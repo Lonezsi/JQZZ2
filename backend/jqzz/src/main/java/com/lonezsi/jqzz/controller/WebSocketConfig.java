@@ -1,4 +1,4 @@
-package com.jqzz.config;
+package com.lonezsi.jqzz.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

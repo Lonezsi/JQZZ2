@@ -1,7 +1,7 @@
-package com.jqzz.controller;
+package com.lonezsi.jqzz.controller;
 
-import com.jqzz.model.Lobby;
-import com.jqzz.repository.LobbyRepository;
+import com.lonezsi.jqzz.model.Lobby;
+import com.lonezsi.jqzz.repository.LobbyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -39,19 +39,20 @@ public class QuizController {
     public Map<String,Object> action(@PathVariable Long lobbyId, @RequestBody Map<String,String> payload){
 
         String action = payload.get("action");
-
         Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
 
-        if(action.equals("start")){
+        // Flipped the equals check to be null-safe
+        if("start".equals(action)){
             lobby.setStatus("started");
             lobbyRepository.save(lobby);
 
-            messagingTemplate.convertAndSend(
-                "/topic/lobby/"+lobbyId,
-                Map.of("event","quizStarted","lobby",lobby)
-            );
+            String destination = "/topic/lobby/" + lobbyId;
+            
+            // Renamed 'payload' to 'eventData' here to avoid the conflict
+            Object eventData = Map.of("event", "quizStarted", "lobby", lobby); 
+            messagingTemplate.convertAndSend(destination, eventData);
         }
 
-        return Map.of("success",true);
+        return Map.of("success", true);
     }
 }

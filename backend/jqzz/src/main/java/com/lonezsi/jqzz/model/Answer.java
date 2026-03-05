@@ -1,4 +1,4 @@
-package com.jqzz.model;
+package com.lonezsi.jqzz.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

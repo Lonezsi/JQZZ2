@@ -1,6 +1,8 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect } from "react";
+import type { SubmitEvent } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_ENDPOINT } from "./config/api";
 
 interface Lobby {
   id: number;
@@ -14,14 +16,14 @@ const Dashboard = () => {
 
   useEffect(() => {
     axios
-      .get<Lobby[]>("http://localhost:8080/api/lobbies")
+      .get<Lobby[]>(`${API_ENDPOINT}/lobbies`)
       .then((res) => setLobbies(res.data))
       .catch(console.error);
   }, []);
 
-  const createLobby = async (e: FormEvent) => {
+  const createLobby = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const res = await axios.post<Lobby>("http://localhost:8080/api/lobbies", {
+    const res = await axios.post<Lobby>(`${API_ENDPOINT}/lobbies`, {
       name: lobbyName,
       adminId: 1,
     });

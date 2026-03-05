@@ -1,4 +1,4 @@
-package com.jqzz.model;
+package com.lonezsi.jqzz.model;
 
 import jakarta.persistence.*;
 import java.util.List;

@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useQuizSocket, QuizEvent } from "./hooks/useQuizSocket";
-
-interface Lobby {
-  id: number;
-  name: string;
-  status: string;
-}
+import { useQuizSocket } from "./hooks/useQuizSocket";
+import type { Lobby } from "./hooks/useQuizSocket";
+import { API_ENDPOINT } from "./config/api";
 
 const LobbyView = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,23 +14,22 @@ const LobbyView = () => {
   useEffect(() => {
     if (!id) return;
     axios
-      .get<Lobby>(`http://localhost:8080/api/lobbies/${id}`)
+      .get<Lobby>(`${API_ENDPOINT}/lobbies/${id}`)
       .then((res) => setLobby(res.data))
       .catch(console.error);
   }, [id]);
 
   useEffect(() => {
-    if (quizEvent) {
-      console.log("Event received:", quizEvent);
-      if (quizEvent.event === "quizStarted" && quizEvent.lobby) {
-        setLobby(quizEvent.lobby);
-      }
+    if (quizEvent?.lobby) {
+      // Safe cast through unknown
+      const updatedLobby = quizEvent.lobby as unknown as Lobby;
+      setTimeout(() => setLobby(updatedLobby), 0);
     }
   }, [quizEvent]);
 
   const handleAdminAction = async (action: string) => {
     if (!id) return;
-    await axios.post(`http://localhost:8080/api/quiz/${id}/action`, { action });
+    await axios.post(`${API_ENDPOINT}/quiz/${id}/action`, { action });
   };
 
   if (!lobby) return <div>Loading...</div>;
