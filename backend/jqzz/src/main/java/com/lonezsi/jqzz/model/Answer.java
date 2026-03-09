@@ -19,6 +19,10 @@ public class Answer {
 
     private int value;
 
+    private String imageUrl;
+
+    private String userId; // for USER_GENERATED types, to track who created this answer
+
     public Long getId(){return id;}
     public void setId(Long id){this.id=id;}
 
@@ -28,6 +32,12 @@ public class Answer {
     public int getValue(){return value;}
     public void setValue(int value){this.value=value;}
 
+    public String getImageUrl(){return imageUrl;}
+    public void setImageUrl(String imageUrl){this.imageUrl=imageUrl;}
+
     public Question getQuestion(){return question;}
     public void setQuestion(Question question){this.question=question;}
+
+    public String getUserId(){return userId;}
+    public void setUserId(String userId){this.userId=userId;}
 }
