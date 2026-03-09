@@ -33,21 +33,23 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <section className="hero-section">
-        <div className="hero-content">
-          <div className="hero-logo">
-            <img src="/logo.png" alt="JQZZ Logo" />
-          </div>
-          <div className="hero-text">
-            <h1>JQZZ</h1>
-            <p className="tagline">Experience Interactive Quiz Gaming</p>
-          </div>
-        </div>
-      </section>
-
       <div className="main-container">
         <div className="bento-grid">
-          <div className="bento-box bento-box-large">
+          <div className="bento-box bento-box-large hero-section">
+            <div className="hero-logo">
+              <img src="/logo.png" alt="JQZZ Logo" />
+            </div>
+            <div className="hero-text align-center">
+              <h1>---JQzz---</h1>
+              <p className="tagline">
+                Egy teljesen egyedi weboldal, a kompetíció egyébént is béna (és
+                még drága is)
+              </p>
+              <h1 className="align-center">----x----</h1>
+            </div>
+          </div>
+
+          <div className="bento-box bento-box-tall">
             <div className="box-header">
               <h2>Create New Lobby</h2>
               <p>Start a new quiz session</p>

@@ -14,8 +14,8 @@
   justify-content: center;
   background: linear-gradient(
     135deg,
-    rgba(99, 102, 241, 0.1) 0%,
-    rgba(16, 185, 129, 0.1) 100%
+    var(--hero-gradient-start) 0%,
+    var(--hero-gradient-end) 100%
   );
   border-bottom: 1px solid var(--border);
   min-height: 400px;
@@ -42,23 +42,25 @@
 .hero-logo img {
   max-width: 100%;
   height: auto;
-  filter: drop-shadow(0 20px 40px rgba(99, 102, 241, 0.3));
   animation: float 3s ease-in-out infinite;
+  mix-blend-mode: color-burn;
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
+.bento-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  mix-blend-mode: multiply;
+  background-color: var(--primary);
+  background-position: center;
+
+  opacity: 0.02;
+  z-index: -1;
 }
 
 .hero-text {
   flex: 1;
-  text-align: left;
 }
 
 .hero-text h1 {
@@ -83,57 +85,49 @@
 /* Bento Grid */
 .bento-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  grid-auto-rows: auto;
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 0.8rem;
+  align-items: start;
   width: 100%;
-  margin-top: 3rem;
+  margin-top: 1.25rem;
 }
 
 .bento-box {
-  background: var(--bg-primary);
   border: 1px solid var(--border);
-  padding: 2rem;
-  border-radius: 16px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  padding: 1rem;
+  border-radius: 12px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
   display: flex;
   flex-direction: column;
-  min-height: 250px;
   position: relative;
   overflow: hidden;
+  min-height: 120px;
 }
 
-.bento-box::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    transparent 100%
-  );
-  pointer-events: none;
-  border-radius: 16px;
-}
-
-.bento-box:hover {
+.bento-box:hover:not(.hero-section) {
   border-color: var(--primary);
-  background: var(--bg-secondary);
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 20px 40px var(--shadow-primary-weak);
 }
 
 .bento-box-large {
-  grid-column: span 1;
+  grid-column: span 2;
+}
+
+.bento-box-tall {
+  grid-row: span 2;
+}
+
+.bento-box-wide {
+  grid-column: span 2;
 }
 
 @media (min-width: 768px) {
   .bento-box-large {
-    grid-column: span 2;
+    grid-column: span 3;
   }
 
   .bento-grid {
@@ -143,11 +137,11 @@
 
 @media (min-width: 1024px) {
   .bento-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
 
   .bento-box-large {
-    grid-column: span 2;
+    grid-column: span 3;
   }
 }
 
@@ -210,7 +204,7 @@
 }
 
 .lobby-item:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--hover-bg-light);
   border-color: var(--primary);
 }
 
@@ -235,11 +229,6 @@
 .btn-join {
   margin-left: 1rem;
   white-space: nowrap;
-  background: linear-gradient(
-    135deg,
-    var(--primary) 0%,
-    var(--primary-dark) 100%
-  );
   border: none;
   padding: 0.75rem 1.5rem;
   font-size: 0.95rem;
@@ -247,7 +236,7 @@
 
 .btn-join:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 8px 20px var(--shadow-primary-strong);
 }
 
 /* Empty State */
@@ -294,29 +283,20 @@
   padding: 0.875rem;
 }
 
-.btn-primary {
-  background: linear-gradient(
-    135deg,
-    var(--primary) 0%,
-    var(--primary-dark) 100%
-  );
-  color: white;
-}
-
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 30px var(--shadow-primary-medium);
 }
 
 .btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  filter: invert(1);
+  color: var(--text-white);
   border: 2px solid var(--primary);
 }
 
 .btn-secondary:hover {
-  background: rgba(99, 102, 241, 0.2);
   transform: translateY(-2px);
+  border: 2px solid var(--text-white);
 }
 
 /* Responsive Design */
@@ -347,7 +327,6 @@
 
   .bento-box {
     padding: 1.5rem;
-    min-height: auto;
   }
 
   .lobby-item {
