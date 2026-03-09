@@ -1,9 +1,5 @@
 package com.lonezsi.jqzz.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
-import java.util.List;
-
 public enum QuestionTypes {
     PREWRITTEN_SINGLE,       // 1: prewritten answers, each gives points = value
     PREWRITTEN_MULTIPLE,     // 2: prewritten answers, multiple selectable, points = value
