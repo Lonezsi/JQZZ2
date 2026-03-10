@@ -7,6 +7,7 @@ import { WS_ENDPOINT } from "../config/api";
 export interface QuizEvent {
   event: string;
   lobby?: Lobby;
+  payload?: unknown;
 }
 
 export interface Lobby {
