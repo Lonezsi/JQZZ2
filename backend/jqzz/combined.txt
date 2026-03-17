@@ -1,0 +1,871 @@
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\JqzzApplication.java ===== 
+package com.lonezsi.jqzz;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class JqzzApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(JqzzApplication.class, args);
+	}
+
+}
+
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\ScriptRunner.java ===== 
+package com.lonezsi.jqzz;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.lonezsi.jqzz.model.Question;
+import com.lonezsi.jqzz.model.QuestionType;
+
+
+public class ScriptRunner {
+
+    private final Map<String, Question> questions = new HashMap<>();
+    private final List<Command> commands = new ArrayList<>();
+    private int currentIndex = 0;
+
+    public void parseScript(String script) throws Exception {
+        String[] lines = script.split("\n");
+        Pattern questionPattern = Pattern.compile("Question\\s+(\\w+)\\s*\\{");
+        Pattern commandPattern = Pattern.compile("(Ask|Elaborate|Results)\\((\\w+)(?:,\\s*(\\d+))?\\)");
+
+        Question current = null;
+        String currentQId = null;
+        StringBuilder block = new StringBuilder();
+
+        for(String line : lines){
+            line = line.trim();
+            if(line.isEmpty() || line.startsWith("//")) continue;
+
+            Matcher qMatch = questionPattern.matcher(line);
+            if(qMatch.find()){
+                current = new Question();
+                current.setType(QuestionType.PREWRITTEN_SINGLE); // default type
+                block.setLength(0);
+                currentQId = qMatch.group(1);
+                continue;
+            }
+
+            if(current != null){
+                if(line.equals("}")) {
+                    parseQuestionBlock(current, block.toString());
+                    questions.put(currentQId, current);
+                    current = null;
+                    currentQId = null;
+                } else {
+                    block.append(line).append("\n");
+                }
+                continue;
+            }
+
+            Matcher cMatch = commandPattern.matcher(line);
+            if(cMatch.find()){
+                String cmd = cMatch.group(1);
+                String qId = cMatch.group(2);
+                String timeStr = cMatch.group(3);
+                int time = timeStr != null ? Integer.parseInt(timeStr) : 0; // default 0
+
+                switch(cmd){
+                    case "Ask" -> commands.add(new AskCommand(qId, time));
+                    case "Elaborate" -> commands.add(new ElaborateCommand(qId, time));
+                    case "Results" -> commands.add(new ResultsCommand(qId, time));
+                }
+            }
+        }
+    }
+
+    private void parseQuestionBlock(Question q, String blockStr){
+        blockStr = blockStr.replaceAll(",\\s*\n?", "\n"); // split commas or newlines
+        for(String line : blockStr.split("\n")){
+            line = line.trim();
+            if(line.isEmpty()) continue;
+
+            if(line.startsWith("type:")) {
+                String typeStr = line.substring(5).trim();
+                q.setType(QuestionType.valueOf(typeStr));
+            } else if(line.startsWith("text:")) {
+                q.setText(line.substring(5).trim().replaceAll("\"",""));
+            } else if(line.startsWith("image:")) {
+                String raw = line.substring(6).trim().replaceAll("\"","");
+                q.setImageUrl(resolveImage(raw));
+            } else if(line.startsWith("elaboration-text:")) {
+                q.setElaborationText(line.substring(17).trim().replaceAll("\"",""));
+            } else if(line.startsWith("elaboration-image:")) {
+                String raw = line.substring(18).trim().replaceAll("\"","");
+                q.setElaborationImageUrl(resolveImage(raw));
+            }
+        }
+    }
+
+    /**
+     * Detects the type of image input and normalizes it:
+     * - public ID: only letters/numbers, no symbols → store as-is
+     * - private ID: MyUser:someid → store as-is
+     * - URL: anything with "://" → store as-is
+     */
+    private String resolveImage(String input){
+        if(input.isEmpty()) return null;
+        if(input.contains("://")) return input; // URL
+        if(input.contains(":")) return input;   // private id
+        return input;                           // public id
+    }
+
+    public boolean hasNext(){ return currentIndex < commands.size(); }
+
+    public ScriptEvent nextEvent(){
+        if(!hasNext()) return null;
+        Command cmd = commands.get(currentIndex++);
+        return cmd.toEvent(questions);
+    }
+
+    public interface ScriptEvent {
+        default String getEventType() {
+            return "script_event";
+        }
+        Map<String,Object> getPayload();
+    }
+
+    public interface Command {
+        ScriptEvent toEvent(Map<String, Question> questions);
+    }
+
+    // Reactive commands
+    public static class AskCommand implements Command {
+        String qId; int time;
+        public AskCommand(String qId, int time){ this.qId=qId; this.time=time; }
+        @Override
+        public ScriptEvent toEvent(Map<String, Question> questions){
+            Question q = questions.get(qId);
+            return () -> {
+                Map<String,Object> payload = new HashMap<>();
+                payload.put("questionId", qId);
+                payload.put("question", q);
+                payload.put("time", time);
+                return payload;
+            };
+        }
+    }
+
+    public static class ElaborateCommand implements Command {
+        String qId; int time;
+        public ElaborateCommand(String qId, int time){ this.qId=qId; this.time=time; }
+        @Override
+        public ScriptEvent toEvent(Map<String, Question> questions){
+            Question q = questions.get(qId);
+            return () -> {
+                Map<String,Object> payload = new HashMap<>();
+                payload.put("questionId", qId);
+                payload.put("text", q.getElaborationText());
+                payload.put("image", q.getElaborationImageUrl());
+                payload.put("time", time);
+                return payload;
+            };
+        }
+    }
+
+    public static class ResultsCommand implements Command {
+        String qId; int time;
+        public ResultsCommand(String qId, int time){ this.qId=qId; this.time=time; }
+        @Override
+        public ScriptEvent toEvent(Map<String, Question> questions){
+            Question q = questions.get(qId);
+            return () -> {
+                Map<String,Object> payload = new HashMap<>();
+                payload.put("questionId", qId);
+                payload.put("results", evaluateQuestionResults(q));
+                payload.put("time", time);
+                return payload;
+            };
+        }
+
+        private Map<String,Object> evaluateQuestionResults(Question q){
+            Map<String,Object> res = new HashMap<>();
+            switch(q.getType()){
+                case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE -> res.put("answers", q.getAnswers());
+                case TIERLIST                               -> res.put("answers", q.evaluateTierlist());
+                case KNOCKOUT_BATTLE                        -> res.put("answers", q.getAnswers());
+                case USER_GENERATED_VOTE                    -> res.put("winner", q.evaluateVote());
+                case USER_GENERATED_IDENTIFY                -> res.put("answers", q.getAnswers());
+                case USER_GENERATED                         -> res.put("answers", q.getAnswers());
+            }
+            return res;
+        }
+    }
+}
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\config\CorsConfig.java ===== 
+package com.lonezsi.jqzz.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+@Configuration
+public class CorsConfig {
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowCredentials(true);
+        configuration.addAllowedOrigin("http://localhost:5173");
+        configuration.addAllowedOrigin("http://localhost:3000");
+        configuration.addAllowedHeader("*");
+        configuration.addAllowedMethod("*");
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\config\WebSocketConfig.java ===== 
+package com.lonezsi.jqzz.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*");
+    }
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\QuizController.java ===== 
+package com.lonezsi.jqzz.controller;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.lonezsi.jqzz.ScriptRunner;
+import com.lonezsi.jqzz.model.Lobby;
+import com.lonezsi.jqzz.repository.LobbyRepository;
+
+//basically fully deprecated
+//TODO: fix this
+
+@RestController
+@RequestMapping("/api")
+@CrossOrigin(origins="*")
+public class QuizController {
+
+    @Autowired
+    private LobbyRepository lobbyRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    // Keep per-lobby script runners so REST actions can advance the script
+    private final ConcurrentHashMap<Long, ScriptRunner> runners = new ConcurrentHashMap<>();
+
+    @GetMapping("/lobbies")
+    public List<Lobby> getLobbies(){
+        return lobbyRepository.findAll();
+    }
+
+    @GetMapping("/lobbies/{id}")
+    public Lobby getLobby(@PathVariable Long id){
+        return lobbyRepository.findById(id).orElseThrow();
+    }
+
+    @PostMapping("/lobbies")
+    public Lobby createLobby(@RequestBody Lobby lobby){
+        return lobbyRepository.save(lobby);
+    }
+
+    @PostMapping("/quiz/{lobbyId}/action")
+    public Map<String,Object> action(@PathVariable Long lobbyId, @RequestBody Map<String,String> payload){
+
+        String action = payload.get("action");
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+
+        // Flipped the equals check to be null-safe
+        String destination = "/topic/lobby/" + lobbyId;
+
+        if("start".equals(action)){
+            lobbyRepository.save(lobby);
+
+            // initialize runner for this lobby
+            runners.computeIfAbsent(lobbyId, id -> {
+                ScriptRunner r = new ScriptRunner();
+                try { r.parseScript(loadScriptForLobby(String.valueOf(id))); } catch(Exception e) { }
+                return r;
+            });
+
+            Object eventData = Map.of("event", "quizStarted", "lobby", lobby);
+            messagingTemplate.convertAndSend(destination, eventData);
+        } else if ("next".equals(action)) {
+            // Advance script runner and broadcast the resulting script event
+            ScriptRunner runner = runners.computeIfAbsent(lobbyId, id -> {
+                ScriptRunner r = new ScriptRunner();
+                try { r.parseScript(loadScriptForLobby(String.valueOf(id))); } catch(Exception e) { }
+                return r;
+            });
+
+            if (runner.hasNext()) {
+                var ev = runner.nextEvent();
+                Object eventData = Map.of("event", "script_event", "payload", ev.getPayload());
+                messagingTemplate.convertAndSend(destination, eventData);
+            }
+        }
+
+        return Map.of("success", true);
+    }
+
+    private String loadScriptForLobby(String lobbyId) {
+        try {
+            var is = getClass().getResourceAsStream("./default.txt");
+            if (is == null) return "";
+            return new String(is.readAllBytes());
+        } catch (Exception e) {
+        }
+        return "";
+    }
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\QuizWebSocketController.java ===== 
+package com.lonezsi.jqzz.controller;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import com.lonezsi.jqzz.ScriptRunner;
+
+import tools.jackson.databind.ObjectMapper;
+
+//TODO: this shit's ass bro :skull:
+
+@Component
+public class QuizWebSocketController extends TextWebSocketHandler {
+
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ScriptRunner> runners = new ConcurrentHashMap<>();
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) {
+        String lobbyId = getLobbyIdFromSession(session);
+        sessions.put(session.getId(), session);
+    }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        // Expect JSON: { action: "next", lobbyId: "abc123" }
+        var node = mapper.readTree(message.getPayload());
+        String action = node.get("action").asText();
+        String lobbyId = node.get("lobbyId").asText();
+
+        ScriptRunner runner = runners.get(lobbyId);
+        if (runner == null) return;
+
+        if ("next".equals(action) && runner.hasNext()) {
+            var event = runner.nextEvent();
+            session.sendMessage(new TextMessage(mapper.writeValueAsString(event)));
+        }
+    }
+
+    private String getLobbyIdFromSession(WebSocketSession session) {
+        // extract lobbyId from query param
+        String uri = session.getUri().toString();
+        return uri.split("lobbyId=")[1];
+    }
+
+    public ConcurrentHashMap<String, WebSocketSession> getSessions() {
+        return sessions;
+    }
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Action.java ===== 
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+
+@Entity
+public class Action {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "question_id")
+    private Question question;
+
+    private Phase phase;
+
+    private int time;
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public Question getQuestion(){return question;}
+    public void setQuestion(Question question){this.question=question;}
+
+    public Phase getPhase(){return phase;}
+    public void setPhase(Phase phase){this.phase=phase;}
+
+    public int getTime(){return time;}
+    public void setTime(int time){this.time=time;}
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Answer.java ===== 
+package com.lonezsi.jqzz.model;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+
+@Entity
+public class Answer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name="question_id")
+    @JsonIgnore
+    private Question question;
+
+    private String text;
+
+    private int value;
+
+    private String imageUrl;
+
+    private String userId; // for USER_GENERATED types, to track who created this answer
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public String getText(){return text;}
+    public void setText(String text){this.text=text;}
+
+    public int getValue(){return value;}
+    public void setValue(int value){this.value=value;}
+
+    public String getImageUrl(){return imageUrl;}
+    public void setImageUrl(String imageUrl){this.imageUrl=imageUrl;}
+
+    public Question getQuestion(){return question;}
+    public void setQuestion(Question question){this.question=question;}
+
+    public String getUserId(){return userId;}
+    public void setUserId(String userId){this.userId=userId;}
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Lobby.java ===== 
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import java.util.List;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ElementCollection;
+
+@Entity
+public class Lobby {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    private Long adminId;
+
+    @ManyToOne
+    @JoinColumn(name="quiz_id")
+    private Quiz quiz;
+
+    private int currentActionIndex = -1;
+
+    private int time;
+
+    @ElementCollection
+    private List<Player> players;
+
+    @OneToMany(mappedBy = "lobby", cascade = CascadeType.ALL)
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public String getName(){return name;}
+    public void setName(String name){this.name=name;}
+
+    public Long getAdminId(){return adminId;}
+    public void setAdminId(Long adminId){this.adminId=adminId;}
+
+    public Quiz getQuiz(){return quiz;}
+    public void setQuiz(Quiz quiz){this.quiz=quiz;}
+
+    public int getcurrentActionIndex(){return currentActionIndex;}
+    public void setcurrentActionIndex(int currentActionIndex){this.currentActionIndex=currentActionIndex;}
+
+    public int getTime(){return time;}
+    public void setTime(int time){this.time=time;}
+
+    public List<Player> getPlayers(){return players;}
+    public void setPlayers(List<Player> players){this.players=players;}
+
+    public void addPlayer(String userId){
+        players.add(new Player(userId, 0));
+    }
+
+    // logic
+    public void updateScore(String userId, int score){
+        for(int i=0; i<players.size(); i++){
+            Player p = players.get(i);
+            if(p.userId().equals(userId)){
+                players.set(i, new Player(userId, p.score() + score));
+                break;
+            }
+        }
+    }
+    
+    public void nextQuestion(){
+        currentActionIndex++;
+        time = quiz.getActions().get(currentActionIndex).getTime();
+    }
+
+    public boolean isQuizOver(){
+        return currentActionIndex >= quiz.getActions().size() - 1;
+    }
+
+    public Action getCurrentAction(){
+        if(currentActionIndex < 0 || currentActionIndex >= quiz.getActions().size()) return null;
+        return quiz.getActions().get(currentActionIndex);
+    }
+
+    public void reset(){
+        currentActionIndex = -1;
+        time = 0;
+        for(int i=0; i<players.size(); i++){
+            Player p = players.get(i);
+            players.set(i, new Player(p.userId(), 0));
+        }
+    }
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Phase.java ===== 
+package com.lonezsi.jqzz.model;
+
+public enum Phase {
+    WAITING,
+    QUESTION,
+    ANSWER,
+    ELABORATION,
+    RESULT;
+    public static Phase fromString(String phase) {
+        try {
+            return Phase.valueOf(phase.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return WAITING; // default to WAITING if unknown
+        }
+    }
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Player.java ===== 
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.Embeddable;
+
+@Embeddable
+public record Player(String userId, int score){}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Question.java ===== 
+package com.lonezsi.jqzz.model;
+
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+
+@Entity
+public class Question {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name="quiz_id")
+    @JsonIgnore
+    private Quiz quiz;
+
+    private String text;
+
+    private String imageUrl;
+
+    private String elaborationText;
+
+    private String elaborationImageUrl;
+
+    private QuestionType type;
+
+    private String userId; // for user generated content, store the author's userId
+
+    @OneToMany(mappedBy="question", cascade = CascadeType.ALL)
+    private List<Answer> answers;
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public Quiz getQuiz(){return quiz;}
+    public void setQuiz(Quiz quiz){this.quiz=quiz;}
+
+    public List<Answer> getAnswers(){return answers;}
+    public void setAnswers(List<Answer> answers){this.answers=answers;}
+
+    public String getUserId(){return userId;}
+    public void setUserId(String userId){this.userId=userId;}
+
+    // data
+    public String getText(){return text;}
+    public void setText(String text){this.text=text;}
+
+    public String getImageUrl(){return imageUrl;}
+    public void setImageUrl(String imageUrl){this.imageUrl=imageUrl;}
+
+    public String getElaborationText(){return elaborationText;}
+    public void setElaborationText(String elaborationText){this.elaborationText=elaborationText;}
+    
+    public String getElaborationImageUrl(){return elaborationImageUrl;}
+    public void setElaborationImageUrl(String elaborationImageUrl){this.elaborationImageUrl=elaborationImageUrl;}
+
+    public QuestionType getType(){return type;}
+    public void setType(QuestionType type){this.type=type;}
+
+    // --- Logic to compute results based on type ---
+    
+    public int evaluateSingleChoice(int selectedAnswerId){
+        if(type != QuestionType.PREWRITTEN_SINGLE) throw new IllegalStateException("Wrong question type");
+        return answers.stream()
+                .filter(a -> a.getId().intValue() == selectedAnswerId)
+                .mapToInt(Answer::getValue)
+                .findFirst()
+                .orElse(0);
+    }
+
+    public int evaluateMultipleChoice(List<Integer> selectedAnswerIds){
+        if(type != QuestionType.PREWRITTEN_MULTIPLE) throw new IllegalStateException("Wrong question type");
+        return answers.stream()
+                .filter(a -> selectedAnswerIds.contains(a.getId().intValue()))
+                .mapToInt(Answer::getValue)
+                .sum();
+    }
+
+    public List<Answer> evaluateTierlist(){
+        if(type != QuestionType.TIERLIST) throw new IllegalStateException("Wrong question type");
+        // In tierlist, the Answer.value stores the position
+        answers.sort((a,b) -> Integer.compare(a.getValue(), b.getValue()));
+        return answers;
+    }
+
+    public Answer evaluateKnockoutBattle(int firstAnswerId, int secondAnswerId){
+        if(type != QuestionType.KNOCKOUT_BATTLE) throw new IllegalStateException("Wrong question type");
+        Answer first = answers.stream().filter(a -> a.getId().intValue()==firstAnswerId).findFirst().orElse(null);
+        Answer second = answers.stream().filter(a -> a.getId().intValue()==secondAnswerId).findFirst().orElse(null);
+        if(first == null || second == null) return null;
+        // Winner = higher value
+        return first.getValue() >= second.getValue() ? first : second;
+    }
+
+    public void assignUserAnswer(int answerId, int value){
+        // Generic for user generated answers (text/image)
+        Answer ans = answers.stream().filter(a -> a.getId().intValue()==answerId).findFirst().orElse(null);
+        if(ans != null){
+            ans.setValue(value);
+        }
+    }
+
+    // --- USER GENERATED VOTE ---
+    public Answer evaluateVote(){
+        if(type != QuestionType.USER_GENERATED_VOTE) throw new IllegalStateException("Wrong question type");
+        // Each answer's value represents number of votes
+        return answers.stream()
+                .max(Comparator.comparingInt(Answer::getValue))
+                .orElse(null);
+    }
+
+    // --- USER GENERATED IDENTIFY ---
+    public Map<Answer, Answer> evaluateIdentify(Map<Integer, Long> guessMap){
+        /*
+         * guessMap: key = answerId being guessed, value = userId guessed as author
+         * returns: Map<Answer, Answer> where key = answer, value = userAnswer guessed as correct author
+         */
+        if(type != QuestionType.USER_GENERATED_IDENTIFY) throw new IllegalStateException("Wrong question type");
+
+        Map<Answer, Answer> results = new HashMap<>();
+        for(Answer ans : answers){
+            Long guessedUserId = guessMap.get(ans.getId().intValue());
+            if(guessedUserId != null){
+                // find the correct answer submitted by that user
+                Answer correctAnswer = answers.stream()
+                        .filter(a -> a.getUserId().equals(guessedUserId.toString()))
+                        .findFirst()
+                        .orElse(null);
+                results.put(ans, correctAnswer);
+            } else {
+                results.put(ans, null);
+            }
+        }
+        return results;
+    }
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\QuestionType.java ===== 
+package com.lonezsi.jqzz.model;
+
+public enum QuestionType {
+    PREWRITTEN_SINGLE,       // 1: prewritten answers, each gives points = value
+    PREWRITTEN_MULTIPLE,     // 2: prewritten answers, multiple selectable, points = value
+    USER_GENERATED,          // 3: no answers, user adds text/image
+    USER_GENERATED_VOTE,     // 4: user adds answers, next question votes for favourite
+    USER_GENERATED_IDENTIFY, // 5: user adds answers, next question asks who answered this
+    TIERLIST,                // 6: tierlist, drag squares into tiers, updating values
+    KNOCKOUT_BATTLE          // 7: user adds answers, next questions form knockout battle tree
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Quiz.java ===== 
+package com.lonezsi.jqzz.model;
+
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.JoinColumn;
+
+@Entity
+public class Quiz {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    private String authorId;
+
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name="quiz_id")
+    private List<Action> actions;
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+    
+    public List<Action> getActions(){return actions;}
+    public void setActions(List<Action> actions){this.actions=actions;}
+
+    public String getName(){return name;}
+    public void setName(String name){this.name=name;}
+
+    public String getAuthorId(){return authorId;}
+    public void setAuthorId(String authorId){this.authorId=authorId;}
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\User.java ===== 
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
+@Entity
+public class User {
+    @Id
+    private String id;
+
+    private String name;
+
+    private String password;
+
+    private String email;
+
+    private String profilePictureUrl;
+
+    public String getId(){return id;}
+    public void setId(String id){this.id=id;}
+
+    public String getName(){return name;}
+    public void setName(String name){this.name=name;}
+
+    public String getPassword(){return password;}
+    public void setPassword(String password){this.password=password;}
+
+    public String getEmail(){return email;}
+    public void setEmail(String email){this.email=email;}
+
+    public String getProfilePictureUrl(){return profilePictureUrl;}
+    public void setProfilePictureUrl(String profilePictureUrl){this.profilePictureUrl=profilePictureUrl;}
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\repository\LobbyRepository.java ===== 
+package com.lonezsi.jqzz.repository;
+
+import com.lonezsi.jqzz.model.Lobby;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface LobbyRepository extends JpaRepository<Lobby, Long> {
+}.
+===== C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\test\java\com\lonezsi\jqzz\JqzzApplicationTests.java ===== 
+package com.lonezsi.jqzz;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class JqzzApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+.

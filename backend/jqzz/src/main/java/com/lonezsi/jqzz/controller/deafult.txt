@@ -1,6 +1,0 @@
-Question Q1 {
-    text: "aaaaaaaaa"
-    }
-Ask(Q1, 20)
-Elaborate(Q1, 10)
-Results(Q1)

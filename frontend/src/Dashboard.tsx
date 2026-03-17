@@ -3,6 +3,7 @@ import type { SubmitEvent } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { API_ENDPOINT } from "./config/api";
+import useGameStore from "./store/gameStore";
 import "./Dashboard.css";
 
 interface Lobby {
@@ -13,22 +14,30 @@ interface Lobby {
 const Dashboard = () => {
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [lobbyName, setLobbyName] = useState("");
+  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
   const navigate = useNavigate();
 
   useEffect(() => {
     axios
       .get<Lobby[]>(`${API_ENDPOINT}/lobbies`)
       .then((res) => setLobbies(res.data))
-      .catch(console.error);
-  }, []);
+      .catch((err) => {
+        setErrorMessage(`Failed to load lobbies: ${err}`);
+      });
+  }, [setErrorMessage]);
 
   const createLobby = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const res = await axios.post<Lobby>(`${API_ENDPOINT}/lobbies`, {
-      name: lobbyName,
-      adminId: 1,
-    });
-    navigate(`/lobby/${res.data.id}`);
+    try {
+      const res = await axios.post<Lobby>(`${API_ENDPOINT}/lobbies`, {
+        name: lobbyName,
+        adminId: 1,
+      });
+      navigate(`/lobby/${res.data.id}`);
+    } catch (err) {
+      setErrorMessage(`Failed to create lobby: ${err}`);
+      console.error(err);
+    }
   };
 
   return (

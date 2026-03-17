@@ -1,6 +1,6 @@
 package com.lonezsi.jqzz.model;
 
-public enum QuestionTypes {
+public enum QuestionType {
     PREWRITTEN_SINGLE,       // 1: prewritten answers, each gives points = value
     PREWRITTEN_MULTIPLE,     // 2: prewritten answers, multiple selectable, points = value
     USER_GENERATED,          // 3: no answers, user adds text/image

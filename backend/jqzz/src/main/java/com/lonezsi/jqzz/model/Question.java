@@ -24,9 +24,9 @@ public class Question {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name="lobby_id")
+    @JoinColumn(name="quiz_id")
     @JsonIgnore
-    private Lobby lobby;
+    private Quiz quiz;
 
     private String text;
 
@@ -36,7 +36,9 @@ public class Question {
 
     private String elaborationImageUrl;
 
-    private QuestionTypes type;
+    private QuestionType type;
+
+    private String userId; // for user generated content, store the author's userId
 
     @OneToMany(mappedBy="question", cascade = CascadeType.ALL)
     private List<Answer> answers;
@@ -44,11 +46,14 @@ public class Question {
     public Long getId(){return id;}
     public void setId(Long id){this.id=id;}
 
-    public Lobby getLobby(){return lobby;}
-    public void setLobby(Lobby lobby){this.lobby=lobby;}
+    public Quiz getQuiz(){return quiz;}
+    public void setQuiz(Quiz quiz){this.quiz=quiz;}
 
     public List<Answer> getAnswers(){return answers;}
     public void setAnswers(List<Answer> answers){this.answers=answers;}
+
+    public String getUserId(){return userId;}
+    public void setUserId(String userId){this.userId=userId;}
 
     // data
     public String getText(){return text;}
@@ -63,13 +68,13 @@ public class Question {
     public String getElaborationImageUrl(){return elaborationImageUrl;}
     public void setElaborationImageUrl(String elaborationImageUrl){this.elaborationImageUrl=elaborationImageUrl;}
 
-    public QuestionTypes getType(){return type;}
-    public void setType(QuestionTypes type){this.type=type;}
+    public QuestionType getType(){return type;}
+    public void setType(QuestionType type){this.type=type;}
 
     // --- Logic to compute results based on type ---
     
     public int evaluateSingleChoice(int selectedAnswerId){
-        if(type != QuestionTypes.PREWRITTEN_SINGLE) throw new IllegalStateException("Wrong question type");
+        if(type != QuestionType.PREWRITTEN_SINGLE) throw new IllegalStateException("Wrong question type");
         return answers.stream()
                 .filter(a -> a.getId().intValue() == selectedAnswerId)
                 .mapToInt(Answer::getValue)
@@ -78,7 +83,7 @@ public class Question {
     }
 
     public int evaluateMultipleChoice(List<Integer> selectedAnswerIds){
-        if(type != QuestionTypes.PREWRITTEN_MULTIPLE) throw new IllegalStateException("Wrong question type");
+        if(type != QuestionType.PREWRITTEN_MULTIPLE) throw new IllegalStateException("Wrong question type");
         return answers.stream()
                 .filter(a -> selectedAnswerIds.contains(a.getId().intValue()))
                 .mapToInt(Answer::getValue)
@@ -86,14 +91,14 @@ public class Question {
     }
 
     public List<Answer> evaluateTierlist(){
-        if(type != QuestionTypes.TIERLIST) throw new IllegalStateException("Wrong question type");
+        if(type != QuestionType.TIERLIST) throw new IllegalStateException("Wrong question type");
         // In tierlist, the Answer.value stores the position
         answers.sort((a,b) -> Integer.compare(a.getValue(), b.getValue()));
         return answers;
     }
 
     public Answer evaluateKnockoutBattle(int firstAnswerId, int secondAnswerId){
-        if(type != QuestionTypes.KNOCKOUT_BATTLE) throw new IllegalStateException("Wrong question type");
+        if(type != QuestionType.KNOCKOUT_BATTLE) throw new IllegalStateException("Wrong question type");
         Answer first = answers.stream().filter(a -> a.getId().intValue()==firstAnswerId).findFirst().orElse(null);
         Answer second = answers.stream().filter(a -> a.getId().intValue()==secondAnswerId).findFirst().orElse(null);
         if(first == null || second == null) return null;
@@ -111,7 +116,7 @@ public class Question {
 
     // --- USER GENERATED VOTE ---
     public Answer evaluateVote(){
-        if(type != QuestionTypes.USER_GENERATED_VOTE) throw new IllegalStateException("Wrong question type");
+        if(type != QuestionType.USER_GENERATED_VOTE) throw new IllegalStateException("Wrong question type");
         // Each answer's value represents number of votes
         return answers.stream()
                 .max(Comparator.comparingInt(Answer::getValue))
@@ -124,7 +129,7 @@ public class Question {
          * guessMap: key = answerId being guessed, value = userId guessed as author
          * returns: Map<Answer, Answer> where key = answer, value = userAnswer guessed as correct author
          */
-        if(type != QuestionTypes.USER_GENERATED_IDENTIFY) throw new IllegalStateException("Wrong question type");
+        if(type != QuestionType.USER_GENERATED_IDENTIFY) throw new IllegalStateException("Wrong question type");
 
         Map<Answer, Answer> results = new HashMap<>();
         for(Answer ans : answers){
