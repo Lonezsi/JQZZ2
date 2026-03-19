@@ -13,13 +13,10 @@
 
   color-scheme: light;
 
-  /* paper background */
-  background: url("/bg.jpg");
-  background-size: 100% 100%;
-  background-attachment: fixed;
-
   /* texture overlay */
   --inky-texture: url(https://texturelabs.org/wp-content/uploads/Texturelabs_Paper_269S.jpg);
+
+  --blur-amount: 0px;
 
   color: #1a1a1a;
 
@@ -63,6 +60,22 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url("/bg.jpg");
+  background-size: 100% 100%;
+  background-attachment: fixed;
+  pointer-events: none;
+  backdrop-filter: blur(--blur-amount);
+  mix-blend-mode: multiply;
+  z-index: 10;
 }
 
 a {
