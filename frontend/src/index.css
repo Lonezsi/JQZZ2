@@ -106,7 +106,6 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(2rem, 10vw, 4rem);
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: -1px;
@@ -117,27 +116,24 @@ h1 {
 }
 
 h2 {
-  font-size: clamp(1.5rem, 5vw, 2.5rem);
   line-height: 1.3;
   font-weight: 600;
 }
 
 h3 {
-  font-size: clamp(1.1rem, 3vw, 1.5rem);
   font-weight: 600;
   margin-bottom: 0.75rem;
 }
 
 p {
   color: var(--text-secondary);
-  font-size: 0.95rem;
 }
 
-button {
+.ink-button {
   border-radius: 10px;
   border: 2px solid var(--border);
   padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+
   font-weight: 600;
   font-family: inherit;
   background: linear-gradient(
@@ -152,17 +148,17 @@ button {
   transition: all 0.3s ease;
 }
 
-button:hover {
+.ink-button:hover {
   border-color: var(--primary);
   transform: translateY(-2px);
   box-shadow: 0 10px 30px var(--shadow-primary-medium);
 }
 
-button:active {
+.ink-button:active {
   transform: translateY(0);
 }
 
-button:focus-visible {
+.ink-button:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -176,7 +172,6 @@ textarea {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.95rem;
   border-radius: 8px;
   transition: all 0.3s ease;
 }

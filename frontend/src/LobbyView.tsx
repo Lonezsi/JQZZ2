@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import api from "./api/client";
 import useQuizSocket from "./hooks/useQuizSocket";
-import { API_ENDPOINT } from "./config/api";
+import ErrorBanner from "./components/ErrorBanner";
 import useGameStore, { type Action, type Player } from "./store/gameStore";
 import WaitingScreen from "./components/WaitingScreen";
 import QuestionScreen from "./components/QuestionScreen";
@@ -32,7 +31,6 @@ const LobbyView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [lobby, setLobby] = useState<Lobby | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const quizEvent = useQuizSocket(id);
   const currentAction = useGameStore((s) => s.currentAction);
@@ -41,14 +39,24 @@ const LobbyView = () => {
   const currentUserId = useGameStore((s) => s.userId);
   const setLobbyAdminId = useGameStore((s) => s.setLobbyAdminId);
   const setPlayers = useGameStore((s) => s.setPlayers);
+  const errorMessage = useGameStore((s) => s.errorMessage);
+  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
 
-  const isLobbyAdmin = Boolean(lobby?.adminId != null && currentUserId != null && lobby.adminId === currentUserId);
+  const isLobbyAdmin = Boolean(
+    lobby?.adminId != null &&
+    currentUserId != null &&
+    lobby.adminId === currentUserId,
+  );
+  const isPlayerInLobby = Boolean(
+    currentUserId &&
+    players.some((player) => player.userId === String(currentUserId)),
+  );
 
   useEffect(() => {
     if (!id) return;
 
-    axios
-      .get<Lobby>(`${API_ENDPOINT}/lobbies/${id}`)
+    api
+      .get<Lobby>(`/lobbies/${id}`)
       .then((res) => {
         setLobby(res.data);
         setLobbyAdminId(res.data.adminId);
@@ -56,9 +64,9 @@ const LobbyView = () => {
       })
       .catch((err) => {
         console.error("Failed to load lobby", err);
-        setError("Failed to load lobby data");
+        setErrorMessage("Failed to load lobby data");
       });
-  }, [id, setLobbyAdminId, setPlayers]);
+  }, [id, setLobbyAdminId, setPlayers, setErrorMessage]);
 
   useEffect(() => {
     if (!quizEvent || !id) return;
@@ -67,23 +75,31 @@ const LobbyView = () => {
       const lobbyUpdate = quizEvent.lobby as Partial<Lobby>;
 
       setTimeout(() => {
-        setLobby((prev) => ({
-          ...(prev ?? {}),
-          ...lobbyUpdate,
-        } as Lobby));
+        setLobby(
+          (prev) =>
+            ({
+              ...(prev ?? {}),
+              ...lobbyUpdate,
+            }) as Lobby,
+        );
       }, 0);
 
       if (lobbyUpdate.adminId != null) {
         setLobbyAdminId(lobbyUpdate.adminId);
       }
 
-      const lobbyData = quizEvent.lobby as Partial<Lobby> & { players?: Player[] };
+      const lobbyData = quizEvent.lobby as Partial<Lobby> & {
+        players?: Player[];
+      };
       if (Array.isArray(lobbyData.players)) {
         setPlayers(lobbyData.players);
       }
     }
 
-    if (quizEvent.event === "players_update" && Array.isArray(quizEvent.payload)) {
+    if (
+      quizEvent.event === "players_update" &&
+      Array.isArray(quizEvent.payload)
+    ) {
       setPlayers(quizEvent.payload as Player[]);
     }
 
@@ -96,11 +112,64 @@ const LobbyView = () => {
                 currentActionIndex: prev.currentActionIndex + 1,
                 time: quizEvent.action?.time ?? prev.time,
               }
-            : prev
+            : prev,
         );
       }, 0);
     }
   }, [quizEvent, id, setLobbyAdminId, setPlayers]);
+
+  const joinLobby = async () => {
+    if (!id) return;
+    if (!currentUserId) {
+      //give the user a unique ID and store it in localStorage
+      const newUserId = Date.now();
+      localStorage.setItem("userId", String(newUserId));
+      window.location.reload();
+    }
+
+    try {
+      const response = await api.post<Lobby>(`/lobbies/${id}/join`, {
+        userId: String(currentUserId),
+      });
+      setLobby(response.data);
+      setPlayers(response.data.players ?? []);
+      setLobbyAdminId(response.data.adminId);
+    } catch (e) {
+      console.error("Lobby join failed", e);
+      setErrorMessage("Could not join lobby");
+    }
+  };
+
+  const leaveLobby = async () => {
+    if (!id) return;
+    if (!currentUserId) {
+      setErrorMessage("Set a user ID before leaving.");
+      return;
+    }
+
+    try {
+      const response = await api.post<Lobby>(`/lobbies/${id}/leave`, {
+        userId: String(currentUserId),
+      });
+      setLobby(response.data);
+      setPlayers(response.data.players ?? []);
+    } catch (e) {
+      console.error("Lobby leave failed", e);
+      setErrorMessage("Could not leave lobby");
+    }
+  };
+
+  const deleteLobby = async () => {
+    if (!id) return;
+
+    try {
+      await api.delete(`/lobbies/${id}`);
+      navigate("/");
+    } catch (e) {
+      console.error("Delete lobby failed", e);
+      setErrorMessage("Could not delete lobby");
+    }
+  };
 
   const startQuiz = async () => {
     if (!id) return;
@@ -108,7 +177,7 @@ const LobbyView = () => {
       await api.post(`/game/${id}/start`);
     } catch (e) {
       console.error("Start quiz failed", e);
-      setError("Could not start quiz");
+      setErrorMessage("Could not start quiz");
     }
   };
 
@@ -118,7 +187,7 @@ const LobbyView = () => {
       await api.post(`/game/${id}/next`);
     } catch (e) {
       console.error("Next action failed", e);
-      setError("Could not advance to next action");
+      setErrorMessage("Could not advance to next action");
     }
   };
 
@@ -147,52 +216,79 @@ const LobbyView = () => {
     }
   };
 
-  if (!lobby && !error) return <div>Loading lobby…</div>;
-  if (error) return <div className="error">{error}</div>;
+  if (!lobby && !errorMessage) return <div>Loading lobby…</div>;
   if (!lobby) return <div>Lobby not found</div>;
 
   return (
-    <div className="container paper-bg">
-      <header className="lobby-header">
-        <h1>Lobby: {lobby.name}</h1>
-        <p>ID: {lobby.id}</p>
-        <p>Admin: {lobby.adminId ?? "TBD"}</p>
-        <p>Quiz progress: {lobby.currentActionIndex + 1}/{lobby.quiz?.actions?.length ?? "?"}</p>
-        <p>Timer (s): {timer}</p>
-      </header>
+    <>
+      <ErrorBanner />
+      <div className="container paper-bg">
+        <header className="lobby-header">
+          <h1>Lobby: {lobby.name}</h1>
+          <p>ID: {lobby.id}</p>
+          <p>Admin: {lobby.adminId ?? "TBD"}</p>
+          <p>
+            Quiz progress: {lobby.currentActionIndex + 1}/
+            {lobby.quiz?.actions?.length ?? "?"}
+          </p>
+          <p>Timer (s): {timer}</p>
+        </header>
 
-      <section className="lobby-players">
-        <h2>Players ({players.length})</h2>
-        {players.length === 0 ? (
-          <p>No players joined yet.</p>
-        ) : (
-          <ul>
-            {players.map((player) => (
-              <li key={player.userId}>
-                {player.name ?? player.userId}: {player.score} points
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section className="lobby-players">
+          <h2>Players ({players.length})</h2>
+          {players.length === 0 ? (
+            <p>No players joined yet.</p>
+          ) : (
+            <ul>
+              {players.map((player) => (
+                <li key={player.userId}>
+                  {player.name ?? player.userId}: {player.score} points
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <section className="lobby-action" style={{ marginTop: 16 }}>
-        {renderPhaseScreen()}
-      </section>
+        <section className="lobby-action" style={{ marginTop: 16 }}>
+          {renderPhaseScreen()}
+        </section>
 
-      <section className="admin-controls" style={{ marginTop: 16 }}>
-        <button onClick={startQuiz} className="s-button" disabled={!isLobbyAdmin}>
-          Start Quiz
-        </button>
-        <button onClick={nextAction} className="s-button" disabled={!isLobbyAdmin}>
-          Next
-        </button>
-      </section>
-
-      <button onClick={() => navigate("/")} className="s-button" style={{ marginTop: 12 }}>
-        Leave Lobby
-      </button>
-    </div>
+        <section
+          className="admin-controls"
+          style={{ marginTop: 16, display: "grid", gap: 8 }}
+        >
+          {isLobbyAdmin && (
+            <>
+              <button onClick={startQuiz} className="s-button">
+                Start Quiz
+              </button>
+              <button onClick={nextAction} className="s-button">
+                Next Action
+              </button>
+              <button onClick={deleteLobby} className="s-button danger">
+                Delete Lobby
+              </button>
+            </>
+          )}
+          {!isLobbyAdmin && (
+            <>
+              {isPlayerInLobby ? (
+                <button onClick={leaveLobby} className="s-button warning">
+                  Leave Lobby
+                </button>
+              ) : (
+                <button onClick={joinLobby} className="s-button">
+                  Join Lobby
+                </button>
+              )}
+            </>
+          )}
+          <button onClick={() => navigate("/")} className="s-button secondary">
+            Back to Dash
+          </button>
+        </section>
+      </div>
+    </>
   );
 };
 

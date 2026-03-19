@@ -15,7 +15,8 @@ export default function ErrorBanner() {
         right: 0,
         zIndex: 9999,
         padding: "12px 16px",
-        backgroundColor: "rgba(220, 38, 38, 0.95)",
+        backgroundColor: "rgba(220, 38, 38, 0.35)",
+        backdropFilter: "blur(5px)",
         color: "white",
         fontWeight: 600,
         display: "flex",
@@ -27,8 +28,8 @@ export default function ErrorBanner() {
       <button
         style={{
           marginLeft: 12,
-          backgroundColor: "rgba(255,255,255,0.2)",
-          border: "none",
+          backgroundColor: "transparent",
+          border: "1px solid white",
           color: "white",
           borderRadius: 4,
           padding: "4px 8px",
@@ -36,7 +37,7 @@ export default function ErrorBanner() {
         }}
         onClick={() => setErrorMessage(undefined)}
       >
-        Close
+        x
       </button>
     </div>
   );

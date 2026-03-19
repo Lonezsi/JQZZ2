@@ -1,0 +1,2570 @@
+package com.lonezsi.jqzz.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:5173", "http://localhost:3000")
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
+}
+package com.lonezsi.jqzz.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+    }
+}
+package com.lonezsi.jqzz.controller;
+
+import java.util.Map;
+
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.lonezsi.jqzz.model.Action;
+import com.lonezsi.jqzz.model.Lobby;
+import com.lonezsi.jqzz.repository.LobbyRepository;
+
+@RestController
+@RequestMapping("/game")
+public class GameController {
+
+    private final LobbyRepository lobbyRepository;
+    private final SimpMessagingTemplate messaging;
+
+    public GameController(
+        LobbyRepository lobbyRepository,
+        SimpMessagingTemplate messaging
+    ){
+        this.lobbyRepository = lobbyRepository;
+        this.messaging = messaging;
+    }
+
+    @PostMapping("/{lobbyId}/start")
+    public void start(@PathVariable Long lobbyId){
+
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+
+        lobby.reset();
+        lobbyRepository.save(lobby);
+
+        messaging.convertAndSend(
+            "/topic/lobby/" + lobbyId,
+            (Object) Map.of("event","quiz_started")
+        );
+    }
+
+    @PostMapping("/{lobbyId}/next")
+    public void next(@PathVariable Long lobbyId){
+
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+
+        Action action = lobby.nextAction();
+
+        lobbyRepository.save(lobby);
+
+        messaging.convertAndSend(
+            "/topic/lobby/" + lobbyId,
+            (Object) Map.of(
+                "event","action",
+                "action", action
+            )
+        );
+    }
+
+    @MessageMapping("/lobby/{lobbyId}/timer")
+    public void timerUpdate(@DestinationVariable Long lobbyId, @Payload TimerUpdate update) {
+        if (update == null || update.getAdminId() == null || update.getRemaining() == null) {
+            return;
+        }
+
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+
+        if (lobby.getAdminId() == null || !lobby.getAdminId().equals(update.getAdminId())) {
+            // ignore non-admin timer updates
+            return;
+        }
+
+        int remaining = update.getRemaining();
+        if (remaining < -1) {
+            return;
+        }
+
+        lobby.setTime(remaining);
+        lobbyRepository.save(lobby);
+
+        messaging.convertAndSend(
+            "/topic/lobby/" + lobbyId,
+            (Object) Map.of(
+                "event", "timer_update",
+                "time", remaining
+            )
+        );
+    }
+
+    public static class TimerUpdate {
+        private Long adminId;
+        private Integer remaining;
+
+        public Long getAdminId() {
+            return adminId;
+        }
+
+        public void setAdminId(Long adminId) {
+            this.adminId = adminId;
+        }
+
+        public Integer getRemaining() {
+            return remaining;
+        }
+
+        public void setRemaining(Integer remaining) {
+            this.remaining = remaining;
+        }
+    }
+}
+package com.lonezsi.jqzz.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.lonezsi.jqzz.model.Lobby;
+import com.lonezsi.jqzz.model.Player;
+import com.lonezsi.jqzz.repository.LobbyRepository;
+
+@RestController
+@RequestMapping("/lobbies")
+public class LobbyController {
+
+    private final LobbyRepository lobbyRepository;
+    private final SimpMessagingTemplate messaging;
+
+    public LobbyController(LobbyRepository lobbyRepository, SimpMessagingTemplate messaging) {
+        this.lobbyRepository = lobbyRepository;
+        this.messaging = messaging;
+    }
+
+    @GetMapping
+    public List<Lobby> getAll() {
+        return lobbyRepository.findAll();
+    }
+
+    @GetMapping("/{lobbyId}")
+    public Lobby getOne(@PathVariable Long lobbyId) {
+        return lobbyRepository.findById(lobbyId).orElseThrow();
+    }
+
+    @PostMapping
+    public Lobby create(@RequestBody CreateLobbyRequest request) {
+        Lobby lobby = new Lobby();
+        lobby.setName(request.getName());
+        lobby.setAdminId(request.getAdminId());
+        lobby.setCurrentActionIndex(-1);
+        lobby.setTime(0);
+
+        Player admin = new Player(String.valueOf(request.getAdminId()), 0);
+
+        lobby.getPlayers().add(admin);
+
+        Lobby saved = lobbyRepository.save(lobby);
+
+        messaging.convertAndSend(
+            "/topic/lobbies",
+            (Object) Map.of("event", "lobby_created", "lobby", saved)
+        );
+
+        return saved;
+    }
+
+    @PostMapping("/{lobbyId}/join")
+    public Lobby join(@PathVariable Long lobbyId, @RequestBody JoinLobbyRequest request) {
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+
+        boolean exists = lobby.getPlayers().stream()
+            .anyMatch(p -> p.userId().equals(request.getUserId()));
+
+        if (!exists) {
+            Player player = new Player(request.getUserId(), 0);
+            lobby.getPlayers().add(player);
+        }
+
+        Lobby saved = lobbyRepository.save(lobby);
+
+        messaging.convertAndSend(
+            "/topic/lobby/" + lobbyId,
+            (Object) Map.of("event", "players_update", "payload", saved.getPlayers())
+        );
+
+        return saved;
+    }
+
+    @PostMapping("/{lobbyId}/leave")
+    public Lobby leave(@PathVariable Long lobbyId, @RequestBody JoinLobbyRequest request) {
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+
+        lobby.getPlayers().removeIf(p -> p.userId().equals(request.getUserId()));
+
+        Lobby saved = lobbyRepository.save(lobby);
+
+        messaging.convertAndSend(
+            "/topic/lobby/" + lobbyId,
+            (Object) Map.of("event", "players_update", "payload", saved.getPlayers())
+        );
+
+        return saved;
+    }
+
+    @DeleteMapping("/{lobbyId}")
+    public void delete(@PathVariable Long lobbyId) {
+        lobbyRepository.deleteById(lobbyId);
+
+        messaging.convertAndSend(
+            "/topic/lobbies",
+            (Object) Map.of("event", "lobby_deleted", "lobbyId", lobbyId)
+        );
+    }
+
+    public static class CreateLobbyRequest {
+        private String name;
+        private Long adminId;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Long getAdminId() {
+            return adminId;
+        }
+
+        public void setAdminId(Long adminId) {
+            this.adminId = adminId;
+        }
+    }
+
+    public static class JoinLobbyRequest {
+        private String userId;
+
+        public String getUserId() {
+            return userId;
+        }
+
+        public void setUserId(String userId) {
+            this.userId = userId;
+        }
+    }
+}
+package com.lonezsi.jqzz.controller;
+
+import java.util.Map;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.lonezsi.jqzz.util.IdGenerator;
+
+import com.lonezsi.jqzz.model.User;
+import com.lonezsi.jqzz.repository.UserRepository;
+
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    private final UserRepository userRepository;
+    private final SimpMessagingTemplate messaging;
+
+    public UserController(UserRepository userRepository, SimpMessagingTemplate messaging) {
+        this.userRepository = userRepository;
+        this.messaging = messaging;
+    }
+
+    @PostMapping("/register")
+    public User register(@RequestBody RegisterRequest request) {
+
+        String id = IdGenerator.generateId();
+
+        String baseHandle = IdGenerator.generateHandle(request.getName());
+        String handle = baseHandle;
+
+        int attempts = 0;
+        while(userRepository.existsByHandle(handle)){
+            handle = baseHandle + IdGenerator.random(1);
+            attempts++;
+            if(attempts > 5){
+                handle = baseHandle + IdGenerator.random(attempts - 4);
+                break;
+            }
+            if(attempts > 10){
+                handle = "user" + IdGenerator.random(5);
+                break;
+            }
+        }
+
+        User user = new User();
+        user.setId(id);
+        user.setName(request.getName());
+        user.setHandle(handle);
+        user.setOnline(true);
+
+        User saved = userRepository.save(user);
+
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_registered", "user", saved)
+        );
+
+        return saved;
+    }
+
+    @PostMapping("/login")
+    public User login(@RequestBody LoginRequest request) {
+        User user = userRepository.findById(request.getId()).orElseThrow();
+        user.setOnline(true);
+
+        User saved = userRepository.save(user);
+
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_logged_in", "user", saved)
+        );
+
+        return saved;
+    }
+
+    @PostMapping("/logout")
+    public void logout(@RequestBody LogoutRequest request) {
+        User user = userRepository.findById(request.getId()).orElseThrow();
+        user.setOnline(false);
+
+        userRepository.save(user);
+
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_logged_out", "user", user)
+        );
+    }
+
+    @PostMapping("/{id}/handle")
+    public User updateHandle(@PathVariable String id, @RequestBody Map<String,String> body) {
+
+        String newHandle = body.get("handle")
+            .toLowerCase()
+            .replaceAll("[^a-z0-9]", "");
+
+        if(userRepository.existsByHandle(newHandle)){
+            throw new RuntimeException("Handle already taken");
+        }
+
+        User user = userRepository.findById(id).orElseThrow();
+        user.setHandle(newHandle);
+
+        User saved = userRepository.save(user);
+
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_updated", "user", saved)
+        );
+
+        return saved;
+    }
+
+    @PostMapping("/{id}/name")
+    public User updateName(@PathVariable String id, @RequestBody Map<String,String> body) {
+        User user = userRepository.findById(id).orElseThrow();
+        user.setName(body.get("name"));
+        return userRepository.save(user);
+    }
+
+    @PostMapping("/{id}/update")
+    public User update(@PathVariable String id, @RequestBody Map<String,String> body) {
+        User user = userRepository.findById(id).orElseThrow();
+
+        if(body.containsKey("name")) user.setName(body.get("name"));
+
+        User saved = userRepository.save(user);
+
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_updated", "user", saved)
+        );
+
+        return saved;
+    }
+
+    @GetMapping
+    public Iterable<User> getAll() {
+        return userRepository.findAll();
+    }
+
+    @GetMapping("/{userId}")
+    public User getOne(@PathVariable String userId) {
+        return userRepository.findById(userId).orElseThrow();
+    }
+
+    public static class RegisterRequest {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    public static class RegisterResponse {
+        private String userId;
+
+        public RegisterResponse(String userId) {
+            this.userId = userId;
+        }
+
+        public String getUserId() {
+            return userId;
+        }
+
+        public void setUserId(String userId) {
+            this.userId = userId;
+        }
+    }
+
+    public static class LoginRequest {
+        private String id;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+    }
+
+    public static class LogoutRequest {
+        private String id;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+    }
+}
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+
+@Entity
+public class Action {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SuppressWarnings("unused")
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name="question_id")
+    private Question question;
+
+    private Phase phase;
+
+    private int time;
+
+    @SuppressWarnings("unused")
+    private int orderIndex;
+
+    public Action(){}
+
+    public Action(Question question, Phase phase, int time){
+        this.question = question;
+        this.phase = phase;
+        this.time = time;
+    }
+
+    public Question getQuestion(){return question;}
+    public Phase getPhase(){return phase;}
+    public int getTime(){return time;}
+}
+package com.lonezsi.jqzz.model;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+
+@Entity
+public class Answer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name="question_id")
+    @JsonIgnore
+    private Question question;
+
+    private String text;
+
+    private int value;
+
+    private String imageUrl;
+
+    private String userId; // for USER_GENERATED types, to track who created this answer
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public String getText(){return text;}
+    public void setText(String text){this.text=text;}
+
+    public int getValue(){return value;}
+    public void setValue(int value){this.value=value;}
+
+    public String getImageUrl(){return imageUrl;}
+    public void setImageUrl(String imageUrl){this.imageUrl=imageUrl;}
+
+    public Question getQuestion(){return question;}
+    public void setQuestion(Question question){this.question=question;}
+
+    public String getUserId(){return userId;}
+    public void setUserId(String userId){this.userId=userId;}
+}
+package com.lonezsi.jqzz.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+
+@Entity
+public class Lobby {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    private Long adminId;
+
+    @ManyToOne
+    @JoinColumn(name="quiz_id")
+    private Quiz quiz;
+
+    private int currentActionIndex = -1;
+
+    private int time;
+
+    @ElementCollection
+    private List<Player> players = new ArrayList<>();
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public String getName(){return name;}
+    public void setName(String name){this.name=name;}
+
+    public Long getAdminId(){return adminId;}
+    public void setAdminId(Long adminId){this.adminId=adminId;}
+
+    public Quiz getQuiz(){return quiz;}
+    public void setQuiz(Quiz quiz){this.quiz=quiz;}
+
+    public int getCurrentActionIndex(){return currentActionIndex;}
+    public void setCurrentActionIndex(int currentActionIndex){this.currentActionIndex=currentActionIndex;}
+
+    public int getTime(){return time;}
+    public void setTime(int time){this.time=time;}
+
+    public List<Player> getPlayers(){return players;}
+    public void setPlayers(List<Player> players){this.players=players;}
+
+    public void addPlayer(String userId){
+        players.add(new Player(userId, 0));
+    }
+
+    // logic
+    public void updateScore(String userId, int score){
+        for(int i=0; i<players.size(); i++){
+            Player p = players.get(i);
+            if(p.userId().equals(userId)){
+                players.set(i, new Player(userId, p.score() + score));
+                break;
+            }
+        }
+    }
+
+    public Action nextAction(){
+
+        currentActionIndex++;
+
+        if(currentActionIndex >= quiz.getActions().size())
+            return null;
+
+        Action action = quiz.getActions().get(currentActionIndex);
+        time = action.getTime();
+
+        return action;
+    }
+
+    public boolean isQuizOver(){
+        if (quiz == null || quiz.getActions() == null || quiz.getActions().isEmpty()) {
+            return true;
+        }
+        return currentActionIndex >= quiz.getActions().size() - 1;
+    }
+
+    public Action getCurrentAction(){
+        if (quiz == null || quiz.getActions() == null || currentActionIndex < 0 || currentActionIndex >= quiz.getActions().size()) {
+            return null;
+        }
+        return quiz.getActions().get(currentActionIndex);
+    }
+
+    public void reset(){
+        currentActionIndex = -1;
+        time = 0;
+        for(int i=0; i<players.size(); i++){
+            Player p = players.get(i);
+            players.set(i, new Player(p.userId(), 0));
+        }
+    }
+}
+package com.lonezsi.jqzz.model;
+
+public enum Phase {
+    WAITING,
+    QUESTION,
+    ANSWER,
+    ELABORATION,
+    RESULT;
+    public static Phase fromString(String phase) {
+        try {
+            return Phase.valueOf(phase.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return WAITING; // default to WAITING if unknown
+        }
+    }
+}
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.Embeddable;
+
+@Embeddable
+public record Player(String userId, int score){}
+package com.lonezsi.jqzz.model;
+
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+
+@Entity
+public class Question {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name="quiz_id")
+    @JsonIgnore
+    private Quiz quiz;
+
+    private String text;
+
+    private String imageUrl;
+
+    private String elaborationText;
+
+    private String elaborationImageUrl;
+
+    private QuestionType type;
+
+    private String userId; // for user generated content, store the author's userId
+
+    @OneToMany(mappedBy="question", cascade = CascadeType.ALL)
+    private List<Answer> answers;
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public Quiz getQuiz(){return quiz;}
+    public void setQuiz(Quiz quiz){this.quiz=quiz;}
+
+    public List<Answer> getAnswers(){return answers;}
+    public void setAnswers(List<Answer> answers){this.answers=answers;}
+
+    public String getUserId(){return userId;}
+    public void setUserId(String userId){this.userId=userId;}
+
+    // data
+    public String getText(){return text;}
+    public void setText(String text){this.text=text;}
+
+    public String getImageUrl(){return imageUrl;}
+    public void setImageUrl(String imageUrl){this.imageUrl=imageUrl;}
+
+    public String getElaborationText(){return elaborationText;}
+    public void setElaborationText(String elaborationText){this.elaborationText=elaborationText;}
+    
+    public String getElaborationImageUrl(){return elaborationImageUrl;}
+    public void setElaborationImageUrl(String elaborationImageUrl){this.elaborationImageUrl=elaborationImageUrl;}
+
+    public QuestionType getType(){return type;}
+    public void setType(QuestionType type){this.type=type;}
+
+    // --- Logic to compute results based on type ---
+    
+    public int evaluateSingleChoice(int selectedAnswerId){
+        if(type != QuestionType.PREWRITTEN_SINGLE) throw new IllegalStateException("Wrong question type");
+        return answers.stream()
+                .filter(a -> a.getId().intValue() == selectedAnswerId)
+                .mapToInt(Answer::getValue)
+                .findFirst()
+                .orElse(0);
+    }
+
+    public int evaluateMultipleChoice(List<Integer> selectedAnswerIds){
+        if(type != QuestionType.PREWRITTEN_MULTIPLE) throw new IllegalStateException("Wrong question type");
+        return answers.stream()
+                .filter(a -> selectedAnswerIds.contains(a.getId().intValue()))
+                .mapToInt(Answer::getValue)
+                .sum();
+    }
+
+    public List<Answer> evaluateTierlist(){
+        if(type != QuestionType.TIERLIST) throw new IllegalStateException("Wrong question type");
+        // In tierlist, the Answer.value stores the position
+        answers.sort((a,b) -> Integer.compare(a.getValue(), b.getValue()));
+        return answers;
+    }
+
+    public Answer evaluateKnockoutBattle(int firstAnswerId, int secondAnswerId){
+        if(type != QuestionType.KNOCKOUT_BATTLE) throw new IllegalStateException("Wrong question type");
+        Answer first = answers.stream().filter(a -> a.getId().intValue()==firstAnswerId).findFirst().orElse(null);
+        Answer second = answers.stream().filter(a -> a.getId().intValue()==secondAnswerId).findFirst().orElse(null);
+        if(first == null || second == null) return null;
+        // Winner = higher value
+        return first.getValue() >= second.getValue() ? first : second;
+    }
+
+    public void assignUserAnswer(int answerId, int value){
+        // Generic for user generated answers (text/image)
+        Answer ans = answers.stream().filter(a -> a.getId().intValue()==answerId).findFirst().orElse(null);
+        if(ans != null){
+            ans.setValue(value);
+        }
+    }
+
+    // --- USER GENERATED VOTE ---
+    public Answer evaluateVote(){
+        if(type != QuestionType.USER_GENERATED_VOTE) throw new IllegalStateException("Wrong question type");
+        // Each answer's value represents number of votes
+        return answers.stream()
+                .max(Comparator.comparingInt(Answer::getValue))
+                .orElse(null);
+    }
+
+    // --- USER GENERATED IDENTIFY ---
+    public Map<Answer, Answer> evaluateIdentify(Map<Integer, Long> guessMap){
+        /*
+         * guessMap: key = answerId being guessed, value = userId guessed as author
+         * returns: Map<Answer, Answer> where key = answer, value = userAnswer guessed as correct author
+         */
+        if(type != QuestionType.USER_GENERATED_IDENTIFY) throw new IllegalStateException("Wrong question type");
+
+        Map<Answer, Answer> results = new HashMap<>();
+        for(Answer ans : answers){
+            Long guessedUserId = guessMap.get(ans.getId().intValue());
+            if(guessedUserId != null){
+                // find the correct answer submitted by that user
+                Answer correctAnswer = answers.stream()
+                        .filter(a -> a.getUserId().equals(guessedUserId.toString()))
+                        .findFirst()
+                        .orElse(null);
+                results.put(ans, correctAnswer);
+            } else {
+                results.put(ans, null);
+            }
+        }
+        return results;
+    }
+}
+package com.lonezsi.jqzz.model;
+
+public enum QuestionType {
+    PREWRITTEN_SINGLE,       // 1: prewritten answers, each gives points = value
+    PREWRITTEN_MULTIPLE,     // 2: prewritten answers, multiple selectable, points = value
+    USER_GENERATED,          // 3: no answers, user adds text/image
+    USER_GENERATED_VOTE,     // 4: user adds answers, next question votes for favourite
+    USER_GENERATED_IDENTIFY, // 5: user adds answers, next question asks who answered this
+    TIERLIST,                // 6: tierlist, drag squares into tiers, updating values
+    KNOCKOUT_BATTLE          // 7: user adds answers, next questions form knockout battle tree
+}
+package com.lonezsi.jqzz.model;
+
+import java.util.List;
+import java.util.ArrayList;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.JoinColumn;
+
+@Entity
+public class Quiz {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    private String authorId;
+
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name="quiz_id")
+    private List<Action> actions = new ArrayList<>();
+
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
+    public List<Action> getActions(){return actions;}
+    public void setActions(List<Action> actions){this.actions=actions;}
+
+    public String getName(){return name;}
+    public void setName(String name){this.name=name;}
+
+    public String getAuthorId(){return authorId;}
+    public void setAuthorId(String authorId){this.authorId=authorId;}
+
+    public void concat(Quiz other){
+        this.actions.addAll(other.getActions());
+    }
+}
+package com.lonezsi.jqzz.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+
+@Entity
+public class User {
+    @Id
+    private String id;
+
+    @Column(unique=true)
+    private String handle;
+
+    private String name;
+
+    // these are actually ALL optional
+    private String password;
+    private String email;
+    private String profilePictureUrl;
+
+    private boolean online;
+
+    public User() {}
+
+    public String getId(){return id;}
+    public void setId(String id){this.id=id;}
+
+    public String getHandle(){return handle;}
+    public void setHandle(String handle){this.handle=handle;}
+
+    public String getName(){return name;}
+    public void setName(String name){this.name=name;}
+
+    public String getPassword(){return password;}
+    public void setPassword(String password){this.password=password;}
+
+    public String getEmail(){return email;}
+    public void setEmail(String email){this.email=email;}
+
+    public String getProfilePictureUrl(){return profilePictureUrl;}
+    public void setProfilePictureUrl(String profilePictureUrl){this.profilePictureUrl=profilePictureUrl;}
+
+    public boolean isOnline(){return online;}
+    public void setOnline(boolean online){this.online=online;}
+}
+package com.lonezsi.jqzz.repository;
+
+import com.lonezsi.jqzz.model.Lobby;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface LobbyRepository extends JpaRepository<Lobby, Long> {
+}
+package com.lonezsi.jqzz.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.lonezsi.jqzz.model.User;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, String> {
+    boolean existsByHandle(String handle);
+    User findByHandle(String handle);
+}
+package com.lonezsi.jqzz.util;
+
+public class IdGenerator {
+
+    private static final String CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+    public static String random(int length) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            int idx = (int)(Math.random() * CHARS.length());
+            sb.append(CHARS.charAt(idx));
+        }
+        return sb.toString();
+    }
+
+    public static String generateId() {
+        return random(10); // internal ID
+    }
+
+    public static String generateHandle(String base) {
+        String clean = base.toLowerCase().replaceAll("[^a-z0-9]", "");
+        if(clean.isEmpty()) clean = "user";
+        return clean;
+    }
+}
+package com.lonezsi.jqzz;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class JqzzApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(JqzzApplication.class, args);
+	}
+
+}
+package com.lonezsi.jqzz.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+//import org.springframework.messaging.simp.SimpMessagingTemplate;
+
+import com.lonezsi.jqzz.model.Lobby;
+import com.lonezsi.jqzz.model.Player;
+import com.lonezsi.jqzz.repository.LobbyRepository;
+
+@ExtendWith(MockitoExtension.class)
+class LobbyControllerTest {
+
+    @Mock
+    private LobbyRepository lobbyRepository;
+
+    //@Mock
+    //private SimpMessagingTemplate messaging;
+
+    @InjectMocks
+    private LobbyController lobbyController;
+
+    @Test
+    void create_shouldSaveLobbyAndSendWebSocketEvent() {
+        LobbyController.CreateLobbyRequest request = new LobbyController.CreateLobbyRequest();
+        request.setName("Test Lobby");
+        request.setAdminId(123L);
+
+        Lobby savedLobby = new Lobby();
+        savedLobby.setId(1L);
+        savedLobby.setName("Test Lobby");
+        savedLobby.setAdminId(123L);
+        savedLobby.setCurrentActionIndex(-1);
+        savedLobby.getPlayers().add(new Player("123", 0));
+
+        when(lobbyRepository.save(org.mockito.ArgumentMatchers.any(Lobby.class))).thenReturn(savedLobby);
+
+        Lobby result = lobbyController.create(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getName()).isEqualTo("Test Lobby");
+        assertThat(result.getAdminId()).isEqualTo(123L);
+        assertThat(result.getCurrentActionIndex()).isEqualTo(-1);
+        assertThat(result.getPlayers()).hasSize(1);
+        assertThat(result.isQuizOver()).isTrue();
+
+        verify(lobbyRepository).save(org.mockito.ArgumentMatchers.any(Lobby.class));
+    }
+
+    @Test
+    void join_shouldAddPlayerWhenNonExistingAndSendPlayersUpdateEvent() {
+        LobbyController.JoinLobbyRequest request = new LobbyController.JoinLobbyRequest();
+        request.setUserId("player1");
+
+        Lobby lobby = new Lobby();
+        lobby.setId(1L);
+        lobby.setName("Test Lobby");
+        lobby.setAdminId(123L);
+
+        when(lobbyRepository.findById(1L)).thenReturn(Optional.of(lobby));
+        when(lobbyRepository.save(org.mockito.ArgumentMatchers.any(Lobby.class))).thenAnswer(i -> i.getArgument(0));
+
+        Lobby result = lobbyController.join(1L, request);
+
+        assertThat(result.getPlayers()).extracting(Player::userId).contains("player1");
+
+        verify(lobbyRepository).findById(1L);
+        verify(lobbyRepository).save(lobby);
+    }
+}
+package com.lonezsi.jqzz;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class JqzzApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+@font-face{font-family:OldEnglishFive;src:url(/OldEnglishFive.ttf) format("truetype")}:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;line-height:1.6;font-weight:400;color-scheme:light;background:url(/bg.jpg);background-size:100% 100%;background-attachment:fixed;--inky-texture: url(https://texturelabs.org/wp-content/uploads/Texturelabs_Paper_269S.jpg);color:#1a1a1a;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;--primary: #1a1a1a;--primary-dark: #000000;--secondary: #4a4a4a;--accent: #8a8a8a;--hero-gradient-start: rgba(0, 0, 0, .03);--hero-gradient-end: rgba(0, 0, 0, .01);--hover-bg-light: rgba(0, 0, 0, .05);--shadow-primary-weak: rgba(0, 0, 0, .05);--shadow-primary-medium: rgba(0, 0, 0, .08);--shadow-primary-strong: rgba(0, 0, 0, .12);--bg-primary: rgba(255, 255, 255, .85);--bg-secondary: rgba(245, 245, 240, .9);--border: rgba(0, 0, 0, .15);--text-primary: #111111;--text-secondary: #555555;--text-white: #ffffff}*{margin:0;padding:0;box-sizing:border-box}a{font-weight:500;color:var(--primary);text-decoration:none;transition:color .3s ease}a:hover{color:var(--accent)}body{margin:0;min-width:320px;min-height:100vh}#root{width:100%;min-height:100vh}.tag{position:absolute;margin-bottom:0;bottom:0;right:5px;opacity:.2;z-index:-1}.align-center{text-align:center}h1,h2,h3{font-family:OldEnglishFive,serif}h1{font-size:clamp(2rem,10vw,4rem);line-height:1.2;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}h2{font-size:clamp(1.5rem,5vw,2.5rem);line-height:1.3;font-weight:600}h3{font-size:clamp(1.1rem,3vw,1.5rem);font-weight:600;margin-bottom:.75rem}p{color:var(--text-secondary);font-size:.95rem}button{border-radius:10px;border:2px solid var(--border);padding:.75rem 1.5rem;font-size:1rem;font-weight:600;font-family:inherit;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);background-image:var(--inky-texture);background-size:cover;color:#fff;cursor:pointer;transition:all .3s ease}button:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 10px 30px var(--shadow-primary-medium)}button:active{transform:translateY(0)}button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}input[type=text],input[type=number],textarea{width:100%;padding:.75rem 1rem;border:2px solid var(--border);background-color:var(--bg-secondary);color:var(--text-primary);font-family:inherit;font-size:.95rem;border-radius:8px;transition:all .3s ease}input[type=text]:focus,input[type=number]:focus,textarea:focus{outline:none;border-color:var(--primary);background-color:var(--hover-bg-light)}input::placeholder,textarea::placeholder{color:var(--text-secondary)}.dashboard-container{width:100%;display:flex;flex-direction:column;padding-bottom:4rem}.hero-section{width:100%;padding:4rem 2rem;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--hero-gradient-start) 0%,var(--hero-gradient-end) 100%);border-bottom:1px solid var(--border);min-height:400px}.hero-content{display:flex;align-items:center;justify-content:center;gap:3rem;max-width:900px;width:100%}.hero-logo{flex:0 0 auto;width:250px;height:250px;display:flex;align-items:center;justify-content:center}.hero-logo img{max-width:100%;height:auto;animation:float 3s ease-in-out infinite;mix-blend-mode:color-burn}.bento-box:before{content:"";position:absolute;inset:0;mix-blend-mode:multiply;background-color:var(--primary);background-position:center;opacity:.02;z-index:-1}.hero-text{flex:1}.hero-text h1{margin-bottom:1rem}.tagline{font-size:1.25rem;color:var(--text-secondary);margin:0;font-weight:500}.main-container{width:100%;max-width:1400px;margin:0 auto;padding:0 2rem}.bento-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));grid-auto-rows:1fr;gap:.8rem;align-items:start;width:100%;margin-top:1.25rem}.bento-box{border:1px solid var(--border);padding:1rem;border-radius:12px;transition:transform .18s ease,box-shadow .18s ease;display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:120px}.bento-box:hover:not(.hero-section){border-color:var(--primary);transform:translateY(-8px);box-shadow:0 20px 40px var(--shadow-primary-weak)}.bento-box-large{grid-column:span 2}.bento-box-tall{grid-row:span 2}.bento-box-wide{grid-column:span 2}@media(min-width:768px){.bento-box-large{grid-column:span 3}.bento-grid{grid-template-columns:repeat(2,1fr)}}@media(min-width:1024px){.bento-grid{grid-template-columns:repeat(6,1fr)}.bento-box-large{grid-column:span 3}}.box-header{margin-bottom:1.5rem}.box-header h2{margin-bottom:.5rem;color:var(--text-primary)}.box-header p{color:var(--text-secondary);font-size:.9rem;margin:0}.box-header h3{color:var(--text-primary)}.lobby-form{display:flex;flex-direction:column;gap:1rem;flex:1;justify-content:flex-end}.lobby-form input{padding:1rem;font-size:1rem}.lobby-form button{padding:1rem;font-size:1rem;width:100%}.lobby-list{display:flex;flex-direction:column;gap:1rem}.lobby-item{display:flex;align-items:center;justify-content:space-between;padding:1.25rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;transition:all .3s ease}.lobby-item:hover{background:var(--hover-bg-light);border-color:var(--primary)}.lobby-info{display:flex;flex-direction:column;gap:.5rem;flex:1}.lobby-name{font-weight:600;color:var(--text-primary);font-size:1.1rem}.lobby-id{font-size:.85rem;color:var(--text-secondary)}.btn-join{margin-left:1rem;white-space:nowrap;border:none;padding:.75rem 1.5rem;font-size:.95rem}.btn-join:hover{transform:translateY(-2px);box-shadow:0 8px 20px var(--shadow-primary-strong)}.empty-state{display:flex;align-items:center;justify-content:center;min-height:150px;text-align:center}.empty-state p{margin:0;color:var(--text-secondary)}.stat-number{font-size:3rem;font-weight:700;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:1rem 0;line-height:1}.stat-label{color:var(--text-secondary);margin:0;font-size:.9rem}.btn-primary,.btn-secondary{border:none;font-weight:600;transition:all .3s ease;cursor:pointer;border-radius:10px;width:100%;padding:.875rem}.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px var(--shadow-primary-medium)}.btn-secondary{filter:invert(1);color:var(--text-white);border:2px solid var(--primary)}.btn-secondary:hover{transform:translateY(-2px);border:2px solid var(--text-white)}@media(max-width:768px){.hero-content{flex-direction:column;gap:2rem;text-align:center}.hero-logo{width:180px;height:180px}.hero-text{text-align:center}.hero-section{padding:2rem 1.5rem;min-height:300px}.main-container{padding:0 1.5rem}.bento-box{padding:1.5rem}.lobby-item{flex-direction:column;align-items:flex-start;gap:1rem}.btn-join{margin-left:0;width:100%}.bento-grid{gap:1rem}.box-header h2{font-size:1.5rem}}@media(max-width:480px){.hero-logo{width:150px;height:150px}.hero-section{padding:1.5rem 1rem;min-height:250px}.bento-box{padding:1.25rem}.stat-number{font-size:2rem}.tagline{font-size:1rem}}
+export default function AnswerLockedScreen() {
+  return (
+    <div className="p-6 rounded-lg shadow-lg bg-white text-center">
+      <h2 className="text-2xl mb-2">Answer submitted!</h2>
+      <p className="text-gray-600">Waiting for results...</p>
+    </div>
+  );
+}
+import useGameStore from "../store/gameStore";
+
+export default function ElaborationScreen() {
+  const action = useGameStore((s) => s.currentAction);
+  const q = action?.question;
+
+  if (!q) return <div>No elaboration</div>;
+
+  return (
+    <div className="p-6 rounded-lg shadow-lg bg-white">
+      <h3 className="text-2xl mb-2">Explanation</h3>
+      <p className="text-lg">{q?.text}</p>
+      {q?.imageUrl && (
+        <img src={q.imageUrl} alt="elaboration" className="mt-4 max-w-full" />
+      )}
+    </div>
+  );
+}
+import useGameStore from "../store/gameStore";
+
+export default function ErrorBanner() {
+  const errorMessage = useGameStore((s) => s.errorMessage);
+  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
+
+  if (!errorMessage) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        padding: "12px 16px",
+        backgroundColor: "rgba(220, 38, 38, 0.35)",
+        backdropFilter: "blur(5px)",
+        color: "white",
+        fontWeight: 600,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <span>{errorMessage}</span>
+      <button
+        style={{
+          marginLeft: 12,
+          backgroundColor: "transparent",
+          border: "1px solid white",
+          color: "white",
+          borderRadius: 4,
+          padding: "4px 8px",
+          cursor: "pointer",
+        }}
+        onClick={() => setErrorMessage(undefined)}
+      >
+        x
+      </button>
+    </div>
+  );
+}
+import useGameStore from "../store/gameStore";
+
+export default function Leaderboard() {
+  const players = useGameStore((s) => s.players.slice()).sort(
+    (a, b) => b.score - a.score,
+  );
+
+  return (
+    <div className="p-4 bg-gray-50 rounded">
+      <h4 className="text-xl">🏆 Leaderboard</h4>
+      <ol className="mt-2 list-decimal pl-5">
+        {players.map((p) => (
+          <li key={p.id} className="py-1">
+            <strong>{p.name}</strong> — {p.score}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+import { useEffect, useState } from "react";
+import useGameStore from "../store/gameStore";
+import api from "../api/client";
+
+export default function QuestionScreen() {
+  const action = useGameStore((s) => s.currentAction);
+  const lobbyId = useGameStore((s) => s.lobbyId);
+
+  const [selected, setSelected] = useState<number | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const submitAnswer = async (questionId: number, answerId: number) => {
+    if (!lobbyId) return;
+    if (submitted) return;
+    setSelected(answerId);
+    try {
+      await api.post(`/game/${lobbyId}/answer`, {
+        questionId,
+        answerId,
+      });
+      setSubmitted(true);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
+  };
+
+  if (!action?.question) return <div>No question</div>;
+
+  const q = action.question;
+
+  useEffect(() => {
+    // reset selection when a new action/question arrives
+    setSelected(null);
+    setSubmitted(false);
+  }, [action?.orderIndex, action?.question?.id]);
+
+  return (
+    <div className="p-6 rounded-lg shadow-lg bg-white">
+      <h2 className="text-3xl mb-4">{q.text}</h2>
+      {q.imageUrl && (
+        <img src={q.imageUrl} alt="question" className="mb-4 max-w-full" />
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        {q.answers?.map((a) => {
+          const isSelected = selected === a.id;
+          return (
+            <button
+              key={a.id}
+              onClick={() => submitAnswer(q.id, a.id)}
+              disabled={submitted}
+              className={`p-4 rounded-lg text-xl focus:outline-none transition-colors ${
+                submitted
+                  ? isSelected
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-200 text-gray-600 cursor-not-allowed"
+                  : isSelected
+                    ? "bg-indigo-700 text-white"
+                    : "bg-indigo-600 text-white"
+              }`}
+            >
+              {a.text}
+            </button>
+          );
+        })}
+      </div>
+
+      {submitted && (
+        <div className="mt-4 text-center text-green-700">
+          Answer submitted! Waiting for results...
+        </div>
+      )}
+    </div>
+  );
+}
+import useGameStore from "../store/gameStore";
+import Leaderboard from "./Leaderboard";
+
+export default function ResultScreen() {
+  const action = useGameStore((s) => s.currentAction);
+  const q = action?.question;
+
+  return (
+    <div className="p-6 rounded-lg shadow-lg bg-white">
+      <h3 className="text-2xl mb-2">Results</h3>
+      {q ? (
+        <div>
+          <p className="text-lg">Correct answer shown on server</p>
+          <p className="mt-2 font-semibold">{q.text}</p>
+        </div>
+      ) : (
+        <p>No result data</p>
+      )}
+      <div className="mt-6">
+        <Leaderboard />
+      </div>
+    </div>
+  );
+}
+import useGameStore from "../store/gameStore";
+
+export default function WaitingScreen() {
+  const timer = useGameStore((s) => s.timer);
+  const currentAction = useGameStore((s) => s.currentAction);
+
+  return (
+    <div className="p-6 rounded-lg shadow-lg bg-white">
+      <h2 className="text-2xl mb-2">Next question starting in</h2>
+      <div className="text-6xl font-bold">{timer}</div>
+      {currentAction?.question?.text && (
+        <p className="mt-4 text-gray-600">{currentAction.question.text}</p>
+      )}
+    </div>
+  );
+}
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Utility Classes */
+.logo {
+  max-width: 100%;
+  height: auto;
+  transition: transform 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+.card {
+  padding: 2rem;
+  border-radius: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+}
+
+/* Text utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Dashboard from "./Dashboard";
+import LobbyView from "./LobbyView";
+import ErrorBanner from "./components/ErrorBanner";
+
+function App() {
+  return (
+    <>
+      <ErrorBanner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/lobby/:id" element={<LobbyView />} />
+        </Routes>
+      </BrowserRouter>
+    </>
+  );
+}
+
+export default App;
+.dashboard-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 4rem;
+  zoom: 0.8;
+}
+
+/* Hero Section */
+.hero-section {
+  width: 100%;
+  padding: 4rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    var(--hero-gradient-start) 0%,
+    var(--hero-gradient-end) 100%
+  );
+  border-bottom: 1px solid var(--border);
+  min-height: 400px;
+}
+
+.hero-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  max-width: 900px;
+  width: 100%;
+}
+
+.hero-logo {
+  flex: 0 0 auto;
+  width: 250px;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-logo img {
+  max-width: 100%;
+  height: auto;
+  animation: float 3s ease-in-out infinite;
+  mix-blend-mode: color-burn;
+}
+
+.bento-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  mix-blend-mode: multiply;
+  background-color: var(--primary);
+  background-position: center;
+
+  opacity: 0.02;
+  z-index: -1;
+}
+
+.hero-text {
+  flex: 1;
+}
+
+.hero-text h1 {
+  margin-bottom: 1rem;
+}
+
+.tagline {
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Main Container */
+.main-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Bento Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 0.8rem;
+  align-items: start;
+  width: 100%;
+  margin-top: 1.25rem;
+}
+
+.bento-box {
+  border: 1px solid var(--border);
+  padding: 1rem;
+  border-radius: 12px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  width: 100%;
+  height: 100%;
+}
+
+.bento-box:hover:not(.hero-section) {
+  border-color: var(--primary);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px var(--shadow-primary-weak);
+}
+
+.bento-box-large {
+  grid-column: span 2;
+}
+
+.bento-box-tall {
+  grid-row: span 2;
+}
+
+.bento-box-wide {
+  grid-column: span 2;
+}
+
+/* Box Header */
+.box-header {
+  margin-bottom: 1.5rem;
+}
+
+.box-header h2 {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.box-header p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.box-header h3 {
+  color: var(--text-primary);
+}
+
+/* Lobby Form */
+.lobby-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.lobby-form input {
+  padding: 1rem;
+}
+
+.lobby-form button {
+  padding: 1rem;
+  width: 100%;
+}
+
+/* Lobby List */
+.lobby-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lobby-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.lobby-item:hover {
+  background: var(--hover-bg-light);
+  border-color: var(--primary);
+}
+
+.lobby-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.lobby-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lobby-id {
+  color: var(--text-secondary);
+}
+
+.btn-join {
+  margin-left: 1rem;
+  white-space: nowrap;
+  border: none;
+  padding: 0.75rem 1.5rem;
+}
+
+.btn-join:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--shadow-primary-strong);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  text-align: center;
+}
+
+.empty-state p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Stats */
+.stat-number {
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 1rem 0;
+  line-height: 1;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Buttons */
+.btn-primary,
+.btn-secondary {
+  border: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: 10px;
+  width: 100%;
+  padding: 0.875rem;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px var(--shadow-primary-medium);
+}
+
+.btn-secondary {
+  filter: invert(1);
+  color: var(--text-white);
+  border: 2px solid var(--primary);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  border: 2px solid var(--text-white);
+}
+
+/* User List Box */
+.user-list-box {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.user-item.online {
+  border-color: var(--primary);
+  background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--text-white);
+}
+
+.user-item input {
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  color: inherit;
+  width: 100%;
+}
+
+.user-item input:focus {
+  outline: none;
+  text-decoration: underline;
+}
+
+.user-status {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 1rem;
+}
+
+.auth-box {
+  gap: 1rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.dropdown-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.dropdown-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.user-item span {
+  font-size: 1.2rem;
+}
+
+.user-item.online span {
+  color: limegreen;
+}
+
+.user-item:not(.online) span {
+  color: gray;
+}
+
+/* smoother feel */
+.bento-box {
+  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* hover polish */
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+/* animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-content {
+    flex-direction: column;
+    gap: 2rem;
+    text-align: center;
+  }
+
+  .hero-logo {
+    width: 180px;
+    height: 180px;
+  }
+
+  .hero-text {
+    text-align: center;
+  }
+
+  .hero-section {
+    padding: 2rem 1.5rem;
+    min-height: 300px;
+  }
+
+  .main-container {
+    padding: 0 1.5rem;
+  }
+
+  .bento-box {
+    padding: 1.5rem;
+  }
+
+  .lobby-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .btn-join {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .bento-grid {
+    gap: 1rem;
+  }
+}
+import { useState, useEffect } from "react";
+import type { SubmitEvent } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { API_ENDPOINT } from "./config/api";
+import useGameStore from "./store/gameStore";
+import "./Dashboard.css";
+
+interface Lobby {
+  id: number;
+  name: string;
+}
+
+interface User {
+  id: string;
+  handle: string;
+  name: string;
+  online: boolean;
+}
+
+const Dashboard = () => {
+  const [lobbies, setLobbies] = useState<Lobby[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [lobbyName, setLobbyName] = useState("");
+
+  // 🔥 unified auth state
+  const [handle, setHandle] = useState("");
+  const [name, setName] = useState("");
+  const [extraOpen, setExtraOpen] = useState(false);
+  const [userExists, setUserExists] = useState<boolean | null>(null);
+
+  const userId = useGameStore((s) => s.userId);
+  const setUserId = useGameStore((s) => s.setUserId);
+  const setUserName = useGameStore((s) => s.setUserName);
+  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
+
+  const navigate = useNavigate();
+
+  // 🔥 LIVE HANDLE CHECK
+  useEffect(() => {
+    if (!handle) {
+      setUserExists(null);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await axios.get<User[]>(`${API_ENDPOINT}/users`);
+        const found = res.data.find((u) => u.handle === handle);
+        setUserExists(!!found);
+      } catch {
+        setUserExists(null);
+      }
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [handle]);
+
+  // fetch data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const usersRes = await axios.get<User[]>(`${API_ENDPOINT}/users`);
+        setUsers(
+          usersRes.data.sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0)),
+        );
+
+        const lobbiesRes = await axios.get<Lobby[]>(`${API_ENDPOINT}/lobbies`);
+        setLobbies(lobbiesRes.data);
+      } catch (err) {
+        setErrorMessage(`Failed to load data: ${err}`);
+      }
+    };
+
+    fetchData();
+  }, [setErrorMessage]);
+
+  // 🔥 unified login/register
+  const handleAuth = async (e: SubmitEvent) => {
+    e.preventDefault();
+
+    try {
+      if (userExists) {
+        const user = users.find((u) => u.handle === handle);
+        if (!user) return;
+
+        const res = await axios.post(`${API_ENDPOINT}/users/login`, {
+          id: user.id,
+        });
+
+        setUserId(res.data.id);
+        setUserName(res.data.name);
+      } else {
+        const res = await axios.post(`${API_ENDPOINT}/users/register`, {
+          name: name || handle || "Guest",
+        });
+
+        setUserId(res.data.id);
+        setUserName(res.data.name);
+      }
+    } catch (err) {
+      setErrorMessage(`Auth failed: ${err}`);
+    }
+  };
+
+  const createLobby = async (e: SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post<Lobby>(`${API_ENDPOINT}/lobbies`, {
+        name: lobbyName,
+        adminId: userId,
+      });
+      navigate(`/lobby/${res.data.id}`);
+    } catch (err) {
+      setErrorMessage(`Failed to create lobby: ${err}`);
+    }
+  };
+
+  const renameUser = (id: string, newName: string) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, name: newName } : u)),
+    );
+
+    axios
+      .post(`${API_ENDPOINT}/users/${id}/name`, { name: newName })
+      .catch((err) => setErrorMessage(`Failed to rename user: ${err}`));
+  };
+
+  return (
+    <div className="dashboard-container">
+      <div className="main-container">
+        <div className="bento-grid">
+          {/* HERO (unchanged) */}
+          <div className="bento-box hero-section">
+            <div className="hero-logo">
+              <img src="/logo.png" alt="JQZZ Logo" />
+            </div>
+            <div className="hero-text align-center">
+              <h1>---JQzz---</h1>
+              <p className="tagline">
+                Egy teljesen egyedi weboldal, a kompetíció egyébként is béna (és
+                még drága is)
+              </p>
+              <h1 className="tag">;Lonezsi</h1>
+            </div>
+          </div>
+
+          {/* 🔥 AUTH BOX (NEW but same style slot) */}
+          <div className="bento-box">
+            <div className="box-header">
+              <h2>Account</h2>
+            </div>
+
+            <form onSubmit={handleAuth} className="auth-form">
+              <input
+                type="text"
+                placeholder="Handle..."
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+              />
+
+              <button
+                type="button"
+                className="dropdown-toggle"
+                onClick={() => setExtraOpen(!extraOpen)}
+              >
+                {extraOpen ? "Less ▲" : "More ▼"}
+              </button>
+
+              {extraOpen && (
+                <div className="dropdown-area">
+                  <input
+                    type="text"
+                    placeholder="Display name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <button type="submit" className="btn-primary">
+                {userExists === null
+                  ? "Continue"
+                  : userExists
+                    ? "Login"
+                    : "Register"}
+              </button>
+            </form>
+          </div>
+
+          {/* CREATE LOBBY (kept) */}
+          <div className="bento-box">
+            <div className="box-header">
+              <h2>Create New Lobby</h2>
+            </div>
+
+            <form onSubmit={createLobby} className="lobby-form">
+              <input
+                value={lobbyName}
+                onChange={(e) => setLobbyName(e.target.value)}
+                placeholder="Enter lobby name"
+                required
+              />
+              <button type="submit" className="btn-primary">
+                Create Lobby
+              </button>
+            </form>
+          </div>
+
+          {/* USERS (kept, but live typing already good) */}
+          <div className="bento-box">
+            <div className="box-header">
+              <h2>Users</h2>
+            </div>
+
+            <div className="user-list-box">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className={`user-item ${user.online ? "online" : ""}`}
+                >
+                  <input
+                    value={user.name}
+                    onChange={(e) => renameUser(user.id, e.target.value)}
+                  />
+                  <span className="user-status">
+                    {user.online ? "Online" : "Offline"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* LOBBIES (kept) */}
+          <div className="bento-box">
+            <div className="box-header">
+              <h2>Join Existing Lobby</h2>
+            </div>
+
+            {lobbies.length > 0 ? (
+              <div className="lobby-list">
+                {lobbies.map((lobby) => (
+                  <div key={lobby.id} className="lobby-item">
+                    <span className="lobby-name">{lobby.name}</span>
+                    <button
+                      onClick={() => navigate(`/lobby/${lobby.id}`)}
+                      className="btn-join"
+                    >
+                      Join →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No lobbies yet</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
+@font-face {
+  font-family: "OldEnglishFive";
+  src: url("/OldEnglishFive.ttf") format("truetype");
+}
+
+:root {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+
+  line-height: 1.6;
+  font-weight: 400;
+
+  color-scheme: light;
+
+  /* paper background */
+  background: url("/bg.jpg");
+  background-size: 100% 100%;
+  background-attachment: fixed;
+
+  /* texture overlay */
+  --inky-texture: url(https://texturelabs.org/wp-content/uploads/Texturelabs_Paper_269S.jpg);
+
+  color: #1a1a1a;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* monochrome palette */
+
+  --primary: #1a1a1a;
+  --primary-dark: #000000;
+  --secondary: #4a4a4a;
+  --accent: #8a8a8a;
+
+  /* subtle newspaper gradient */
+  --hero-gradient-start: rgba(0, 0, 0, 0.03);
+  --hero-gradient-end: rgba(0, 0, 0, 0.01);
+
+  --hover-bg-light: rgba(0, 0, 0, 0.05);
+
+  --shadow-primary-weak: rgba(0, 0, 0, 0.05);
+  --shadow-primary-medium: rgba(0, 0, 0, 0.08);
+  --shadow-primary-strong: rgba(0, 0, 0, 0.12);
+
+  /* UI surfaces */
+
+  --bg-primary: rgba(255, 255, 255, 0.85);
+  --bg-secondary: rgba(245, 245, 240, 0.9);
+
+  --border: rgba(0, 0, 0, 0.15);
+
+  /* text */
+
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --text-white: #ffffff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+a {
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+a:hover {
+  color: var(--accent);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.tag {
+  position: absolute;
+  margin-bottom: 0px;
+  bottom: 0;
+  right: 5px;
+  opacity: 0.2;
+  z-index: -1;
+}
+
+.align-center {
+  text-align: center;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "OldEnglishFive", serif;
+}
+
+h1 {
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+h3 {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+.ink-button {
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  padding: 0.75rem 1.5rem;
+
+  font-weight: 600;
+  font-family: inherit;
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
+  background-image: var(--inky-texture);
+  background-size: cover;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ink-button:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px var(--shadow-primary-medium);
+}
+
+.ink-button:active {
+  transform: translateY(0);
+}
+
+.ink-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: var(--hover-bg-light);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+}
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import api from "./api/client";
+import useQuizSocket from "./hooks/useQuizSocket";
+import ErrorBanner from "./components/ErrorBanner";
+import useGameStore, { type Action, type Player } from "./store/gameStore";
+import WaitingScreen from "./components/WaitingScreen";
+import QuestionScreen from "./components/QuestionScreen";
+import AnswerLockedScreen from "./components/AnswerLockedScreen";
+import ElaborationScreen from "./components/ElaborationScreen";
+import ResultScreen from "./components/ResultScreen";
+
+export interface Quiz {
+  id: number;
+  name: string;
+  authorId: string;
+  actions: Action[];
+}
+
+export interface Lobby {
+  id: number;
+  name: string;
+  adminId?: number;
+  currentActionIndex: number;
+  time: number;
+  players: Player[];
+  quiz?: Quiz;
+}
+
+const LobbyView = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [lobby, setLobby] = useState<Lobby | null>(null);
+
+  const quizEvent = useQuizSocket(id);
+  const currentAction = useGameStore((s) => s.currentAction);
+  const timer = useGameStore((s) => s.timer);
+  const players = useGameStore((s) => s.players);
+  const currentUserId = useGameStore((s) => s.userId);
+  const setLobbyAdminId = useGameStore((s) => s.setLobbyAdminId);
+  const setPlayers = useGameStore((s) => s.setPlayers);
+  const errorMessage = useGameStore((s) => s.errorMessage);
+  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
+
+  const isLobbyAdmin = Boolean(
+    lobby?.adminId != null &&
+    currentUserId != null &&
+    lobby.adminId === currentUserId,
+  );
+  const isPlayerInLobby = Boolean(
+    currentUserId &&
+    players.some((player) => player.userId === String(currentUserId)),
+  );
+
+  useEffect(() => {
+    if (!id) return;
+
+    api
+      .get<Lobby>(`/lobbies/${id}`)
+      .then((res) => {
+        setLobby(res.data);
+        setLobbyAdminId(res.data.adminId);
+        setPlayers(res.data.players ?? []);
+      })
+      .catch((err) => {
+        console.error("Failed to load lobby", err);
+        setErrorMessage("Failed to load lobby data");
+      });
+  }, [id, setLobbyAdminId, setPlayers, setErrorMessage]);
+
+  useEffect(() => {
+    if (!quizEvent || !id) return;
+
+    if (quizEvent.event === "quiz_started" && quizEvent.lobby) {
+      const lobbyUpdate = quizEvent.lobby as Partial<Lobby>;
+
+      setTimeout(() => {
+        setLobby(
+          (prev) =>
+            ({
+              ...(prev ?? {}),
+              ...lobbyUpdate,
+            }) as Lobby,
+        );
+      }, 0);
+
+      if (lobbyUpdate.adminId != null) {
+        setLobbyAdminId(lobbyUpdate.adminId);
+      }
+
+      const lobbyData = quizEvent.lobby as Partial<Lobby> & {
+        players?: Player[];
+      };
+      if (Array.isArray(lobbyData.players)) {
+        setPlayers(lobbyData.players);
+      }
+    }
+
+    if (
+      quizEvent.event === "players_update" &&
+      Array.isArray(quizEvent.payload)
+    ) {
+      setPlayers(quizEvent.payload as Player[]);
+    }
+
+    if (quizEvent.event === "action" && quizEvent.action) {
+      setTimeout(() => {
+        setLobby((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentActionIndex: prev.currentActionIndex + 1,
+                time: quizEvent.action?.time ?? prev.time,
+              }
+            : prev,
+        );
+      }, 0);
+    }
+  }, [quizEvent, id, setLobbyAdminId, setPlayers]);
+
+  const joinLobby = async () => {
+    if (!id) return;
+    if (!currentUserId) {
+      //give the user a unique ID and store it in localStorage
+      const newUserId = Date.now();
+      localStorage.setItem("userId", String(newUserId));
+      window.location.reload();
+    }
+
+    try {
+      const response = await api.post<Lobby>(`/lobbies/${id}/join`, {
+        userId: String(currentUserId),
+      });
+      setLobby(response.data);
+      setPlayers(response.data.players ?? []);
+      setLobbyAdminId(response.data.adminId);
+    } catch (e) {
+      console.error("Lobby join failed", e);
+      setErrorMessage("Could not join lobby");
+    }
+  };
+
+  const leaveLobby = async () => {
+    if (!id) return;
+    if (!currentUserId) {
+      setErrorMessage("Set a user ID before leaving.");
+      return;
+    }
+
+    try {
+      const response = await api.post<Lobby>(`/lobbies/${id}/leave`, {
+        userId: String(currentUserId),
+      });
+      setLobby(response.data);
+      setPlayers(response.data.players ?? []);
+    } catch (e) {
+      console.error("Lobby leave failed", e);
+      setErrorMessage("Could not leave lobby");
+    }
+  };
+
+  const deleteLobby = async () => {
+    if (!id) return;
+
+    try {
+      await api.delete(`/lobbies/${id}`);
+      navigate("/");
+    } catch (e) {
+      console.error("Delete lobby failed", e);
+      setErrorMessage("Could not delete lobby");
+    }
+  };
+
+  const startQuiz = async () => {
+    if (!id) return;
+    try {
+      await api.post(`/game/${id}/start`);
+    } catch (e) {
+      console.error("Start quiz failed", e);
+      setErrorMessage("Could not start quiz");
+    }
+  };
+
+  const nextAction = async () => {
+    if (!id) return;
+    try {
+      await api.post(`/game/${id}/next`);
+    } catch (e) {
+      console.error("Next action failed", e);
+      setErrorMessage("Could not advance to next action");
+    }
+  };
+
+  const renderPhaseScreen = () => {
+    if (!currentAction) {
+      return <WaitingScreen />;
+    }
+
+    switch (currentAction.phase) {
+      case "WAITING":
+        return <WaitingScreen />;
+      case "QUESTION":
+        return <QuestionScreen />;
+      case "ANSWER":
+        return <AnswerLockedScreen />;
+      case "ELABORATION":
+        return <ElaborationScreen />;
+      case "RESULT":
+        return <ResultScreen />;
+      default:
+        return (
+          <div className="p-6 rounded-lg shadow-lg bg-white text-center">
+            Unknown phase: {currentAction.phase}
+          </div>
+        );
+    }
+  };
+
+  if (!lobby && !errorMessage) return <div>Loading lobby…</div>;
+  if (!lobby) return <div>Lobby not found</div>;
+
+  return (
+    <>
+      <ErrorBanner />
+      <div className="container paper-bg">
+        <header className="lobby-header">
+          <h1>Lobby: {lobby.name}</h1>
+          <p>ID: {lobby.id}</p>
+          <p>Admin: {lobby.adminId ?? "TBD"}</p>
+          <p>
+            Quiz progress: {lobby.currentActionIndex + 1}/
+            {lobby.quiz?.actions?.length ?? "?"}
+          </p>
+          <p>Timer (s): {timer}</p>
+        </header>
+
+        <section className="lobby-players">
+          <h2>Players ({players.length})</h2>
+          {players.length === 0 ? (
+            <p>No players joined yet.</p>
+          ) : (
+            <ul>
+              {players.map((player) => (
+                <li key={player.userId}>
+                  {player.name ?? player.userId}: {player.score} points
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="lobby-action" style={{ marginTop: 16 }}>
+          {renderPhaseScreen()}
+        </section>
+
+        <section
+          className="admin-controls"
+          style={{ marginTop: 16, display: "grid", gap: 8 }}
+        >
+          {isLobbyAdmin && (
+            <>
+              <button onClick={startQuiz} className="s-button">
+                Start Quiz
+              </button>
+              <button onClick={nextAction} className="s-button">
+                Next Action
+              </button>
+              <button onClick={deleteLobby} className="s-button danger">
+                Delete Lobby
+              </button>
+            </>
+          )}
+          {!isLobbyAdmin && (
+            <>
+              {isPlayerInLobby ? (
+                <button onClick={leaveLobby} className="s-button warning">
+                  Leave Lobby
+                </button>
+              ) : (
+                <button onClick={joinLobby} className="s-button">
+                  Join Lobby
+                </button>
+              )}
+            </>
+          )}
+          <button onClick={() => navigate("/")} className="s-button secondary">
+            Back to Dash
+          </button>
+        </section>
+      </div>
+    </>
+  );
+};
+
+export default LobbyView;
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
