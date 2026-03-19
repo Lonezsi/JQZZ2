@@ -1,0 +1,88 @@
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
+import type { User } from "../types";
+import { userService } from "../services/userService";
+
+interface AuthContextType {
+  user: User | null;
+  login: (id: string) => Promise<void>;
+  register: (name: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (data: Partial<User>) => void;
+}
+
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
+  updateUser: () => {},
+});
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const login = useCallback(async (id: string) => {
+    const res = await userService.login({ id });
+    setUser(res.data);
+    localStorage.setItem("userId", res.data.id);
+  }, []);
+
+  const register = useCallback(
+    async (name: string) => {
+      const res = await userService.register({ name });
+      await login(res.data.userId);
+    },
+    [login],
+  );
+
+  useEffect(() => {
+    const stored = localStorage.getItem("userId");
+    if (stored) {
+      userService
+        .getOne(stored)
+        .then((res) => {
+          setUser(res.data);
+          setLoading(false);
+        })
+        .catch(() => {
+          localStorage.removeItem("userId");
+          register("Guest").finally(() => setLoading(false));
+        });
+    } else {
+      register("Guest").finally(() => setLoading(false));
+    }
+  }, [register]);
+
+  const logout = useCallback(async () => {
+    if (user) {
+      await userService.logout({ id: user.id });
+      setUser(null);
+      localStorage.removeItem("userId");
+    }
+  }, [user]);
+
+  const updateUser = useCallback((data: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...data } : null));
+  }, []);
+
+  if (loading) {
+    return <div className="jqzz-dash">Initializing user...</div>;
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);

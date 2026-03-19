@@ -1,3 +1,6 @@
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\config\CorsConfig.java
+====================
 package com.lonezsi.jqzz.config;
 
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +20,10 @@ public class CorsConfig implements WebMvcConfigurer {
                 .maxAge(3600);
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\config\WebSocketConfig.java
+====================
 package com.lonezsi.jqzz.config;
 
 import org.springframework.context.annotation.Configuration;
@@ -40,6 +47,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\GameController.java
+====================
 package com.lonezsi.jqzz.controller;
 
 import java.util.Map;
@@ -155,6 +166,10 @@ public class GameController {
         }
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\LobbyController.java
+====================
 package com.lonezsi.jqzz.controller;
 
 import java.util.List;
@@ -298,6 +313,10 @@ public class LobbyController {
         }
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\UserController.java
+====================
 package com.lonezsi.jqzz.controller;
 
 import java.util.Map;
@@ -503,6 +522,10 @@ public class UserController {
         }
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Action.java
+====================
 package com.lonezsi.jqzz.model;
 
 import jakarta.persistence.Entity;
@@ -543,6 +566,10 @@ public class Action {
     public Phase getPhase(){return phase;}
     public int getTime(){return time;}
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Answer.java
+====================
 package com.lonezsi.jqzz.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -586,6 +613,10 @@ public class Answer {
     public String getUserId(){return userId;}
     public void setUserId(String userId){this.userId=userId;}
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Lobby.java
+====================
 package com.lonezsi.jqzz.model;
 
 import java.util.ArrayList;
@@ -693,6 +724,10 @@ public class Lobby {
         }
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Phase.java
+====================
 package com.lonezsi.jqzz.model;
 
 public enum Phase {
@@ -709,12 +744,20 @@ public enum Phase {
         }
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Player.java
+====================
 package com.lonezsi.jqzz.model;
 
 import jakarta.persistence.Embeddable;
 
 @Embeddable
 public record Player(String userId, int score){}
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Question.java
+====================
 package com.lonezsi.jqzz.model;
 
 import java.util.Comparator;
@@ -865,6 +908,10 @@ public class Question {
         return results;
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\QuestionType.java
+====================
 package com.lonezsi.jqzz.model;
 
 public enum QuestionType {
@@ -876,6 +923,10 @@ public enum QuestionType {
     TIERLIST,                // 6: tierlist, drag squares into tiers, updating values
     KNOCKOUT_BATTLE          // 7: user adds answers, next questions form knockout battle tree
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Quiz.java
+====================
 package com.lonezsi.jqzz.model;
 
 import java.util.List;
@@ -920,6 +971,10 @@ public class Quiz {
         this.actions.addAll(other.getActions());
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\User.java
+====================
 package com.lonezsi.jqzz.model;
 
 import jakarta.persistence.Entity;
@@ -966,6 +1021,10 @@ public class User {
     public boolean isOnline(){return online;}
     public void setOnline(boolean online){this.online=online;}
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\repository\LobbyRepository.java
+====================
 package com.lonezsi.jqzz.repository;
 
 import com.lonezsi.jqzz.model.Lobby;
@@ -973,6 +1032,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LobbyRepository extends JpaRepository<Lobby, Long> {
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\repository\UserRepository.java
+====================
 package com.lonezsi.jqzz.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -985,6 +1048,10 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByHandle(String handle);
     User findByHandle(String handle);
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\util\IdGenerator.java
+====================
 package com.lonezsi.jqzz.util;
 
 public class IdGenerator {
@@ -1010,6 +1077,10 @@ public class IdGenerator {
         return clean;
     }
 }
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\JqzzApplication.java
+====================
 package com.lonezsi.jqzz;
 
 import org.springframework.boot.SpringApplication;
@@ -1023,6 +1094,11 @@ public class JqzzApplication {
 	}
 
 }
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\test\java\com\lonezsi\jqzz\controller\LobbyControllerTest.java
+====================
 package com.lonezsi.jqzz.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -1103,6 +1179,11 @@ class LobbyControllerTest {
         verify(lobbyRepository).save(lobby);
     }
 }
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\test\java\com\lonezsi\jqzz\JqzzApplicationTests.java
+====================
 package com.lonezsi.jqzz;
 
 import org.junit.jupiter.api.Test;
@@ -1116,1455 +1197,3118 @@ class JqzzApplicationTests {
 	}
 
 }
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\dist\assets\index-B_ngzFMr.css
+====================
 @font-face{font-family:OldEnglishFive;src:url(/OldEnglishFive.ttf) format("truetype")}:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;line-height:1.6;font-weight:400;color-scheme:light;background:url(/bg.jpg);background-size:100% 100%;background-attachment:fixed;--inky-texture: url(https://texturelabs.org/wp-content/uploads/Texturelabs_Paper_269S.jpg);color:#1a1a1a;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;--primary: #1a1a1a;--primary-dark: #000000;--secondary: #4a4a4a;--accent: #8a8a8a;--hero-gradient-start: rgba(0, 0, 0, .03);--hero-gradient-end: rgba(0, 0, 0, .01);--hover-bg-light: rgba(0, 0, 0, .05);--shadow-primary-weak: rgba(0, 0, 0, .05);--shadow-primary-medium: rgba(0, 0, 0, .08);--shadow-primary-strong: rgba(0, 0, 0, .12);--bg-primary: rgba(255, 255, 255, .85);--bg-secondary: rgba(245, 245, 240, .9);--border: rgba(0, 0, 0, .15);--text-primary: #111111;--text-secondary: #555555;--text-white: #ffffff}*{margin:0;padding:0;box-sizing:border-box}a{font-weight:500;color:var(--primary);text-decoration:none;transition:color .3s ease}a:hover{color:var(--accent)}body{margin:0;min-width:320px;min-height:100vh}#root{width:100%;min-height:100vh}.tag{position:absolute;margin-bottom:0;bottom:0;right:5px;opacity:.2;z-index:-1}.align-center{text-align:center}h1,h2,h3{font-family:OldEnglishFive,serif}h1{font-size:clamp(2rem,10vw,4rem);line-height:1.2;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}h2{font-size:clamp(1.5rem,5vw,2.5rem);line-height:1.3;font-weight:600}h3{font-size:clamp(1.1rem,3vw,1.5rem);font-weight:600;margin-bottom:.75rem}p{color:var(--text-secondary);font-size:.95rem}button{border-radius:10px;border:2px solid var(--border);padding:.75rem 1.5rem;font-size:1rem;font-weight:600;font-family:inherit;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);background-image:var(--inky-texture);background-size:cover;color:#fff;cursor:pointer;transition:all .3s ease}button:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 10px 30px var(--shadow-primary-medium)}button:active{transform:translateY(0)}button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}input[type=text],input[type=number],textarea{width:100%;padding:.75rem 1rem;border:2px solid var(--border);background-color:var(--bg-secondary);color:var(--text-primary);font-family:inherit;font-size:.95rem;border-radius:8px;transition:all .3s ease}input[type=text]:focus,input[type=number]:focus,textarea:focus{outline:none;border-color:var(--primary);background-color:var(--hover-bg-light)}input::placeholder,textarea::placeholder{color:var(--text-secondary)}.dashboard-container{width:100%;display:flex;flex-direction:column;padding-bottom:4rem}.hero-section{width:100%;padding:4rem 2rem;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--hero-gradient-start) 0%,var(--hero-gradient-end) 100%);border-bottom:1px solid var(--border);min-height:400px}.hero-content{display:flex;align-items:center;justify-content:center;gap:3rem;max-width:900px;width:100%}.hero-logo{flex:0 0 auto;width:250px;height:250px;display:flex;align-items:center;justify-content:center}.hero-logo img{max-width:100%;height:auto;animation:float 3s ease-in-out infinite;mix-blend-mode:color-burn}.bento-box:before{content:"";position:absolute;inset:0;mix-blend-mode:multiply;background-color:var(--primary);background-position:center;opacity:.02;z-index:-1}.hero-text{flex:1}.hero-text h1{margin-bottom:1rem}.tagline{font-size:1.25rem;color:var(--text-secondary);margin:0;font-weight:500}.main-container{width:100%;max-width:1400px;margin:0 auto;padding:0 2rem}.bento-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));grid-auto-rows:1fr;gap:.8rem;align-items:start;width:100%;margin-top:1.25rem}.bento-box{border:1px solid var(--border);padding:1rem;border-radius:12px;transition:transform .18s ease,box-shadow .18s ease;display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:120px}.bento-box:hover:not(.hero-section){border-color:var(--primary);transform:translateY(-8px);box-shadow:0 20px 40px var(--shadow-primary-weak)}.bento-box-large{grid-column:span 2}.bento-box-tall{grid-row:span 2}.bento-box-wide{grid-column:span 2}@media(min-width:768px){.bento-box-large{grid-column:span 3}.bento-grid{grid-template-columns:repeat(2,1fr)}}@media(min-width:1024px){.bento-grid{grid-template-columns:repeat(6,1fr)}.bento-box-large{grid-column:span 3}}.box-header{margin-bottom:1.5rem}.box-header h2{margin-bottom:.5rem;color:var(--text-primary)}.box-header p{color:var(--text-secondary);font-size:.9rem;margin:0}.box-header h3{color:var(--text-primary)}.lobby-form{display:flex;flex-direction:column;gap:1rem;flex:1;justify-content:flex-end}.lobby-form input{padding:1rem;font-size:1rem}.lobby-form button{padding:1rem;font-size:1rem;width:100%}.lobby-list{display:flex;flex-direction:column;gap:1rem}.lobby-item{display:flex;align-items:center;justify-content:space-between;padding:1.25rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;transition:all .3s ease}.lobby-item:hover{background:var(--hover-bg-light);border-color:var(--primary)}.lobby-info{display:flex;flex-direction:column;gap:.5rem;flex:1}.lobby-name{font-weight:600;color:var(--text-primary);font-size:1.1rem}.lobby-id{font-size:.85rem;color:var(--text-secondary)}.btn-join{margin-left:1rem;white-space:nowrap;border:none;padding:.75rem 1.5rem;font-size:.95rem}.btn-join:hover{transform:translateY(-2px);box-shadow:0 8px 20px var(--shadow-primary-strong)}.empty-state{display:flex;align-items:center;justify-content:center;min-height:150px;text-align:center}.empty-state p{margin:0;color:var(--text-secondary)}.stat-number{font-size:3rem;font-weight:700;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:1rem 0;line-height:1}.stat-label{color:var(--text-secondary);margin:0;font-size:.9rem}.btn-primary,.btn-secondary{border:none;font-weight:600;transition:all .3s ease;cursor:pointer;border-radius:10px;width:100%;padding:.875rem}.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px var(--shadow-primary-medium)}.btn-secondary{filter:invert(1);color:var(--text-white);border:2px solid var(--primary)}.btn-secondary:hover{transform:translateY(-2px);border:2px solid var(--text-white)}@media(max-width:768px){.hero-content{flex-direction:column;gap:2rem;text-align:center}.hero-logo{width:180px;height:180px}.hero-text{text-align:center}.hero-section{padding:2rem 1.5rem;min-height:300px}.main-container{padding:0 1.5rem}.bento-box{padding:1.5rem}.lobby-item{flex-direction:column;align-items:flex-start;gap:1rem}.btn-join{margin-left:0;width:100%}.bento-grid{gap:1rem}.box-header h2{font-size:1.5rem}}@media(max-width:480px){.hero-logo{width:150px;height:150px}.hero-section{padding:1.5rem 1rem;min-height:250px}.bento-box{padding:1.25rem}.stat-number{font-size:2rem}.tagline{font-size:1rem}}
-export default function AnswerLockedScreen() {
-  return (
-    <div className="p-6 rounded-lg shadow-lg bg-white text-center">
-      <h2 className="text-2xl mb-2">Answer submitted!</h2>
-      <p className="text-gray-600">Waiting for results...</p>
-    </div>
-  );
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\common\Button.tsx
+====================
+import React from "react";
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary" | "accent" | "danger";
+  size?: "sm" | "md" | "lg";
+  fullWidth?: boolean;
 }
-import useGameStore from "../store/gameStore";
 
-export default function ElaborationScreen() {
-  const action = useGameStore((s) => s.currentAction);
-  const q = action?.question;
-
-  if (!q) return <div>No elaboration</div>;
+export const Button: React.FC<ButtonProps> = ({
+  children,
+  variant = "primary",
+  size = "md",
+  fullWidth = false,
+  className = "",
+  ...props
+}) => {
+  const baseClasses =
+    "rounded font-mono transition-all duration-200 inline-flex items-center justify-center gap-2";
+  const variantClasses = {
+    primary: "bg-cyan text-black border border-cyan hover:bg-cyan/90",
+    secondary:
+      "bg-bg2 text-txt2 border border-border2 hover:bg-bg3 hover:text-txt",
+    accent: "bg-cyan-dim text-cyan border border-cyan hover:bg-cyan/20",
+    danger: "bg-red/10 text-red border border-red/30 hover:bg-red/20",
+  };
+  const sizeClasses = {
+    sm: "px-3 py-1 text-xs",
+    md: "px-4 py-2 text-sm",
+    lg: "px-6 py-3 text-base",
+  };
+  const widthClass = fullWidth ? "w-full" : "";
 
   return (
-    <div className="p-6 rounded-lg shadow-lg bg-white">
-      <h3 className="text-2xl mb-2">Explanation</h3>
-      <p className="text-lg">{q?.text}</p>
-      {q?.imageUrl && (
-        <img src={q.imageUrl} alt="elaboration" className="mt-4 max-w-full" />
+    <button
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\common\Input.tsx
+====================
+import React from "react";
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+}
+
+export const Input: React.FC<InputProps> = ({
+  label,
+  error,
+  className = "",
+  id,
+  ...props
+}) => {
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+
+  return (
+    <div className="flex flex-col gap-1">
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="text-xs uppercase text-txt3 tracking-wider"
+        >
+          {label}
+        </label>
       )}
+      <input
+        id={inputId}
+        className={`bg-bg2 border border-border2 rounded px-3 py-2 text-sm font-mono text-txt focus:outline-none focus:border-cyan transition-colors ${error ? "border-red" : ""} ${className}`}
+        {...props}
+      />
+      {error && <span className="text-xs text-red">{error}</span>}
     </div>
   );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\TextMode\HighlightedScript.tsx
+====================
+EMPTY!!!
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\TextMode\ScriptEditor.tsx
+====================
+import React, { useState, useEffect, useRef } from "react";
+import type { Quiz, Question, Action } from "../../../../types";
+import { quizToScript } from "../../../../utils/scriptSerializer";
+import { parseScript } from "../../../../utils/scriptParser";
+import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
+
+interface ScriptEditorProps {
+  quiz: Quiz | undefined;
+  aiPrompt: string;
+  onAiPromptChange: (v: string) => void;
+  onParsed: (questions: Question[], actions: Action[]) => void;
 }
-import useGameStore from "../store/gameStore";
 
-export default function ErrorBanner() {
-  const errorMessage = useGameStore((s) => s.errorMessage);
-  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
+export const ScriptEditor: React.FC<ScriptEditorProps> = ({
+  quiz,
+  aiPrompt,
+  onAiPromptChange,
+  onParsed,
+}) => {
+  const [text, setText] = useState<string>(() => quizToScript(quiz));
+  const [parseOk, setParseOk] = useState<boolean>(true);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
+  const prevIdRef = useRef<number | undefined>(quiz?.id);
 
-  if (!errorMessage) return null;
+  useEffect(() => {
+    if (quiz?.id !== prevIdRef.current) {
+      prevIdRef.current = quiz?.id;
+      setText(quizToScript(quiz));
+    }
+  }, [quiz]);
+
+  const syncScroll = () => {
+    if (taRef.current && preRef.current) {
+      preRef.current.scrollTop = taRef.current.scrollTop;
+      preRef.current.scrollLeft = taRef.current.scrollLeft;
+    }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!quiz) return;
+      const { questions, actions, errors } = parseScript(text, quiz.questions);
+      setParseOk(errors.length === 0);
+      onParsed(questions, actions);
+    }, 650);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+
+  const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    const ta = taRef.current!;
+    const { selectionStart: s, selectionEnd: end } = ta;
+    const next = text.slice(0, s) + "  " + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = s + 2;
+    });
+  };
+
+  return (
+    <div className="jqzz-text-editor">
+      <div className="jqzz-ai-bar">
+        <span className="jqzz-ai-label"># AI:</span>
+        <input
+          className="jqzz-ai-input"
+          placeholder="Create a chaotic party quiz with memes..."
+          value={aiPrompt}
+          onChange={(e) => onAiPromptChange(e.target.value)}
+        />
+        <span className={`jqzz-parse-badge${parseOk ? " ok" : " err"}`}>
+          {parseOk ? "✓ valid" : "⚠ errors"}
+        </span>
+        <button
+          className="jqzz-ai-btn"
+          onClick={() => alert("Generating quiz from AI prompt...")}
+        >
+          Generate
+        </button>
+      </div>
+      <div className="jqzz-editor-wrap">
+        <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
+          <HighlightedScript text={text} />
+        </pre>
+        <textarea
+          ref={taRef}
+          className="jqzz-script-ta"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onScroll={syncScroll}
+          onKeyDown={handleTab}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
+      </div>
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\TextMode\TextMode.tsx
+====================
+import React from "react";
+import type { Quiz, Question, Action } from "../../../../types";
+import { ScriptEditor } from "./ScriptEditor";
+
+interface TextModeProps {
+  quiz: Quiz | undefined;
+  aiPrompt: string;
+  setAiPrompt: (v: string) => void;
+  onParsed: (questions: Question[], actions: Action[]) => void;
+}
+
+export const TextMode: React.FC<TextModeProps> = ({
+  quiz,
+  aiPrompt,
+  setAiPrompt,
+  onParsed,
+}) => {
+  return (
+    <ScriptEditor
+      quiz={quiz}
+      aiPrompt={aiPrompt}
+      onAiPromptChange={setAiPrompt}
+      onParsed={onParsed}
+    />
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\ActionCard.tsx
+====================
+import React from "react";
+import type { Action } from "../../../../types";
+
+interface ActionCardProps {
+  action: Action;
+  isSelected: boolean;
+  isDragging: boolean;
+  isOver: boolean;
+  onSelect: (id: number | null) => void;
+  onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+  onActionDragEnd: () => void;
+  onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+  onActionDrop: (e: React.DragEvent<HTMLDivElement>, dropId: number) => void;
+  deleteAction: (id: number) => void;
+  duplicateAction: (id: number) => void;
+}
+
+export const ActionCard: React.FC<ActionCardProps> = ({
+  action,
+  isSelected,
+  isDragging,
+  isOver,
+  onSelect,
+  onActionDragStart,
+  onActionDragEnd,
+  onActionDragOver,
+  onActionDrop,
+  deleteAction,
+  duplicateAction,
+}) => {
+  if (action.phase === "DIVIDER") {
+    return (
+      <div
+        key={action.id}
+        className={`jqzz-divider-block${isSelected ? " selected" : ""}`}
+        onClick={() => onSelect(action.id)}
+        draggable
+        onDragStart={(e) => onActionDragStart(e, action.id)}
+        onDragEnd={onActionDragEnd}
+        onDragOver={(e) => onActionDragOver(e, action.id)}
+        onDrop={(e) => onActionDrop(e, action.id)}
+      >
+        <span style={{ color: "var(--txt3)", fontSize: 10, cursor: "grab" }}>
+          ⠿
+        </span>
+        <div className="jqzz-divider-line" />
+        <span className="jqzz-divider-label">DIVIDER</span>
+        <div className="jqzz-divider-line" />
+        <button
+          className="jqzz-card-action-btn del"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteAction(action.id);
+          }}
+          style={{ opacity: 0.6, marginLeft: 4 }}
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  if (action.phase === "TEXT") {
+    return (
+      <div
+        key={action.id}
+        className={`jqzz-text-block${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
+        onClick={() => onSelect(action.id)}
+        onDragOver={(e) => onActionDragOver(e, action.id)}
+        onDrop={(e) => onActionDrop(e, action.id)}
+      >
+        <div
+          className="jqzz-drag-handle"
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            onActionDragStart(e, action.id);
+          }}
+          onDragEnd={onActionDragEnd}
+        >
+          ⠿
+        </div>
+        <span style={{ color: "var(--txt3)", fontSize: 10, marginRight: 4 }}>
+          ✎
+        </span>
+        <span className="jqzz-text-block-content">
+          {action.preview || "empty note"}
+        </span>
+        <span
+          className="jqzz-card-actions"
+          style={{ opacity: 1, marginLeft: "auto", display: "flex", gap: 4 }}
+        >
+          <button
+            className="jqzz-card-action-btn del"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteAction(action.id);
+            }}
+          >
+            ✕
+          </button>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        padding: "12px 16px",
-        backgroundColor: "rgba(220, 38, 38, 0.35)",
-        backdropFilter: "blur(5px)",
-        color: "white",
-        fontWeight: 600,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
+      key={action.id}
+      className={`jqzz-card${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
+      onClick={() => onSelect(action.id)}
+      onDragOver={(e) => onActionDragOver(e, action.id)}
+      onDrop={(e) => onActionDrop(e, action.id)}
     >
-      <span>{errorMessage}</span>
-      <button
-        style={{
-          marginLeft: 12,
-          backgroundColor: "transparent",
-          border: "1px solid white",
-          color: "white",
-          borderRadius: 4,
-          padding: "4px 8px",
-          cursor: "pointer",
+      <div
+        className="jqzz-drag-handle"
+        draggable
+        onDragStart={(e) => {
+          e.stopPropagation();
+          onActionDragStart(e, action.id);
         }}
-        onClick={() => setErrorMessage(undefined)}
+        onDragEnd={onActionDragEnd}
+        title="Drag to reorder"
       >
-        x
+        ⠿
+      </div>
+      <span className={`jqzz-phase-badge badge-${action.phase}`}>
+        {action.phase}
+      </span>
+      <span className="jqzz-card-time">{action.time}s</span>
+      <span className="jqzz-card-preview">{action.preview}</span>
+      <span className="jqzz-card-actions">
+        <button
+          className="jqzz-card-action-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            duplicateAction(action.id);
+          }}
+          title="Duplicate"
+        >
+          ⧉
+        </button>
+        <button
+          className="jqzz-card-action-btn del"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteAction(action.id);
+          }}
+          title="Delete"
+        >
+          ✕
+        </button>
+      </span>
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\AddButton.tsx
+====================
+import React from "react";
+
+interface AddButtonProps {
+  dropOver: boolean;
+  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
+  onDropZoneDragLeave: () => void;
+  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
+}
+
+export const AddButton: React.FC<AddButtonProps> = ({
+  dropOver,
+  onDropZoneDragOver,
+  onDropZoneDragLeave,
+  onDropZoneDrop,
+}) => {
+  return (
+    <div
+      className={`jqzz-add-btn${dropOver ? " over" : ""}`}
+      onDragOver={onDropZoneDragOver}
+      onDragLeave={onDropZoneDragLeave}
+      onDrop={onDropZoneDrop}
+      onClick={() => alert("Add new action block")}
+    >
+      {dropOver ? "✦ Release to add snippet" : "+ Add Action / Drop Snippet"}
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\EmptyState.tsx
+====================
+import React from "react";
+
+interface EmptyStateProps {
+  dropOver: boolean;
+  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
+  onDropZoneDragLeave: () => void;
+  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
+}
+
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  dropOver,
+  onDropZoneDragOver,
+  onDropZoneDragLeave,
+  onDropZoneDrop,
+}) => {
+  return (
+    <div className="jqzz-empty-state">
+      <div className="jqzz-empty-icon">◈</div>
+      <div className="jqzz-empty-title">No actions yet</div>
+      <div className="jqzz-empty-sub">
+        Click a snippet in the sidebar to add it,
+        <br />
+        or drag one here.
+      </div>
+      <div
+        className={`jqzz-empty-drop${dropOver ? " over" : ""}`}
+        onDragOver={onDropZoneDragOver}
+        onDragLeave={onDropZoneDragLeave}
+        onDrop={onDropZoneDrop}
+      >
+        {dropOver ? "✦ Release to add" : "↓ Drop snippet here"}
+      </div>
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\GroupLabel.tsx
+====================
+import React from "react";
+
+interface GroupLabelProps {
+  questionNumber: number | string;
+  questionText: string;
+}
+
+export const GroupLabel: React.FC<GroupLabelProps> = ({
+  questionNumber,
+  questionText,
+}) => {
+  return (
+    <div className="jqzz-group-label">
+      Q{questionNumber} — {questionText}
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\VisualMode.tsx
+====================
+import React from "react";
+import type { Quiz, Question, RenderItem } from "../../../../types";
+import { ActionCard } from "./ActionCard";
+import { EmptyState } from "./EmptyState";
+import { AddButton } from "./AddButton";
+
+interface VisualModeProps {
+  quiz: Quiz | undefined;
+  renderItems: RenderItem[];
+  questionMap: Map<number, Question>;
+  selectedActionId: number | null;
+  setSelectedActionId: (id: number | null) => void;
+  dragActionId: number | null;
+  dragOverActionId: number | null;
+  onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+  onActionDragEnd: () => void;
+  onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+  onActionDrop: (e: React.DragEvent<HTMLDivElement>, dropId: number) => void;
+  deleteAction: (id: number) => void;
+  duplicateAction: (id: number) => void;
+  dropOver: boolean;
+  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
+  onDropZoneDragLeave: () => void;
+  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
+}
+
+export const VisualMode: React.FC<VisualModeProps> = ({
+  quiz,
+  renderItems,
+  questionMap,
+  selectedActionId,
+  setSelectedActionId,
+  dragActionId,
+  dragOverActionId,
+  onActionDragStart,
+  onActionDragEnd,
+  onActionDragOver,
+  onActionDrop,
+  deleteAction,
+  duplicateAction,
+  dropOver,
+  onDropZoneDragOver,
+  onDropZoneDragLeave,
+  onDropZoneDrop,
+}) => {
+  if (!quiz) {
+    return (
+      <div style={{ color: "var(--txt3)", fontSize: 12 }}>
+        Select a quiz to begin.
+      </div>
+    );
+  }
+
+  if (renderItems.length === 0) {
+    return (
+      <EmptyState
+        dropOver={dropOver}
+        onDropZoneDragOver={onDropZoneDragOver}
+        onDropZoneDragLeave={onDropZoneDragLeave}
+        onDropZoneDrop={onDropZoneDrop}
+      />
+    );
+  }
+
+  return (
+    <>
+      {renderItems.map((item, idx) => {
+        if (item.kind === "divider") {
+          return (
+            <ActionCard
+              key={item.action.id}
+              action={item.action}
+              isSelected={item.action.id === selectedActionId}
+              isDragging={item.action.id === dragActionId}
+              isOver={
+                item.action.id === dragOverActionId &&
+                dragActionId !== item.action.id
+              }
+              onSelect={setSelectedActionId}
+              onActionDragStart={onActionDragStart}
+              onActionDragEnd={onActionDragEnd}
+              onActionDragOver={onActionDragOver}
+              onActionDrop={onActionDrop}
+              deleteAction={deleteAction}
+              duplicateAction={duplicateAction}
+            />
+          );
+        }
+        if (item.kind === "text") {
+          return (
+            <ActionCard
+              key={item.action.id}
+              action={item.action}
+              isSelected={item.action.id === selectedActionId}
+              isDragging={item.action.id === dragActionId}
+              isOver={
+                item.action.id === dragOverActionId &&
+                dragActionId !== item.action.id
+              }
+              onSelect={setSelectedActionId}
+              onActionDragStart={onActionDragStart}
+              onActionDragEnd={onActionDragEnd}
+              onActionDragOver={onActionDragOver}
+              onActionDrop={onActionDrop}
+              deleteAction={deleteAction}
+              duplicateAction={duplicateAction}
+            />
+          );
+        }
+        // group
+        const q = questionMap.get(item.questionId);
+        const qIdx = q ? quiz.questions.indexOf(q) + 1 : "?";
+        const qLabel = q
+          ? `"${q.text.slice(0, 38)}${q.text.length > 38 ? "…" : ""}"`
+          : "Unknown";
+        return (
+          <div key={`${item.questionId}-${idx}`} className="jqzz-group">
+            <div className="jqzz-group-label">
+              Q{qIdx} — {qLabel}
+            </div>
+            {item.actions.map((a) => (
+              <ActionCard
+                key={a.id}
+                action={a}
+                isSelected={a.id === selectedActionId}
+                isDragging={a.id === dragActionId}
+                isOver={a.id === dragOverActionId && dragActionId !== a.id}
+                onSelect={setSelectedActionId}
+                onActionDragStart={onActionDragStart}
+                onActionDragEnd={onActionDragEnd}
+                onActionDragOver={onActionDragOver}
+                onActionDrop={onActionDrop}
+                deleteAction={deleteAction}
+                duplicateAction={duplicateAction}
+              />
+            ))}
+          </div>
+        );
+      })}
+      <AddButton
+        dropOver={dropOver}
+        onDropZoneDragOver={onDropZoneDragOver}
+        onDropZoneDragLeave={onDropZoneDragLeave}
+        onDropZoneDrop={onDropZoneDrop}
+      />
+    </>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\Main.tsx
+====================
+import React from "react";
+import { Toolbar } from "./Toolbar";
+import { VisualMode } from "./VisualMode/VisualMode";
+import { TextMode } from "./TextMode/TextMode";
+import type {
+  EditorMode,
+  Quiz,
+  Question,
+  Action,
+  RenderItem,
+} from "../../../types";
+
+interface MainProps {
+  mode: EditorMode;
+  setMode: (mode: EditorMode) => void;
+  onOpenPalette: () => void;
+  onExport: () => void;
+  quiz: Quiz | undefined;
+  renderItems: RenderItem[];
+  questionMap: Map<number, Question>;
+  selectedActionId: number | null;
+  setSelectedActionId: (id: number | null) => void;
+  dragActionId: number | null;
+  dragOverActionId: number | null;
+  onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+  onActionDragEnd: () => void;
+  onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
+  onActionDrop: (e: React.DragEvent<HTMLDivElement>, dropId: number) => void;
+  deleteAction: (id: number) => void;
+  duplicateAction: (id: number) => void;
+  dropOver: boolean;
+  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
+  onDropZoneDragLeave: () => void;
+  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
+  aiPrompt: string;
+  setAiPrompt: (v: string) => void;
+  onParsed: (questions: Question[], actions: Action[]) => void;
+}
+
+export const Main: React.FC<MainProps> = ({
+  mode,
+  setMode,
+  onOpenPalette,
+  onExport,
+  quiz,
+  renderItems,
+  questionMap,
+  selectedActionId,
+  setSelectedActionId,
+  dragActionId,
+  dragOverActionId,
+  onActionDragStart,
+  onActionDragEnd,
+  onActionDragOver,
+  onActionDrop,
+  deleteAction,
+  duplicateAction,
+  dropOver,
+  onDropZoneDragOver,
+  onDropZoneDragLeave,
+  onDropZoneDrop,
+  aiPrompt,
+  setAiPrompt,
+  onParsed,
+}) => {
+  return (
+    <main className="jqzz-main">
+      <Toolbar
+        mode={mode}
+        setMode={setMode}
+        onOpenPalette={onOpenPalette}
+        onExport={onExport}
+      />
+
+      <div
+        className="jqzz-body"
+        onDragOver={mode === "visual" ? onDropZoneDragOver : undefined}
+        onDragLeave={mode === "visual" ? onDropZoneDragLeave : undefined}
+        onDrop={mode === "visual" ? onDropZoneDrop : undefined}
+      >
+        {mode === "visual" ? (
+          <VisualMode
+            quiz={quiz}
+            renderItems={renderItems}
+            questionMap={questionMap}
+            selectedActionId={selectedActionId}
+            setSelectedActionId={setSelectedActionId}
+            dragActionId={dragActionId}
+            dragOverActionId={dragOverActionId}
+            onActionDragStart={onActionDragStart}
+            onActionDragEnd={onActionDragEnd}
+            onActionDragOver={onActionDragOver}
+            onActionDrop={onActionDrop}
+            deleteAction={deleteAction}
+            duplicateAction={duplicateAction}
+            dropOver={dropOver}
+            onDropZoneDragOver={onDropZoneDragOver}
+            onDropZoneDragLeave={onDropZoneDragLeave}
+            onDropZoneDrop={onDropZoneDrop}
+          />
+        ) : (
+          <TextMode
+            quiz={quiz}
+            aiPrompt={aiPrompt}
+            setAiPrompt={setAiPrompt}
+            onParsed={onParsed}
+          />
+        )}
+      </div>
+    </main>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\Toolbar.tsx
+====================
+import React from "react";
+import type { EditorMode } from "../../../types";
+
+interface ToolbarProps {
+  mode: EditorMode;
+  setMode: (mode: EditorMode) => void;
+  onOpenPalette: () => void;
+  onExport: () => void;
+}
+
+export const Toolbar: React.FC<ToolbarProps> = ({
+  mode,
+  setMode,
+  onOpenPalette,
+  onExport,
+}) => {
+  return (
+    <div className="jqzz-toolbar">
+      <div className="jqzz-tab-group">
+        <button
+          className={`jqzz-tab${mode === "visual" ? " active" : ""}`}
+          onClick={() => setMode("visual")}
+        >
+          ■ Visual
+        </button>
+        <button
+          className={`jqzz-tab${mode === "text" ? " active" : ""}`}
+          onClick={() => setMode("text")}
+        >
+          {"</>"} Text Mode
+        </button>
+      </div>
+      <div className="jqzz-spacer" />
+      <button className="jqzz-toolbar-btn" onClick={onOpenPalette}>
+        ⌘ Palette
+      </button>
+      <button className="jqzz-toolbar-btn" onClick={onExport}>
+        ↓ Export
+      </button>
+      <button
+        className="jqzz-toolbar-btn run"
+        onClick={() => alert("Starting quiz...")}
+      >
+        ▶ Start
       </button>
     </div>
   );
-}
-import useGameStore from "../store/gameStore";
+};
 
-export default function Leaderboard() {
-  const players = useGameStore((s) => s.players.slice()).sort(
-    (a, b) => b.score - a.score,
-  );
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\ContextEditor.tsx
+====================
+import React, { useState, useEffect } from "react";
+import type { Action, Question, Answer, Phase } from "../../../types";
+
+interface ContextEditorProps {
+  action: Action | null;
+  question: Question | null;
+  onActionUpdate: (id: number, patch: Partial<Action>) => void;
+  onQuestionUpdate: (id: number, patch: Partial<Question>) => void;
+}
+
+export const ContextEditor: React.FC<ContextEditorProps> = ({
+  action,
+  question,
+  onActionUpdate,
+  onQuestionUpdate,
+}) => {
+  const [answers, setAnswers] = useState<Answer[]>(question?.answers ?? []);
+
+  useEffect(() => {
+    setAnswers(question?.answers ?? []);
+  }, [question?.id]);
+
+  if (!action) {
+    return (
+      <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
+        Select an action card to edit.
+      </div>
+    );
+  }
+
+  if (action.phase === "TEXT" || action.phase === "DIVIDER") {
+    return (
+      <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
+        {action.phase === "TEXT" && (
+          <>
+            <div className="jqzz-section-label">Text Note</div>
+            <div className="jqzz-field-group">
+              <div className="jqzz-field-label">Content</div>
+              <textarea
+                className="jqzz-field-textarea"
+                value={action.preview}
+                onChange={(e) =>
+                  onActionUpdate(action.id, { preview: e.target.value })
+                }
+              />
+            </div>
+          </>
+        )}
+        {action.phase === "DIVIDER" && (
+          <div style={{ color: "var(--txt3)", fontSize: 11 }}>
+            Visual divider — separates sections in the timeline.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const updateAnswer = (idx: number, field: keyof Answer, val: string) => {
+    const next = answers.map((a, i) =>
+      i === idx ? { ...a, [field]: field === "value" ? Number(val) : val } : a,
+    );
+    setAnswers(next);
+    if (question) onQuestionUpdate(question.id, { answers: next });
+  };
+
+  const addAnswer = () => {
+    const next = [...answers, { id: Date.now(), text: "", value: 0 }];
+    setAnswers(next);
+    if (question) onQuestionUpdate(question.id, { answers: next });
+  };
+
+  const removeAnswer = (idx: number) => {
+    const next = answers.filter((_, i) => i !== idx);
+    setAnswers(next);
+    if (question) onQuestionUpdate(question.id, { answers: next });
+  };
 
   return (
-    <div className="p-4 bg-gray-50 rounded">
-      <h4 className="text-xl">🏆 Leaderboard</h4>
-      <ol className="mt-2 list-decimal pl-5">
-        {players.map((p) => (
-          <li key={p.id} className="py-1">
-            <strong>{p.name}</strong> — {p.score}
-          </li>
-        ))}
-      </ol>
+    <>
+      <div className="jqzz-section-label">Phase</div>
+      <div className="jqzz-field-group">
+        <div className="jqzz-field-label">Type</div>
+        <select
+          className="jqzz-field-select"
+          value={action.phase}
+          onChange={(e) =>
+            onActionUpdate(action.id, { phase: e.target.value as Phase })
+          }
+        >
+          {(
+            ["WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"] as const
+          ).map((p) => (
+            <option key={p}>{p}</option>
+          ))}
+        </select>
+      </div>
+      <div className="jqzz-field-group">
+        <div className="jqzz-field-label">Duration (s)</div>
+        <input
+          className="jqzz-field-input"
+          type="number"
+          value={action.time}
+          onChange={(e) =>
+            onActionUpdate(action.id, { time: Number(e.target.value) })
+          }
+        />
+      </div>
+      {question && (
+        <>
+          <div className="jqzz-divider-sep" />
+          <div className="jqzz-section-label">Question</div>
+          <div className="jqzz-field-group">
+            <div className="jqzz-field-label">Prompt</div>
+            <textarea
+              className="jqzz-field-textarea"
+              value={question.text}
+              onChange={(e) =>
+                onQuestionUpdate(question.id, { text: e.target.value })
+              }
+            />
+          </div>
+          <div className="jqzz-field-group">
+            <div className="jqzz-field-label">Image URL</div>
+            <input
+              className="jqzz-field-input"
+              placeholder="optional..."
+              value={question.imageUrl || ""}
+              onChange={(e) =>
+                onQuestionUpdate(question.id, { imageUrl: e.target.value })
+              }
+            />
+          </div>
+          <div className="jqzz-field-group">
+            <div className="jqzz-field-label">Elaboration</div>
+            <textarea
+              className="jqzz-field-textarea"
+              style={{ minHeight: 44 }}
+              value={question.elaborationText || ""}
+              onChange={(e) =>
+                onQuestionUpdate(question.id, {
+                  elaborationText: e.target.value,
+                })
+              }
+            />
+          </div>
+          {(answers.length > 0 || question.type !== "USER_GENERATED") && (
+            <>
+              <div className="jqzz-divider-sep" />
+              <div className="jqzz-section-label">Answers</div>
+              {answers.map((a, i) => (
+                <div key={a.id} className="jqzz-answer-row">
+                  <input
+                    className="jqzz-answer-text"
+                    value={a.text}
+                    placeholder="Answer..."
+                    onChange={(e) => updateAnswer(i, "text", e.target.value)}
+                  />
+                  <input
+                    className="jqzz-answer-val"
+                    type="number"
+                    value={a.value}
+                    onChange={(e) => updateAnswer(i, "value", e.target.value)}
+                  />
+                  <button
+                    className="jqzz-answer-del"
+                    onClick={() => removeAnswer(i)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button className="jqzz-add-answer" onClick={addAnswer}>
+                + Add Answer
+              </button>
+            </>
+          )}
+        </>
+      )}
+    </>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\RightPanel.tsx
+====================
+import React, { useState } from "react";
+import type { Quiz, Question, Action, RightTab } from "../../../types";
+import { UsersTab } from "./UsersTab";
+import { ContextEditor } from "./ContextEditor";
+
+interface RightPanelProps {
+  quiz: Quiz | undefined;
+  questionMap: Map<number, Question>;
+  selectedAction: Action | null;
+  onActionUpdate: (id: number, patch: Partial<Action>) => void;
+  onQuestionUpdate: (id: number, patch: Partial<Question>) => void;
+}
+
+export const RightPanel: React.FC<RightPanelProps> = ({
+  quiz,
+  questionMap,
+  selectedAction,
+  onActionUpdate,
+  onQuestionUpdate,
+}) => {
+  const [activeTab, setActiveTab] = useState<RightTab>("context");
+
+  const action = selectedAction;
+  const question = action ? (questionMap.get(action.questionId) ?? null) : null;
+
+  const contextLabel = action
+    ? action.phase === "TEXT" || action.phase === "DIVIDER"
+      ? action.phase
+      : action.phase
+    : "Context";
+
+  return (
+    <div className="jqzz-rpanel">
+      <div className="jqzz-rpanel-tabs">
+        <button
+          className={`jqzz-rpanel-tab${activeTab === "context" ? " active" : ""}`}
+          onClick={() => setActiveTab("context")}
+        >
+          {contextLabel}
+        </button>
+        <button
+          className={`jqzz-rpanel-tab${activeTab === "users" ? " active" : ""}`}
+          onClick={() => setActiveTab("users")}
+        >
+          Users
+        </button>
+      </div>
+      <div className="jqzz-rpanel-body">
+        {activeTab === "users" ? (
+          <UsersTab />
+        ) : (
+          <ContextEditor
+            action={action}
+            question={question}
+            onActionUpdate={onActionUpdate}
+            onQuestionUpdate={onQuestionUpdate}
+          />
+        )}
+      </div>
     </div>
   );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\UsersTab.tsx
+====================
+import React, { useState, useEffect } from "react";
+import type { UserEntry } from "../../../types";
+import { userService } from "../../../services/userService";
+import { useWebSocket } from "../../../hooks/useWebSocket";
+
+export const UsersTab: React.FC = () => {
+  const [users, setUsers] = useState<UserEntry[]>([]);
+
+  useEffect(() => {
+    userService.getAll().then((res) => setUsers(res.data));
+  }, []);
+
+  useWebSocket("/topic/users", (msg) => {
+    // handle user_registered, user_logged_in, user_logged_out, user_updated
+    const { event, user } = msg;
+    setUsers((prev) => {
+      switch (event) {
+        case "user_registered":
+        case "user_logged_in":
+        case "user_updated":
+          return prev.map((u) => (u.id === user.id ? user : u));
+        case "user_logged_out":
+          return prev.map((u) =>
+            u.id === user.id ? { ...u, online: false } : u,
+          );
+        default:
+          return prev;
+      }
+    });
+  });
+
+  const sorted = [...users].sort((a, b) => Number(b.online) - Number(a.online));
+  const online = sorted.filter((u) => u.online).length;
+  const offline = sorted.length - online;
+
+  return (
+    <div>
+      <div className="jqzz-stat-row">
+        <div className="jqzz-stat-box">
+          <div className="jqzz-stat-num" style={{ color: "var(--cyan)" }}>
+            {online}
+          </div>
+          <div className="jqzz-stat-label">Online</div>
+        </div>
+        <div className="jqzz-stat-box">
+          <div className="jqzz-stat-num" style={{ color: "var(--txt2)" }}>
+            {offline}
+          </div>
+          <div className="jqzz-stat-label">Offline</div>
+        </div>
+      </div>
+      {online > 0 && <div className="jqzz-section-label">Online</div>}
+      {sorted
+        .filter((u) => u.online)
+        .map((u) => (
+          <div key={u.id} className="jqzz-user-row">
+            <div className="jqzz-user-avatar online">
+              {u.name[0].toUpperCase()}
+            </div>
+            <div className="jqzz-user-info">
+              <div className="jqzz-user-name">{u.name}</div>
+              <div className="jqzz-user-handle">{u.handle}</div>
+            </div>
+            <div className="jqzz-online-dot on" />
+          </div>
+        ))}
+      {offline > 0 && (
+        <div
+          className="jqzz-section-label"
+          style={{ marginTop: online > 0 ? 14 : 0 }}
+        >
+          Offline
+        </div>
+      )}
+      {sorted
+        .filter((u) => !u.online)
+        .map((u) => (
+          <div key={u.id} className="jqzz-user-row">
+            <div className="jqzz-user-avatar offline">
+              {u.name[0].toUpperCase()}
+            </div>
+            <div className="jqzz-user-info">
+              <div className="jqzz-user-name" style={{ color: "var(--txt2)" }}>
+                {u.name}
+              </div>
+              <div className="jqzz-user-handle">{u.handle}</div>
+            </div>
+            <div className="jqzz-online-dot off" />
+          </div>
+        ))}
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\FooterShortcuts.tsx
+====================
+import React from "react";
+
+export const FooterShortcuts: React.FC = () => {
+  const shortcuts: [string, string][] = [
+    ["New quiz", "^N"],
+    ["Import", "^I"],
+    ["Start", "^↵"],
+    ["Palette", "^K"],
+  ];
+
+  return (
+    <div className="jqzz-sid-footer">
+      {shortcuts.map(([label, key]) => (
+        <div key={label} className="jqzz-shortcut-row">
+          <span>{label}</span>
+          <span className="jqzz-kbd">{key}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\Identity.tsx
+====================
+import React from "react";
+import type { User } from "../../../types";
+
+interface IdentityProps {
+  identity: User | null;
+  onClick: () => void;
 }
-import { useEffect, useState } from "react";
-import useGameStore from "../store/gameStore";
-import api from "../api/client";
 
-export default function QuestionScreen() {
-  const action = useGameStore((s) => s.currentAction);
-  const lobbyId = useGameStore((s) => s.lobbyId);
+export const Identity: React.FC<IdentityProps> = ({ identity, onClick }) => {
+  if (!identity) return null;
+  const avatarLetter = identity.name ? identity.name[0].toUpperCase() : "?";
 
-  const [selected, setSelected] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  return (
+    <div className="jqzz-identity" onClick={onClick}>
+      <div className="jqzz-identity-row">
+        <div className="jqzz-avatar">{avatarLetter}</div>
+        <div>
+          <div className="jqzz-identity-name">{identity.name}</div>
+          <div className="jqzz-identity-handle">{identity.handle}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  const submitAnswer = async (questionId: number, answerId: number) => {
-    if (!lobbyId) return;
-    if (submitted) return;
-    setSelected(answerId);
-    try {
-      await api.post(`/game/${lobbyId}/answer`, {
-        questionId,
-        answerId,
-      });
-      setSubmitted(true);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\QuizList.tsx
+====================
+import React from "react";
+import type { Quiz } from "../../../types";
+
+interface QuizListProps {
+  quizzes: Quiz[];
+  activeQuizId: number | null;
+  onSelectQuiz: (id: number) => void;
+}
+
+export const QuizList: React.FC<QuizListProps> = ({
+  quizzes,
+  activeQuizId,
+  onSelectQuiz,
+}) => {
+  return (
+    <div
+      className="jqzz-sid-section"
+      style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
+    >
+      <div className="jqzz-sid-label">Recent Quizzes</div>
+      {quizzes.map((q) => (
+        <div
+          key={q.id}
+          className={`jqzz-quiz-item${q.id === activeQuizId ? " active" : ""}`}
+          onClick={() => onSelectQuiz(q.id)}
+        >
+          <span className="jqzz-quiz-dot" />
+          <span className="jqzz-quiz-name">{q.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\Sidebar.tsx
+====================
+import React from "react";
+import type { User, Quiz, Snippet } from "../../../types";
+import { Identity as IdentityComponent } from "./Identity";
+import { QuizList } from "./QuizList";
+import { SnippetList } from "./SnippetList";
+import { FooterShortcuts } from "./FooterShortcuts";
+
+interface SidebarProps {
+  identity: User | null;
+  onIdentityClick: () => void;
+  quizzes: Quiz[];
+  activeQuizId: number | null;
+  onSelectQuiz: (id: number) => void;
+  onNewQuiz: () => void;
+  snippets: Snippet[];
+  draggingSnippet: string | null;
+  onSnippetDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
+  onSnippetDragEnd: () => void;
+  onSnippetClick: (id: string) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  identity,
+  onIdentityClick,
+  quizzes,
+  activeQuizId,
+  onSelectQuiz,
+  onNewQuiz,
+  snippets,
+  draggingSnippet,
+  onSnippetDragStart,
+  onSnippetDragEnd,
+  onSnippetClick,
+}) => {
+  return (
+    <aside className="jqzz-sidebar">
+      <div className="jqzz-logo">
+        <span className="jqzz-logo-badge">JQ</span>
+        <span className="jqzz-logo-name">ZZ</span>
+      </div>
+
+      <IdentityComponent identity={identity} onClick={onIdentityClick} />
+
+      <div className="jqzz-sid-section">
+        <div className="jqzz-sid-label">Quick Actions</div>
+        <button className="jqzz-sid-btn accent" onClick={onNewQuiz}>
+          + New Quiz <span className="jqzz-kbd">^N</span>
+        </button>
+        <button
+          className="jqzz-sid-btn"
+          onClick={() => alert("Import .txt flow")}
+        >
+          ↑ Import .txt <span className="jqzz-kbd">^I</span>
+        </button>
+        <button className="jqzz-sid-btn" onClick={() => alert("Join lobby")}>
+          ▶ Join Lobby
+        </button>
+      </div>
+
+      <QuizList
+        quizzes={quizzes}
+        activeQuizId={activeQuizId}
+        onSelectQuiz={onSelectQuiz}
+      />
+
+      <SnippetList
+        snippets={snippets}
+        draggingSnippet={draggingSnippet}
+        onSnippetDragStart={onSnippetDragStart}
+        onSnippetDragEnd={onSnippetDragEnd}
+        onSnippetClick={onSnippetClick}
+      />
+
+      <FooterShortcuts />
+    </aside>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\SnippetList.tsx
+====================
+import React from "react";
+import type { Snippet } from "../../../types";
+
+interface SnippetListProps {
+  snippets: Snippet[];
+  draggingSnippet: string | null;
+  onSnippetDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
+  onSnippetDragEnd: () => void;
+  onSnippetClick: (id: string) => void;
+}
+
+export const SnippetList: React.FC<SnippetListProps> = ({
+  snippets,
+  draggingSnippet,
+  onSnippetDragStart,
+  onSnippetDragEnd,
+  onSnippetClick,
+}) => {
+  return (
+    <div
+      className="jqzz-sid-section"
+      style={{ borderTop: "1px solid var(--border)" }}
+    >
+      <div className="jqzz-sid-label">
+        Snippets{" "}
+        <span style={{ opacity: 0.4, fontSize: 9, letterSpacing: 0 }}>
+          click or drag ↓
+        </span>
+      </div>
+      {snippets.map((s) => (
+        <div
+          key={s.id}
+          className={`jqzz-snippet-item${draggingSnippet === s.id ? " dragging" : ""}`}
+          draggable
+          onDragStart={(e) => onSnippetDragStart(e, s.id)}
+          onDragEnd={onSnippetDragEnd}
+          onClick={() => onSnippetClick(s.id)}
+          title={`${s.steps.length} actions`}
+        >
+          <span className="jqzz-quiz-dot" style={{ background: s.color }} />
+          <span className="jqzz-quiz-name">{s.name}</span>
+          <span style={{ fontSize: 9, color: "var(--txt3)", flexShrink: 0 }}>
+            {s.steps.length}×
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Dashboard.tsx
+====================
+import React, { useState, useMemo, useCallback } from "react";
+import { useQuizzes } from "../../hooks/useQuizzes";
+import { useQuizMutations } from "../../hooks/useQuizMutations";
+import { useDragAndDrop } from "../../hooks/useDragAndDrop";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
+import { useAuth } from "../../contexts/AuthContext";
+import { Sidebar } from "./Sidebar/Sidebar";
+import { Main } from "./Main/Main";
+import { RightPanel } from "./RightPanel/RightPanel";
+import { CommandPalette } from "../Modals/CommandPalette";
+import { IdentityModal } from "../Modals/IdentityModal";
+import { SNIPPETS } from "../../constants/snippets";
+import { buildRenderItems } from "../../utils/buildRenderItems"; // we'll write this helper
+import type { EditorMode } from "../../types";
+import "../../index.css";
+
+export const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+  const { quizzes, setQuizzes, loading, error, refetch } = useQuizzes();
+  const [activeQuizId, setActiveQuizId] = useState<number | null>(null);
+  const [selectedActionId, setSelectedActionId] = useState<number | null>(null);
+  const [mode, setMode] = useState<EditorMode>("visual");
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+
+  const quiz = useMemo(
+    () => quizzes.find((q) => q.id === activeQuizId),
+    [quizzes, activeQuizId],
+  );
+
+  const questionMap = useMemo(
+    () => new Map(quiz?.questions.map((q) => [q.id, q])),
+    [quiz],
+  );
+
+  const {
+    updateAction,
+    updateQuestion,
+    deleteAction,
+    duplicateAction,
+    reorderActions,
+    newQuiz,
+    dropSnippet: dropSnippetMutation,
+    handleParsed,
+  } = useQuizMutations(activeQuizId, setQuizzes, user?.id || "");
+
+  const dropSnippet = useCallback(
+    (snippetId: string) => {
+      if (!activeQuizId) return;
+      dropSnippetMutation(snippetId);
+    },
+    [activeQuizId, dropSnippetMutation],
+  );
+
+  const {
+    draggingSnippet,
+    dropOver,
+    dragActionId,
+    dragOverActionId,
+    onSnippetDragStart,
+    onSnippetDragEnd,
+    onDropZoneDragOver,
+    onDropZoneDragLeave,
+    onDropZoneDrop,
+    onActionDragStart,
+    onActionDragEnd,
+    onActionDragOver,
+    onActionDrop,
+  } = useDragAndDrop(dropSnippet, reorderActions);
+
+  const handleExport = useCallback(() => {
+    if (!quiz) return;
+    // reuse quizToScript from utils
+    import("../../utils/scriptSerializer").then(({ quizToScript }) => {
+      const blob = new Blob([quizToScript(quiz)], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${quiz.name.replace(/\s+/g, "_")}.txt`;
+      a.click();
+    });
+  }, [quiz]);
+
+  useKeyboardShortcuts({
+    onPalette: () => setPaletteOpen(true),
+    onNewQuiz: newQuiz,
+    onToggleMode: () => setMode((m) => (m === "visual" ? "text" : "visual")),
+    onEscape: () => {
+      setPaletteOpen(false);
+      setIdentityOpen(false);
+    },
+    onExport: handleExport,
+  });
+
+  const renderItems = useMemo(() => buildRenderItems(quiz), [quiz]);
+
+  if (loading) return <div className="jqzz-dash">Loading quizzes...</div>;
+  if (error) return <div className="jqzz-dash">Error: {error}</div>;
+
+  return (
+    <div className="jqzz-dash">
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      {identityOpen && user && (
+        <IdentityModal
+          current={user}
+          onSave={(updated) => {
+            // update via context
+            // also call API
+            setIdentityOpen(false);
+          }}
+          onClose={() => setIdentityOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        identity={user}
+        onIdentityClick={() => setIdentityOpen(true)}
+        quizzes={quizzes}
+        activeQuizId={activeQuizId}
+        onSelectQuiz={(id) => {
+          setActiveQuizId(id);
+          setSelectedActionId(null);
+        }}
+        onNewQuiz={newQuiz}
+        snippets={SNIPPETS}
+        draggingSnippet={draggingSnippet}
+        onSnippetDragStart={onSnippetDragStart}
+        onSnippetDragEnd={onSnippetDragEnd}
+        onSnippetClick={dropSnippet}
+      />
+
+      <Main
+        mode={mode}
+        setMode={setMode}
+        onOpenPalette={() => setPaletteOpen(true)}
+        onExport={handleExport}
+        quiz={quiz}
+        renderItems={renderItems}
+        questionMap={questionMap}
+        selectedActionId={selectedActionId}
+        setSelectedActionId={setSelectedActionId}
+        dragActionId={dragActionId}
+        dragOverActionId={dragOverActionId}
+        onActionDragStart={onActionDragStart}
+        onActionDragEnd={onActionDragEnd}
+        onActionDragOver={onActionDragOver}
+        onActionDrop={onActionDrop}
+        deleteAction={deleteAction}
+        duplicateAction={duplicateAction}
+        dropOver={dropOver}
+        onDropZoneDragOver={onDropZoneDragOver}
+        onDropZoneDragLeave={onDropZoneDragLeave}
+        onDropZoneDrop={onDropZoneDrop}
+        aiPrompt={aiPrompt}
+        setAiPrompt={setAiPrompt}
+        onParsed={handleParsed}
+      />
+
+      <RightPanel
+        quiz={quiz}
+        questionMap={questionMap}
+        selectedAction={
+          quiz?.actions.find((a) => a.id === selectedActionId) ?? null
+        }
+        onActionUpdate={updateAction}
+        onQuestionUpdate={updateQuestion}
+      />
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Modals\CommandPalette.tsx
+====================
+import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
+import { COMMANDS } from "../../constants/commands";
+
+interface CommandPaletteProps {
+  onClose: () => void;
+}
+
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
+  const [query, setQuery] = useState("");
+  const [activeIdx, setActiveIdx] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const filtered = COMMANDS.filter(
+    (c) => !query || c.label.toLowerCase().includes(query.toLowerCase()),
+  );
+
+  useEffect(() => {
+    setActiveIdx(0);
+  }, [query]);
+
+  const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      onClose();
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      setActiveIdx((i) => Math.min(i + 1, filtered.length - 1));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      setActiveIdx((i) => Math.max(i - 1, 0));
+      return;
+    }
+    if (e.key === "Enter" && filtered[activeIdx]) {
+      alert(`Executing: ${filtered[activeIdx].label}`);
+      onClose();
     }
   };
 
-  if (!action?.question) return <div>No question</div>;
+  return (
+    <div className="jqzz-palette-overlay" onClick={onClose}>
+      <div
+        className="jqzz-palette"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKey}
+      >
+        <div className="jqzz-palette-input-wrap">
+          <span style={{ color: "var(--txt3)" }}>{">"}</span>
+          <input
+            ref={inputRef}
+            className="jqzz-palette-input"
+            placeholder="Type a command or search..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div className="jqzz-cmd-list">
+          {filtered.map((cmd, i) => (
+            <div
+              key={cmd.label}
+              className={`jqzz-cmd-item${i === activeIdx ? " active" : ""}`}
+              onClick={() => {
+                alert(`Executing: ${cmd.label}`);
+                onClose();
+              }}
+              onMouseEnter={() => setActiveIdx(i)}
+            >
+              <span className="jqzz-cmd-icon">{cmd.icon}</span>
+              <span className="jqzz-cmd-label">{cmd.label}</span>
+              {cmd.sub && <span className="jqzz-cmd-sub">{cmd.sub}</span>}
+            </div>
+          ))}
+        </div>
+        <div className="jqzz-palette-footer">
+          {[
+            ["Enter", "select"],
+            ["Esc", "close"],
+            ["↑↓", "navigate"],
+          ].map(([k, v]) => (
+            <div key={k} className="jqzz-palette-hint">
+              <span className="jqzz-kbd">{k}</span> {v}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  const q = action.question;
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Modals\IdentityModal.tsx
+====================
+import React, { useState } from "react";
+import type { User } from "../../types";
+import { useAuth } from "../../contexts/AuthContext";
+import { userService } from "../../services/userService";
+
+interface IdentityModalProps {
+  current: User;
+  onSave: (id: User) => void;
+  onClose: () => void;
+}
+
+export const IdentityModal: React.FC<IdentityModalProps> = ({
+  current,
+  onSave,
+  onClose,
+}) => {
+  const { updateUser } = useAuth();
+  const [name, setName] = useState(current.name);
+  const [handle, setHandle] = useState(current.handle);
+
+  const handleSave = async () => {
+    try {
+      if (name !== current.name) {
+        await userService.updateName(current.id, { name });
+      }
+      if (handle !== current.handle) {
+        await userService.updateHandle(current.id, { handle });
+      }
+      const updated = { ...current, name, handle };
+      updateUser(updated);
+      onSave(updated);
+    } catch (error) {
+      alert(
+        "Failed to update identity" +
+          (error instanceof Error ? `: ${error.message}` : ""),
+      );
+    }
+  };
+
+  return (
+    <div className="jqzz-modal-overlay" onClick={onClose}>
+      <div className="jqzz-modal" onClick={(e) => e.stopPropagation()}>
+        <h3># Set Identity</h3>
+        <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
+          Display Name
+        </div>
+        <input
+          className="jqzz-modal-input"
+          placeholder="e.g. lonezsi"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
+          Handle
+        </div>
+        <input
+          className="jqzz-modal-input"
+          placeholder="@handle"
+          value={handle}
+          onChange={(e) =>
+            setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))
+          }
+        />
+        <div className="jqzz-modal-row">
+          <button className="jqzz-modal-btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="jqzz-modal-btn primary" onClick={handleSave}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\contexts\AuthContext.tsx
+====================
+import React, { createContext, useState, useEffect, useContext } from "react";
+import type { User } from "../types";
+import { userService } from "../services/userService";
+
+interface AuthContextType {
+  user: User | null;
+  login: (id: string) => Promise<void>;
+  register: (name: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (data: Partial<User>) => void;
+}
+
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
+  updateUser: () => {},
+});
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // reset selection when a new action/question arrives
-    setSelected(null);
-    setSubmitted(false);
-  }, [action?.orderIndex, action?.question?.id]);
+    const stored = localStorage.getItem("userId");
+    if (stored) {
+      userService
+        .getOne(stored)
+        .then((res) => setUser(res.data))
+        .catch(() => localStorage.removeItem("userId"));
+    }
+  }, []);
+
+  const login = async (id: string) => {
+    const res = await userService.login({ id });
+    setUser(res.data);
+    localStorage.setItem("userId", res.data.id);
+  };
+
+  const register = async (name: string) => {
+    const res = await userService.register({ name });
+    await login(res.data.userId);
+  };
+
+  const logout = async () => {
+    if (user) {
+      await userService.logout({ id: user.id });
+      setUser(null);
+      localStorage.removeItem("userId");
+    }
+  };
+
+  const updateUser = (data: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...data } : null));
+  };
 
   return (
-    <div className="p-6 rounded-lg shadow-lg bg-white">
-      <h2 className="text-3xl mb-4">{q.text}</h2>
-      {q.imageUrl && (
-        <img src={q.imageUrl} alt="question" className="mb-4 max-w-full" />
-      )}
-
-      <div className="grid grid-cols-2 gap-4">
-        {q.answers?.map((a) => {
-          const isSelected = selected === a.id;
-          return (
-            <button
-              key={a.id}
-              onClick={() => submitAnswer(q.id, a.id)}
-              disabled={submitted}
-              className={`p-4 rounded-lg text-xl focus:outline-none transition-colors ${
-                submitted
-                  ? isSelected
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-200 text-gray-600 cursor-not-allowed"
-                  : isSelected
-                    ? "bg-indigo-700 text-white"
-                    : "bg-indigo-600 text-white"
-              }`}
-            >
-              {a.text}
-            </button>
-          );
-        })}
-      </div>
-
-      {submitted && (
-        <div className="mt-4 text-center text-green-700">
-          Answer submitted! Waiting for results...
-        </div>
-      )}
-    </div>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
+      {children}
+    </AuthContext.Provider>
   );
-}
-import useGameStore from "../store/gameStore";
-import Leaderboard from "./Leaderboard";
+};
 
-export default function ResultScreen() {
-  const action = useGameStore((s) => s.currentAction);
-  const q = action?.question;
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAuth = () => useContext(AuthContext);
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\contexts\WebSocketContext.tsx
+====================
+import React, { createContext, useEffect, useState, useRef } from "react";
+import type { Client, IMessage, StompSubscription } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
+interface WebSocketContextType {
+  client: Client | null;
+  subscribe: (
+    destination: string,
+    callback: (msg: IMessage) => void,
+  ) => StompSubscription | undefined;
+}
+
+export const WebSocketContext = createContext<WebSocketContextType>({
+  client: null,
+  subscribe: () => undefined,
+});
+
+export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [client, setClient] = useState<Client | null>(null);
+  const clientRef = useRef<Client | null>(null);
+
+  useEffect(() => {
+    const stompClient = new Client({
+      webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log("WebSocket connected");
+      },
+    });
+    stompClient.activate();
+    clientRef.current = stompClient;
+    // We set state only once, after activation
+    setClient(stompClient);
+
+    return () => {
+      stompClient.deactivate();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps – runs once on mount
+
+  const subscribe = (
+    destination: string,
+    callback: (msg: IMessage) => void,
+  ) => {
+    return clientRef.current?.subscribe(destination, callback);
+  };
 
   return (
-    <div className="p-6 rounded-lg shadow-lg bg-white">
-      <h3 className="text-2xl mb-2">Results</h3>
-      {q ? (
-        <div>
-          <p className="text-lg">Correct answer shown on server</p>
-          <p className="mt-2 font-semibold">{q.text}</p>
-        </div>
-      ) : (
-        <p>No result data</p>
-      )}
-      <div className="mt-6">
-        <Leaderboard />
-      </div>
-    </div>
+    <WebSocketContext.Provider value={{ client, subscribe }}>
+      {children}
+    </WebSocketContext.Provider>
   );
-}
-import useGameStore from "../store/gameStore";
+};
 
-export default function WaitingScreen() {
-  const timer = useGameStore((s) => s.timer);
-  const currentAction = useGameStore((s) => s.currentAction);
+// eslint-disable-next-line react-refresh/only-export-components
+export const useWebSocket = () => React.useContext(WebSocketContext);
 
-  return (
-    <div className="p-6 rounded-lg shadow-lg bg-white">
-      <h2 className="text-2xl mb-2">Next question starting in</h2>
-      <div className="text-6xl font-bold">{timer}</div>
-      {currentAction?.question?.text && (
-        <p className="mt-4 text-gray-600">{currentAction.question.text}</p>
-      )}
-    </div>
-  );
-}
-#root {
-  width: 100%;
-  min-height: 100vh;
-}
 
-/* Utility Classes */
-.logo {
-  max-width: 100%;
-  height: auto;
-  transition: transform 0.3s ease;
-}
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\syntaxHighlighterScript.tsx
+====================
+import { tokenizeLine, TOKEN_COLOR } from "./syntaxHighlighter";
 
-.logo:hover {
-  transform: scale(1.05);
-}
-
-.card {
-  padding: 2rem;
-  border-radius: 12px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-}
-
-/* Text utilities */
-.text-center {
-  text-align: center;
-}
-
-.text-primary {
-  color: var(--primary);
-}
-
-.text-secondary {
-  color: var(--text-secondary);
-}
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "./Dashboard";
-import LobbyView from "./LobbyView";
-import ErrorBanner from "./components/ErrorBanner";
-
-function App() {
+export const HighlightedScript = ({ text }: { text: string }) => {
   return (
     <>
-      <ErrorBanner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/lobby/:id" element={<LobbyView />} />
-        </Routes>
-      </BrowserRouter>
+      {text.split("\n").map((line, li) => (
+        <span key={li} style={{ display: "block", minHeight: "1.8em" }}>
+          {line === "---" ? (
+            <span
+              style={{
+                color: TOKEN_COLOR.div,
+                borderBottom: "1px solid #333748",
+                display: "block",
+              }}
+            >
+              {line || " "}
+            </span>
+          ) : (
+            tokenizeLine(line).map((tk, ti) => (
+              <span key={ti} style={{ color: TOKEN_COLOR[tk.t] }}>
+                {tk.v}
+              </span>
+            ))
+          )}
+          {line.length === 0 && "\u00a0"}
+        </span>
+      ))}
     </>
   );
+};
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\App.tsx
+====================
+import { Dashboard } from "./components/Dashboard/Dashboard";
+
+function App() {
+  return <Dashboard />;
 }
 
 export default App;
-.dashboard-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 4rem;
-  zoom: 0.8;
-}
 
-/* Hero Section */
-.hero-section {
-  width: 100%;
-  padding: 4rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--hero-gradient-start) 0%,
-    var(--hero-gradient-end) 100%
-  );
-  border-bottom: 1px solid var(--border);
-  min-height: 400px;
-}
 
-.hero-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3rem;
-  max-width: 900px;
-  width: 100%;
-}
-
-.hero-logo {
-  flex: 0 0 auto;
-  width: 250px;
-  height: 250px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hero-logo img {
-  max-width: 100%;
-  height: auto;
-  animation: float 3s ease-in-out infinite;
-  mix-blend-mode: color-burn;
-}
-
-.bento-box::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  mix-blend-mode: multiply;
-  background-color: var(--primary);
-  background-position: center;
-
-  opacity: 0.02;
-  z-index: -1;
-}
-
-.hero-text {
-  flex: 1;
-}
-
-.hero-text h1 {
-  margin-bottom: 1rem;
-}
-
-.tagline {
-  color: var(--text-secondary);
-  margin: 0;
-  font-weight: 500;
-}
-
-/* Main Container */
-.main-container {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-/* Bento Grid */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 1fr;
-  gap: 0.8rem;
-  align-items: start;
-  width: 100%;
-  margin-top: 1.25rem;
-}
-
-.bento-box {
-  border: 1px solid var(--border);
-  padding: 1rem;
-  border-radius: 12px;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  min-height: 120px;
-  width: 100%;
-  height: 100%;
-}
-
-.bento-box:hover:not(.hero-section) {
-  border-color: var(--primary);
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px var(--shadow-primary-weak);
-}
-
-.bento-box-large {
-  grid-column: span 2;
-}
-
-.bento-box-tall {
-  grid-row: span 2;
-}
-
-.bento-box-wide {
-  grid-column: span 2;
-}
-
-/* Box Header */
-.box-header {
-  margin-bottom: 1.5rem;
-}
-
-.box-header h2 {
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
-}
-
-.box-header p {
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.box-header h3 {
-  color: var(--text-primary);
-}
-
-/* Lobby Form */
-.lobby-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.lobby-form input {
-  padding: 1rem;
-}
-
-.lobby-form button {
-  padding: 1rem;
-  width: 100%;
-}
-
-/* Lobby List */
-.lobby-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.lobby-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.lobby-item:hover {
-  background: var(--hover-bg-light);
-  border-color: var(--primary);
-}
-
-.lobby-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.lobby-name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.lobby-id {
-  color: var(--text-secondary);
-}
-
-.btn-join {
-  margin-left: 1rem;
-  white-space: nowrap;
-  border: none;
-  padding: 0.75rem 1.5rem;
-}
-
-.btn-join:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px var(--shadow-primary-strong);
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 150px;
-  text-align: center;
-}
-
-.empty-state p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-
-/* Stats */
-.stat-number {
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 1rem 0;
-  line-height: 1;
-}
-
-.stat-label {
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-/* Buttons */
-.btn-primary,
-.btn-secondary {
-  border: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border-radius: 10px;
-  width: 100%;
-  padding: 0.875rem;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px var(--shadow-primary-medium);
-}
-
-.btn-secondary {
-  filter: invert(1);
-  color: var(--text-white);
-  border: 2px solid var(--primary);
-}
-
-.btn-secondary:hover {
-  transform: translateY(-2px);
-  border: 2px solid var(--text-white);
-}
-
-/* User List Box */
-.user-list-box {
-  max-height: 400px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.user-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.user-item.online {
-  border-color: var(--primary);
-  background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
-  color: var(--text-white);
-}
-
-.user-item input {
-  border: none;
-  background: transparent;
-  font-weight: 600;
-  color: inherit;
-  width: 100%;
-}
-
-.user-item input:focus {
-  outline: none;
-  text-decoration: underline;
-}
-
-.user-status {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-left: 1rem;
-}
-
-.auth-box {
-  gap: 1rem;
-}
-
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.dropdown-toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  opacity: 0.7;
-}
-
-.dropdown-area {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  animation: fadeIn 0.2s ease;
-}
-
-.user-item span {
-  font-size: 1.2rem;
-}
-
-.user-item.online span {
-  color: limegreen;
-}
-
-.user-item:not(.online) span {
-  color: gray;
-}
-
-/* smoother feel */
-.bento-box {
-  backdrop-filter: blur(6px);
-  background: rgba(255, 255, 255, 0.75);
-}
-
-/* hover polish */
-button {
-  transition: all 0.2s ease;
-}
-
-button:hover {
-  transform: translateY(-2px);
-}
-
-/* animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .hero-content {
-    flex-direction: column;
-    gap: 2rem;
-    text-align: center;
-  }
-
-  .hero-logo {
-    width: 180px;
-    height: 180px;
-  }
-
-  .hero-text {
-    text-align: center;
-  }
-
-  .hero-section {
-    padding: 2rem 1.5rem;
-    min-height: 300px;
-  }
-
-  .main-container {
-    padding: 0 1.5rem;
-  }
-
-  .bento-box {
-    padding: 1.5rem;
-  }
-
-  .lobby-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .btn-join {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .bento-grid {
-    gap: 1rem;
-  }
-}
-import { useState, useEffect } from "react";
-import type { SubmitEvent } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { API_ENDPOINT } from "./config/api";
-import useGameStore from "./store/gameStore";
-import "./Dashboard.css";
-
-interface Lobby {
-  id: number;
-  name: string;
-}
-
-interface User {
-  id: string;
-  handle: string;
-  name: string;
-  online: boolean;
-}
-
-const Dashboard = () => {
-  const [lobbies, setLobbies] = useState<Lobby[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [lobbyName, setLobbyName] = useState("");
-
-  // 🔥 unified auth state
-  const [handle, setHandle] = useState("");
-  const [name, setName] = useState("");
-  const [extraOpen, setExtraOpen] = useState(false);
-  const [userExists, setUserExists] = useState<boolean | null>(null);
-
-  const userId = useGameStore((s) => s.userId);
-  const setUserId = useGameStore((s) => s.setUserId);
-  const setUserName = useGameStore((s) => s.setUserName);
-  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
-
-  const navigate = useNavigate();
-
-  // 🔥 LIVE HANDLE CHECK
-  useEffect(() => {
-    if (!handle) {
-      setUserExists(null);
-      return;
-    }
-
-    const timeout = setTimeout(async () => {
-      try {
-        const res = await axios.get<User[]>(`${API_ENDPOINT}/users`);
-        const found = res.data.find((u) => u.handle === handle);
-        setUserExists(!!found);
-      } catch {
-        setUserExists(null);
-      }
-    }, 250);
-
-    return () => clearTimeout(timeout);
-  }, [handle]);
-
-  // fetch data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const usersRes = await axios.get<User[]>(`${API_ENDPOINT}/users`);
-        setUsers(
-          usersRes.data.sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0)),
-        );
-
-        const lobbiesRes = await axios.get<Lobby[]>(`${API_ENDPOINT}/lobbies`);
-        setLobbies(lobbiesRes.data);
-      } catch (err) {
-        setErrorMessage(`Failed to load data: ${err}`);
-      }
-    };
-
-    fetchData();
-  }, [setErrorMessage]);
-
-  // 🔥 unified login/register
-  const handleAuth = async (e: SubmitEvent) => {
-    e.preventDefault();
-
-    try {
-      if (userExists) {
-        const user = users.find((u) => u.handle === handle);
-        if (!user) return;
-
-        const res = await axios.post(`${API_ENDPOINT}/users/login`, {
-          id: user.id,
-        });
-
-        setUserId(res.data.id);
-        setUserName(res.data.name);
-      } else {
-        const res = await axios.post(`${API_ENDPOINT}/users/register`, {
-          name: name || handle || "Guest",
-        });
-
-        setUserId(res.data.id);
-        setUserName(res.data.name);
-      }
-    } catch (err) {
-      setErrorMessage(`Auth failed: ${err}`);
-    }
-  };
-
-  const createLobby = async (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post<Lobby>(`${API_ENDPOINT}/lobbies`, {
-        name: lobbyName,
-        adminId: userId,
-      });
-      navigate(`/lobby/${res.data.id}`);
-    } catch (err) {
-      setErrorMessage(`Failed to create lobby: ${err}`);
-    }
-  };
-
-  const renameUser = (id: string, newName: string) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, name: newName } : u)),
-    );
-
-    axios
-      .post(`${API_ENDPOINT}/users/${id}/name`, { name: newName })
-      .catch((err) => setErrorMessage(`Failed to rename user: ${err}`));
-  };
-
-  return (
-    <div className="dashboard-container">
-      <div className="main-container">
-        <div className="bento-grid">
-          {/* HERO (unchanged) */}
-          <div className="bento-box hero-section">
-            <div className="hero-logo">
-              <img src="/logo.png" alt="JQZZ Logo" />
-            </div>
-            <div className="hero-text align-center">
-              <h1>---JQzz---</h1>
-              <p className="tagline">
-                Egy teljesen egyedi weboldal, a kompetíció egyébként is béna (és
-                még drága is)
-              </p>
-              <h1 className="tag">;Lonezsi</h1>
-            </div>
-          </div>
-
-          {/* 🔥 AUTH BOX (NEW but same style slot) */}
-          <div className="bento-box">
-            <div className="box-header">
-              <h2>Account</h2>
-            </div>
-
-            <form onSubmit={handleAuth} className="auth-form">
-              <input
-                type="text"
-                placeholder="Handle..."
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-              />
-
-              <button
-                type="button"
-                className="dropdown-toggle"
-                onClick={() => setExtraOpen(!extraOpen)}
-              >
-                {extraOpen ? "Less ▲" : "More ▼"}
-              </button>
-
-              {extraOpen && (
-                <div className="dropdown-area">
-                  <input
-                    type="text"
-                    placeholder="Display name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-              )}
-
-              <button type="submit" className="btn-primary">
-                {userExists === null
-                  ? "Continue"
-                  : userExists
-                    ? "Login"
-                    : "Register"}
-              </button>
-            </form>
-          </div>
-
-          {/* CREATE LOBBY (kept) */}
-          <div className="bento-box">
-            <div className="box-header">
-              <h2>Create New Lobby</h2>
-            </div>
-
-            <form onSubmit={createLobby} className="lobby-form">
-              <input
-                value={lobbyName}
-                onChange={(e) => setLobbyName(e.target.value)}
-                placeholder="Enter lobby name"
-                required
-              />
-              <button type="submit" className="btn-primary">
-                Create Lobby
-              </button>
-            </form>
-          </div>
-
-          {/* USERS (kept, but live typing already good) */}
-          <div className="bento-box">
-            <div className="box-header">
-              <h2>Users</h2>
-            </div>
-
-            <div className="user-list-box">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className={`user-item ${user.online ? "online" : ""}`}
-                >
-                  <input
-                    value={user.name}
-                    onChange={(e) => renameUser(user.id, e.target.value)}
-                  />
-                  <span className="user-status">
-                    {user.online ? "Online" : "Offline"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* LOBBIES (kept) */}
-          <div className="bento-box">
-            <div className="box-header">
-              <h2>Join Existing Lobby</h2>
-            </div>
-
-            {lobbies.length > 0 ? (
-              <div className="lobby-list">
-                {lobbies.map((lobby) => (
-                  <div key={lobby.id} className="lobby-item">
-                    <span className="lobby-name">{lobby.name}</span>
-                    <button
-                      onClick={() => navigate(`/lobby/${lobby.id}`)}
-                      className="btn-join"
-                    >
-                      Join →
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <p>No lobbies yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Dashboard;
-@font-face {
-  font-family: "OldEnglishFive";
-  src: url("/OldEnglishFive.ttf") format("truetype");
-}
-
-:root {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-
-  line-height: 1.6;
-  font-weight: 400;
-
-  color-scheme: light;
-
-  /* paper background */
-  background: url("/bg.jpg");
-  background-size: 100% 100%;
-  background-attachment: fixed;
-
-  /* texture overlay */
-  --inky-texture: url(https://texturelabs.org/wp-content/uploads/Texturelabs_Paper_269S.jpg);
-
-  color: #1a1a1a;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  /* monochrome palette */
-
-  --primary: #1a1a1a;
-  --primary-dark: #000000;
-  --secondary: #4a4a4a;
-  --accent: #8a8a8a;
-
-  /* subtle newspaper gradient */
-  --hero-gradient-start: rgba(0, 0, 0, 0.03);
-  --hero-gradient-end: rgba(0, 0, 0, 0.01);
-
-  --hover-bg-light: rgba(0, 0, 0, 0.05);
-
-  --shadow-primary-weak: rgba(0, 0, 0, 0.05);
-  --shadow-primary-medium: rgba(0, 0, 0, 0.08);
-  --shadow-primary-strong: rgba(0, 0, 0, 0.12);
-
-  /* UI surfaces */
-
-  --bg-primary: rgba(255, 255, 255, 0.85);
-  --bg-secondary: rgba(245, 245, 240, 0.9);
-
-  --border: rgba(0, 0, 0, 0.15);
-
-  /* text */
-
-  --text-primary: #111111;
-  --text-secondary: #555555;
-  --text-white: #ffffff;
-}
-
-* {
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\index.css
+====================
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
+.jqzz-dash * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+}
+.jqzz-dash {
+  --bg0: #0b0c10;
+  --bg1: #111318;
+  --bg2: #181a21;
+  --bg3: #1e2029;
+  --bg4: #272a35;
+  --border: #252830;
+  --border2: #333748;
+  --cyan: #00e5c8;
+  --cyan-dim: rgba(0, 229, 200, 0.1);
+  --lime: #a3e635;
+  --pink: #f472b6;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --txt: #dde1f0;
+  --txt2: #8890ab;
+  --txt3: #484f66;
+  --mono: "JetBrains Mono", monospace;
+  --r: 6px;
+  --r2: 4px;
+  display: flex;
+  height: 100vh;
+  min-height: 600px;
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--bg0);
+  color: var(--txt);
+  overflow: hidden;
 }
 
-a {
-  font-weight: 500;
-  color: var(--primary);
-  text-decoration: none;
-  transition: color 0.3s ease;
+/* SIDEBAR */
+.jqzz-sidebar {
+  width: 210px;
+  min-width: 210px;
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-a:hover {
-  color: var(--accent);
+.jqzz-logo {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+.jqzz-logo-badge {
+  background: var(--cyan);
+  color: #000;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--r2);
+  letter-spacing: 1.5px;
 }
-
-#root {
+.jqzz-logo-name {
+  color: var(--txt3);
+  font-size: 11px;
+  letter-spacing: 3px;
+}
+.jqzz-identity {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.jqzz-identity:hover {
+  background: var(--bg2);
+}
+.jqzz-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.jqzz-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--cyan-dim);
+  border: 1px solid var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.jqzz-identity-name {
+  color: var(--txt);
+  font-size: 12px;
+  font-weight: 600;
+}
+.jqzz-identity-handle {
+  color: var(--txt3);
+  font-size: 10px;
+  margin-top: 1px;
+}
+.jqzz-sid-section {
+  padding: 8px 0;
+}
+.jqzz-sid-label {
+  color: var(--txt3);
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 4px 13px 6px;
+  text-transform: uppercase;
+}
+.jqzz-sid-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  cursor: pointer;
+  color: var(--txt2);
+  font-size: 12px;
+  transition: all 0.12s;
+  border: none;
+  background: none;
   width: 100%;
-  min-height: 100vh;
+  text-align: left;
+  font-family: var(--mono);
+}
+.jqzz-sid-btn:hover {
+  background: var(--bg2);
+  color: var(--txt);
+}
+.jqzz-sid-btn.accent {
+  color: var(--cyan);
+}
+.jqzz-sid-btn.accent:hover {
+  background: var(--cyan-dim);
+}
+.jqzz-kbd {
+  margin-left: auto;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-size: 9px;
+  padding: 1px 5px;
+  color: var(--txt3);
+}
+.jqzz-quiz-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 13px;
+  cursor: pointer;
+  color: var(--txt2);
+  font-size: 11px;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+}
+.jqzz-quiz-item:hover {
+  background: var(--bg2);
+  color: var(--txt);
+}
+.jqzz-quiz-item.active {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+}
+.jqzz-quiz-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--txt3);
+  flex-shrink: 0;
+}
+.jqzz-quiz-item.active .jqzz-quiz-dot {
+  background: var(--cyan);
+}
+.jqzz-quiz-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.jqzz-sid-footer {
+  margin-top: auto;
+  padding: 10px 13px;
+  border-top: 1px solid var(--border);
+}
+.jqzz-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+  color: var(--txt3);
+  font-size: 10px;
+}
+.jqzz-snippet-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 13px;
+  cursor: grab;
+  color: var(--txt2);
+  font-size: 11px;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+.jqzz-snippet-item:hover {
+  background: var(--bg2);
+  color: var(--txt);
+}
+.jqzz-snippet-item:active {
+  cursor: grabbing;
+}
+.jqzz-snippet-item.dragging {
+  opacity: 0.35;
 }
 
-.tag {
+/* MAIN */
+.jqzz-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.jqzz-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg1);
+  flex-shrink: 0;
+}
+.jqzz-tab-group {
+  display: flex;
+  background: var(--bg2);
+  border-radius: var(--r);
+  padding: 2px;
+  gap: 1px;
+}
+.jqzz-tab {
+  padding: 5px 14px;
+  border-radius: var(--r2);
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--txt2);
+  transition: all 0.12s;
+  letter-spacing: 0.5px;
+}
+.jqzz-tab.active {
+  background: var(--bg4);
+  color: var(--txt);
+}
+.jqzz-spacer {
+  flex: 1;
+}
+.jqzz-toolbar-btn {
+  padding: 5px 12px;
+  border-radius: var(--r2);
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--txt2);
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.jqzz-toolbar-btn:hover {
+  background: var(--bg3);
+  color: var(--txt);
+}
+.jqzz-toolbar-btn.run {
+  background: var(--cyan);
+  color: #000;
+  border-color: var(--cyan);
+  font-weight: 700;
+}
+.jqzz-toolbar-btn.run:hover {
+  background: #00ccb2;
+}
+.jqzz-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+.jqzz-body::-webkit-scrollbar {
+  width: 4px;
+}
+.jqzz-body::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 2px;
+}
+
+/* ACTION CARDS */
+.jqzz-group-label {
+  color: var(--txt3);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-group-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.jqzz-group {
+  margin-bottom: 14px;
+}
+.jqzz-drop-line {
+  height: 2px;
+  background: var(--cyan);
+  border-radius: 1px;
+  margin: 0 0 4px;
+  transition: opacity 0.1s;
+}
+.jqzz-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+  position: relative;
+}
+.jqzz-card:hover {
+  border-color: var(--border2);
+  background: var(--bg3);
+}
+.jqzz-card.selected {
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+}
+.jqzz-card.drag-over {
+  border-top: 2px solid var(--cyan);
+}
+.jqzz-card.dragging-self {
+  opacity: 0.4;
+}
+.jqzz-drag-handle {
+  display: flex;
+  align-items: center;
+  color: var(--txt3);
+  font-size: 14px;
+  cursor: grab;
+  padding: 0 4px 0 0;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.1s;
+  user-select: none;
+}
+.jqzz-drag-handle:hover {
+  color: var(--txt2);
+}
+.jqzz-drag-handle:active {
+  cursor: grabbing;
+}
+.jqzz-card-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  margin-left: auto;
+}
+.jqzz-card:hover .jqzz-card-actions {
+  opacity: 1;
+}
+.jqzz-card-action-btn {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  color: var(--txt3);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--r2);
+  cursor: pointer;
+  font-family: var(--mono);
+  transition: all 0.1s;
+}
+.jqzz-card-action-btn:hover {
+  color: var(--txt);
+  border-color: var(--txt3);
+}
+.jqzz-card-action-btn.del:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+.jqzz-phase-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 2px 8px;
+  border-radius: var(--r2);
+  flex-shrink: 0;
+  min-width: 90px;
+  text-align: center;
+  font-family: var(--mono);
+}
+.badge-WAITING {
+  background: rgba(72, 79, 102, 0.3);
+  color: #8890ab;
+  border: 1px solid #333748;
+}
+.badge-QUESTION {
+  background: rgba(0, 229, 200, 0.12);
+  color: #00e5c8;
+  border: 1px solid rgba(0, 229, 200, 0.3);
+}
+.badge-ANSWER {
+  background: rgba(163, 230, 53, 0.12);
+  color: #a3e635;
+  border: 1px solid rgba(163, 230, 53, 0.3);
+}
+.badge-ELABORATION {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.badge-RESULT {
+  background: rgba(244, 114, 182, 0.12);
+  color: #f472b6;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+.badge-TEXT {
+  background: rgba(100, 100, 120, 0.2);
+  color: #686e8a;
+  border: 1px solid #333748;
+}
+.jqzz-card-time {
+  color: var(--txt3);
+  font-size: 11px;
+  min-width: 30px;
+}
+.jqzz-card-preview {
+  color: var(--txt2);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* TEXT block */
+.jqzz-text-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.jqzz-text-block:hover {
+  border-color: var(--border2);
+  background: var(--bg2);
+}
+.jqzz-text-block-content {
+  color: var(--txt3);
+  font-size: 11px;
+  font-style: italic;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* DIVIDER block */
+.jqzz-divider-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s;
+}
+.jqzz-divider-block:hover {
+  opacity: 1;
+}
+.jqzz-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.jqzz-divider-label {
+  color: var(--txt3);
+  font-size: 9px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+/* ADD BTN */
+.jqzz-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  color: var(--txt3);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--mono);
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+.jqzz-add-btn:hover,
+.jqzz-add-btn.over {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--cyan-dim);
+}
+
+/* EMPTY */
+.jqzz-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px 24px;
+}
+.jqzz-empty-icon {
+  font-size: 28px;
+  opacity: 0.3;
+}
+.jqzz-empty-title {
+  font-size: 13px;
+  color: var(--txt2);
+}
+.jqzz-empty-sub {
+  font-size: 11px;
+  color: var(--txt3);
+  text-align: center;
+  line-height: 1.8;
+}
+.jqzz-empty-drop {
+  border: 1px dashed var(--border2);
+  border-radius: var(--r);
+  padding: 16px 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--txt3);
+  transition: all 0.15s;
+  margin-top: 8px;
+  width: 100%;
+  max-width: 280px;
+}
+.jqzz-empty-drop.over {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--cyan-dim);
+}
+
+/* TEXT EDITOR */
+.jqzz-text-editor {
+  background: var(--bg1);
+  border-radius: var(--r);
+  padding: 14px;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.jqzz-ai-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+.jqzz-ai-label {
+  color: var(--txt3);
+  font-size: 10px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.jqzz-ai-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--txt);
+  font-size: 11px;
+  flex: 1;
+  font-family: var(--mono);
+}
+.jqzz-ai-input::placeholder {
+  color: var(--txt3);
+}
+.jqzz-ai-btn {
+  background: var(--cyan);
+  color: #000;
+  border: none;
+  border-radius: var(--r2);
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--mono);
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.jqzz-ai-btn:hover {
+  background: #00ccb2;
+}
+
+/* OVERLAY EDITOR */
+.jqzz-editor-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: var(--r2);
+}
+.jqzz-highlight-pre {
   position: absolute;
-  margin-bottom: 0px;
-  bottom: 0;
-  right: 5px;
-  opacity: 0.2;
-  z-index: -1;
+  inset: 0;
+  margin: 0;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--txt);
+  background: var(--bg2);
+  border-radius: var(--r2);
+  word-break: normal;
+}
+.jqzz-script-ta {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.8;
+  color: transparent;
+  caret-color: var(--cyan);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+  border-radius: var(--r2);
+}
+.jqzz-script-ta::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.jqzz-script-ta::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 2px;
+}
+.jqzz-script-ta::selection {
+  background: rgba(0, 229, 200, 0.2);
+}
+.jqzz-parse-badge {
+  font-size: 9px;
+  color: var(--txt3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  letter-spacing: 0.5px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.jqzz-parse-badge.ok {
+  color: var(--lime);
+  border-color: rgba(163, 230, 53, 0.3);
+}
+.jqzz-parse-badge.err {
+  color: var(--red);
+  border-color: rgba(248, 113, 113, 0.3);
 }
 
-.align-center {
+/* RIGHT PANEL */
+.jqzz-rpanel {
+  width: 250px;
+  min-width: 250px;
+  background: var(--bg1);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.jqzz-rpanel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.jqzz-rpanel-tab {
+  flex: 1;
+  padding: 9px 6px;
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--txt3);
+  transition: all 0.12s;
+  border-bottom: 2px solid transparent;
+}
+.jqzz-rpanel-tab:hover {
+  color: var(--txt2);
+  background: var(--bg2);
+}
+.jqzz-rpanel-tab.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+.jqzz-rpanel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+.jqzz-rpanel-body::-webkit-scrollbar {
+  width: 4px;
+}
+.jqzz-rpanel-body::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 2px;
+}
+.jqzz-section-label {
+  color: var(--txt3);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.jqzz-field-group {
+  margin-bottom: 12px;
+}
+.jqzz-field-label {
+  color: var(--txt3);
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+.jqzz-field-select,
+.jqzz-field-input,
+.jqzz-field-textarea {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--txt);
+  font-size: 12px;
+  padding: 5px 8px;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color 0.12s;
+}
+.jqzz-field-select:focus,
+.jqzz-field-input:focus,
+.jqzz-field-textarea:focus {
+  border-color: var(--cyan);
+}
+.jqzz-field-textarea {
+  resize: vertical;
+  min-height: 58px;
+  line-height: 1.5;
+}
+.jqzz-divider-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+.jqzz-answer-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.jqzz-answer-text {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--txt);
+  font-size: 11px;
+  padding: 4px 7px;
+  font-family: var(--mono);
+  outline: none;
+}
+.jqzz-answer-text:focus {
+  border-color: var(--cyan);
+}
+.jqzz-answer-val {
+  width: 38px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--lime);
+  font-size: 11px;
+  padding: 4px 5px;
+  font-family: var(--mono);
+  outline: none;
   text-align: center;
 }
-
-h1,
-h2,
-h3 {
-  font-family: "OldEnglishFive", serif;
-}
-
-h1 {
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-h2 {
-  line-height: 1.3;
-  font-weight: 600;
-}
-
-h3 {
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}
-
-p {
-  color: var(--text-secondary);
-}
-
-.ink-button {
-  border-radius: 10px;
-  border: 2px solid var(--border);
-  padding: 0.75rem 1.5rem;
-
-  font-weight: 600;
-  font-family: inherit;
-  background: linear-gradient(
-    135deg,
-    var(--primary) 0%,
-    var(--primary-dark) 100%
-  );
-  background-image: var(--inky-texture);
-  background-size: cover;
-  color: white;
+.jqzz-answer-del {
+  background: none;
+  border: none;
+  color: var(--txt3);
   cursor: pointer;
-  transition: all 0.3s ease;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1;
+  transition: color 0.1s;
 }
-
-.ink-button:hover {
-  border-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px var(--shadow-primary-medium);
+.jqzz-answer-del:hover {
+  color: var(--red);
 }
-
-.ink-button:active {
-  transform: translateY(0);
-}
-
-.ink-button:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-input[type="text"],
-input[type="number"],
-textarea {
+.jqzz-add-answer {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--border);
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  font-family: inherit;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--r2);
+  color: var(--txt3);
+  font-size: 11px;
+  padding: 5px;
+  cursor: pointer;
+  font-family: var(--mono);
+  transition: all 0.12s;
+  margin-top: 4px;
+}
+.jqzz-add-answer:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 
-input[type="text"]:focus,
-input[type="number"]:focus,
-textarea:focus {
+/* USERS */
+.jqzz-stat-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.jqzz-stat-box {
+  flex: 1;
+  background: var(--bg2);
+  border-radius: var(--r);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+}
+.jqzz-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.jqzz-stat-label {
+  color: var(--txt3);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.jqzz-user-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.jqzz-user-row:last-child {
+  border-bottom: none;
+}
+.jqzz-user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.jqzz-user-avatar.online {
+  background: var(--cyan-dim);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+}
+.jqzz-user-avatar.offline {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--txt3);
+}
+.jqzz-user-info {
+  flex: 1;
+  min-width: 0;
+}
+.jqzz-user-name {
+  font-size: 11px;
+  color: var(--txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jqzz-user-handle {
+  font-size: 10px;
+  color: var(--txt3);
+}
+.jqzz-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.jqzz-online-dot.on {
+  background: var(--cyan);
+  box-shadow: 0 0 4px var(--cyan);
+}
+.jqzz-online-dot.off {
+  background: var(--txt3);
+}
+
+/* PALETTE */
+.jqzz-palette-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+  backdrop-filter: blur(2px);
+}
+.jqzz-palette {
+  width: 500px;
+  max-width: 90vw;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  animation: paletteIn 0.15s ease;
+}
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+}
+.jqzz-palette-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.jqzz-palette-input {
+  background: none;
+  border: none;
   outline: none;
-  border-color: var(--primary);
-  background-color: var(--hover-bg-light);
+  color: var(--txt);
+  font-size: 14px;
+  flex: 1;
+  font-family: var(--mono);
+}
+.jqzz-palette-input::placeholder {
+  color: var(--txt3);
+}
+.jqzz-cmd-list {
+  padding: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.jqzz-cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--r2);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.jqzz-cmd-item:hover,
+.jqzz-cmd-item.active {
+  background: var(--cyan-dim);
+}
+.jqzz-cmd-icon {
+  color: var(--txt3);
+  font-size: 12px;
+  min-width: 16px;
+  text-align: center;
+}
+.jqzz-cmd-label {
+  color: var(--txt);
+  font-size: 13px;
+}
+.jqzz-cmd-sub {
+  color: var(--txt3);
+  font-size: 11px;
+  margin-left: auto;
+}
+.jqzz-cmd-item.active .jqzz-cmd-icon,
+.jqzz-cmd-item.active .jqzz-cmd-label {
+  color: var(--cyan);
+}
+.jqzz-palette-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+}
+.jqzz-palette-hint {
+  color: var(--txt3);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-secondary);
+/* MODAL */
+.jqzz-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
 }
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import api from "./api/client";
-import useQuizSocket from "./hooks/useQuizSocket";
-import ErrorBanner from "./components/ErrorBanner";
-import useGameStore, { type Action, type Player } from "./store/gameStore";
-import WaitingScreen from "./components/WaitingScreen";
-import QuestionScreen from "./components/QuestionScreen";
-import AnswerLockedScreen from "./components/AnswerLockedScreen";
-import ElaborationScreen from "./components/ElaborationScreen";
-import ResultScreen from "./components/ResultScreen";
-
-export interface Quiz {
-  id: number;
-  name: string;
-  authorId: string;
-  actions: Action[];
+.jqzz-modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 24px;
+  width: 340px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  animation: paletteIn 0.15s ease;
+}
+.jqzz-modal h3 {
+  color: var(--txt);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+.jqzz-modal-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  color: var(--txt);
+  font-size: 13px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  outline: none;
+  margin-bottom: 10px;
+  transition: border-color 0.12s;
+}
+.jqzz-modal-input:focus {
+  border-color: var(--cyan);
+}
+.jqzz-modal-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.jqzz-modal-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--r2);
+  font-size: 12px;
+  font-family: var(--mono);
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--txt2);
+  transition: all 0.12s;
+}
+.jqzz-modal-btn:hover {
+  background: var(--bg4);
+  color: var(--txt);
+}
+.jqzz-modal-btn.primary {
+  background: var(--cyan);
+  color: #000;
+  border-color: var(--cyan);
+  font-weight: 700;
+}
+.jqzz-modal-btn.primary:hover {
+  background: #00ccb2;
+}
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.jqzz-card {
+  animation: fadeSlide 0.12s ease;
 }
 
-export interface Lobby {
-  id: number;
-  name: string;
-  adminId?: number;
-  currentActionIndex: number;
-  time: number;
-  players: Player[];
-  quiz?: Quiz;
-}
 
-const LobbyView = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [lobby, setLobby] = useState<Lobby | null>(null);
-
-  const quizEvent = useQuizSocket(id);
-  const currentAction = useGameStore((s) => s.currentAction);
-  const timer = useGameStore((s) => s.timer);
-  const players = useGameStore((s) => s.players);
-  const currentUserId = useGameStore((s) => s.userId);
-  const setLobbyAdminId = useGameStore((s) => s.setLobbyAdminId);
-  const setPlayers = useGameStore((s) => s.setPlayers);
-  const errorMessage = useGameStore((s) => s.errorMessage);
-  const setErrorMessage = useGameStore((s) => s.setErrorMessage);
-
-  const isLobbyAdmin = Boolean(
-    lobby?.adminId != null &&
-    currentUserId != null &&
-    lobby.adminId === currentUserId,
-  );
-  const isPlayerInLobby = Boolean(
-    currentUserId &&
-    players.some((player) => player.userId === String(currentUserId)),
-  );
-
-  useEffect(() => {
-    if (!id) return;
-
-    api
-      .get<Lobby>(`/lobbies/${id}`)
-      .then((res) => {
-        setLobby(res.data);
-        setLobbyAdminId(res.data.adminId);
-        setPlayers(res.data.players ?? []);
-      })
-      .catch((err) => {
-        console.error("Failed to load lobby", err);
-        setErrorMessage("Failed to load lobby data");
-      });
-  }, [id, setLobbyAdminId, setPlayers, setErrorMessage]);
-
-  useEffect(() => {
-    if (!quizEvent || !id) return;
-
-    if (quizEvent.event === "quiz_started" && quizEvent.lobby) {
-      const lobbyUpdate = quizEvent.lobby as Partial<Lobby>;
-
-      setTimeout(() => {
-        setLobby(
-          (prev) =>
-            ({
-              ...(prev ?? {}),
-              ...lobbyUpdate,
-            }) as Lobby,
-        );
-      }, 0);
-
-      if (lobbyUpdate.adminId != null) {
-        setLobbyAdminId(lobbyUpdate.adminId);
-      }
-
-      const lobbyData = quizEvent.lobby as Partial<Lobby> & {
-        players?: Player[];
-      };
-      if (Array.isArray(lobbyData.players)) {
-        setPlayers(lobbyData.players);
-      }
-    }
-
-    if (
-      quizEvent.event === "players_update" &&
-      Array.isArray(quizEvent.payload)
-    ) {
-      setPlayers(quizEvent.payload as Player[]);
-    }
-
-    if (quizEvent.event === "action" && quizEvent.action) {
-      setTimeout(() => {
-        setLobby((prev) =>
-          prev
-            ? {
-                ...prev,
-                currentActionIndex: prev.currentActionIndex + 1,
-                time: quizEvent.action?.time ?? prev.time,
-              }
-            : prev,
-        );
-      }, 0);
-    }
-  }, [quizEvent, id, setLobbyAdminId, setPlayers]);
-
-  const joinLobby = async () => {
-    if (!id) return;
-    if (!currentUserId) {
-      //give the user a unique ID and store it in localStorage
-      const newUserId = Date.now();
-      localStorage.setItem("userId", String(newUserId));
-      window.location.reload();
-    }
-
-    try {
-      const response = await api.post<Lobby>(`/lobbies/${id}/join`, {
-        userId: String(currentUserId),
-      });
-      setLobby(response.data);
-      setPlayers(response.data.players ?? []);
-      setLobbyAdminId(response.data.adminId);
-    } catch (e) {
-      console.error("Lobby join failed", e);
-      setErrorMessage("Could not join lobby");
-    }
-  };
-
-  const leaveLobby = async () => {
-    if (!id) return;
-    if (!currentUserId) {
-      setErrorMessage("Set a user ID before leaving.");
-      return;
-    }
-
-    try {
-      const response = await api.post<Lobby>(`/lobbies/${id}/leave`, {
-        userId: String(currentUserId),
-      });
-      setLobby(response.data);
-      setPlayers(response.data.players ?? []);
-    } catch (e) {
-      console.error("Lobby leave failed", e);
-      setErrorMessage("Could not leave lobby");
-    }
-  };
-
-  const deleteLobby = async () => {
-    if (!id) return;
-
-    try {
-      await api.delete(`/lobbies/${id}`);
-      navigate("/");
-    } catch (e) {
-      console.error("Delete lobby failed", e);
-      setErrorMessage("Could not delete lobby");
-    }
-  };
-
-  const startQuiz = async () => {
-    if (!id) return;
-    try {
-      await api.post(`/game/${id}/start`);
-    } catch (e) {
-      console.error("Start quiz failed", e);
-      setErrorMessage("Could not start quiz");
-    }
-  };
-
-  const nextAction = async () => {
-    if (!id) return;
-    try {
-      await api.post(`/game/${id}/next`);
-    } catch (e) {
-      console.error("Next action failed", e);
-      setErrorMessage("Could not advance to next action");
-    }
-  };
-
-  const renderPhaseScreen = () => {
-    if (!currentAction) {
-      return <WaitingScreen />;
-    }
-
-    switch (currentAction.phase) {
-      case "WAITING":
-        return <WaitingScreen />;
-      case "QUESTION":
-        return <QuestionScreen />;
-      case "ANSWER":
-        return <AnswerLockedScreen />;
-      case "ELABORATION":
-        return <ElaborationScreen />;
-      case "RESULT":
-        return <ResultScreen />;
-      default:
-        return (
-          <div className="p-6 rounded-lg shadow-lg bg-white text-center">
-            Unknown phase: {currentAction.phase}
-          </div>
-        );
-    }
-  };
-
-  if (!lobby && !errorMessage) return <div>Loading lobby…</div>;
-  if (!lobby) return <div>Lobby not found</div>;
-
-  return (
-    <>
-      <ErrorBanner />
-      <div className="container paper-bg">
-        <header className="lobby-header">
-          <h1>Lobby: {lobby.name}</h1>
-          <p>ID: {lobby.id}</p>
-          <p>Admin: {lobby.adminId ?? "TBD"}</p>
-          <p>
-            Quiz progress: {lobby.currentActionIndex + 1}/
-            {lobby.quiz?.actions?.length ?? "?"}
-          </p>
-          <p>Timer (s): {timer}</p>
-        </header>
-
-        <section className="lobby-players">
-          <h2>Players ({players.length})</h2>
-          {players.length === 0 ? (
-            <p>No players joined yet.</p>
-          ) : (
-            <ul>
-              {players.map((player) => (
-                <li key={player.userId}>
-                  {player.name ?? player.userId}: {player.score} points
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="lobby-action" style={{ marginTop: 16 }}>
-          {renderPhaseScreen()}
-        </section>
-
-        <section
-          className="admin-controls"
-          style={{ marginTop: 16, display: "grid", gap: 8 }}
-        >
-          {isLobbyAdmin && (
-            <>
-              <button onClick={startQuiz} className="s-button">
-                Start Quiz
-              </button>
-              <button onClick={nextAction} className="s-button">
-                Next Action
-              </button>
-              <button onClick={deleteLobby} className="s-button danger">
-                Delete Lobby
-              </button>
-            </>
-          )}
-          {!isLobbyAdmin && (
-            <>
-              {isPlayerInLobby ? (
-                <button onClick={leaveLobby} className="s-button warning">
-                  Leave Lobby
-                </button>
-              ) : (
-                <button onClick={joinLobby} className="s-button">
-                  Join Lobby
-                </button>
-              )}
-            </>
-          )}
-          <button onClick={() => navigate("/")} className="s-button secondary">
-            Back to Dash
-          </button>
-        </section>
-      </div>
-    </>
-  );
-};
-
-export default LobbyView;
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\index.tsx
+====================
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { AuthProvider } from "./contexts/AuthContext";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { Dashboard } from "./components/Dashboard/Dashboard";
+import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <WebSocketProvider>
+        <Dashboard />
+      </WebSocketProvider>
+    </AuthProvider>
   </React.StrictMode>,
 );
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\main.tsx
+====================
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { AuthProvider } from "./contexts/AuthContext";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <AuthProvider>
+      <WebSocketProvider>
+        <App />
+      </WebSocketProvider>
+    </AuthProvider>
+  </React.StrictMode>,
+);
+
+
