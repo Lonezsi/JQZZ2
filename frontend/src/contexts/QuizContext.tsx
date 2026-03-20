@@ -93,12 +93,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleSelectAction = useCallback(
     (id: number, ctrlKey: boolean = false, shiftKey: boolean = false) => {
-      console.log("toggleSelectAction called", {
-        id,
-        ctrlKey,
-        shiftKey,
-        lastSelected: lastSelectedActionId,
-      });
       setSelectedActionIds((prev) => {
         const newSet = new Set(prev);
         const actionIds = getActionIdsInOrder();
@@ -120,7 +114,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
             newSet.add(id);
           }
           setLastSelectedActionId(id);
-          console.log("new selection set", Array.from(newSet));
           return newSet;
         }
 
