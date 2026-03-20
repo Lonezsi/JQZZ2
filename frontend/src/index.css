@@ -4,6 +4,11 @@
   margin: 0;
   padding: 0;
 }
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
 .jqzz-dash {
   --bg0: #0b0c10;
   --bg1: #111318;

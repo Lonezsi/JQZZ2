@@ -1,4 +1,3 @@
-// src/components/Dashboard/Main/Main.tsx
 import React from "react";
 import { Toolbar } from "./Toolbar";
 import { VisualMode } from "./VisualMode/VisualMode";

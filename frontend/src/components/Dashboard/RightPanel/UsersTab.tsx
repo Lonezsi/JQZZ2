@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from "react";
-import type { UserEntry } from "../../../types";
+import type { User } from "../../../types";
 import { userService } from "../../../services/userService";
 import { useWebSocket } from "../../../hooks/useWebSocket";
 
 interface UserWebSocketMessage {
   event: string;
-  user: UserEntry;
+  user: User;
 }
 
 export const UsersTab: React.FC = () => {
-  const [users, setUsers] = useState<UserEntry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     userService.getAll().then((res) => setUsers(res.data));
   }, []);
 
-  // Now we can pass the generic type argument
   useWebSocket<UserWebSocketMessage>("/topic/users", (msg) => {
     const { event, user } = msg;
     setUsers((prev) => {

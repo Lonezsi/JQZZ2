@@ -10,8 +10,8 @@ import { userService } from "../services/userService";
 
 interface AuthContextType {
   user: User | null;
-  login: (id: string) => Promise<void>;
-  register: (name: string) => Promise<void>;
+  login: (id: string) => Promise<User>;
+  register: (name: string) => Promise<User | undefined>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
 }
@@ -19,8 +19,10 @@ interface AuthContextType {
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
-  register: async () => {},
+  login: async () => {
+    throw new Error("login not implemented");
+  },
+  register: async () => undefined,
   logout: async () => {},
   updateUser: () => {},
 });
@@ -31,16 +33,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const login = useCallback(async (id: string) => {
+  const login = useCallback(async (id: string): Promise<User> => {
     const res = await userService.login({ id });
     setUser(res.data);
     localStorage.setItem("userId", res.data.id);
+    return res.data;
   }, []);
 
   const register = useCallback(
-    async (name: string) => {
-      const res = await userService.register({ name });
-      await login(res.data.userId);
+    async (name: string): Promise<User | undefined> => {
+      try {
+        const res = await userService.register({ name });
+        const user = await login(res.data.userId);
+        return user;
+      } catch (error) {
+        console.error("Registration failed", error);
+        return undefined;
+      }
     },
     [login],
   );
