@@ -1,0 +1,267 @@
+/* Action cards, text blocks, dividers, empty states, add button */
+/* Group label */
+.jqzz-group-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-group-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.jqzz-group {
+  margin-bottom: 14px;
+}
+
+/* Cards */
+.jqzz-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 9px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+  position: relative;
+}
+.jqzz-card:hover {
+  border-color: var(--border-light);
+  background: var(--bg-highlight);
+}
+.jqzz-card.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-card.drag-over {
+  border-top: 2px solid var(--accent);
+}
+.jqzz-card.dragging-self {
+  opacity: 0.4;
+}
+.jqzz-drag-handle {
+  display: flex;
+  align-items: center;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: grab;
+  padding: 0 4px 0 0;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.1s;
+  user-select: none;
+}
+.jqzz-drag-handle:hover {
+  color: var(--text-muted);
+}
+.jqzz-drag-handle:active {
+  cursor: grabbing;
+}
+.jqzz-card-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  margin-left: auto;
+}
+.jqzz-card:hover .jqzz-card-actions {
+  opacity: 1;
+}
+.jqzz-card-action-btn {
+  background: var(--bg-accent);
+  border: 1px solid var(--border-light);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.jqzz-card-action-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+.jqzz-card-action-btn.del:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+.jqzz-phase-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  min-width: 90px;
+  text-align: center;
+}
+.badge-WAITING {
+  background: rgba(72, 79, 102, 0.3);
+  color: #8890ab;
+  border: 1px solid #333748;
+}
+.badge-QUESTION {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.badge-ANSWER {
+  background: color-mix(in srgb, #a3e635 12%, transparent);
+  color: #a3e635;
+  border: 1px solid color-mix(in srgb, #a3e635 30%, transparent);
+}
+.badge-ELABORATION {
+  background: color-mix(in srgb, #fbbf24 12%, transparent);
+  color: #fbbf24;
+  border: 1px solid color-mix(in srgb, #fbbf24 30%, transparent);
+}
+.badge-RESULT {
+  background: color-mix(in srgb, #f472b6 12%, transparent);
+  color: #f472b6;
+  border: 1px solid color-mix(in srgb, #f472b6 30%, transparent);
+}
+.badge-TEXT {
+  background: rgba(100, 100, 120, 0.2);
+  color: #686e8a;
+  border: 1px solid #333748;
+}
+.jqzz-card-time {
+  color: var(--text-dim);
+  font-size: 11px;
+  min-width: 30px;
+}
+.jqzz-card-preview {
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Text block */
+.jqzz-text-block {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.jqzz-text-block:hover {
+  border-color: var(--border-light);
+  background: var(--bg-elevated);
+}
+.jqzz-text-block-content {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: italic;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Divider block */
+.jqzz-divider-block {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 12px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s;
+}
+.jqzz-divider-block:hover {
+  opacity: 1;
+}
+.jqzz-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+.jqzz-divider-label {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+/* Add button */
+.jqzz-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: var(--spacing-sm);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+.jqzz-add-btn:hover,
+.jqzz-add-btn.over {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Empty state */
+.jqzz-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px 24px;
+}
+.jqzz-empty-icon {
+  font-size: 28px;
+  opacity: 0.3;
+}
+.jqzz-empty-title {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.jqzz-empty-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.8;
+}
+.jqzz-empty-drop {
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  transition: all 0.15s;
+  margin-top: var(--spacing-sm);
+  width: 100%;
+  max-width: 280px;
+}
+.jqzz-empty-drop.over {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}

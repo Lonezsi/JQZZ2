@@ -1,0 +1,9 @@
+/* Dashboard layout */
+.jqzz-dash {
+  display: flex;
+  height: 100vh;
+  min-height: 600px;
+  background: var(--bg-base);
+  color: var(--text);
+  overflow: hidden;
+}

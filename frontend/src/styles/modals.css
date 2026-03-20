@@ -1,0 +1,169 @@
+/* Modals and command palette */
+/* Command Palette */
+.jqzz-palette-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+  backdrop-filter: blur(2px);
+}
+.jqzz-palette {
+  width: 500px;
+  max-width: 90vw;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  animation: paletteIn 0.15s ease;
+}
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+}
+.jqzz-palette-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--spacing-md) 16px;
+  border-bottom: 1px solid var(--border);
+}
+.jqzz-palette-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  flex: 1;
+}
+.jqzz-palette-input::placeholder {
+  color: var(--text-dim);
+}
+.jqzz-cmd-list {
+  padding: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.jqzz-cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.jqzz-cmd-item:hover,
+.jqzz-cmd-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-cmd-icon {
+  color: var(--text-dim);
+  font-size: 12px;
+  min-width: 16px;
+  text-align: center;
+}
+.jqzz-cmd-label {
+  color: var(--text);
+  font-size: 13px;
+}
+.jqzz-cmd-sub {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-left: auto;
+}
+.jqzz-cmd-item.active .jqzz-cmd-icon,
+.jqzz-cmd-item.active .jqzz-cmd-label {
+  color: var(--accent);
+}
+.jqzz-palette-footer {
+  padding: var(--spacing-sm) 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+}
+.jqzz-palette-hint {
+  color: var(--text-dim);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Identity Modal */
+.jqzz-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.jqzz-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 24px;
+  width: 340px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  animation: paletteIn 0.15s ease;
+}
+.jqzz-modal h3 {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+.jqzz-modal-input {
+  width: 100%;
+  background: var(--bg-highlight);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  padding: var(--spacing-sm) 10px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.jqzz-modal-input:focus {
+  border-color: var(--accent);
+}
+.jqzz-modal-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: 4px;
+}
+.jqzz-modal-btn {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  background: var(--bg-highlight);
+  color: var(--text-muted);
+  transition: all 0.12s;
+}
+.jqzz-modal-btn:hover {
+  background: var(--bg-accent);
+  color: var(--text);
+}
+.jqzz-modal-btn.primary {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.jqzz-modal-btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 85%, black);
+}

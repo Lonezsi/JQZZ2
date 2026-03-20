@@ -1,0 +1,196 @@
+/* Sidebar components */
+.jqzz-sidebar {
+  width: 210px;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-right: 1px solid var(--border);
+}
+
+/* Logo */
+.jqzz-logo {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.jqzz-logo-badge {
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 1.5px;
+}
+.jqzz-logo-name {
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 3px;
+}
+
+/* Identity */
+.jqzz-identity {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.jqzz-identity:hover {
+  background: var(--bg-elevated);
+}
+.jqzz-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.jqzz-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.jqzz-identity-name {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.jqzz-identity-handle {
+  color: var(--text-dim);
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+/* Sections */
+.jqzz-sid-section {
+  padding: var(--spacing-sm) 0;
+}
+.jqzz-sid-label {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 4px 13px 6px;
+  text-transform: uppercase;
+}
+.jqzz-sid-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 7px 13px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: all 0.12s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.jqzz-sid-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.jqzz-sid-btn.accent {
+  color: var(--accent);
+}
+.jqzz-sid-btn.accent:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-kbd {
+  margin-left: auto;
+  background: var(--bg-highlight);
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  font-size: 9px;
+  padding: 1px 5px;
+  color: var(--text-dim);
+}
+
+/* Quiz list */
+.jqzz-quiz-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 13px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+}
+.jqzz-quiz-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.jqzz-quiz-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+.jqzz-quiz-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.jqzz-quiz-item.active .jqzz-quiz-dot {
+  background: var(--accent);
+}
+.jqzz-quiz-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Snippets */
+.jqzz-snippet-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 13px;
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 11px;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+.jqzz-snippet-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.jqzz-snippet-item:active {
+  cursor: grabbing;
+}
+.jqzz-snippet-item.dragging {
+  opacity: 0.35;
+}
+
+/* Footer shortcuts */
+.jqzz-sid-footer {
+  margin-top: auto;
+  padding: 10px 13px;
+  border-top: 1px solid var(--border);
+}
+.jqzz-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+  color: var(--text-dim);
+  font-size: 10px;
+}
