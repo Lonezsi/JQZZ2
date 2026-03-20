@@ -265,3 +265,11 @@
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
+.jqzz-card,
+.jqzz-card *,
+.jqzz-text-block,
+.jqzz-text-block *,
+.jqzz-divider-block,
+.jqzz-divider-block * {
+  user-select: none !important;
+}

@@ -6,6 +6,7 @@ interface ShortcutHandlers {
   onToggleMode?: () => void;
   onEscape?: () => void;
   onExport?: () => void;
+  onSelectAll?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
@@ -14,6 +15,7 @@ export const useKeyboardShortcuts = ({
   onToggleMode,
   onEscape,
   onExport,
+  onSelectAll,
 }: ShortcutHandlers) => {
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
@@ -34,11 +36,15 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         onExport?.();
       }
+      if (mod && e.key === "a") {
+        e.preventDefault();
+        onSelectAll?.(); // handle Ctrl+A
+      }
       if (e.key === "Escape") {
         onEscape?.();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onPalette, onNewQuiz, onToggleMode, onEscape, onExport]);
+  }, [onPalette, onNewQuiz, onToggleMode, onEscape, onExport, onSelectAll]);
 };

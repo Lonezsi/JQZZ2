@@ -10,8 +10,8 @@ interface MainProps {
   setMode: (mode: EditorMode) => void;
   onOpenPalette: () => void;
   onExport: () => void;
-  selectedActionId: number | null;
-  setSelectedActionId: (id: number | null) => void;
+  selectedActionIds: Set<number>;
+  toggleSelectAction: (id: number, ctrlKey?: boolean) => void;
   dragActionId: number | null;
   dragOverActionId: number | null;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -34,8 +34,8 @@ export const Main: React.FC<MainProps> = ({
   setMode,
   onOpenPalette,
   onExport,
-  selectedActionId,
-  setSelectedActionId,
+  selectedActionIds,
+  toggleSelectAction,
   dragActionId,
   dragOverActionId,
   onActionDragStart,
@@ -74,8 +74,8 @@ export const Main: React.FC<MainProps> = ({
             quiz={quiz}
             renderItems={renderItems}
             questionMap={questionMap}
-            selectedActionId={selectedActionId}
-            setSelectedActionId={setSelectedActionId}
+            selectedActionIds={selectedActionIds}
+            toggleSelectAction={toggleSelectAction}
             dragActionId={dragActionId}
             dragOverActionId={dragOverActionId}
             onActionDragStart={onActionDragStart}

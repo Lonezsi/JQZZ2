@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useContext,
   useCallback,
+  useRef,
 } from "react";
 import type { User } from "../types";
 import { userService } from "../services/userService";
@@ -32,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializing = useRef(false);
 
   const login = useCallback(async (id: string): Promise<User> => {
     const res = await userService.login({ id });
@@ -55,6 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
+    if (initializing.current) return;
+    initializing.current = true;
     const stored = localStorage.getItem("userId");
     if (stored) {
       userService

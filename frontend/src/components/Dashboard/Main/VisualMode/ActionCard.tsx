@@ -1,12 +1,13 @@
 import React from "react";
 import type { Action } from "../../../../types";
+import { useQuiz } from "../../../../contexts/QuizContext";
 
 interface ActionCardProps {
   action: Action;
   isSelected: boolean;
   isDragging: boolean;
   isOver: boolean;
-  onSelect: (id: number | null) => void;
+  onToggleSelect: (id: number, ctrlKey?: boolean, shiftKey?: boolean) => void;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
   onActionDragEnd: () => void;
   onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -20,7 +21,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   isSelected,
   isDragging,
   isOver,
-  onSelect,
+  onToggleSelect,
   onActionDragStart,
   onActionDragEnd,
   onActionDragOver,
@@ -28,12 +29,22 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   deleteAction,
   duplicateAction,
 }) => {
+  const { shiftPressed } = useQuiz();
+
   if (action.phase === "DIVIDER") {
     return (
       <div
         key={action.id}
         className={`jqzz-divider-block${isSelected ? " selected" : ""}`}
-        onClick={() => onSelect(action.id)}
+        onMouseDown={(e) => {
+          if (e.shiftKey) {
+            e.preventDefault();
+          }
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
+        }}
         draggable
         onDragStart={(e) => onActionDragStart(e, action.id)}
         onDragEnd={onActionDragEnd}
@@ -65,7 +76,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       <div
         key={action.id}
         className={`jqzz-text-block${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
-        onClick={() => onSelect(action.id)}
+        onMouseDown={(e) => {
+          if (e.shiftKey) {
+            e.preventDefault();
+          }
+        }}
+        onClick={(e) => {
+          onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
+        }}
         onDragOver={(e) => onActionDragOver(e, action.id)}
         onDrop={(e) => onActionDrop(e, action.id)}
       >
@@ -108,7 +126,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     <div
       key={action.id}
       className={`jqzz-card${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
-      onClick={() => onSelect(action.id)}
+      onMouseDown={(e) => {
+        if (e.shiftKey) {
+          e.preventDefault();
+        }
+      }}
+      onClick={(e) => {
+        onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
+      }}
       onDragOver={(e) => onActionDragOver(e, action.id)}
       onDrop={(e) => onActionDrop(e, action.id)}
     >

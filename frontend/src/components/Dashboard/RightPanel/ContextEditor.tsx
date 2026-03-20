@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { Action, Question, Answer, Phase } from "../../../types";
+import { generateId } from "../../../utils/idGenerator";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -65,7 +66,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
   };
 
   const addAnswer = () => {
-    const next = [...answers, { id: Date.now(), text: "", value: 0 }];
+    const next = [...answers, { id: generateId(), text: "", value: 0 }];
     setAnswers(next);
     if (question) onQuestionUpdate(question.id, { answers: next });
   };

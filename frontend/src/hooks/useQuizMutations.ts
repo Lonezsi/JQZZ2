@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { Quiz, Action, Question } from "../types";
 import { quizService } from "../services/quizService";
 import { SNIPPETS } from "../constants/snippets";
+import { generateId } from "../utils/idGenerator";
 
 export const useQuizMutations = (
   activeQuizId: number | null,
@@ -57,7 +58,7 @@ export const useQuizMutations = (
       updateQuiz((quiz) => {
         const idx = quiz.actions.findIndex((a) => a.id === id);
         if (idx === -1) return quiz;
-        const clone: Action = { ...quiz.actions[idx], id: Date.now() };
+        const clone: Action = { ...quiz.actions[idx], id: generateId() };
         const newActions = [...quiz.actions];
         newActions.splice(idx + 1, 0, clone);
         return { ...quiz, actions: newActions };
@@ -85,8 +86,9 @@ export const useQuizMutations = (
   const newQuiz = useCallback(async () => {
     try {
       const response = await quizService.create({
-        name: `Quiz ${Date.now()}`,
+        name: `Quiz ${generateId()}`,
         authorId,
+        actions: [],
       });
       setQuizzes((prev) => [...prev, response.data]);
       return response.data.id;
@@ -104,37 +106,29 @@ export const useQuizMutations = (
         prev.map((quiz) => {
           if (quiz.id !== activeQuizId) return quiz;
 
-          let targetQId: number;
-          let updatedQuestions = quiz.questions;
+          // Create a new question for this snippet
+          const newQuestion: Question = {
+            id: generateId(),
+            text: "New Question",
+            imageUrl: "",
+            type: "PREWRITTEN_SINGLE",
+            elaborationText: "",
+            answers: [],
+          };
 
-          if (quiz.questions.length === 0) {
-            targetQId = Date.now();
-            updatedQuestions = [
-              {
-                id: targetQId,
-                text: "New Question",
-                imageUrl: "",
-                type: "PREWRITTEN_SINGLE",
-                elaborationText: "",
-                answers: [],
-              },
-            ];
-          } else {
-            targetQId = quiz.questions[quiz.questions.length - 1].id;
-          }
-
-          const base = Date.now();
-          const newActions: Action[] = snippet.steps.map((s, i) => ({
-            id: base + i,
+          // Create actions for the snippet, all referencing the new question
+          const newActions: Action[] = snippet.steps.map((s) => ({
+            id: generateId(),
             phase: s.phase,
             time: s.time,
-            questionId: targetQId,
+            questionId: newQuestion.id,
             preview: s.preview,
           }));
 
+          // Append the new question to the list and new actions to the actions list
           return {
             ...quiz,
-            questions: updatedQuestions,
+            questions: [...quiz.questions, newQuestion],
             actions: [...quiz.actions, ...newActions],
           };
         }),

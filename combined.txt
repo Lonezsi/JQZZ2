@@ -1499,13 +1499,14 @@ C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard
 ====================
 import React from "react";
 import type { Action } from "../../../../types";
+import { useQuiz } from "../../../../contexts/QuizContext";
 
 interface ActionCardProps {
   action: Action;
   isSelected: boolean;
   isDragging: boolean;
   isOver: boolean;
-  onSelect: (id: number | null) => void;
+  onToggleSelect: (id: number, ctrlKey?: boolean, shiftKey?: boolean) => void;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
   onActionDragEnd: () => void;
   onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -1519,7 +1520,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   isSelected,
   isDragging,
   isOver,
-  onSelect,
+  onToggleSelect,
   onActionDragStart,
   onActionDragEnd,
   onActionDragOver,
@@ -1527,12 +1528,22 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   deleteAction,
   duplicateAction,
 }) => {
+  const { shiftPressed } = useQuiz();
+
   if (action.phase === "DIVIDER") {
     return (
       <div
         key={action.id}
         className={`jqzz-divider-block${isSelected ? " selected" : ""}`}
-        onClick={() => onSelect(action.id)}
+        onMouseDown={(e) => {
+          if (e.shiftKey) {
+            e.preventDefault();
+          }
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
+        }}
         draggable
         onDragStart={(e) => onActionDragStart(e, action.id)}
         onDragEnd={onActionDragEnd}
@@ -1564,7 +1575,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       <div
         key={action.id}
         className={`jqzz-text-block${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
-        onClick={() => onSelect(action.id)}
+        onMouseDown={(e) => {
+          if (e.shiftKey) {
+            e.preventDefault();
+          }
+        }}
+        onClick={(e) => {
+          onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
+        }}
         onDragOver={(e) => onActionDragOver(e, action.id)}
         onDrop={(e) => onActionDrop(e, action.id)}
       >
@@ -1607,7 +1625,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     <div
       key={action.id}
       className={`jqzz-card${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
-      onClick={() => onSelect(action.id)}
+      onMouseDown={(e) => {
+        if (e.shiftKey) {
+          e.preventDefault();
+        }
+      }}
+      onClick={(e) => {
+        onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
+      }}
       onDragOver={(e) => onActionDragOver(e, action.id)}
       onDrop={(e) => onActionDrop(e, action.id)}
     >
@@ -1762,8 +1787,8 @@ interface VisualModeProps {
   quiz: Quiz | undefined;
   renderItems: RenderItem[];
   questionMap: Map<number, Question>;
-  selectedActionId: number | null;
-  setSelectedActionId: (id: number | null) => void;
+  selectedActionIds: Set<number>;
+  toggleSelectAction: (id: number, ctrlKey?: boolean) => void;
   dragActionId: number | null;
   dragOverActionId: number | null;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -1782,8 +1807,8 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   quiz,
   renderItems,
   questionMap,
-  selectedActionId,
-  setSelectedActionId,
+  selectedActionIds,
+  toggleSelectAction,
   dragActionId,
   dragOverActionId,
   onActionDragStart,
@@ -1824,13 +1849,13 @@ export const VisualMode: React.FC<VisualModeProps> = ({
             <ActionCard
               key={item.action.id}
               action={item.action}
-              isSelected={item.action.id === selectedActionId}
+              isSelected={selectedActionIds.has(item.action.id)}
               isDragging={item.action.id === dragActionId}
               isOver={
                 item.action.id === dragOverActionId &&
                 dragActionId !== item.action.id
               }
-              onSelect={setSelectedActionId}
+              onToggleSelect={toggleSelectAction}
               onActionDragStart={onActionDragStart}
               onActionDragEnd={onActionDragEnd}
               onActionDragOver={onActionDragOver}
@@ -1845,13 +1870,13 @@ export const VisualMode: React.FC<VisualModeProps> = ({
             <ActionCard
               key={item.action.id}
               action={item.action}
-              isSelected={item.action.id === selectedActionId}
+              isSelected={selectedActionIds.has(item.action.id)}
               isDragging={item.action.id === dragActionId}
               isOver={
                 item.action.id === dragOverActionId &&
                 dragActionId !== item.action.id
               }
-              onSelect={setSelectedActionId}
+              onToggleSelect={toggleSelectAction}
               onActionDragStart={onActionDragStart}
               onActionDragEnd={onActionDragEnd}
               onActionDragOver={onActionDragOver}
@@ -1876,10 +1901,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
               <ActionCard
                 key={a.id}
                 action={a}
-                isSelected={a.id === selectedActionId}
+                isSelected={selectedActionIds.has(a.id)}
                 isDragging={a.id === dragActionId}
                 isOver={a.id === dragOverActionId && dragActionId !== a.id}
-                onSelect={setSelectedActionId}
+                onToggleSelect={toggleSelectAction}
                 onActionDragStart={onActionDragStart}
                 onActionDragEnd={onActionDragEnd}
                 onActionDragOver={onActionDragOver}
@@ -1905,7 +1930,6 @@ export const VisualMode: React.FC<VisualModeProps> = ({
 ====================
 C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\Main.tsx
 ====================
-// src/components/Dashboard/Main/Main.tsx
 import React from "react";
 import { Toolbar } from "./Toolbar";
 import { VisualMode } from "./VisualMode/VisualMode";
@@ -1918,8 +1942,8 @@ interface MainProps {
   setMode: (mode: EditorMode) => void;
   onOpenPalette: () => void;
   onExport: () => void;
-  selectedActionId: number | null;
-  setSelectedActionId: (id: number | null) => void;
+  selectedActionIds: Set<number>;
+  toggleSelectAction: (id: number, ctrlKey?: boolean) => void;
   dragActionId: number | null;
   dragOverActionId: number | null;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -1942,8 +1966,8 @@ export const Main: React.FC<MainProps> = ({
   setMode,
   onOpenPalette,
   onExport,
-  selectedActionId,
-  setSelectedActionId,
+  selectedActionIds,
+  toggleSelectAction,
   dragActionId,
   dragOverActionId,
   onActionDragStart,
@@ -1982,8 +2006,8 @@ export const Main: React.FC<MainProps> = ({
             quiz={quiz}
             renderItems={renderItems}
             questionMap={questionMap}
-            selectedActionId={selectedActionId}
-            setSelectedActionId={setSelectedActionId}
+            selectedActionIds={selectedActionIds}
+            toggleSelectAction={toggleSelectAction}
             dragActionId={dragActionId}
             dragOverActionId={dragOverActionId}
             onActionDragStart={onActionDragStart}
@@ -2069,6 +2093,7 @@ C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard
 ====================
 import React, { useState, useEffect } from "react";
 import type { Action, Question, Answer, Phase } from "../../../types";
+import { generateId } from "../../../utils/idGenerator";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -2134,7 +2159,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
   };
 
   const addAnswer = () => {
-    const next = [...answers, { id: Date.now(), text: "", value: 0 }];
+    const next = [...answers, { id: generateId(), text: "", value: 0 }];
     setAnswers(next);
     if (question) onQuestionUpdate(question.id, { answers: next });
   };
@@ -2262,12 +2287,14 @@ import { useQuiz } from "../../../contexts/QuizContext";
 
 interface RightPanelProps {
   selectedAction: Action | null;
+  multipleSelected: boolean;
   onActionUpdate: (id: number, patch: Partial<Action>) => void;
   onQuestionUpdate: (id: number, patch: Partial<Question>) => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
   selectedAction,
+  multipleSelected,
   onActionUpdate,
   onQuestionUpdate,
 }) => {
@@ -2302,6 +2329,14 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       <div className="jqzz-rpanel-body">
         {activeTab === "users" ? (
           <UsersTab />
+        ) : multipleSelected ? (
+          <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
+            Multiple actions selected. Click on a single action to edit.
+          </div>
+        ) : !action ? (
+          <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
+            Select an action card to edit.
+          </div>
         ) : (
           <ContextEditor
             action={action}
@@ -2320,19 +2355,23 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\UsersTab.tsx
 ====================
 import React, { useState, useEffect } from "react";
-import type { UserEntry } from "../../../types";
+import type { User } from "../../../types";
 import { userService } from "../../../services/userService";
 import { useWebSocket } from "../../../hooks/useWebSocket";
 
+interface UserWebSocketMessage {
+  event: string;
+  user: User;
+}
+
 export const UsersTab: React.FC = () => {
-  const [users, setUsers] = useState<UserEntry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     userService.getAll().then((res) => setUsers(res.data));
   }, []);
 
-  useWebSocket("/topic/users", (msg) => {
-    // handle user_registered, user_logged_in, user_logged_out, user_updated
+  useWebSocket<UserWebSocketMessage>("/topic/users", (msg) => {
     const { event, user } = msg;
     setUsers((prev) => {
       switch (event) {
@@ -2370,6 +2409,7 @@ export const UsersTab: React.FC = () => {
           <div className="jqzz-stat-label">Offline</div>
         </div>
       </div>
+
       {online > 0 && <div className="jqzz-section-label">Online</div>}
       {sorted
         .filter((u) => u.online)
@@ -2385,6 +2425,7 @@ export const UsersTab: React.FC = () => {
             <div className="jqzz-online-dot on" />
           </div>
         ))}
+
       {offline > 0 && (
         <div
           className="jqzz-section-label"
@@ -2452,7 +2493,19 @@ interface IdentityProps {
 }
 
 export const Identity: React.FC<IdentityProps> = ({ identity, onClick }) => {
-  if (!identity) return null;
+  if (!identity) {
+    return (
+      <div className="jqzz-identity" onClick={onClick}>
+        <div className="jqzz-identity-row">
+          <div className="jqzz-avatar">?</div>
+          <div>
+            <div className="jqzz-identity-name">Set your identity</div>
+            <div className="jqzz-identity-handle">click to register</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const avatarLetter = identity.name ? identity.name[0].toUpperCase() : "?";
 
   return (
@@ -2665,8 +2718,10 @@ export const Dashboard: React.FC = () => {
     quizzes,
     activeQuizId,
     setActiveQuizId,
-    selectedActionId,
-    setSelectedActionId,
+    selectedActionIds, // <-- now a Set
+    toggleSelectAction, // <-- for selection
+    selectAllActions, // <-- for Ctrl+A
+    clearSelectedActions,
     mode,
     setMode,
     aiPrompt,
@@ -2679,7 +2734,7 @@ export const Dashboard: React.FC = () => {
     newQuiz,
     dropSnippet: dropSnippetMutation,
     handleParsed,
-    quiz, // <-- from context
+    quiz,
   } = useQuiz();
 
   const dropSnippet = useCallback(
@@ -2719,6 +2774,14 @@ export const Dashboard: React.FC = () => {
     });
   }, [quiz]);
 
+  // Determine which action to edit in the right panel
+  const selectedActionIdsArray = Array.from(selectedActionIds);
+  const firstSelectedId = selectedActionIdsArray[0] ?? null;
+  const selectedAction = firstSelectedId
+    ? (quiz?.actions.find((a) => a.id === firstSelectedId) ?? null)
+    : null;
+  const multipleSelected = selectedActionIdsArray.length > 1;
+
   useKeyboardShortcuts({
     onPalette: () => setPaletteOpen(true),
     onNewQuiz: newQuiz,
@@ -2728,6 +2791,7 @@ export const Dashboard: React.FC = () => {
       setIdentityOpen(false);
     },
     onExport: handleExport,
+    onSelectAll: selectAllActions, // Ctrl+A
   });
 
   return (
@@ -2748,7 +2812,7 @@ export const Dashboard: React.FC = () => {
         activeQuizId={activeQuizId}
         onSelectQuiz={(id) => {
           setActiveQuizId(id);
-          setSelectedActionId(null);
+          clearSelectedActions(); // clear selection when switching quizzes
         }}
         onNewQuiz={newQuiz}
         snippets={SNIPPETS}
@@ -2763,9 +2827,8 @@ export const Dashboard: React.FC = () => {
         setMode={setMode}
         onOpenPalette={() => setPaletteOpen(true)}
         onExport={handleExport}
-        // removed quiz, renderItems, questionMap
-        selectedActionId={selectedActionId}
-        setSelectedActionId={setSelectedActionId}
+        selectedActionIds={selectedActionIds}
+        toggleSelectAction={toggleSelectAction}
         dragActionId={dragActionId}
         dragOverActionId={dragOverActionId}
         onActionDragStart={onActionDragStart}
@@ -2784,9 +2847,8 @@ export const Dashboard: React.FC = () => {
       />
 
       <RightPanel
-        selectedAction={
-          quiz?.actions.find((a) => a.id === selectedActionId) ?? null
-        }
+        selectedAction={selectedAction}
+        multipleSelected={multipleSelected}
         onActionUpdate={updateAction}
         onQuestionUpdate={updateQuestion}
       />
@@ -2903,8 +2965,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
 
 interface IdentityModalProps {
-  current: User;
-  onSave: (id: User) => void;
+  current: User | null;
+  onSave: (user: User) => void; // always expects a User
   onClose: () => void;
 }
 
@@ -2913,33 +2975,47 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   onSave,
   onClose,
 }) => {
-  const { updateUser } = useAuth();
-  const [name, setName] = useState(current.name);
-  const [handle, setHandle] = useState(current.handle);
+  const { updateUser, register } = useAuth();
+  const [name, setName] = useState(current?.name ?? "");
+  const [handle, setHandle] = useState(current?.handle ?? "");
+  const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
+    if (!name.trim()) return;
+    setLoading(true);
     try {
-      if (name !== current.name) {
-        await userService.updateName(current.id, { name });
+      if (!current) {
+        // New user: register with the given name
+        const user = await register(name.trim());
+        if (user) {
+          onSave(user); // pass the new user
+        }
+      } else {
+        // Existing user: update name and/or handle
+        if (name !== current.name) {
+          await userService.updateName(current.id, { name });
+        }
+        if (handle !== current.handle && handle.trim()) {
+          await userService.updateHandle(current.id, { handle: handle.trim() });
+        }
+        const updated = { ...current, name, handle };
+        updateUser(updated);
+        onSave(updated);
       }
-      if (handle !== current.handle) {
-        await userService.updateHandle(current.id, { handle });
-      }
-      const updated = { ...current, name, handle };
-      updateUser(updated);
-      onSave(updated);
     } catch (error) {
       alert(
         "Failed to update identity" +
           (error instanceof Error ? `: ${error.message}` : ""),
       );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="jqzz-modal-overlay" onClick={onClose}>
       <div className="jqzz-modal" onClick={(e) => e.stopPropagation()}>
-        <h3># Set Identity</h3>
+        <h3>{current ? "# Set Identity" : "# Create Account"}</h3>
         <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
           Display Name
         </div>
@@ -2949,23 +3025,37 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
-          Handle
-        </div>
-        <input
-          className="jqzz-modal-input"
-          placeholder="@handle"
-          value={handle}
-          onChange={(e) =>
-            setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))
-          }
-        />
+        {current && (
+          <>
+            <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
+              Handle
+            </div>
+            <input
+              className="jqzz-modal-input"
+              placeholder="@handle"
+              value={handle}
+              onChange={(e) =>
+                setHandle(
+                  e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""),
+                )
+              }
+            />
+          </>
+        )}
         <div className="jqzz-modal-row">
-          <button className="jqzz-modal-btn" onClick={onClose}>
+          <button
+            className="jqzz-modal-btn"
+            onClick={onClose}
+            disabled={loading}
+          >
             Cancel
           </button>
-          <button className="jqzz-modal-btn primary" onClick={handleSave}>
-            Save
+          <button
+            className="jqzz-modal-btn primary"
+            onClick={handleSave}
+            disabled={loading || !name.trim()}
+          >
+            {loading ? "Saving..." : current ? "Save" : "Create"}
           </button>
         </div>
       </div>
@@ -2983,14 +3073,15 @@ import React, {
   useEffect,
   useContext,
   useCallback,
+  useRef,
 } from "react";
 import type { User } from "../types";
 import { userService } from "../services/userService";
 
 interface AuthContextType {
   user: User | null;
-  login: (id: string) => Promise<void>;
-  register: (name: string) => Promise<void>;
+  login: (id: string) => Promise<User>;
+  register: (name: string) => Promise<User | undefined>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
 }
@@ -2998,8 +3089,10 @@ interface AuthContextType {
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
-  register: async () => {},
+  login: async () => {
+    throw new Error("login not implemented");
+  },
+  register: async () => undefined,
   logout: async () => {},
   updateUser: () => {},
 });
@@ -3009,22 +3102,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializing = useRef(false);
 
-  const login = useCallback(async (id: string) => {
+  const login = useCallback(async (id: string): Promise<User> => {
     const res = await userService.login({ id });
     setUser(res.data);
     localStorage.setItem("userId", res.data.id);
+    return res.data;
   }, []);
 
   const register = useCallback(
-    async (name: string) => {
-      const res = await userService.register({ name });
-      await login(res.data.userId);
+    async (name: string): Promise<User | undefined> => {
+      try {
+        const res = await userService.register({ name });
+        const user = await login(res.data.userId);
+        return user;
+      } catch (error) {
+        console.error("Registration failed", error);
+        return undefined;
+      }
     },
     [login],
   );
 
   useEffect(() => {
+    if (initializing.current) return;
+    initializing.current = true;
     const stored = localStorage.getItem("userId");
     if (stored) {
       userService
@@ -3073,7 +3176,15 @@ export const useAuth = () => useContext(AuthContext);
 ====================
 C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\contexts\QuizContext.tsx
 ====================
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { useQuizMutations } from "../hooks/useQuizMutations";
 import { useAuth } from "./AuthContext";
@@ -3085,8 +3196,14 @@ interface QuizContextType {
   setQuizzes: React.Dispatch<React.SetStateAction<Quiz[]>>;
   activeQuizId: number | null;
   setActiveQuizId: (id: number | null) => void;
-  selectedActionId: number | null;
-  setSelectedActionId: (id: number | null) => void;
+  selectedActionIds: Set<number>;
+  toggleSelectAction: (
+    id: number,
+    ctrlKey?: boolean,
+    shiftKey?: boolean,
+  ) => void;
+  selectAllActions: () => void;
+  clearSelectedActions: () => void;
   mode: EditorMode;
   setMode: (mode: EditorMode) => void;
   aiPrompt: string;
@@ -3104,6 +3221,7 @@ interface QuizContextType {
   newQuiz: () => Promise<number | undefined>;
   dropSnippet: (snippetId: string) => void;
   handleParsed: (questions: Question[], actions: Action[]) => void;
+  shiftPressed: React.RefObject<boolean>;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -3114,7 +3232,12 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   const { quizzes, setQuizzes } = useQuizzes();
   const { user } = useAuth();
   const [activeQuizId, setActiveQuizId] = useState<number | null>(null);
-  const [selectedActionId, setSelectedActionId] = useState<number | null>(null);
+  const [selectedActionIds, setSelectedActionIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [lastSelectedActionId, setLastSelectedActionId] = useState<
+    number | null
+  >(null);
   const [mode, setMode] = useState<EditorMode>("visual");
   const [aiPrompt, setAiPrompt] = useState("");
 
@@ -3141,13 +3264,113 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     handleParsed,
   } = useQuizMutations(activeQuizId, setQuizzes, authorId);
 
+  const getActionIdsInOrder = useCallback((): number[] => {
+    if (!quiz) return [];
+    return quiz.actions.map((a) => a.id);
+  }, [quiz]);
+
+  const toggleSelectAction = useCallback(
+    (id: number, ctrlKey: boolean = false, shiftKey: boolean = false) => {
+      console.log("toggleSelectAction called", {
+        id,
+        ctrlKey,
+        shiftKey,
+        lastSelected: lastSelectedActionId,
+      });
+      setSelectedActionIds((prev) => {
+        const newSet = new Set(prev);
+        const actionIds = getActionIdsInOrder();
+
+        if (shiftKey) {
+          if (lastSelectedActionId !== null) {
+            const lastIdx = actionIds.indexOf(lastSelectedActionId);
+            const currentIdx = actionIds.indexOf(id);
+            if (lastIdx !== -1 && currentIdx !== -1) {
+              const start = Math.min(lastIdx, currentIdx);
+              const end = Math.max(lastIdx, currentIdx);
+              for (let i = start; i <= end; i++) {
+                newSet.add(actionIds[i]);
+              }
+            }
+          } else {
+            // No anchor: select only this action
+            newSet.clear();
+            newSet.add(id);
+          }
+          setLastSelectedActionId(id);
+          console.log("new selection set", Array.from(newSet));
+          return newSet;
+        }
+
+        if (ctrlKey) {
+          if (newSet.has(id)) {
+            newSet.delete(id);
+          } else {
+            newSet.add(id);
+          }
+          setLastSelectedActionId(id);
+          return newSet;
+        }
+
+        // No modifier
+        if (newSet.size === 1 && newSet.has(id)) {
+          newSet.clear();
+          setLastSelectedActionId(null);
+        } else {
+          newSet.clear();
+          newSet.add(id);
+          setLastSelectedActionId(id);
+        }
+        return newSet;
+      });
+    },
+    [getActionIdsInOrder, lastSelectedActionId],
+  );
+
+  const selectAllActions = useCallback(() => {
+    const actionIds = getActionIdsInOrder();
+    setSelectedActionIds(new Set(actionIds));
+    if (actionIds.length > 0) {
+      setLastSelectedActionId(actionIds[actionIds.length - 1]);
+    }
+  }, [getActionIdsInOrder]);
+
+  const clearSelectedActions = useCallback(() => {
+    setSelectedActionIds(new Set());
+    setLastSelectedActionId(null);
+  }, []);
+
+  const shiftPressed = useRef(false);
+
+  // Reset selection when quiz changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    clearSelectedActions();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") shiftPressed.current = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") shiftPressed.current = false;
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [activeQuizId, clearSelectedActions]);
+
   const value: QuizContextType = {
+    shiftPressed,
     quizzes,
     setQuizzes,
     activeQuizId,
     setActiveQuizId,
-    selectedActionId,
-    setSelectedActionId,
+    selectedActionIds,
+    toggleSelectAction,
+    selectAllActions,
+    clearSelectedActions,
     mode,
     setMode,
     aiPrompt,
@@ -3168,7 +3391,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
+//eslint-disable-next-line react-refresh/only-export-components
 export const useQuiz = () => {
   const context = useContext(QuizContext);
   if (!context) throw new Error("useQuiz must be used within a QuizProvider");
@@ -3241,6 +3464,1209 @@ export const useWebSocket = () => React.useContext(WebSocketContext);
 
 
 ====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\components.css
+====================
+/* Action cards, text blocks, dividers, empty states, add button */
+/* Group label */
+.jqzz-group-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-group-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.jqzz-group {
+  margin-bottom: 14px;
+}
+
+/* Cards */
+.jqzz-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 9px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+  position: relative;
+}
+.jqzz-card:hover {
+  border-color: var(--border-light);
+  background: var(--bg-highlight);
+}
+.jqzz-card.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-card.drag-over {
+  border-top: 2px solid var(--accent);
+}
+.jqzz-card.dragging-self {
+  opacity: 0.4;
+}
+.jqzz-drag-handle {
+  display: flex;
+  align-items: center;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: grab;
+  padding: 0 4px 0 0;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.1s;
+  user-select: none;
+}
+.jqzz-drag-handle:hover {
+  color: var(--text-muted);
+}
+.jqzz-drag-handle:active {
+  cursor: grabbing;
+}
+.jqzz-card-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  margin-left: auto;
+}
+.jqzz-card:hover .jqzz-card-actions {
+  opacity: 1;
+}
+.jqzz-card-action-btn {
+  background: var(--bg-accent);
+  border: 1px solid var(--border-light);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.jqzz-card-action-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+.jqzz-card-action-btn.del:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+.jqzz-phase-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  min-width: 90px;
+  text-align: center;
+}
+.badge-WAITING {
+  background: rgba(72, 79, 102, 0.3);
+  color: #8890ab;
+  border: 1px solid #333748;
+}
+.badge-QUESTION {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.badge-ANSWER {
+  background: color-mix(in srgb, #a3e635 12%, transparent);
+  color: #a3e635;
+  border: 1px solid color-mix(in srgb, #a3e635 30%, transparent);
+}
+.badge-ELABORATION {
+  background: color-mix(in srgb, #fbbf24 12%, transparent);
+  color: #fbbf24;
+  border: 1px solid color-mix(in srgb, #fbbf24 30%, transparent);
+}
+.badge-RESULT {
+  background: color-mix(in srgb, #f472b6 12%, transparent);
+  color: #f472b6;
+  border: 1px solid color-mix(in srgb, #f472b6 30%, transparent);
+}
+.badge-TEXT {
+  background: rgba(100, 100, 120, 0.2);
+  color: #686e8a;
+  border: 1px solid #333748;
+}
+.jqzz-card-time {
+  color: var(--text-dim);
+  font-size: 11px;
+  min-width: 30px;
+}
+.jqzz-card-preview {
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Text block */
+.jqzz-text-block {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.jqzz-text-block:hover {
+  border-color: var(--border-light);
+  background: var(--bg-elevated);
+}
+.jqzz-text-block-content {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-style: italic;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Divider block */
+.jqzz-divider-block {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 12px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s;
+}
+.jqzz-divider-block:hover {
+  opacity: 1;
+}
+.jqzz-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+.jqzz-divider-label {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+/* Add button */
+.jqzz-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: var(--spacing-sm);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+.jqzz-add-btn:hover,
+.jqzz-add-btn.over {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Empty state */
+.jqzz-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px 24px;
+}
+.jqzz-empty-icon {
+  font-size: 28px;
+  opacity: 0.3;
+}
+.jqzz-empty-title {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.jqzz-empty-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.8;
+}
+.jqzz-empty-drop {
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  transition: all 0.15s;
+  margin-top: var(--spacing-sm);
+  width: 100%;
+  max-width: 280px;
+}
+.jqzz-empty-drop.over {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-card,
+.jqzz-card *,
+.jqzz-text-block,
+.jqzz-text-block *,
+.jqzz-divider-block,
+.jqzz-divider-block * {
+  user-select: none !important;
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\editor.css
+====================
+/* Text editor and script highlighting */
+.jqzz-text-editor {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius-md);
+  padding: 14px;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+.jqzz-ai-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  flex-shrink: 0;
+}
+.jqzz-ai-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.jqzz-ai-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 11px;
+  flex: 1;
+}
+.jqzz-ai-input::placeholder {
+  color: var(--text-dim);
+}
+.jqzz-ai-btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.jqzz-ai-btn:hover {
+  background: color-mix(in srgb, var(--accent) 85%, black);
+}
+.jqzz-parse-badge {
+  font-size: 9px;
+  color: var(--text-dim);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-highlight);
+  border: 1px solid var(--border);
+  letter-spacing: 0.5px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.jqzz-parse-badge.ok {
+  color: #a3e635;
+  border-color: color-mix(in srgb, #a3e635 30%, transparent);
+}
+.jqzz-parse-badge.err {
+  color: #f87171;
+  border-color: color-mix(in srgb, #f87171 30%, transparent);
+}
+
+/* Overlay editor */
+.jqzz-editor-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+.jqzz-highlight-pre {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--spacing-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  word-break: normal;
+}
+.jqzz-script-ta {
+  position: absolute;
+  inset: 0;
+  padding: var(--spacing-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  color: transparent;
+  caret-color: var(--accent);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+}
+.jqzz-script-ta::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.jqzz-script-ta::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 2px;
+}
+.jqzz-script-ta::selection {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\glass.css
+====================
+/* Glass effect utilities */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right-color: rgba(255, 255, 255, 0.05);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\index.css
+====================
+/* Imports all the above */
+
+@import './variables.css';
+@import './reset.css';
+@import './glass.css';
+@import './layout.css';
+@import './sidebar.css';
+@import './main.css';
+@import './components.css';
+@import './editor.css';
+@import './right-panel.css';
+@import './modals.css';
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\layout.css
+====================
+/* Dashboard layout */
+.jqzz-dash {
+  display: flex;
+  height: 100vh;
+  min-height: 600px;
+  background: var(--bg-base);
+  color: var(--text);
+  overflow: hidden;
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\main.css
+====================
+/* Main area, toolbar */
+.jqzz-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Toolbar */
+.jqzz-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  flex-shrink: 0;
+}
+.jqzz-tab-group {
+  display: flex;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 1px;
+}
+.jqzz-tab {
+  padding: 5px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  transition: all 0.12s;
+  letter-spacing: 0.5px;
+}
+.jqzz-tab.active {
+  background: var(--bg-accent);
+  color: var(--text);
+}
+.jqzz-spacer {
+  flex: 1;
+}
+.jqzz-toolbar-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.jqzz-toolbar-btn:hover {
+  background: var(--bg-highlight);
+  color: var(--text);
+}
+.jqzz-toolbar-btn.run {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.jqzz-toolbar-btn.run:hover {
+  background: color-mix(in srgb, var(--accent) 85%, black);
+}
+
+/* Body */
+.jqzz-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+.jqzz-body::-webkit-scrollbar {
+  width: 4px;
+}
+.jqzz-body::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 2px;
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\modals.css
+====================
+/* Modals and command palette */
+/* Command Palette */
+.jqzz-palette-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+  backdrop-filter: blur(2px);
+}
+.jqzz-palette {
+  width: 500px;
+  max-width: 90vw;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  animation: paletteIn 0.15s ease;
+}
+@keyframes paletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+}
+.jqzz-palette-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--spacing-md) 16px;
+  border-bottom: 1px solid var(--border);
+}
+.jqzz-palette-input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  flex: 1;
+}
+.jqzz-palette-input::placeholder {
+  color: var(--text-dim);
+}
+.jqzz-cmd-list {
+  padding: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.jqzz-cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.jqzz-cmd-item:hover,
+.jqzz-cmd-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-cmd-icon {
+  color: var(--text-dim);
+  font-size: 12px;
+  min-width: 16px;
+  text-align: center;
+}
+.jqzz-cmd-label {
+  color: var(--text);
+  font-size: 13px;
+}
+.jqzz-cmd-sub {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-left: auto;
+}
+.jqzz-cmd-item.active .jqzz-cmd-icon,
+.jqzz-cmd-item.active .jqzz-cmd-label {
+  color: var(--accent);
+}
+.jqzz-palette-footer {
+  padding: var(--spacing-sm) 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+}
+.jqzz-palette-hint {
+  color: var(--text-dim);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Identity Modal */
+.jqzz-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.jqzz-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 24px;
+  width: 340px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+  animation: paletteIn 0.15s ease;
+}
+.jqzz-modal h3 {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+.jqzz-modal-input {
+  width: 100%;
+  background: var(--bg-highlight);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  padding: var(--spacing-sm) 10px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.jqzz-modal-input:focus {
+  border-color: var(--accent);
+}
+.jqzz-modal-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: 4px;
+}
+.jqzz-modal-btn {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  background: var(--bg-highlight);
+  color: var(--text-muted);
+  transition: all 0.12s;
+}
+.jqzz-modal-btn:hover {
+  background: var(--bg-accent);
+  color: var(--text);
+}
+.jqzz-modal-btn.primary {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.jqzz-modal-btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 85%, black);
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\reset.css
+====================
+/* Base resets */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-base);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\right-panel.css
+====================
+/* Right panel, users, forms */
+.jqzz-rpanel {
+  width: 250px;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-left: 1px solid var(--border);
+}
+.jqzz-rpanel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.jqzz-rpanel-tab {
+  flex: 1;
+  padding: 9px 6px;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  transition: all 0.12s;
+  border-bottom: 2px solid transparent;
+}
+.jqzz-rpanel-tab:hover {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+.jqzz-rpanel-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.jqzz-rpanel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+.jqzz-rpanel-body::-webkit-scrollbar {
+  width: 4px;
+}
+.jqzz-rpanel-body::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 2px;
+}
+.jqzz-section-label {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.jqzz-field-group {
+  margin-bottom: var(--spacing-md);
+}
+.jqzz-field-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+.jqzz-field-select,
+.jqzz-field-input,
+.jqzz-field-textarea {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.jqzz-field-select:focus,
+.jqzz-field-input:focus,
+.jqzz-field-textarea:focus {
+  border-color: var(--accent);
+}
+.jqzz-field-textarea {
+  resize: vertical;
+  min-height: 58px;
+  line-height: 1.5;
+}
+.jqzz-divider-sep {
+  height: 1px;
+  background: var(--border);
+  margin: var(--spacing-md) 0;
+}
+
+/* Answer rows */
+.jqzz-answer-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.jqzz-answer-text {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 11px;
+  padding: 4px 7px;
+  outline: none;
+}
+.jqzz-answer-text:focus {
+  border-color: var(--accent);
+}
+.jqzz-answer-val {
+  width: 38px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: #a3e635;
+  font-size: 11px;
+  padding: 4px 5px;
+  text-align: center;
+}
+.jqzz-answer-del {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1;
+  transition: color 0.1s;
+}
+.jqzz-answer-del:hover {
+  color: #f87171;
+}
+.jqzz-add-answer {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 5px;
+  cursor: pointer;
+  transition: all 0.12s;
+  margin-top: 4px;
+}
+.jqzz-add-answer:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Users */
+.jqzz-stat-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: 14px;
+}
+.jqzz-stat-box {
+  flex: 1;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) 10px;
+  border: 1px solid var(--border);
+}
+.jqzz-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.jqzz-stat-label {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.jqzz-user-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.jqzz-user-row:last-child {
+  border-bottom: none;
+}
+.jqzz-user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.jqzz-user-avatar.online {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.jqzz-user-avatar.offline {
+  background: var(--bg-highlight);
+  border: 1px solid var(--border-light);
+  color: var(--text-dim);
+}
+.jqzz-user-info {
+  flex: 1;
+  min-width: 0;
+}
+.jqzz-user-name {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jqzz-user-handle {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.jqzz-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.jqzz-online-dot.on {
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+.jqzz-online-dot.off {
+  background: var(--text-dim);
+}
+
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\sidebar.css
+====================
+/* Sidebar components */
+.jqzz-sidebar {
+  width: 210px;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-right: 1px solid var(--border);
+}
+
+/* Logo */
+.jqzz-logo {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.jqzz-logo-badge {
+  background: var(--accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 1.5px;
+}
+.jqzz-logo-name {
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 3px;
+}
+
+/* Identity */
+.jqzz-identity {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.jqzz-identity:hover {
+  background: var(--bg-elevated);
+}
+.jqzz-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.jqzz-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.jqzz-identity-name {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.jqzz-identity-handle {
+  color: var(--text-dim);
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+/* Sections */
+.jqzz-sid-section {
+  padding: var(--spacing-sm) 0;
+}
+.jqzz-sid-label {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 4px 13px 6px;
+  text-transform: uppercase;
+}
+.jqzz-sid-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 7px 13px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: all 0.12s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.jqzz-sid-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.jqzz-sid-btn.accent {
+  color: var(--accent);
+}
+.jqzz-sid-btn.accent:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.jqzz-kbd {
+  margin-left: auto;
+  background: var(--bg-highlight);
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  font-size: 9px;
+  padding: 1px 5px;
+  color: var(--text-dim);
+}
+
+/* Quiz list */
+.jqzz-quiz-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 13px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+}
+.jqzz-quiz-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.jqzz-quiz-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+.jqzz-quiz-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.jqzz-quiz-item.active .jqzz-quiz-dot {
+  background: var(--accent);
+}
+.jqzz-quiz-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Snippets */
+.jqzz-snippet-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 13px;
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 11px;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+.jqzz-snippet-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.jqzz-snippet-item:active {
+  cursor: grabbing;
+}
+.jqzz-snippet-item.dragging {
+  opacity: 0.35;
+}
+
+/* Footer shortcuts */
+.jqzz-sid-footer {
+  margin-top: auto;
+  padding: 10px 13px;
+  border-top: 1px solid var(--border);
+}
+.jqzz-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+
+====================
 C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\syntaxHighlighterScript.tsx
 ====================
 import { tokenizeLine, TOKEN_COLOR } from "./syntaxHighlighter";
@@ -3291,1165 +4717,51 @@ export default App;
 C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\index.css
 ====================
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
-.jqzz-dash * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-.jqzz-dash {
-  --bg0: #0b0c10;
-  --bg1: #111318;
-  --bg2: #181a21;
-  --bg3: #1e2029;
-  --bg4: #272a35;
+@import "../frontend/src/styles/reset.css";
+@import "../frontend/src/styles/glass.css";
+@import "../frontend/src/styles/layout.css";
+@import "../frontend/src/styles/sidebar.css";
+@import "../frontend/src/styles/main.css";
+@import "../frontend/src/styles/components.css";
+@import "../frontend/src/styles/editor.css";
+@import "../frontend/src/styles/right-panel.css";
+@import "../frontend/src/styles/modals.css";
+
+:root {
+  /* Backgrounds – from dark to light */
+  --bg-base: #0b0c10; /* deepest background */
+  --bg-surface: #111318; /* panels */
+  --bg-elevated: #181a21; /* cards, inputs */
+  --bg-highlight: #1e2029; /* hover states */
+  --bg-accent: #272a35; /* active tab, etc. */
+
+  /* Borders */
   --border: #252830;
-  --border2: #333748;
-  --cyan: #00e5c8;
-  --cyan-dim: rgba(0, 229, 200, 0.1);
-  --lime: #a3e635;
-  --pink: #f472b6;
-  --amber: #fbbf24;
-  --red: #f87171;
-  --purple: #a78bfa;
-  --txt: #dde1f0;
-  --txt2: #8890ab;
-  --txt3: #484f66;
-  --mono: "JetBrains Mono", monospace;
-  --r: 6px;
-  --r2: 4px;
-  display: flex;
-  height: 100vh;
-  min-height: 600px;
-  font-family: var(--mono);
-  font-size: 13px;
-  background: var(--bg0);
-  color: var(--txt);
-  overflow: hidden;
-}
+  --border-light: #333748;
 
-/* SIDEBAR */
-.jqzz-sidebar {
-  width: 210px;
-  min-width: 210px;
-  background: var(--bg1);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.jqzz-logo {
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.jqzz-logo-badge {
-  background: var(--cyan);
-  color: #000;
-  font-weight: 700;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: var(--r2);
-  letter-spacing: 1.5px;
-}
-.jqzz-logo-name {
-  color: var(--txt3);
-  font-size: 11px;
-  letter-spacing: 3px;
-}
-.jqzz-identity {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.jqzz-identity:hover {
-  background: var(--bg2);
-}
-.jqzz-identity-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.jqzz-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--cyan-dim);
-  border: 1px solid var(--cyan);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--cyan);
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.jqzz-identity-name {
-  color: var(--txt);
-  font-size: 12px;
-  font-weight: 600;
-}
-.jqzz-identity-handle {
-  color: var(--txt3);
-  font-size: 10px;
-  margin-top: 1px;
-}
-.jqzz-sid-section {
-  padding: 8px 0;
-}
-.jqzz-sid-label {
-  color: var(--txt3);
-  font-size: 9px;
-  letter-spacing: 2px;
-  padding: 4px 13px 6px;
-  text-transform: uppercase;
-}
-.jqzz-sid-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 13px;
-  cursor: pointer;
-  color: var(--txt2);
-  font-size: 12px;
-  transition: all 0.12s;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  font-family: var(--mono);
-}
-.jqzz-sid-btn:hover {
-  background: var(--bg2);
-  color: var(--txt);
-}
-.jqzz-sid-btn.accent {
-  color: var(--cyan);
-}
-.jqzz-sid-btn.accent:hover {
-  background: var(--cyan-dim);
-}
-.jqzz-kbd {
-  margin-left: auto;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: 3px;
-  font-size: 9px;
-  padding: 1px 5px;
-  color: var(--txt3);
-}
-.jqzz-quiz-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 13px;
-  cursor: pointer;
-  color: var(--txt2);
-  font-size: 11px;
-  transition: all 0.12s;
-  border-left: 2px solid transparent;
-}
-.jqzz-quiz-item:hover {
-  background: var(--bg2);
-  color: var(--txt);
-}
-.jqzz-quiz-item.active {
-  background: var(--cyan-dim);
-  color: var(--cyan);
-  border-left-color: var(--cyan);
-}
-.jqzz-quiz-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--txt3);
-  flex-shrink: 0;
-}
-.jqzz-quiz-item.active .jqzz-quiz-dot {
-  background: var(--cyan);
-}
-.jqzz-quiz-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.jqzz-sid-footer {
-  margin-top: auto;
-  padding: 10px 13px;
-  border-top: 1px solid var(--border);
-}
-.jqzz-shortcut-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 0;
-  color: var(--txt3);
-  font-size: 10px;
-}
-.jqzz-snippet-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 13px;
-  cursor: grab;
-  color: var(--txt2);
-  font-size: 11px;
-  transition: all 0.12s;
-  border-left: 2px solid transparent;
-  user-select: none;
-}
-.jqzz-snippet-item:hover {
-  background: var(--bg2);
-  color: var(--txt);
-}
-.jqzz-snippet-item:active {
-  cursor: grabbing;
-}
-.jqzz-snippet-item.dragging {
-  opacity: 0.35;
-}
+  /* Accent */
+  --accent: #00e504;
 
-/* MAIN */
-.jqzz-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-}
-.jqzz-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg1);
-  flex-shrink: 0;
-}
-.jqzz-tab-group {
-  display: flex;
-  background: var(--bg2);
-  border-radius: var(--r);
-  padding: 2px;
-  gap: 1px;
-}
-.jqzz-tab {
-  padding: 5px 14px;
-  border-radius: var(--r2);
-  font-size: 11px;
-  font-family: var(--mono);
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--txt2);
-  transition: all 0.12s;
-  letter-spacing: 0.5px;
-}
-.jqzz-tab.active {
-  background: var(--bg4);
-  color: var(--txt);
-}
-.jqzz-spacer {
-  flex: 1;
-}
-.jqzz-toolbar-btn {
-  padding: 5px 12px;
-  border-radius: var(--r2);
-  font-size: 11px;
-  font-family: var(--mono);
-  cursor: pointer;
-  border: 1px solid var(--border2);
-  background: var(--bg2);
-  color: var(--txt2);
-  transition: all 0.12s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.jqzz-toolbar-btn:hover {
-  background: var(--bg3);
-  color: var(--txt);
-}
-.jqzz-toolbar-btn.run {
-  background: var(--cyan);
-  color: #000;
-  border-color: var(--cyan);
-  font-weight: 700;
-}
-.jqzz-toolbar-btn.run:hover {
-  background: #00ccb2;
-}
-.jqzz-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px;
-}
-.jqzz-body::-webkit-scrollbar {
-  width: 4px;
-}
-.jqzz-body::-webkit-scrollbar-thumb {
-  background: var(--border2);
-  border-radius: 2px;
-}
+  /* Text */
+  --text: #dde1f0;
+  --text-muted: #8890ab;
+  --text-dim: #484f66;
 
-/* ACTION CARDS */
-.jqzz-group-label {
-  color: var(--txt3);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.jqzz-group-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.jqzz-group {
-  margin-bottom: 14px;
-}
-.jqzz-drop-line {
-  height: 2px;
-  background: var(--cyan);
-  border-radius: 1px;
-  margin: 0 0 4px;
-  transition: opacity 0.1s;
-}
-.jqzz-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  margin-bottom: 4px;
-  cursor: pointer;
-  transition:
-    border-color 0.12s,
-    background 0.12s;
-  position: relative;
-}
-.jqzz-card:hover {
-  border-color: var(--border2);
-  background: var(--bg3);
-}
-.jqzz-card.selected {
-  border-color: var(--cyan);
-  background: var(--cyan-dim);
-}
-.jqzz-card.drag-over {
-  border-top: 2px solid var(--cyan);
-}
-.jqzz-card.dragging-self {
-  opacity: 0.4;
-}
-.jqzz-drag-handle {
-  display: flex;
-  align-items: center;
-  color: var(--txt3);
-  font-size: 14px;
-  cursor: grab;
-  padding: 0 4px 0 0;
-  flex-shrink: 0;
-  line-height: 1;
-  transition: color 0.1s;
-  user-select: none;
-}
-.jqzz-drag-handle:hover {
-  color: var(--txt2);
-}
-.jqzz-drag-handle:active {
-  cursor: grabbing;
-}
-.jqzz-card-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.12s;
-  margin-left: auto;
-}
-.jqzz-card:hover .jqzz-card-actions {
-  opacity: 1;
-}
-.jqzz-card-action-btn {
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  color: var(--txt3);
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: var(--r2);
-  cursor: pointer;
-  font-family: var(--mono);
-  transition: all 0.1s;
-}
-.jqzz-card-action-btn:hover {
-  color: var(--txt);
-  border-color: var(--txt3);
-}
-.jqzz-card-action-btn.del:hover {
-  color: var(--red);
-  border-color: var(--red);
-}
-.jqzz-phase-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  padding: 2px 8px;
-  border-radius: var(--r2);
-  flex-shrink: 0;
-  min-width: 90px;
-  text-align: center;
-  font-family: var(--mono);
-}
-.badge-WAITING {
-  background: rgba(72, 79, 102, 0.3);
-  color: #8890ab;
-  border: 1px solid #333748;
-}
-.badge-QUESTION {
-  background: rgba(0, 229, 200, 0.12);
-  color: #00e5c8;
-  border: 1px solid rgba(0, 229, 200, 0.3);
-}
-.badge-ANSWER {
-  background: rgba(163, 230, 53, 0.12);
-  color: #a3e635;
-  border: 1px solid rgba(163, 230, 53, 0.3);
-}
-.badge-ELABORATION {
-  background: rgba(251, 191, 36, 0.12);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-}
-.badge-RESULT {
-  background: rgba(244, 114, 182, 0.12);
-  color: #f472b6;
-  border: 1px solid rgba(244, 114, 182, 0.3);
-}
-.badge-TEXT {
-  background: rgba(100, 100, 120, 0.2);
-  color: #686e8a;
-  border: 1px solid #333748;
-}
-.jqzz-card-time {
-  color: var(--txt3);
-  font-size: 11px;
-  min-width: 30px;
-}
-.jqzz-card-preview {
-  color: var(--txt2);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
+  /* Font & radii */
+  --font-mono: "JetBrains Mono", monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
 
-/* TEXT block */
-.jqzz-text-block {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: var(--r);
-  margin-bottom: 4px;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-.jqzz-text-block:hover {
-  border-color: var(--border2);
-  background: var(--bg2);
-}
-.jqzz-text-block-content {
-  color: var(--txt3);
-  font-size: 11px;
-  font-style: italic;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  /* Spacing – optional, but can be used with calc() */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
 
-/* DIVIDER block */
-.jqzz-divider-block {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  margin-bottom: 4px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.12s;
+  /* Glass effect (will be applied with backdrop-filter) */
+  --glass-bg: rgba(17, 19, 24, 0.7);
+  --glass-blur: 12px;
 }
-.jqzz-divider-block:hover {
-  opacity: 1;
-}
-.jqzz-divider-line {
-  flex: 1;
-  height: 1px;
-  background: var(--border2);
-}
-.jqzz-divider-label {
-  color: var(--txt3);
-  font-size: 9px;
-  letter-spacing: 2px;
-  flex-shrink: 0;
-}
-
-/* ADD BTN */
-.jqzz-add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px;
-  background: none;
-  border: 1px dashed var(--border);
-  border-radius: var(--r);
-  color: var(--txt3);
-  font-size: 11px;
-  cursor: pointer;
-  font-family: var(--mono);
-  transition: all 0.15s;
-  margin-top: 4px;
-}
-.jqzz-add-btn:hover,
-.jqzz-add-btn.over {
-  border-color: var(--cyan);
-  color: var(--cyan);
-  background: var(--cyan-dim);
-}
-
-/* EMPTY */
-.jqzz-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 48px 20px 24px;
-}
-.jqzz-empty-icon {
-  font-size: 28px;
-  opacity: 0.3;
-}
-.jqzz-empty-title {
-  font-size: 13px;
-  color: var(--txt2);
-}
-.jqzz-empty-sub {
-  font-size: 11px;
-  color: var(--txt3);
-  text-align: center;
-  line-height: 1.8;
-}
-.jqzz-empty-drop {
-  border: 1px dashed var(--border2);
-  border-radius: var(--r);
-  padding: 16px 24px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--txt3);
-  transition: all 0.15s;
-  margin-top: 8px;
-  width: 100%;
-  max-width: 280px;
-}
-.jqzz-empty-drop.over {
-  border-color: var(--cyan);
-  color: var(--cyan);
-  background: var(--cyan-dim);
-}
-
-/* TEXT EDITOR */
-.jqzz-text-editor {
-  background: var(--bg1);
-  border-radius: var(--r);
-  padding: 14px;
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.jqzz-ai-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--r);
-  padding: 8px 12px;
-  flex-shrink: 0;
-}
-.jqzz-ai-label {
-  color: var(--txt3);
-  font-size: 10px;
-  letter-spacing: 1px;
-  flex-shrink: 0;
-}
-.jqzz-ai-input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--txt);
-  font-size: 11px;
-  flex: 1;
-  font-family: var(--mono);
-}
-.jqzz-ai-input::placeholder {
-  color: var(--txt3);
-}
-.jqzz-ai-btn {
-  background: var(--cyan);
-  color: #000;
-  border: none;
-  border-radius: var(--r2);
-  padding: 3px 10px;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--mono);
-  flex-shrink: 0;
-  transition: background 0.12s;
-}
-.jqzz-ai-btn:hover {
-  background: #00ccb2;
-}
-
-/* OVERLAY EDITOR */
-.jqzz-editor-wrap {
-  position: relative;
-  flex: 1;
-  overflow: hidden;
-  border-radius: var(--r2);
-}
-.jqzz-highlight-pre {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 12px;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.8;
-  white-space: pre;
-  overflow: hidden;
-  pointer-events: none;
-  color: var(--txt);
-  background: var(--bg2);
-  border-radius: var(--r2);
-  word-break: normal;
-}
-.jqzz-script-ta {
-  position: absolute;
-  inset: 0;
-  padding: 12px;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.8;
-  color: transparent;
-  caret-color: var(--cyan);
-  background: transparent;
-  border: none;
-  outline: none;
-  resize: none;
-  white-space: pre;
-  overflow: auto;
-  border-radius: var(--r2);
-}
-.jqzz-script-ta::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-.jqzz-script-ta::-webkit-scrollbar-thumb {
-  background: var(--border2);
-  border-radius: 2px;
-}
-.jqzz-script-ta::selection {
-  background: rgba(0, 229, 200, 0.2);
-}
-.jqzz-parse-badge {
-  font-size: 9px;
-  color: var(--txt3);
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  letter-spacing: 0.5px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.jqzz-parse-badge.ok {
-  color: var(--lime);
-  border-color: rgba(163, 230, 53, 0.3);
-}
-.jqzz-parse-badge.err {
-  color: var(--red);
-  border-color: rgba(248, 113, 113, 0.3);
-}
-
-/* RIGHT PANEL */
-.jqzz-rpanel {
-  width: 250px;
-  min-width: 250px;
-  background: var(--bg1);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.jqzz-rpanel-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.jqzz-rpanel-tab {
-  flex: 1;
-  padding: 9px 6px;
-  font-size: 10px;
-  font-family: var(--mono);
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--txt3);
-  transition: all 0.12s;
-  border-bottom: 2px solid transparent;
-}
-.jqzz-rpanel-tab:hover {
-  color: var(--txt2);
-  background: var(--bg2);
-}
-.jqzz-rpanel-tab.active {
-  color: var(--cyan);
-  border-bottom-color: var(--cyan);
-}
-.jqzz-rpanel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-}
-.jqzz-rpanel-body::-webkit-scrollbar {
-  width: 4px;
-}
-.jqzz-rpanel-body::-webkit-scrollbar-thumb {
-  background: var(--border2);
-  border-radius: 2px;
-}
-.jqzz-section-label {
-  color: var(--txt3);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.jqzz-section-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.jqzz-field-group {
-  margin-bottom: 12px;
-}
-.jqzz-field-label {
-  color: var(--txt3);
-  font-size: 10px;
-  letter-spacing: 1px;
-  margin-bottom: 5px;
-  text-transform: uppercase;
-}
-.jqzz-field-select,
-.jqzz-field-input,
-.jqzz-field-textarea {
-  width: 100%;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--r2);
-  color: var(--txt);
-  font-size: 12px;
-  padding: 5px 8px;
-  font-family: var(--mono);
-  outline: none;
-  transition: border-color 0.12s;
-}
-.jqzz-field-select:focus,
-.jqzz-field-input:focus,
-.jqzz-field-textarea:focus {
-  border-color: var(--cyan);
-}
-.jqzz-field-textarea {
-  resize: vertical;
-  min-height: 58px;
-  line-height: 1.5;
-}
-.jqzz-divider-sep {
-  height: 1px;
-  background: var(--border);
-  margin: 12px 0;
-}
-.jqzz-answer-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 5px;
-}
-.jqzz-answer-text {
-  flex: 1;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--r2);
-  color: var(--txt);
-  font-size: 11px;
-  padding: 4px 7px;
-  font-family: var(--mono);
-  outline: none;
-}
-.jqzz-answer-text:focus {
-  border-color: var(--cyan);
-}
-.jqzz-answer-val {
-  width: 38px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--r2);
-  color: var(--lime);
-  font-size: 11px;
-  padding: 4px 5px;
-  font-family: var(--mono);
-  outline: none;
-  text-align: center;
-}
-.jqzz-answer-del {
-  background: none;
-  border: none;
-  color: var(--txt3);
-  cursor: pointer;
-  padding: 2px 4px;
-  font-size: 12px;
-  line-height: 1;
-  transition: color 0.1s;
-}
-.jqzz-answer-del:hover {
-  color: var(--red);
-}
-.jqzz-add-answer {
-  width: 100%;
-  background: none;
-  border: 1px dashed var(--border);
-  border-radius: var(--r2);
-  color: var(--txt3);
-  font-size: 11px;
-  padding: 5px;
-  cursor: pointer;
-  font-family: var(--mono);
-  transition: all 0.12s;
-  margin-top: 4px;
-}
-.jqzz-add-answer:hover {
-  border-color: var(--cyan);
-  color: var(--cyan);
-}
-
-/* USERS */
-.jqzz-stat-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.jqzz-stat-box {
-  flex: 1;
-  background: var(--bg2);
-  border-radius: var(--r);
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-}
-.jqzz-stat-num {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-.jqzz-stat-label {
-  color: var(--txt3);
-  font-size: 9px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-.jqzz-user-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border);
-}
-.jqzz-user-row:last-child {
-  border-bottom: none;
-}
-.jqzz-user-avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.jqzz-user-avatar.online {
-  background: var(--cyan-dim);
-  border: 1px solid var(--cyan);
-  color: var(--cyan);
-}
-.jqzz-user-avatar.offline {
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  color: var(--txt3);
-}
-.jqzz-user-info {
-  flex: 1;
-  min-width: 0;
-}
-.jqzz-user-name {
-  font-size: 11px;
-  color: var(--txt);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.jqzz-user-handle {
-  font-size: 10px;
-  color: var(--txt3);
-}
-.jqzz-online-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.jqzz-online-dot.on {
-  background: var(--cyan);
-  box-shadow: 0 0 4px var(--cyan);
-}
-.jqzz-online-dot.off {
-  background: var(--txt3);
-}
-
-/* PALETTE */
-.jqzz-palette-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 50;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 80px;
-  backdrop-filter: blur(2px);
-}
-.jqzz-palette {
-  width: 500px;
-  max-width: 90vw;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
-  animation: paletteIn 0.15s ease;
-}
-@keyframes paletteIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.97);
-  }
-}
-.jqzz-palette-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.jqzz-palette-input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--txt);
-  font-size: 14px;
-  flex: 1;
-  font-family: var(--mono);
-}
-.jqzz-palette-input::placeholder {
-  color: var(--txt3);
-}
-.jqzz-cmd-list {
-  padding: 6px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-.jqzz-cmd-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--r2);
-  cursor: pointer;
-  transition: all 0.1s;
-}
-.jqzz-cmd-item:hover,
-.jqzz-cmd-item.active {
-  background: var(--cyan-dim);
-}
-.jqzz-cmd-icon {
-  color: var(--txt3);
-  font-size: 12px;
-  min-width: 16px;
-  text-align: center;
-}
-.jqzz-cmd-label {
-  color: var(--txt);
-  font-size: 13px;
-}
-.jqzz-cmd-sub {
-  color: var(--txt3);
-  font-size: 11px;
-  margin-left: auto;
-}
-.jqzz-cmd-item.active .jqzz-cmd-icon,
-.jqzz-cmd-item.active .jqzz-cmd-label {
-  color: var(--cyan);
-}
-.jqzz-palette-footer {
-  padding: 8px 16px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 16px;
-}
-.jqzz-palette-hint {
-  color: var(--txt3);
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* MODAL */
-.jqzz-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(2px);
-}
-.jqzz-modal {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 24px;
-  width: 340px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
-  animation: paletteIn 0.15s ease;
-}
-.jqzz-modal h3 {
-  color: var(--txt);
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  letter-spacing: 0.5px;
-}
-.jqzz-modal-input {
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: var(--r2);
-  color: var(--txt);
-  font-size: 13px;
-  padding: 8px 10px;
-  font-family: var(--mono);
-  outline: none;
-  margin-bottom: 10px;
-  transition: border-color 0.12s;
-}
-.jqzz-modal-input:focus {
-  border-color: var(--cyan);
-}
-.jqzz-modal-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-.jqzz-modal-btn {
-  flex: 1;
-  padding: 8px;
-  border-radius: var(--r2);
-  font-size: 12px;
-  font-family: var(--mono);
-  cursor: pointer;
-  border: 1px solid var(--border2);
-  background: var(--bg3);
-  color: var(--txt2);
-  transition: all 0.12s;
-}
-.jqzz-modal-btn:hover {
-  background: var(--bg4);
-  color: var(--txt);
-}
-.jqzz-modal-btn.primary {
-  background: var(--cyan);
-  color: #000;
-  border-color: var(--cyan);
-  font-weight: 700;
-}
-.jqzz-modal-btn.primary:hover {
-  background: #00ccb2;
-}
-@keyframes fadeSlide {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-.jqzz-card {
-  animation: fadeSlide 0.12s ease;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\index.tsx
-====================
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { AuthProvider } from "./contexts/AuthContext";
-import { WebSocketProvider } from "./contexts/WebSocketContext";
-import { Dashboard } from "./components/Dashboard/Dashboard";
-import "./index.css";
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <AuthProvider>
-      <WebSocketProvider>
-        <Dashboard />
-      </WebSocketProvider>
-    </AuthProvider>
-  </React.StrictMode>,
-);
 
 
 ====================

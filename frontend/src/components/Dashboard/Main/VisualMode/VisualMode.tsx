@@ -8,8 +8,8 @@ interface VisualModeProps {
   quiz: Quiz | undefined;
   renderItems: RenderItem[];
   questionMap: Map<number, Question>;
-  selectedActionId: number | null;
-  setSelectedActionId: (id: number | null) => void;
+  selectedActionIds: Set<number>;
+  toggleSelectAction: (id: number, ctrlKey?: boolean) => void;
   dragActionId: number | null;
   dragOverActionId: number | null;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -28,8 +28,8 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   quiz,
   renderItems,
   questionMap,
-  selectedActionId,
-  setSelectedActionId,
+  selectedActionIds,
+  toggleSelectAction,
   dragActionId,
   dragOverActionId,
   onActionDragStart,
@@ -70,13 +70,13 @@ export const VisualMode: React.FC<VisualModeProps> = ({
             <ActionCard
               key={item.action.id}
               action={item.action}
-              isSelected={item.action.id === selectedActionId}
+              isSelected={selectedActionIds.has(item.action.id)}
               isDragging={item.action.id === dragActionId}
               isOver={
                 item.action.id === dragOverActionId &&
                 dragActionId !== item.action.id
               }
-              onSelect={setSelectedActionId}
+              onToggleSelect={toggleSelectAction}
               onActionDragStart={onActionDragStart}
               onActionDragEnd={onActionDragEnd}
               onActionDragOver={onActionDragOver}
@@ -91,13 +91,13 @@ export const VisualMode: React.FC<VisualModeProps> = ({
             <ActionCard
               key={item.action.id}
               action={item.action}
-              isSelected={item.action.id === selectedActionId}
+              isSelected={selectedActionIds.has(item.action.id)}
               isDragging={item.action.id === dragActionId}
               isOver={
                 item.action.id === dragOverActionId &&
                 dragActionId !== item.action.id
               }
-              onSelect={setSelectedActionId}
+              onToggleSelect={toggleSelectAction}
               onActionDragStart={onActionDragStart}
               onActionDragEnd={onActionDragEnd}
               onActionDragOver={onActionDragOver}
@@ -122,10 +122,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
               <ActionCard
                 key={a.id}
                 action={a}
-                isSelected={a.id === selectedActionId}
+                isSelected={selectedActionIds.has(a.id)}
                 isDragging={a.id === dragActionId}
                 isOver={a.id === dragOverActionId && dragActionId !== a.id}
-                onSelect={setSelectedActionId}
+                onToggleSelect={toggleSelectAction}
                 onActionDragStart={onActionDragStart}
                 onActionDragEnd={onActionDragEnd}
                 onActionDragOver={onActionDragOver}

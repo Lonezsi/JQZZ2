@@ -6,12 +6,14 @@ import { useQuiz } from "../../../contexts/QuizContext";
 
 interface RightPanelProps {
   selectedAction: Action | null;
+  multipleSelected: boolean;
   onActionUpdate: (id: number, patch: Partial<Action>) => void;
   onQuestionUpdate: (id: number, patch: Partial<Question>) => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
   selectedAction,
+  multipleSelected,
   onActionUpdate,
   onQuestionUpdate,
 }) => {
@@ -46,6 +48,14 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       <div className="jqzz-rpanel-body">
         {activeTab === "users" ? (
           <UsersTab />
+        ) : multipleSelected ? (
+          <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
+            Multiple actions selected. Click on a single action to edit.
+          </div>
+        ) : !action ? (
+          <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
+            Select an action card to edit.
+          </div>
         ) : (
           <ContextEditor
             action={action}

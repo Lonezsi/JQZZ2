@@ -85,6 +85,7 @@ export type RenderItem =
 export interface CreateQuizRequest {
   name: string;
   authorId: string;
+  actions?: Action[];
 }
 
 export interface UpdateQuizRequest {

@@ -17,8 +17,10 @@ export const Dashboard: React.FC = () => {
     quizzes,
     activeQuizId,
     setActiveQuizId,
-    selectedActionId,
-    setSelectedActionId,
+    selectedActionIds, // <-- now a Set
+    toggleSelectAction, // <-- for selection
+    selectAllActions, // <-- for Ctrl+A
+    clearSelectedActions,
     mode,
     setMode,
     aiPrompt,
@@ -31,7 +33,7 @@ export const Dashboard: React.FC = () => {
     newQuiz,
     dropSnippet: dropSnippetMutation,
     handleParsed,
-    quiz, // <-- from context
+    quiz,
   } = useQuiz();
 
   const dropSnippet = useCallback(
@@ -71,6 +73,14 @@ export const Dashboard: React.FC = () => {
     });
   }, [quiz]);
 
+  // Determine which action to edit in the right panel
+  const selectedActionIdsArray = Array.from(selectedActionIds);
+  const firstSelectedId = selectedActionIdsArray[0] ?? null;
+  const selectedAction = firstSelectedId
+    ? (quiz?.actions.find((a) => a.id === firstSelectedId) ?? null)
+    : null;
+  const multipleSelected = selectedActionIdsArray.length > 1;
+
   useKeyboardShortcuts({
     onPalette: () => setPaletteOpen(true),
     onNewQuiz: newQuiz,
@@ -80,6 +90,7 @@ export const Dashboard: React.FC = () => {
       setIdentityOpen(false);
     },
     onExport: handleExport,
+    onSelectAll: selectAllActions, // Ctrl+A
   });
 
   return (
@@ -100,7 +111,7 @@ export const Dashboard: React.FC = () => {
         activeQuizId={activeQuizId}
         onSelectQuiz={(id) => {
           setActiveQuizId(id);
-          setSelectedActionId(null);
+          clearSelectedActions(); // clear selection when switching quizzes
         }}
         onNewQuiz={newQuiz}
         snippets={SNIPPETS}
@@ -115,9 +126,8 @@ export const Dashboard: React.FC = () => {
         setMode={setMode}
         onOpenPalette={() => setPaletteOpen(true)}
         onExport={handleExport}
-        // removed quiz, renderItems, questionMap
-        selectedActionId={selectedActionId}
-        setSelectedActionId={setSelectedActionId}
+        selectedActionIds={selectedActionIds}
+        toggleSelectAction={toggleSelectAction}
         dragActionId={dragActionId}
         dragOverActionId={dragOverActionId}
         onActionDragStart={onActionDragStart}
@@ -136,9 +146,8 @@ export const Dashboard: React.FC = () => {
       />
 
       <RightPanel
-        selectedAction={
-          quiz?.actions.find((a) => a.id === selectedActionId) ?? null
-        }
+        selectedAction={selectedAction}
+        multipleSelected={multipleSelected}
         onActionUpdate={updateAction}
         onQuestionUpdate={updateQuestion}
       />
