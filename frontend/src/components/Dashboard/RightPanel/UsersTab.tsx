@@ -3,6 +3,11 @@ import type { UserEntry } from "../../../types";
 import { userService } from "../../../services/userService";
 import { useWebSocket } from "../../../hooks/useWebSocket";
 
+interface UserWebSocketMessage {
+  event: string;
+  user: UserEntry;
+}
+
 export const UsersTab: React.FC = () => {
   const [users, setUsers] = useState<UserEntry[]>([]);
 
@@ -10,8 +15,8 @@ export const UsersTab: React.FC = () => {
     userService.getAll().then((res) => setUsers(res.data));
   }, []);
 
-  useWebSocket("/topic/users", (msg) => {
-    // handle user_registered, user_logged_in, user_logged_out, user_updated
+  // Now we can pass the generic type argument
+  useWebSocket<UserWebSocketMessage>("/topic/users", (msg) => {
     const { event, user } = msg;
     setUsers((prev) => {
       switch (event) {
@@ -49,6 +54,7 @@ export const UsersTab: React.FC = () => {
           <div className="jqzz-stat-label">Offline</div>
         </div>
       </div>
+
       {online > 0 && <div className="jqzz-section-label">Online</div>}
       {sorted
         .filter((u) => u.online)
@@ -64,6 +70,7 @@ export const UsersTab: React.FC = () => {
             <div className="jqzz-online-dot on" />
           </div>
         ))}
+
       {offline > 0 && (
         <div
           className="jqzz-section-label"

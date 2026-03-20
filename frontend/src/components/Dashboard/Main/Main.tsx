@@ -1,23 +1,16 @@
+// src/components/Dashboard/Main/Main.tsx
 import React from "react";
 import { Toolbar } from "./Toolbar";
 import { VisualMode } from "./VisualMode/VisualMode";
 import { TextMode } from "./TextMode/TextMode";
-import type {
-  EditorMode,
-  Quiz,
-  Question,
-  Action,
-  RenderItem,
-} from "../../../types";
+import { useQuiz } from "../../../contexts/QuizContext";
+import type { EditorMode, Question, Action } from "../../../types";
 
 interface MainProps {
   mode: EditorMode;
   setMode: (mode: EditorMode) => void;
   onOpenPalette: () => void;
   onExport: () => void;
-  quiz: Quiz | undefined;
-  renderItems: RenderItem[];
-  questionMap: Map<number, Question>;
   selectedActionId: number | null;
   setSelectedActionId: (id: number | null) => void;
   dragActionId: number | null;
@@ -42,9 +35,6 @@ export const Main: React.FC<MainProps> = ({
   setMode,
   onOpenPalette,
   onExport,
-  quiz,
-  renderItems,
-  questionMap,
   selectedActionId,
   setSelectedActionId,
   dragActionId,
@@ -63,6 +53,8 @@ export const Main: React.FC<MainProps> = ({
   setAiPrompt,
   onParsed,
 }) => {
+  const { quiz, renderItems, questionMap } = useQuiz();
+
   return (
     <main className="jqzz-main">
       <Toolbar

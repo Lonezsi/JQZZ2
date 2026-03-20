@@ -17,8 +17,9 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
   const [answers, setAnswers] = useState<Answer[]>(question?.answers ?? []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnswers(question?.answers ?? []);
-  }, [question?.id]);
+  }, [question?.id, question?.answers]);
 
   if (!action) {
     return (

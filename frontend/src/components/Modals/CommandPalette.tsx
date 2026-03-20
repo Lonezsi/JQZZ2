@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import type { KeyboardEvent } from "react";
 import { COMMANDS } from "../../constants/commands";
 
 interface CommandPaletteProps {
@@ -19,6 +20,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIdx(0);
   }, [query]);
 

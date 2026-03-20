@@ -16,6 +16,7 @@ interface AuthContextType {
   updateUser: (data: Partial<User>) => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => {},
@@ -58,13 +59,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           register("Guest").finally(() => setLoading(false));
         });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       register("Guest").finally(() => setLoading(false));
     }
   }, [register]);
 
   const logout = useCallback(async () => {
     if (user) {
-      await userService.logout({ id: user.id });
+      await userService.logout(user.id);
       setUser(null);
       localStorage.removeItem("userId");
     }
@@ -85,4 +87,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

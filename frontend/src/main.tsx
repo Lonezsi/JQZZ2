@@ -4,12 +4,15 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import App from "./App";
 import "./index.css";
+import { QuizProvider } from "./contexts/QuizContext";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <AuthProvider>
       <WebSocketProvider>
-        <App />
+        <QuizProvider>
+          <App />
+        </QuizProvider>
       </WebSocketProvider>
     </AuthProvider>
   </React.StrictMode>,

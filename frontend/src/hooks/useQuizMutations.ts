@@ -84,13 +84,16 @@ export const useQuizMutations = (
 
   const newQuiz = useCallback(async () => {
     try {
-      const response = await quizService.create({ name: `Quiz ${Date.now()}` });
+      const response = await quizService.create({
+        name: `Quiz ${Date.now()}`,
+        authorId,
+      });
       setQuizzes((prev) => [...prev, response.data]);
       return response.data.id;
     } catch (error) {
       console.error("Failed to create quiz", error);
     }
-  }, [setQuizzes]);
+  }, [setQuizzes, authorId]);
 
   const dropSnippet = useCallback(
     (snippetId: string) => {

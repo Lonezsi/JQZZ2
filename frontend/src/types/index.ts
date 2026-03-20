@@ -57,6 +57,13 @@ export interface User {
   online: boolean;
 }
 
+export interface UserEntry {
+  id: string;
+  name: string;
+  handle: string;
+  online: boolean;
+}
+
 // For sidebar identity display (subset)
 export type Identity = Pick<User, "id" | "name" | "handle">;
 
@@ -87,6 +94,7 @@ export type RenderItem =
 // API request/response types
 export interface CreateQuizRequest {
   name: string;
+  authorId: string;
 }
 
 export interface UpdateQuizRequest {

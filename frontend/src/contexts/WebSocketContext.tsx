@@ -11,6 +11,7 @@ interface WebSocketContextType {
   ) => StompSubscription | undefined;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const WebSocketContext = createContext<WebSocketContextType>({
   client: null,
   subscribe: () => undefined,
@@ -32,6 +33,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     });
     stompClient.activate();
     clientRef.current = stompClient;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClient(stompClient);
 
     return () => {
@@ -53,4 +55,5 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWebSocket = () => React.useContext(WebSocketContext);
