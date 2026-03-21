@@ -12,6 +12,8 @@ import { useQuizMutations } from "../hooks/useQuizMutations";
 import { useAuth } from "./AuthContext";
 import type { Quiz, Question, Action, EditorMode, RenderItem } from "../types";
 import { buildRenderItems } from "../utils/buildRenderItems";
+import { quizService } from "../services/quizService";
+import { convertToBackendQuiz } from "../utils/quizConverter";
 
 interface QuizContextType {
   quizzes: Quiz[];
@@ -67,10 +69,13 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     () => quizzes.find((q) => q.id === activeQuizId),
     [quizzes, activeQuizId],
   );
-  const questionMap = useMemo(
-    () => new Map(quiz?.questions.map((q) => [q.id, q])),
-    [quiz],
-  );
+
+  // SAFE: ensure questions array exists
+  const questionMap = useMemo(() => {
+    if (!quiz?.questions) return new Map<number, Question>();
+    return new Map(quiz.questions.map((q) => [q.id, q]));
+  }, [quiz]);
+
   const renderItems = useMemo(() => buildRenderItems(quiz), [quiz]);
 
   const authorId = user?.id || "";
@@ -86,6 +91,32 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     handleParsed,
   } = useQuizMutations(activeQuizId, setQuizzes, authorId);
 
+  // --- Persistence logic ---
+  const saveQuiz = useCallback(async (quizToSave: Quiz) => {
+    if (!quizToSave.id) return;
+    try {
+      const backendQuiz = convertToBackendQuiz(quizToSave);
+      await quizService.update(quizToSave.id, backendQuiz);
+      console.log("Quiz saved", quizToSave.id);
+    } catch (err) {
+      console.error("Failed to save quiz", err);
+    }
+  }, []);
+
+  const debouncedSave = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!quiz || !quiz.id) return;
+    if (debouncedSave.current) clearTimeout(debouncedSave.current);
+    debouncedSave.current = window.setTimeout(() => {
+      saveQuiz(quiz);
+    }, 1000);
+    return () => {
+      if (debouncedSave.current) clearTimeout(debouncedSave.current);
+    };
+  }, [quiz, saveQuiz]);
+
+  // --- Selection logic ---
   const getActionIdsInOrder = useCallback((): number[] => {
     if (!quiz) return [];
     return quiz.actions.map((a) => a.id);
@@ -109,7 +140,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
               }
             }
           } else {
-            // No anchor: select only this action
             newSet.clear();
             newSet.add(id);
           }
@@ -127,7 +157,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
           return newSet;
         }
 
-        // No modifier
         if (newSet.size === 1 && newSet.has(id)) {
           newSet.clear();
           setLastSelectedActionId(null);
@@ -157,7 +186,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const shiftPressed = useRef(false);
 
-  // Reset selection when quiz changes
+  // Reset selection when quiz changes and set up shift key listeners
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     clearSelectedActions();
@@ -206,7 +235,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
 };
 
-//eslint-disable-next-line react-refresh/only-export-components
+// eslint-disable-next-line react-refresh/only-export-components
 export const useQuiz = () => {
   const context = useContext(QuizContext);
   if (!context) throw new Error("useQuiz must be used within a QuizProvider");

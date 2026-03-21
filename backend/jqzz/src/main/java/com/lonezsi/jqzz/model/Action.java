@@ -1,5 +1,6 @@
 package com.lonezsi.jqzz.model;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -15,7 +16,7 @@ public class Action {
     @SuppressWarnings("unused")
     private Long id;
 
-    @ManyToOne
+    @ManyToOne (cascade = CascadeType.ALL)
     @JoinColumn(name="question_id")
     private Question question;
 

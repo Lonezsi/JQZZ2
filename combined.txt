@@ -3119,7 +3119,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return user;
       } catch (error) {
         console.error("Registration failed", error);
-        return undefined;
+        // Fallback: create a local user object for demo purposes
+        const fallbackUser: User = {
+          id: `local_${Date.now()}`,
+          name: name || "Guest",
+          handle: `guest_${Math.floor(Math.random() * 10000)}`,
+          online: true,
+        };
+        setUser(fallbackUser);
+        localStorage.setItem("userId", fallbackUser.id);
+        return fallbackUser;
       }
     },
     [login],
@@ -3190,6 +3199,8 @@ import { useQuizMutations } from "../hooks/useQuizMutations";
 import { useAuth } from "./AuthContext";
 import type { Quiz, Question, Action, EditorMode, RenderItem } from "../types";
 import { buildRenderItems } from "../utils/buildRenderItems";
+import { quizService } from "../services/quizService";
+import { convertToBackendQuiz } from "../utils/quizConverter";
 
 interface QuizContextType {
   quizzes: Quiz[];
@@ -3264,6 +3275,32 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     handleParsed,
   } = useQuizMutations(activeQuizId, setQuizzes, authorId);
 
+  // --- Persistence logic ---
+  const saveQuiz = useCallback(async (quizToSave: Quiz) => {
+    if (!quizToSave.id) return;
+    try {
+      const backendQuiz = convertToBackendQuiz(quizToSave);
+      await quizService.update(quizToSave.id, backendQuiz);
+      console.log("Quiz saved", quizToSave.id);
+    } catch (err) {
+      console.error("Failed to save quiz", err);
+    }
+  }, []);
+
+  const debouncedSave = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!quiz || !quiz.id) return;
+    if (debouncedSave.current) clearTimeout(debouncedSave.current);
+    debouncedSave.current = window.setTimeout(() => {
+      saveQuiz(quiz);
+    }, 1000);
+    return () => {
+      if (debouncedSave.current) clearTimeout(debouncedSave.current);
+    };
+  }, [quiz, saveQuiz]);
+
+  // --- Selection logic ---
   const getActionIdsInOrder = useCallback((): number[] => {
     if (!quiz) return [];
     return quiz.actions.map((a) => a.id);
@@ -3271,12 +3308,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleSelectAction = useCallback(
     (id: number, ctrlKey: boolean = false, shiftKey: boolean = false) => {
-      console.log("toggleSelectAction called", {
-        id,
-        ctrlKey,
-        shiftKey,
-        lastSelected: lastSelectedActionId,
-      });
       setSelectedActionIds((prev) => {
         const newSet = new Set(prev);
         const actionIds = getActionIdsInOrder();
@@ -3298,7 +3329,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
             newSet.add(id);
           }
           setLastSelectedActionId(id);
-          console.log("new selection set", Array.from(newSet));
           return newSet;
         }
 
@@ -3342,7 +3372,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const shiftPressed = useRef(false);
 
-  // Reset selection when quiz changes
+  // Reset selection when quiz changes and set up shift key listeners
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     clearSelectedActions();
@@ -3391,7 +3421,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
 };
 
-//eslint-disable-next-line react-refresh/only-export-components
+// eslint-disable-next-line react-refresh/only-export-components
 export const useQuiz = () => {
   const context = useContext(QuizContext);
   if (!context) throw new Error("useQuiz must be used within a QuizProvider");
@@ -3889,18 +3919,52 @@ C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\glass.css
 ====================
 C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\index.css
 ====================
-/* Imports all the above */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
+@import "./styles/reset.css";
+@import "./styles/glass.css";
+@import "./styles/layout.css";
+@import "./styles/sidebar.css";
+@import "./styles/main.css";
+@import "./styles/components.css";
+@import "./styles/editor.css";
+@import "./styles/right-panel.css";
+@import "./styles/modals.css";
 
-@import './variables.css';
-@import './reset.css';
-@import './glass.css';
-@import './layout.css';
-@import './sidebar.css';
-@import './main.css';
-@import './components.css';
-@import './editor.css';
-@import './right-panel.css';
-@import './modals.css';
+:root {
+  /* Backgrounds – from dark to light */
+  --bg-base: #0b0c10; /* deepest background */
+  --bg-surface: #111318; /* panels */
+  --bg-elevated: #181a21; /* cards, inputs */
+  --bg-highlight: #1e2029; /* hover states */
+  --bg-accent: #272a35; /* active tab, etc. */
+
+  /* Borders */
+  --border: #252830;
+  --border-light: #333748;
+
+  /* Accent */
+  --accent: #00e504;
+
+  /* Text */
+  --text: #dde1f0;
+  --text-muted: #8890ab;
+  --text-dim: #484f66;
+
+  /* Font & radii */
+  --font-mono: "JetBrains Mono", monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  /* Spacing – optional, but can be used with calc() */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+
+  /* Glass effect (will be applied with backdrop-filter) */
+  --glass-bg: rgba(17, 19, 24, 0.7);
+  --glass-blur: 12px;
+}
 
 
 ====================
