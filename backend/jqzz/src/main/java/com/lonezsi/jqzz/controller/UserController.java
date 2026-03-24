@@ -3,6 +3,7 @@ package com.lonezsi.jqzz.controller;
 import java.util.Map;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -125,10 +126,13 @@ public class UserController {
     }
 
     @PostMapping("/{id}/update")
-    public User update(@PathVariable String id, @RequestBody Map<String,String> body) {
+    public User update(@PathVariable String id, @RequestBody Map<String, String> body) {
         User user = userRepository.findById(id).orElseThrow();
 
-        if(body.containsKey("name")) user.setName(body.get("name"));
+        if (body.containsKey("name")) user.setName(body.get("name"));
+        if (body.containsKey("handle")) user.setHandle(body.get("handle"));
+        if (body.containsKey("email")) user.setEmail(body.get("email"));
+        if (body.containsKey("profilePictureUrl")) user.setProfilePictureUrl(body.get("profilePictureUrl"));
 
         User saved = userRepository.save(user);
 
@@ -138,6 +142,11 @@ public class UserController {
         );
 
         return saved;
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable String id) {
+        userRepository.deleteById(id);
     }
 
     @GetMapping

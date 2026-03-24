@@ -41,7 +41,7 @@ export const UsersTab: React.FC = () => {
     <div>
       <div className="jqzz-stat-row">
         <div className="jqzz-stat-box">
-          <div className="jqzz-stat-num" style={{ color: "var(--cyan)" }}>
+          <div className="jqzz-stat-num" style={{ color: "var(--lime)" }}>
             {online}
           </div>
           <div className="jqzz-stat-label">Online</div>
@@ -61,12 +61,19 @@ export const UsersTab: React.FC = () => {
           <div key={u.id} className="jqzz-user-row">
             <div className="jqzz-user-avatar online">
               {u.name[0].toUpperCase()}
+              {/* Green dot inside avatar? The online class already gives a cyan border; we'll add a dot outside */}
             </div>
             <div className="jqzz-user-info">
               <div className="jqzz-user-name">{u.name}</div>
               <div className="jqzz-user-handle">{u.handle}</div>
             </div>
-            <div className="jqzz-online-dot on" />
+            <div
+              className="jqzz-online-dot on"
+              style={{
+                backgroundColor: "var(--lime)",
+                boxShadow: "0 0 4px var(--lime)",
+              }}
+            />
           </div>
         ))}
 

@@ -20,12 +20,31 @@ export const Identity: React.FC<IdentityProps> = ({ identity, onClick }) => {
       </div>
     );
   }
+
   const avatarLetter = identity.name ? identity.name[0].toUpperCase() : "?";
+  const avatarStyle: React.CSSProperties = {
+    position: "relative",
+    display: "inline-flex",
+  };
+  const onlineDotStyle: React.CSSProperties = {
+    position: "absolute",
+    bottom: "0px",
+    right: "0px",
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    backgroundColor: "var(--lime, #a3e635)",
+    border: "2px solid var(--bg1)",
+    boxShadow: "0 0 2px rgba(0,0,0,0.2)",
+  };
 
   return (
     <div className="jqzz-identity" onClick={onClick}>
       <div className="jqzz-identity-row">
-        <div className="jqzz-avatar">{avatarLetter}</div>
+        <div style={avatarStyle}>
+          <div className="jqzz-avatar">{avatarLetter}</div>
+          {identity.online && <div style={onlineDotStyle} />}
+        </div>
         <div>
           <div className="jqzz-identity-name">{identity.name}</div>
           <div className="jqzz-identity-handle">{identity.handle}</div>

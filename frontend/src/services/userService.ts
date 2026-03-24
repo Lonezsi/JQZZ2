@@ -15,6 +15,9 @@ export const userService = {
     api.post<User>(`/users/${id}/handle`, data),
   updateName: (id: string, data: UpdateNameRequest) =>
     api.post<User>(`/users/${id}/name`, data),
+  update: (id: string, data: Partial<User>) =>
+    api.post<User>(`/users/${id}/update`, data),
+  delete: (id: string) => api.delete(`/users/${id}`),
   getAll: () => api.get<User[]>("/users"),
   getOne: (id: string) => api.get<User>(`/users/${id}`),
 };

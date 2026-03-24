@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import type { User } from "../types";
 import { userService } from "../services/userService";
+import { api } from "../services/api";
 
 interface AuthContextType {
   user: User | null;
@@ -53,6 +54,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     [login],
   );
 
+  const logout = useCallback(async () => {
+    if (user) {
+      await userService.logout(user.id);
+      setUser(null);
+      localStorage.removeItem("userId");
+    }
+  }, [user]);
+
   useEffect(() => {
     if (initializing.current) return;
     initializing.current = true;
@@ -66,7 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setLoading(false);
         })
         .catch(() => {
-          // Stored ID is invalid – create a new user
           localStorage.removeItem("userId");
           const randomSuffix = Math.floor(Math.random() * 10000);
           register(`Guest_${randomSuffix}`)
@@ -77,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             });
         });
     } else {
-      // No stored ID – create a new user
       const randomSuffix = Math.floor(Math.random() * 10000);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       register(`Guest_${randomSuffix}`)
@@ -89,12 +96,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [register]);
 
-  const logout = useCallback(async () => {
-    if (user) {
-      await userService.logout(user.id);
-      setUser(null);
-      localStorage.removeItem("userId");
-    }
+  // Mark user offline when tab closes
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (user) {
+        const url = `${api.defaults.baseURL}/users/logout`;
+        const blob = new Blob([JSON.stringify({ id: user.id })], {
+          type: "application/json",
+        });
+        navigator.sendBeacon(url, blob);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [user]);
 
   const updateUser = useCallback((data: Partial<User>) => {
