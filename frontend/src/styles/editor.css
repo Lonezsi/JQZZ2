@@ -102,7 +102,7 @@
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.8;
-  color: transparent;
+  color: color-mix(in srgb, transparent 70%, var(--text));
   caret-color: var(--accent);
   background: transparent;
   border: none;
