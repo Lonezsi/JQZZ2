@@ -1,15 +1,17 @@
 package com.lonezsi.jqzz.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Column;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "app_user")
 public class User {
     @Id
     private String id;
 
-    @Column(unique=true)
+    @Column(unique = true)
     private String handle;
 
     private String name;
@@ -21,6 +23,7 @@ public class User {
 
     private boolean online;
 
+    // constructors, getters, setters unchanged
     public User() {}
 
     public String getId(){return id;}

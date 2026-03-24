@@ -2,15 +2,13 @@ import { api } from "./api";
 import type {
   User,
   RegisterRequest,
-  RegisterResponse,
   LoginRequest,
   UpdateHandleRequest,
   UpdateNameRequest,
 } from "../types";
 
 export const userService = {
-  register: (data: RegisterRequest) =>
-    api.post<RegisterResponse>("/users/register", data),
+  register: (data: RegisterRequest) => api.post<User>("/users/register", data),
   login: (data: LoginRequest) => api.post<User>("/users/login", data),
   logout: (id: string) => api.post("/users/logout", { id }),
   updateHandle: (id: string, data: UpdateHandleRequest) =>

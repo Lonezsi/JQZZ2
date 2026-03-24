@@ -1,0 +1,130 @@
+.jqzz-welcome-root {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+.jqzz-welcome-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.05), transparent),
+    radial-gradient(circle at 80% 60%, rgba(0, 0, 0, 0.04), transparent);
+  z-index: 0;
+}
+
+/* HERO */
+.jqzz-welcome-hero {
+  padding: 0rem 2rem 4rem;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.jqzz-welcome-hero-content {
+  max-width: 900px;
+  text-align: center;
+}
+
+.jqzz-welcome-logo {
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: 6px;
+  margin-bottom: 1rem;
+}
+
+.jqzz-welcome-title {
+  font-size: 32px;
+  margin-bottom: 1rem;
+}
+
+.jqzz-welcome-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+}
+
+.jqzz-welcome-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* BUTTONS */
+.jqzz-btn {
+  padding: 0.9rem 1.6rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.jqzz-btn.primary {
+  background: var(--primary);
+  color: white;
+}
+
+.jqzz-btn.primary:hover {
+  transform: translateY(-2px);
+}
+
+.jqzz-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.jqzz-btn.secondary:hover {
+  background: var(--hover-bg-light);
+}
+
+/* FEATURES */
+.jqzz-welcome-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  padding: 3rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.jqzz-feature {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
+}
+
+.jqzz-feature:hover {
+  transform: translateY(-5px);
+}
+
+/* SHOWCASE */
+.jqzz-welcome-showcase {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  padding: 3rem 2rem;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.jqzz-showcase-card {
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
+/* FOOTER */
+.jqzz-welcome-footer {
+  text-align: center;
+  padding: 3rem 1rem;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}

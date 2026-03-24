@@ -15,7 +15,7 @@ export interface Answer {
   text: string;
   value: number;
   imageUrl?: string;
-  userId?: string; // for user‑generated answers
+  userId?: string;
 }
 
 export interface Question {
@@ -24,7 +24,7 @@ export interface Question {
   imageUrl?: string;
   elaborationText?: string;
   elaborationImageUrl?: string;
-  type: string; // matches QuestionType enum
+  type: string;
   userId?: string;
   answers: Answer[];
 }
@@ -33,20 +33,18 @@ export interface Action {
   id: number;
   phase: Phase;
   time: number;
-  questionId: number;
-  preview: string;
+  question: Question | null; // null for TEXT/DIVIDER actions
+  preview: string; // derived in UI
   orderIndex?: number;
 }
 
 export interface Quiz {
   id: number;
   name: string;
-  authorId: string; // references user id
+  authorId: string;
   actions: Action[];
-  questions: Question[]; // derived or provided by backend
 }
 
-// Backend User model
 export interface User {
   id: string;
   handle: string;
@@ -77,7 +75,7 @@ export interface Command {
 }
 
 export type RenderItem =
-  | { kind: "group"; questionId: number; actions: Action[] }
+  | { kind: "group"; question: Question; actions: Action[] }
   | { kind: "divider"; action: Action }
   | { kind: "text"; action: Action };
 
@@ -96,10 +94,6 @@ export interface UpdateQuizRequest {
 
 export interface RegisterRequest {
   name: string;
-}
-
-export interface RegisterResponse {
-  userId: string;
 }
 
 export interface LoginRequest {

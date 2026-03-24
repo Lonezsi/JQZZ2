@@ -12,7 +12,7 @@ import { userService } from "../services/userService";
 interface AuthContextType {
   user: User | null;
   login: (id: string) => Promise<User>;
-  register: (name: string) => Promise<User | undefined>;
+  register: (name: string) => Promise<User>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
 }
@@ -23,7 +23,9 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {
     throw new Error("login not implemented");
   },
-  register: async () => undefined,
+  register: async () => {
+    throw new Error("register not implemented");
+  },
   logout: async () => {},
   updateUser: () => {},
 });
@@ -43,24 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const register = useCallback(
-    async (name: string): Promise<User | undefined> => {
-      try {
-        const res = await userService.register({ name });
-        const user = await login(res.data.userId);
-        return user;
-      } catch (error) {
-        console.error("Registration failed, using fallback user", error);
-        // Fallback: use a local user object
-        const fallbackUser: User = {
-          id: "guest",
-          name: name || "Guest",
-          handle: "guest",
-          online: true,
-        };
-        setUser(fallbackUser);
-        localStorage.setItem("userId", fallbackUser.id);
-        return fallbackUser;
-      }
+    async (name: string): Promise<User> => {
+      const res = await userService.register({ name });
+      const user = await login(res.data.id);
+      return user;
     },
     [login],
   );
@@ -68,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (initializing.current) return;
     initializing.current = true;
+
     const stored = localStorage.getItem("userId");
     if (stored) {
       userService
@@ -77,12 +66,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setLoading(false);
         })
         .catch(() => {
+          // Stored ID is invalid – create a new user
           localStorage.removeItem("userId");
-          register("Guest").finally(() => setLoading(false));
+          const randomSuffix = Math.floor(Math.random() * 10000);
+          register(`Guest_${randomSuffix}`)
+            .then(() => setLoading(false))
+            .catch((err) => {
+              console.error("Failed to create user", err);
+              setLoading(false);
+            });
         });
     } else {
+      // No stored ID – create a new user
+      const randomSuffix = Math.floor(Math.random() * 10000);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      register("Guest").finally(() => setLoading(false));
+      register(`Guest_${randomSuffix}`)
+        .then(() => setLoading(false))
+        .catch((err) => {
+          console.error("Failed to create user", err);
+          setLoading(false);
+        });
     }
   }, [register]);
 

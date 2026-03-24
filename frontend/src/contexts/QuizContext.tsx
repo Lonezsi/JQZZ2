@@ -34,7 +34,6 @@ interface QuizContextType {
   setAiPrompt: (prompt: string) => void;
   // Derived
   quiz: Quiz | undefined;
-  questionMap: Map<number, Question>;
   renderItems: RenderItem[];
   // Mutations
   updateAction: (id: number, patch: Partial<Action>) => void;
@@ -70,12 +69,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     [quizzes, activeQuizId],
   );
 
-  // SAFE: ensure questions array exists
-  const questionMap = useMemo(() => {
-    if (!quiz?.questions) return new Map<number, Question>();
-    return new Map(quiz.questions.map((q) => [q.id, q]));
-  }, [quiz]);
-
   const renderItems = useMemo(() => buildRenderItems(quiz), [quiz]);
 
   const authorId = user?.id || "";
@@ -104,12 +97,16 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const debouncedSave = useRef<number | undefined>(undefined);
+  const isSaving = useRef(false);
 
   useEffect(() => {
-    if (!quiz || !quiz.id) return;
+    if (!quiz || !quiz.id || isSaving.current) return;
     if (debouncedSave.current) clearTimeout(debouncedSave.current);
     debouncedSave.current = window.setTimeout(() => {
-      saveQuiz(quiz);
+      isSaving.current = true;
+      saveQuiz(quiz).finally(() => {
+        isSaving.current = false;
+      });
     }, 1000);
     return () => {
       if (debouncedSave.current) clearTimeout(debouncedSave.current);
@@ -220,7 +217,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     aiPrompt,
     setAiPrompt,
     quiz,
-    questionMap,
     renderItems,
     updateAction,
     updateQuestion,

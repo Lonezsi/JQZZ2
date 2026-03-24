@@ -26,7 +26,6 @@ export const useQuizMutations = (
           a.id === id ? { ...a, ...patch } : a,
         ),
       }));
-      // TODO: debounced API call to save
     },
     [updateQuiz],
   );
@@ -35,8 +34,10 @@ export const useQuizMutations = (
     (id: number, patch: Partial<Question>) => {
       updateQuiz((quiz) => ({
         ...quiz,
-        questions: quiz.questions.map((q) =>
-          q.id === id ? { ...q, ...patch } : q,
+        actions: quiz.actions.map((a) =>
+          a.question?.id === id
+            ? { ...a, question: { ...a.question, ...patch } }
+            : a,
         ),
       }));
     },
@@ -58,7 +59,14 @@ export const useQuizMutations = (
       updateQuiz((quiz) => {
         const idx = quiz.actions.findIndex((a) => a.id === id);
         if (idx === -1) return quiz;
-        const clone: Action = { ...quiz.actions[idx], id: generateId() };
+        const original = quiz.actions[idx];
+        const clone: Action = {
+          ...original,
+          id: generateId(),
+          question: original.question
+            ? { ...original.question, id: generateId() }
+            : null,
+        };
         const newActions = [...quiz.actions];
         newActions.splice(idx + 1, 0, clone);
         return { ...quiz, actions: newActions };
@@ -106,7 +114,6 @@ export const useQuizMutations = (
         prev.map((quiz) => {
           if (quiz.id !== activeQuizId) return quiz;
 
-          // Create a new question for this snippet
           const newQuestion: Question = {
             id: generateId(),
             text: "New Question",
@@ -116,19 +123,16 @@ export const useQuizMutations = (
             answers: [],
           };
 
-          // Create actions for the snippet, all referencing the new question
           const newActions: Action[] = snippet.steps.map((s) => ({
             id: generateId(),
             phase: s.phase,
             time: s.time,
-            questionId: newQuestion.id,
+            question: newQuestion,
             preview: s.preview,
           }));
 
-          // Append the new question to the list and new actions to the actions list
           return {
             ...quiz,
-            questions: [...quiz.questions, newQuestion],
             actions: [...quiz.actions, ...newActions],
           };
         }),
@@ -139,12 +143,18 @@ export const useQuizMutations = (
 
   const handleParsed = useCallback(
     (questions: Question[], actions: Action[]) => {
-      updateQuiz((quiz) => ({
-        ...quiz,
-        questions,
-        actions,
+      // Map each action's questionId to the full question object
+      const questionMap = new Map<number, Question>();
+      questions.forEach((q) => questionMap.set(q.id, q));
+
+      const updatedActions = actions.map((a) => ({
+        ...a,
+        question: a.question?.id
+          ? (questionMap.get(a.question.id) ?? null)
+          : null,
       }));
-      // TODO: call API to save
+
+      updateQuiz((quiz) => ({ ...quiz, actions: updatedActions }));
     },
     [updateQuiz],
   );

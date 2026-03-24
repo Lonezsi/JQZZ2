@@ -1,4 +1,4 @@
-import type { Quiz } from "../types";
+import type { Quiz, Action, Question } from "../types";
 import { PHASE_FN_MAP } from "../constants/phaseMaps";
 
 export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
@@ -27,18 +27,37 @@ export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
 # Any other line becomes a text note block.
 # ─────────────────────────────────────────────────────`;
 
+function getUniqueQuestionsFromActions(actions: Action[]): Question[] {
+  const seen = new Map<number, boolean>();
+  const result: Question[] = [];
+  for (const action of actions) {
+    const q = action.question;
+    if (q && !seen.has(q.id)) {
+      seen.set(q.id, true);
+      result.push(q);
+    }
+  }
+  return result;
+}
+
 export function quizToScript(quiz: Quiz | undefined): string {
-  if (!quiz || quiz.questions.length === 0) return EMPTY_SCRIPT;
+  if (!quiz || quiz.actions.length === 0) return EMPTY_SCRIPT;
+
   const lines: string[] = [
     `# ${quiz.name} — JQzz Script v1`,
     `# Author: ${quiz.authorId}`,
     "",
   ];
-  const qIndexMap = new Map<number, number>();
-  quiz.questions.forEach((q, i) => qIndexMap.set(q.id, i + 1));
 
-  quiz.questions.forEach((q, qi) => {
-    const qid = `Q${qi + 1}`;
+  const uniqueQuestions = getUniqueQuestionsFromActions(quiz.actions);
+
+  // Map question ID to index (starting from 1)
+  const qIndexMap = new Map<number, number>();
+  uniqueQuestions.forEach((q, idx) => qIndexMap.set(q.id, idx + 1));
+
+  // Write NewQuestion blocks
+  uniqueQuestions.forEach((q) => {
+    const qid = `Q${qIndexMap.get(q.id)}`;
     lines.push(`NewQuestion ${qid} (`);
     lines.push(`  time: 30,`);
     lines.push(`  type: "${q.type.toLowerCase().replace(/_/g, "-")}",`);
@@ -55,20 +74,24 @@ export function quizToScript(quiz: Quiz | undefined): string {
     lines.push("");
   });
 
-  quiz.actions.forEach((a) => {
+  // Write actions
+  for (const a of quiz.actions) {
     if (a.phase === "DIVIDER") {
       lines.push("---");
       lines.push("");
-      return;
+      continue;
     }
     if (a.phase === "TEXT") {
       lines.push(a.preview);
-      return;
+      continue;
     }
     const fn = PHASE_FN_MAP[a.phase];
-    const qi = qIndexMap.get(a.questionId);
-    if (fn && qi != null) lines.push(`${fn}(Q${qi}, time: ${a.time})`);
-  });
+    const qId = a.question?.id;
+    if (fn && qId) {
+      const qi = qIndexMap.get(qId);
+      if (qi) lines.push(`${fn}(Q${qi}, time: ${a.time})`);
+    }
+  }
 
   return lines.join("\n");
 }

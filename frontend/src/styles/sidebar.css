@@ -17,6 +17,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  font-family: var(--font-oef);
 }
 .jqzz-logo-badge {
   background: var(--accent);
@@ -38,10 +39,17 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
-  transition: background 0.12s;
+  transition:
+    transform 0.1s cubic-bezier(0.77, 0, 0.175, 1),
+    box-shadow 0.15s ease,
+    border-radius 0.1s ease-in,
+    background 0.15s ease;
 }
 .jqzz-identity:hover {
   background: var(--bg-elevated);
+  transform: translate(3px, -3px);
+  box-shadow: -2px 2px 0 var(--accent);
+  border-radius: 8px;
 }
 .jqzz-identity-row {
   display: flex;
@@ -101,6 +109,8 @@
 .jqzz-sid-btn:hover {
   background: var(--bg-elevated);
   color: var(--text);
+
+  border-left: 3px solid var(--accent);
 }
 .jqzz-sid-btn.accent {
   color: var(--accent);
@@ -193,4 +203,8 @@
   padding: 2px 0;
   color: var(--text-dim);
   font-size: 10px;
+}
+
+.jqzz-sid-separator {
+  border-bottom: 1px solid var(--border);
 }

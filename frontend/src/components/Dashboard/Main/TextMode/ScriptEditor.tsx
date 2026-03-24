@@ -11,6 +11,21 @@ interface ScriptEditorProps {
   onParsed: (questions: Question[], actions: Action[]) => void;
 }
 
+// Helper to extract unique questions in order of appearance from actions
+const extractQuestionsFromActions = (quiz: Quiz | undefined): Question[] => {
+  if (!quiz) return [];
+  const seen = new Set<number>();
+  const result: Question[] = [];
+  for (const action of quiz.actions) {
+    const q = action.question;
+    if (q && !seen.has(q.id)) {
+      seen.add(q.id);
+      result.push(q);
+    }
+  }
+  return result;
+};
+
 export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   quiz,
   aiPrompt,
@@ -23,9 +38,11 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   const preRef = useRef<HTMLPreElement>(null);
   const prevIdRef = useRef<number | undefined>(quiz?.id);
 
+  // Re-seed when active quiz changes
   useEffect(() => {
     if (quiz?.id !== prevIdRef.current) {
       prevIdRef.current = quiz?.id;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setText(quizToScript(quiz));
     }
   }, [quiz]);
@@ -37,16 +54,20 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     }
   };
 
+  // Parse when text changes, using existing questions from quiz actions
   useEffect(() => {
     const t = setTimeout(() => {
       if (!quiz) return;
-      const { questions, actions, errors } = parseScript(text, quiz.questions);
+      const existingQuestions = extractQuestionsFromActions(quiz);
+      const { questions, actions, errors } = parseScript(
+        text,
+        existingQuestions,
+      );
       setParseOk(errors.length === 0);
       onParsed(questions, actions);
     }, 650);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
+  }, [text, quiz, onParsed]); // Include quiz and onParsed dependencies
 
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Tab") return;

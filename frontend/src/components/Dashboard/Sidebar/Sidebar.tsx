@@ -35,11 +35,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="jqzz-sidebar">
       <div className="jqzz-logo">
+        <img
+          src="/icon-white.png"
+          alt="Logo"
+          className="jqzz-logo-img"
+          style={{
+            width: "64px",
+            height: "64px",
+            marginRight: "8px",
+          }}
+        />
         <span className="jqzz-logo-badge">JQ</span>
         <span className="jqzz-logo-name">ZZ</span>
       </div>
 
-      <IdentityComponent identity={identity} onClick={onIdentityClick} />
+      <div className="jqzz-sid-section jqzz-sid-separator">
+        <div className="jqzz-sid-label">Navigaton</div>
+        <button className="jqzz-sid-btn">Home</button>
+      </div>
+
+      <div className="jqzz-sid-section">
+        <div className="jqzz-sid-label">Account</div>
+        <IdentityComponent identity={identity} onClick={onIdentityClick} />
+      </div>
 
       <div className="jqzz-sid-section">
         <div className="jqzz-sid-label">Quick Actions</div>

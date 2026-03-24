@@ -1,15 +1,19 @@
 import React from "react";
-import type { Quiz, Question, RenderItem } from "../../../../types";
+import type { Quiz, RenderItem } from "../../../../types";
 import { ActionCard } from "./ActionCard";
 import { EmptyState } from "./EmptyState";
 import { AddButton } from "./AddButton";
+import { Welcome } from "../../Welcome/Welcome";
 
 interface VisualModeProps {
   quiz: Quiz | undefined;
   renderItems: RenderItem[];
-  questionMap: Map<number, Question>;
   selectedActionIds: Set<number>;
-  toggleSelectAction: (id: number, ctrlKey?: boolean) => void;
+  toggleSelectAction: (
+    id: number,
+    ctrlKey?: boolean,
+    shiftKey?: boolean,
+  ) => void;
   dragActionId: number | null;
   dragOverActionId: number | null;
   onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
@@ -27,7 +31,6 @@ interface VisualModeProps {
 export const VisualMode: React.FC<VisualModeProps> = ({
   quiz,
   renderItems,
-  questionMap,
   selectedActionIds,
   toggleSelectAction,
   dragActionId,
@@ -44,11 +47,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onDropZoneDrop,
 }) => {
   if (!quiz) {
-    return (
-      <div style={{ color: "var(--txt3)", fontSize: 12 }}>
-        Select a quiz to begin.
-      </div>
-    );
+    return <Welcome />;
   }
 
   if (renderItems.length === 0) {
@@ -61,6 +60,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
       />
     );
   }
+
+  // Compute question numbers dynamically
+  let questionNumber = 0;
+  let lastQuestionId: number | null = null;
 
   return (
     <>
@@ -108,15 +111,17 @@ export const VisualMode: React.FC<VisualModeProps> = ({
           );
         }
         // group
-        const q = questionMap.get(item.questionId);
-        const qIdx = q ? quiz.questions.indexOf(q) + 1 : "?";
-        const qLabel = q
-          ? `"${q.text.slice(0, 38)}${q.text.length > 38 ? "…" : ""}"`
-          : "Unknown";
+        const q = item.question;
+        if (q.id !== lastQuestionId) {
+          questionNumber++;
+          lastQuestionId = q.id;
+        }
+        const truncatedText =
+          q.text.length > 38 ? `${q.text.slice(0, 38)}…` : q.text;
         return (
-          <div key={`${item.questionId}-${idx}`} className="jqzz-group">
+          <div key={`${q.id}-${idx}`} className="jqzz-group">
             <div className="jqzz-group-label">
-              Q{qIdx} — {qLabel}
+              Q{questionNumber} — "{truncatedText}"
             </div>
             {item.actions.map((a) => (
               <ActionCard

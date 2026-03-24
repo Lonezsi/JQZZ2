@@ -52,7 +52,7 @@ export const Main: React.FC<MainProps> = ({
   setAiPrompt,
   onParsed,
 }) => {
-  const { quiz, renderItems, questionMap } = useQuiz();
+  const { quiz, renderItems } = useQuiz();
 
   return (
     <main className="jqzz-main">
@@ -73,7 +73,6 @@ export const Main: React.FC<MainProps> = ({
           <VisualMode
             quiz={quiz}
             renderItems={renderItems}
-            questionMap={questionMap}
             selectedActionIds={selectedActionIds}
             toggleSelectAction={toggleSelectAction}
             dragActionId={dragActionId}

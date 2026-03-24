@@ -1,9 +1,14 @@
-import type { Quiz, RenderItem } from "../types";
+import type { Quiz, RenderItem, Question, Action } from "../types";
 
 export function buildRenderItems(quiz: Quiz | undefined): RenderItem[] {
   if (!quiz) return [];
   const items: RenderItem[] = [];
-  let currentGroup: (RenderItem & { kind: "group" }) | null = null;
+  let currentGroup: {
+    kind: "group";
+    question: Question;
+    actions: Action[];
+  } | null = null;
+
   for (const action of quiz.actions) {
     if (action.phase === "DIVIDER") {
       currentGroup = null;
@@ -12,15 +17,21 @@ export function buildRenderItems(quiz: Quiz | undefined): RenderItem[] {
       currentGroup = null;
       items.push({ kind: "text", action });
     } else {
-      if (currentGroup && currentGroup.questionId === action.questionId) {
-        currentGroup.actions.push(action);
+      // action has a question
+      if (action.question) {
+        if (currentGroup && currentGroup.question.id === action.question.id) {
+          currentGroup.actions.push(action);
+        } else {
+          currentGroup = {
+            kind: "group",
+            question: action.question,
+            actions: [action],
+          };
+          items.push(currentGroup);
+        }
       } else {
-        currentGroup = {
-          kind: "group",
-          questionId: action.questionId,
-          actions: [action],
-        };
-        items.push(currentGroup);
+        // fallback – should not happen for non-TEXT/DIVIDER actions
+        items.push({ kind: "text", action });
       }
     }
   }
