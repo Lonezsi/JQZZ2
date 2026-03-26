@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { Action, Question, RightTab } from "../../../types";
 import { UsersTab } from "./UsersTab";
 import { ContextEditor } from "./ContextEditor";
@@ -27,11 +27,18 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       : action.phase
     : "Context";
 
+  useEffect(() => {
+    if (selectedAction === null && activeTab === "context") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTab("users");
+    }
+  }, [selectedAction, activeTab]);
+
   return (
     <div className="jqzz-rpanel">
       <div className="jqzz-rpanel-tabs">
         <button
-          className={`jqzz-rpanel-tab${activeTab === "context" ? " active" : ""}`}
+          className={`jqzz-rpanel-tab${activeTab === "context" ? " active" : ""} ${selectedAction === null ? "disabled" : ""}`}
           onClick={() => setActiveTab("context")}
         >
           {contextLabel}

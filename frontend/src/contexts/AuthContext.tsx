@@ -96,15 +96,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [register]);
 
-  // Mark user offline when tab closes
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (user) {
         const url = `${api.defaults.baseURL}/users/logout`;
-        const blob = new Blob([JSON.stringify({ id: user.id })], {
-          type: "application/json",
-        });
-        navigator.sendBeacon(url, blob);
+        const body = JSON.stringify({ id: user.id });
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: body,
+          keepalive: true,
+        }).catch((err) => console.error("Logout beacon failed", err));
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);

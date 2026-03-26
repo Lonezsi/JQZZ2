@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.http.ResponseEntity;
+
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
 import com.lonezsi.jqzz.util.IdGenerator;
@@ -67,18 +69,18 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public User login(@RequestBody LoginRequest request) {
-        User user = userRepository.findById(request.getId()).orElseThrow();
-        user.setOnline(true);
-
-        User saved = userRepository.save(user);
-
-        messaging.convertAndSend(
-            "/topic/users",
-            (Object) Map.of("event", "user_logged_in", "user", saved)
-        );
-
-        return saved;
+    public ResponseEntity<User> login(@RequestBody LoginRequest request) {
+        return userRepository.findById(request.getId())
+                .map(user -> {
+                    user.setOnline(true);
+                    User saved = userRepository.save(user);
+                    messaging.convertAndSend(
+                        "/topic/users",
+                        (Object) Map.of("event", "user_logged_in", "user", saved)
+                    );
+                    return ResponseEntity.ok(saved);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/logout")
@@ -95,14 +97,14 @@ public class UserController {
     }
 
     @PostMapping("/{id}/handle")
-    public User updateHandle(@PathVariable String id, @RequestBody Map<String,String> body) {
+    public ResponseEntity<User> updateHandle(@PathVariable String id, @RequestBody Map<String,String> body) {
 
         String newHandle = body.get("handle")
             .toLowerCase()
             .replaceAll("[^a-z0-9]", "");
 
         if(userRepository.existsByHandle(newHandle)){
-            throw new RuntimeException("Handle already taken");
+            return ResponseEntity.badRequest().build();
         }
 
         User user = userRepository.findById(id).orElseThrow();
@@ -115,38 +117,48 @@ public class UserController {
             (Object) Map.of("event", "user_updated", "user", saved)
         );
 
-        return saved;
+        return ResponseEntity.ok(saved);
     }
 
     @PostMapping("/{id}/name")
-    public User updateName(@PathVariable String id, @RequestBody Map<String,String> body) {
-        User user = userRepository.findById(id).orElseThrow();
-        user.setName(body.get("name"));
-        return userRepository.save(user);
+    public ResponseEntity<User> updateName(@PathVariable String id, @RequestBody Map<String,String> body) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    user.setName(body.get("name"));
+                    User saved = userRepository.save(user);
+                    return ResponseEntity.ok(saved);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/{id}/update")
-    public User update(@PathVariable String id, @RequestBody Map<String, String> body) {
-        User user = userRepository.findById(id).orElseThrow();
+    public ResponseEntity<User> update(@PathVariable String id, @RequestBody Map<String, String> body) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    if (body.containsKey("name")) user.setName(body.get("name"));
+                    if (body.containsKey("handle")) user.setHandle(body.get("handle"));
+                    if (body.containsKey("email")) user.setEmail(body.get("email"));
+                    if (body.containsKey("profilePictureUrl")) user.setProfilePictureUrl(body.get("profilePictureUrl"));
 
-        if (body.containsKey("name")) user.setName(body.get("name"));
-        if (body.containsKey("handle")) user.setHandle(body.get("handle"));
-        if (body.containsKey("email")) user.setEmail(body.get("email"));
-        if (body.containsKey("profilePictureUrl")) user.setProfilePictureUrl(body.get("profilePictureUrl"));
+                    User saved = userRepository.save(user);
 
-        User saved = userRepository.save(user);
+                    messaging.convertAndSend(
+                        "/topic/users",
+                        (Object) Map.of("event", "user_updated", "user", saved)
+                    );
 
-        messaging.convertAndSend(
-            "/topic/users",
-            (Object) Map.of("event", "user_updated", "user", saved)
-        );
-
-        return saved;
+                    return ResponseEntity.ok(saved);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(@PathVariable String id) {
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
         userRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping
@@ -155,8 +167,10 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public User getOne(@PathVariable String userId) {
-        return userRepository.findById(userId).orElseThrow();
+    public ResponseEntity<User> getOne(@PathVariable String userId) {
+        return userRepository.findById(userId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     public static class RegisterRequest {

@@ -120,8 +120,14 @@
   font-family: var(--font-oef);
 }
 
+.disabled {
+  opacity: 0.5;
+  filter: brightness(0.5);
+  pointer-events: none;
+}
+
 .tag {
-  position: absolute;
+  position: relative;
   margin-bottom: 0px;
   bottom: 0;
   right: 5px;

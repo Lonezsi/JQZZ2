@@ -243,5 +243,23 @@
   box-shadow: 0 0 4px var(--accent);
 }
 .jqzz-online-dot.off {
-  background: var(--text-dim);
+  background: color-mix(in srgb, var(--text-dim), transparent 90%);
+}
+
+.jqzz-refresh-btn {
+  padding: 5px 5px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: border-bottom 0.15s ease-in-out;
+}
+.jqzz-refresh-btn:hover {
+  border-bottom: 5px solid var(--accent);
 }

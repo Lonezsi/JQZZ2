@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-//import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import com.lonezsi.jqzz.model.Lobby;
 import com.lonezsi.jqzz.model.Player;
@@ -23,8 +23,8 @@ class LobbyControllerTest {
     @Mock
     private LobbyRepository lobbyRepository;
 
-    //@Mock
-    //private SimpMessagingTemplate messaging;
+    @Mock
+    private SimpMessagingTemplate messaging;
 
     @InjectMocks
     private LobbyController lobbyController;

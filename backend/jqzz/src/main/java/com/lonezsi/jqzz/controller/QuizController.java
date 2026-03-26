@@ -2,9 +2,12 @@ package com.lonezsi.jqzz.controller;
 
 import com.lonezsi.jqzz.model.Quiz;
 import com.lonezsi.jqzz.repository.QuizRepository;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/quizzes")
@@ -22,8 +25,10 @@ public class QuizController {
     }
 
     @GetMapping("/{id}")
-    public Quiz getOne(@PathVariable Long id) {
-        return quizRepository.findById(id).orElseThrow();
+    public ResponseEntity<Quiz> getOne(@PathVariable Long id) {
+        return quizRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping

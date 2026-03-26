@@ -168,6 +168,7 @@ export const Dashboard: React.FC = () => {
             onSnippetDragStart={onSnippetDragStart}
             onSnippetDragEnd={onSnippetDragEnd}
             onSnippetClick={dropSnippet}
+            onHomeClick={() => setActiveQuizId(null)}
           />
 
           <Main

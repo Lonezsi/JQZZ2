@@ -45,7 +45,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     destination: string,
     callback: (msg: IMessage) => void,
   ) => {
-    return clientRef.current?.subscribe(destination, callback);
+    const client = clientRef.current;
+    if (client && client.connected) {
+      return client.subscribe(destination, callback);
+    }
+    // Not connected yet – subscription will be skipped (component will rely on polling)
+    console.warn("WebSocket not ready, subscription skipped for", destination);
+    return undefined;
   };
 
   return (

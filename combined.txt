@@ -220,6 +220,113 @@ public class GameController {
 }
 
 ====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\ImageController.java
+====================
+package com.lonezsi.jqzz.controller;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.lonezsi.jqzz.model.Image;
+import com.lonezsi.jqzz.model.ImageVisibility;
+import com.lonezsi.jqzz.service.ImageService;
+
+@RestController
+@RequestMapping("/images")
+public class ImageController {
+
+    private final ImageService imageService;
+
+    public ImageController(ImageService imageService) {
+        this.imageService = imageService;
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadImage(
+            @RequestParam("handle") String handle,
+            @RequestParam(value = "ownerId", required = false) String ownerId,
+            @RequestParam("visibility") String visibility,
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        if (ownerId == null && !visibility.equalsIgnoreCase("PUBLIC")) {
+            return ResponseEntity.badRequest().body("Owner ID required for non-public images");
+        }
+
+        ImageVisibility vis;
+        try {
+            vis = ImageVisibility.valueOf(visibility.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid visibility");
+        }
+
+        try {
+            Image image = imageService.uploadImage(handle, ownerId, vis, file);
+            return ResponseEntity.ok(Map.of("id", image.getId(), "handle", image.getHandle()));
+        } catch (IllegalArgumentException | SecurityException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/resolve")
+    public ResponseEntity<?> resolveReference(@RequestParam("ref") String ref,
+                                               @RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+        // In a real app, you'd get the user ID from the security context. For simplicity, we use a header.
+        if (currentUserId == null) {
+            return ResponseEntity.badRequest().body("User ID required");
+        }
+        Optional<Long> imageId = imageService.resolveReference(ref, currentUserId);
+        return imageId.map(id -> ResponseEntity.ok(Map.of("id", id)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<byte[]> getImage(@PathVariable Long id,
+                                           @RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+        if (currentUserId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Optional<byte[]> data = imageService.getImageData(id, currentUserId);
+        if (data.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String mimeType = imageService.getMimeType(id);
+        if (mimeType == null) mimeType = "image/jpeg";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(mimeType))
+                .body(data.get());
+    }
+
+    @GetMapping
+    public ResponseEntity<?> listAccessibleImages(@RequestHeader("X-User-Id") String currentUserId) {
+        return ResponseEntity.ok(imageService.listAccessibleImages(currentUserId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteImage(@PathVariable Long id,
+                                         @RequestHeader("X-User-Id") String currentUserId) {
+        try {
+            imageService.deleteImage(id, currentUserId);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException | SecurityException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}
+
+====================
 C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\controller\LobbyController.java
 ====================
 package com.lonezsi.jqzz.controller;
@@ -724,6 +831,100 @@ public class Answer {
 }
 
 ====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Image.java
+====================
+package com.lonezsi.jqzz.model;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
+@Entity
+@Table(name = "app_image",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"owner_id", "handle"}, name = "uk_owner_handle")
+    })
+public class Image {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String handle;
+
+    @Column(name = "owner_id")
+    private String ownerId;  // null = public
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ImageVisibility visibility;
+
+    @Lob
+    @Column(columnDefinition = "BLOB")
+    private byte[] data;
+
+    private String mimeType;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    // Constructors, getters, setters (unchanged)
+    public Image() {}
+
+    public Image(String handle, String ownerId, ImageVisibility visibility, byte[] data, String mimeType) {
+        this.handle = handle;
+        this.ownerId = ownerId;
+        this.visibility = visibility;
+        this.data = data;
+        this.mimeType = mimeType;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // getters and setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getHandle() { return handle; }
+    public void setHandle(String handle) { this.handle = handle; }
+
+    public String getOwnerId() { return ownerId; }
+    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
+
+    public ImageVisibility getVisibility() { return visibility; }
+    public void setVisibility(ImageVisibility visibility) { this.visibility = visibility; }
+
+    public byte[] getData() { return data; }
+    public void setData(byte[] data) { this.data = data; }
+
+    public String getMimeType() { return mimeType; }
+    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+}
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\ImageVisibility.java
+====================
+package com.lonezsi.jqzz.model;
+
+public enum ImageVisibility {
+    PUBLIC,          // anyone can use, handle globally unique
+    PRIVATE,         // only owner can use, handle unique per owner
+    SEMI_PRIVATE     // owner can use, others can also use (but attributed)
+}
+
+====================
 C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\model\Lobby.java
 ====================
 package com.lonezsi.jqzz.model;
@@ -1135,6 +1336,39 @@ public class User {
 }
 
 ====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\repository\ImageRepository.java
+====================
+package com.lonezsi.jqzz.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.lonezsi.jqzz.model.Image;
+
+public interface ImageRepository extends JpaRepository<Image, Long> {
+
+    // Find public image by handle
+    Optional<Image> findByHandleAndOwnerIdIsNull(String handle);
+
+    // Find private/semi-private image by owner and handle
+    Optional<Image> findByOwnerIdAndHandle(String ownerId, String handle);
+
+    // Find all images accessible to a user (public + own)
+    @Query("SELECT i FROM Image i WHERE i.ownerId IS NULL OR i.ownerId = :userId")
+    List<Image> findAllAccessibleByUser(@Param("userId") String userId);
+
+    // Check if a handle is already used by a public image
+    boolean existsByHandleAndOwnerIdIsNull(String handle);
+
+    // Check if a handle is already used by a specific user
+    boolean existsByOwnerIdAndHandle(String ownerId, String handle);
+}
+
+====================
 C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\repository\LobbyRepository.java
 ====================
 package com.lonezsi.jqzz.repository;
@@ -1170,6 +1404,134 @@ import com.lonezsi.jqzz.model.User;
 public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByHandle(String handle);
     User findByHandle(String handle);
+}
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\main\java\com\lonezsi\jqzz\service\ImageService.java
+====================
+package com.lonezsi.jqzz.service;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.lonezsi.jqzz.model.Image;
+import com.lonezsi.jqzz.model.ImageVisibility;
+import com.lonezsi.jqzz.repository.ImageRepository;
+
+@Service
+public class ImageService {
+
+    private final ImageRepository imageRepository;
+
+    public ImageService(ImageRepository imageRepository) {
+        this.imageRepository = imageRepository;
+    }
+
+    /**
+     * Upload an image. Validates uniqueness of handle based on visibility.
+     */
+    public Image uploadImage(String handle, String ownerId, ImageVisibility visibility, MultipartFile file) throws IOException {
+        // Validate handle format (alphanumeric, no colons)
+        if (!handle.matches("^[a-zA-Z0-9_]+$")) {
+            throw new IllegalArgumentException("Handle must contain only letters, numbers, and underscores");
+        }
+
+        // Check uniqueness
+        if (visibility == ImageVisibility.PUBLIC) {
+            if (imageRepository.existsByHandleAndOwnerIdIsNull(handle)) {
+                throw new IllegalArgumentException("Public image handle already exists");
+            }
+        } else {
+            // private or semi-private
+            if (imageRepository.existsByOwnerIdAndHandle(ownerId, handle)) {
+                throw new IllegalArgumentException("You already have an image with that handle");
+            }
+        }
+
+        byte[] data = file.getBytes();
+        String mimeType = file.getContentType();
+        if (mimeType == null || !mimeType.startsWith("image/")) {
+            throw new IllegalArgumentException("File must be an image");
+        }
+
+        Image image = new Image(handle, ownerId, visibility, data, mimeType);
+        return imageRepository.save(image);
+    }
+
+    /**
+     * Resolve a reference string to an image ID (or URL). The reference can be:
+     * - "handle" (public)
+     * - ":handle" (current user's private/semi-private)
+     * - "username:handle" (other user's private/semi-private)
+     * Returns the image ID or null if not found/accessible.
+     */
+    public Optional<Long> resolveReference(String ref, String currentUserId) {
+        if (ref == null || ref.isBlank()) return Optional.empty();
+
+        String[] parts = ref.split(":", 2);
+        if (parts.length == 2) {
+            // username:handle
+            String username = parts[0];
+            String handle = parts[1];
+            if (username.isEmpty()) {
+                // ":handle" case – current user
+                return imageRepository.findByOwnerIdAndHandle(currentUserId, handle)
+                        .map(Image::getId);
+            } else {
+                // other user
+                // For other users, we should allow access only if the image is semi-private? Actually private images shouldn't be accessible to others.
+                // Let's assume: other users can only see semi-private images.
+                Optional<Image> opt = imageRepository.findByOwnerIdAndHandle(username, handle);
+                if (opt.isPresent()) {
+                    Image img = opt.get();
+                    if (img.getVisibility() == ImageVisibility.PRIVATE && !img.getOwnerId().equals(currentUserId)) {
+                        return Optional.empty(); // not accessible
+                    }
+                    return opt.map(Image::getId);
+                }
+                return Optional.empty();
+            }
+        } else {
+            // public handle
+            return imageRepository.findByHandleAndOwnerIdIsNull(ref).map(Image::getId);
+        }
+    }
+
+    /**
+     * Get image data by ID, checking access rights.
+     */
+    public Optional<byte[]> getImageData(Long id, String currentUserId) {
+        Optional<Image> opt = imageRepository.findById(id);
+        if (opt.isEmpty()) return Optional.empty();
+
+        Image img = opt.get();
+        if (img.getOwnerId() != null && !img.getOwnerId().equals(currentUserId)
+                && img.getVisibility() == ImageVisibility.PRIVATE) {
+            return Optional.empty(); // not accessible
+        }
+        return Optional.of(img.getData());
+    }
+
+    public String getMimeType(Long id) {
+        return imageRepository.findById(id).map(Image::getMimeType).orElse(null);
+    }
+
+    public List<Image> listAccessibleImages(String currentUserId) {
+        return imageRepository.findAllAccessibleByUser(currentUserId);
+    }
+
+    public void deleteImage(Long id, String currentUserId) {
+        Image img = imageRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found"));
+        if (!img.getOwnerId().equals(currentUserId)) {
+            throw new SecurityException("You can only delete your own images");
+        }
+        imageRepository.deleteById(id);
+    }
 }
 
 ====================
@@ -1218,6 +1580,144 @@ class JqzzApplicationTests {
 
 }
 
+
+====================
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\test\java\com\lonezsi\jqzz\controller\ImageControllerTest.java
+====================
+package com.lonezsi.jqzz.controller;
+
+import com.lonezsi.jqzz.model.Image;
+import com.lonezsi.jqzz.model.ImageVisibility;
+import com.lonezsi.jqzz.service.ImageService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@ExtendWith(MockitoExtension.class)
+class ImageControllerTest {
+
+    @Mock
+    private ImageService imageService;
+
+    @InjectMocks
+    private ImageController imageController;
+
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(imageController).build();
+    }
+
+    @Test
+    void uploadImage_success() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "test.png", "image/png", "image data".getBytes());
+        when(imageService.uploadImage(eq("logo"), eq(null), eq(ImageVisibility.PUBLIC), any()))
+                .thenReturn(new Image("logo", null, ImageVisibility.PUBLIC, new byte[0], "image/png"));
+
+        mockMvc.perform(multipart("/images/upload")
+                        .file(file)
+                        .param("handle", "logo")
+                        .param("visibility", "PUBLIC"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.handle").value("logo"));
+    }
+
+    @Test
+    void uploadImage_duplicateHandle_badRequest() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "test.png", "image/png", "image data".getBytes());
+        when(imageService.uploadImage(eq("logo"), eq(null), eq(ImageVisibility.PUBLIC), any()))
+                .thenThrow(new IllegalArgumentException("Public image handle already exists"));
+
+        mockMvc.perform(multipart("/images/upload")
+                        .file(file)
+                        .param("handle", "logo")
+                        .param("visibility", "PUBLIC"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Public image handle already exists"));
+    }
+
+    @Test
+    void resolveReference_found() throws Exception {
+        when(imageService.resolveReference("logo", "user123")).thenReturn(Optional.of(1L));
+
+        mockMvc.perform(get("/images/resolve")
+                        .param("ref", "logo")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void resolveReference_notFound() throws Exception {
+        when(imageService.resolveReference("logo", "user123")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/images/resolve")
+                        .param("ref", "logo")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getImage_success() throws Exception {
+        when(imageService.getImageData(1L, "user123")).thenReturn(Optional.of("image data".getBytes()));
+        when(imageService.getMimeType(1L)).thenReturn("image/png");
+
+        mockMvc.perform(get("/images/1")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/png"))
+                .andExpect(content().bytes("image data".getBytes()));
+    }
+
+    @Test
+    void getImage_notFound() throws Exception {
+        when(imageService.getImageData(1L, "user123")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/images/1")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void listAccessibleImages() throws Exception {
+        mockMvc.perform(get("/images")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteImage_success() throws Exception {
+        mockMvc.perform(delete("/images/1")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteImage_notOwner_badRequest() throws Exception {
+        doThrow(new SecurityException("You can only delete your own images"))
+                .when(imageService).deleteImage(1L, "user123");
+
+        mockMvc.perform(delete("/images/1")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isBadRequest());
+    }
+}
 
 ====================
 C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\test\java\com\lonezsi\jqzz\controller\LobbyControllerTest.java
@@ -1305,5218 +1805,196 @@ class LobbyControllerTest {
 
 
 ====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\vite.config.ts
-====================
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-
-// https://vite.dev/config/
-export default defineConfig({
-  define: {
-    global: "globalThis",
-  },
-  plugins: [react()],
-});
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\dist\assets\index-B_ngzFMr.css
-====================
-@font-face{font-family:OldEnglishFive;src:url(/OldEnglishFive.ttf) format("truetype")}:root{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;line-height:1.6;font-weight:400;color-scheme:light;background:url(/bg.jpg);background-size:100% 100%;background-attachment:fixed;--inky-texture: url(https://texturelabs.org/wp-content/uploads/Texturelabs_Paper_269S.jpg);color:#1a1a1a;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;--primary: #1a1a1a;--primary-dark: #000000;--secondary: #4a4a4a;--accent: #8a8a8a;--hero-gradient-start: rgba(0, 0, 0, .03);--hero-gradient-end: rgba(0, 0, 0, .01);--hover-bg-light: rgba(0, 0, 0, .05);--shadow-primary-weak: rgba(0, 0, 0, .05);--shadow-primary-medium: rgba(0, 0, 0, .08);--shadow-primary-strong: rgba(0, 0, 0, .12);--bg-primary: rgba(255, 255, 255, .85);--bg-secondary: rgba(245, 245, 240, .9);--border: rgba(0, 0, 0, .15);--text-primary: #111111;--text-secondary: #555555;--text-white: #ffffff}*{margin:0;padding:0;box-sizing:border-box}a{font-weight:500;color:var(--primary);text-decoration:none;transition:color .3s ease}a:hover{color:var(--accent)}body{margin:0;min-width:320px;min-height:100vh}#root{width:100%;min-height:100vh}.tag{position:absolute;margin-bottom:0;bottom:0;right:5px;opacity:.2;z-index:-1}.align-center{text-align:center}h1,h2,h3{font-family:OldEnglishFive,serif}h1{font-size:clamp(2rem,10vw,4rem);line-height:1.2;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}h2{font-size:clamp(1.5rem,5vw,2.5rem);line-height:1.3;font-weight:600}h3{font-size:clamp(1.1rem,3vw,1.5rem);font-weight:600;margin-bottom:.75rem}p{color:var(--text-secondary);font-size:.95rem}button{border-radius:10px;border:2px solid var(--border);padding:.75rem 1.5rem;font-size:1rem;font-weight:600;font-family:inherit;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);background-image:var(--inky-texture);background-size:cover;color:#fff;cursor:pointer;transition:all .3s ease}button:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 10px 30px var(--shadow-primary-medium)}button:active{transform:translateY(0)}button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}input[type=text],input[type=number],textarea{width:100%;padding:.75rem 1rem;border:2px solid var(--border);background-color:var(--bg-secondary);color:var(--text-primary);font-family:inherit;font-size:.95rem;border-radius:8px;transition:all .3s ease}input[type=text]:focus,input[type=number]:focus,textarea:focus{outline:none;border-color:var(--primary);background-color:var(--hover-bg-light)}input::placeholder,textarea::placeholder{color:var(--text-secondary)}.dashboard-container{width:100%;display:flex;flex-direction:column;padding-bottom:4rem}.hero-section{width:100%;padding:4rem 2rem;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--hero-gradient-start) 0%,var(--hero-gradient-end) 100%);border-bottom:1px solid var(--border);min-height:400px}.hero-content{display:flex;align-items:center;justify-content:center;gap:3rem;max-width:900px;width:100%}.hero-logo{flex:0 0 auto;width:250px;height:250px;display:flex;align-items:center;justify-content:center}.hero-logo img{max-width:100%;height:auto;animation:float 3s ease-in-out infinite;mix-blend-mode:color-burn}.bento-box:before{content:"";position:absolute;inset:0;mix-blend-mode:multiply;background-color:var(--primary);background-position:center;opacity:.02;z-index:-1}.hero-text{flex:1}.hero-text h1{margin-bottom:1rem}.tagline{font-size:1.25rem;color:var(--text-secondary);margin:0;font-weight:500}.main-container{width:100%;max-width:1400px;margin:0 auto;padding:0 2rem}.bento-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));grid-auto-rows:1fr;gap:.8rem;align-items:start;width:100%;margin-top:1.25rem}.bento-box{border:1px solid var(--border);padding:1rem;border-radius:12px;transition:transform .18s ease,box-shadow .18s ease;display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:120px}.bento-box:hover:not(.hero-section){border-color:var(--primary);transform:translateY(-8px);box-shadow:0 20px 40px var(--shadow-primary-weak)}.bento-box-large{grid-column:span 2}.bento-box-tall{grid-row:span 2}.bento-box-wide{grid-column:span 2}@media(min-width:768px){.bento-box-large{grid-column:span 3}.bento-grid{grid-template-columns:repeat(2,1fr)}}@media(min-width:1024px){.bento-grid{grid-template-columns:repeat(6,1fr)}.bento-box-large{grid-column:span 3}}.box-header{margin-bottom:1.5rem}.box-header h2{margin-bottom:.5rem;color:var(--text-primary)}.box-header p{color:var(--text-secondary);font-size:.9rem;margin:0}.box-header h3{color:var(--text-primary)}.lobby-form{display:flex;flex-direction:column;gap:1rem;flex:1;justify-content:flex-end}.lobby-form input{padding:1rem;font-size:1rem}.lobby-form button{padding:1rem;font-size:1rem;width:100%}.lobby-list{display:flex;flex-direction:column;gap:1rem}.lobby-item{display:flex;align-items:center;justify-content:space-between;padding:1.25rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;transition:all .3s ease}.lobby-item:hover{background:var(--hover-bg-light);border-color:var(--primary)}.lobby-info{display:flex;flex-direction:column;gap:.5rem;flex:1}.lobby-name{font-weight:600;color:var(--text-primary);font-size:1.1rem}.lobby-id{font-size:.85rem;color:var(--text-secondary)}.btn-join{margin-left:1rem;white-space:nowrap;border:none;padding:.75rem 1.5rem;font-size:.95rem}.btn-join:hover{transform:translateY(-2px);box-shadow:0 8px 20px var(--shadow-primary-strong)}.empty-state{display:flex;align-items:center;justify-content:center;min-height:150px;text-align:center}.empty-state p{margin:0;color:var(--text-secondary)}.stat-number{font-size:3rem;font-weight:700;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:1rem 0;line-height:1}.stat-label{color:var(--text-secondary);margin:0;font-size:.9rem}.btn-primary,.btn-secondary{border:none;font-weight:600;transition:all .3s ease;cursor:pointer;border-radius:10px;width:100%;padding:.875rem}.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px var(--shadow-primary-medium)}.btn-secondary{filter:invert(1);color:var(--text-white);border:2px solid var(--primary)}.btn-secondary:hover{transform:translateY(-2px);border:2px solid var(--text-white)}@media(max-width:768px){.hero-content{flex-direction:column;gap:2rem;text-align:center}.hero-logo{width:180px;height:180px}.hero-text{text-align:center}.hero-section{padding:2rem 1.5rem;min-height:300px}.main-container{padding:0 1.5rem}.bento-box{padding:1.5rem}.lobby-item{flex-direction:column;align-items:flex-start;gap:1rem}.btn-join{margin-left:0;width:100%}.bento-grid{gap:1rem}.box-header h2{font-size:1.5rem}}@media(max-width:480px){.hero-logo{width:150px;height:150px}.hero-section{padding:1.5rem 1rem;min-height:250px}.bento-box{padding:1.25rem}.stat-number{font-size:2rem}.tagline{font-size:1rem}}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\App.tsx
-====================
-import { Dashboard } from "./components/Dashboard/Dashboard";
-
-function App() {
-  return <Dashboard />;
-}
-
-export default App;
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\index.css
-====================
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
-@import "./styles/reset.css";
-@import "./styles/glass.css";
-@import "./styles/layout.css";
-@import "./styles/sidebar.css";
-@import "./styles/main.css";
-@import "./styles/components.css";
-@import "./styles/editor.css";
-@import "./styles/right-panel.css";
-@import "./styles/modals.css";
-@import "./styles/welcome.css";
-
-@font-face {
-  font-family: "Old English Five";
-  src: url("/OldEnglishFive.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-:root {
-  /* Backgrounds – from dark to light */
-  --bg-base: #0b0c10; /* deepest background */
-  --bg-surface: #111318; /* panels */
-  --bg-elevated: #181a21; /* cards, inputs */
-  --bg-highlight: #1e2029; /* hover states */
-  --bg-accent: #272a35; /* active tab, etc. */
-
-  /* Borders */
-  --border: #252830;
-  --border-light: #333748;
-
-  /* Accent */
-  --accent: #7700ff;
-
-  /* Text */
-  --text: #dde1f0;
-  --text-muted: #8890ab;
-  --text-dim: #484f66;
-
-  /* Font & radii */
-  --font-mono: "JetBrains Mono", monospace;
-  --font-oef: "Old English Five", serif;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-
-  /* Spacing – optional, but can be used with calc() */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-
-  /* Glass effect (will be applied with backdrop-filter) */
-  --glass-bg: rgba(17, 19, 24, 0.7);
-  --glass-blur: 12px;
-}
-
-.OEF {
-  font-family: var(--font-oef);
-}
-
-.tag {
-  position: absolute;
-  margin-bottom: 0px;
-  bottom: 0;
-  right: 5px;
-  opacity: 0.2;
-  z-index: -1;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\main.tsx
-====================
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { AuthProvider } from "./contexts/AuthContext";
-import { WebSocketProvider } from "./contexts/WebSocketContext";
-import App from "./App";
-import "./index.css";
-import { QuizProvider } from "./contexts/QuizContext";
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <AuthProvider>
-      <WebSocketProvider>
-        <QuizProvider>
-          <App />
-        </QuizProvider>
-      </WebSocketProvider>
-    </AuthProvider>
-  </React.StrictMode>,
-);
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\common\Button.tsx
-====================
-import React from "react";
-
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "accent" | "danger";
-  size?: "sm" | "md" | "lg";
-  fullWidth?: boolean;
-}
-
-export const Button: React.FC<ButtonProps> = ({
-  children,
-  variant = "primary",
-  size = "md",
-  fullWidth = false,
-  className = "",
-  ...props
-}) => {
-  const baseClasses =
-    "rounded font-mono transition-all duration-200 inline-flex items-center justify-center gap-2";
-  const variantClasses = {
-    primary: "bg-cyan text-black border border-cyan hover:bg-cyan/90",
-    secondary:
-      "bg-bg2 text-txt2 border border-border2 hover:bg-bg3 hover:text-txt",
-    accent: "bg-cyan-dim text-cyan border border-cyan hover:bg-cyan/20",
-    danger: "bg-red/10 text-red border border-red/30 hover:bg-red/20",
-  };
-  const sizeClasses = {
-    sm: "px-3 py-1 text-xs",
-    md: "px-4 py-2 text-sm",
-    lg: "px-6 py-3 text-base",
-  };
-  const widthClass = fullWidth ? "w-full" : "";
-
-  return (
-    <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\common\Input.tsx
-====================
-import React, { useId } from "react";
-
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-}
-
-export const Input: React.FC<InputProps> = ({
-  label,
-  error,
-  className = "",
-  id,
-  ...props
-}) => {
-  const generateId = useId();
-  const inputId = id || `input-${generateId}`;
-
-  return (
-    <div className="flex flex-col gap-1">
-      {label && (
-        <label
-          htmlFor={inputId}
-          className="text-xs uppercase text-txt3 tracking-wider"
-        >
-          {label}
-        </label>
-      )}
-      <input
-        id={inputId}
-        className={`bg-bg2 border border-border2 rounded px-3 py-2 text-sm font-mono text-txt focus:outline-none focus:border-cyan transition-colors ${error ? "border-red" : ""} ${className}`}
-        {...props}
-      />
-      {error && <span className="text-xs text-red">{error}</span>}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Dashboard.tsx
-====================
-import React, { useState, useCallback } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import { useQuiz } from "../../contexts/QuizContext";
-import { useDragAndDrop } from "../../hooks/useDragAndDrop";
-import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { Sidebar } from "./Sidebar/Sidebar";
-import { Main } from "./Main/Main";
-import { RightPanel } from "./RightPanel/RightPanel";
-import { CommandPalette } from "../Modals/CommandPalette";
-import { IdentityModal } from "../Modals/IdentityModal";
-import { SNIPPETS } from "../../constants/snippets";
-import "../../index.css";
-
-export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-  const {
-    quizzes,
-    activeQuizId,
-    setActiveQuizId,
-    selectedActionIds, // <-- now a Set
-    toggleSelectAction, // <-- for selection
-    selectAllActions, // <-- for Ctrl+A
-    clearSelectedActions,
-    mode,
-    setMode,
-    aiPrompt,
-    setAiPrompt,
-    updateAction,
-    updateQuestion,
-    deleteAction,
-    duplicateAction,
-    reorderActions,
-    newQuiz,
-    dropSnippet: dropSnippetMutation,
-    handleParsed,
-    quiz,
-  } = useQuiz();
-
-  const dropSnippet = useCallback(
-    (snippetId: string) => {
-      dropSnippetMutation(snippetId);
-    },
-    [dropSnippetMutation],
-  );
-
-  const {
-    draggingSnippet,
-    dropOver,
-    dragActionId,
-    dragOverActionId,
-    onSnippetDragStart,
-    onSnippetDragEnd,
-    onDropZoneDragOver,
-    onDropZoneDragLeave,
-    onDropZoneDrop,
-    onActionDragStart,
-    onActionDragEnd,
-    onActionDragOver,
-    onActionDrop,
-  } = useDragAndDrop(dropSnippet, reorderActions);
-
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [identityOpen, setIdentityOpen] = useState(false);
-
-  const handleExport = useCallback(() => {
-    if (!quiz) return;
-    import("../../utils/scriptSerializer").then(({ quizToScript }) => {
-      const blob = new Blob([quizToScript(quiz)], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${quiz.name.replace(/\s+/g, "_")}.txt`;
-      a.click();
-    });
-  }, [quiz]);
-
-  // Determine which action to edit in the right panel
-  const selectedActionIdsArray = Array.from(selectedActionIds);
-  const firstSelectedId = selectedActionIdsArray[0] ?? null;
-  const selectedAction = firstSelectedId
-    ? (quiz?.actions.find((a) => a.id === firstSelectedId) ?? null)
-    : null;
-  const multipleSelected = selectedActionIdsArray.length > 1;
-
-  useKeyboardShortcuts({
-    onPalette: () => setPaletteOpen(true),
-    onNewQuiz: newQuiz,
-    onToggleMode: () => setMode(mode === "visual" ? "text" : "visual"),
-    onEscape: () => {
-      setPaletteOpen(false);
-      setIdentityOpen(false);
-    },
-    onExport: handleExport,
-    onSelectAll: selectAllActions, // Ctrl+A
-  });
-
-  return (
-    <div className="jqzz-dash">
-      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
-      {identityOpen && user && (
-        <IdentityModal
-          current={user}
-          onSave={() => setIdentityOpen(false)}
-          onClose={() => setIdentityOpen(false)}
-        />
-      )}
-
-      <Sidebar
-        identity={user}
-        onIdentityClick={() => setIdentityOpen(true)}
-        quizzes={quizzes}
-        activeQuizId={activeQuizId}
-        onSelectQuiz={(id) => {
-          setActiveQuizId(id);
-          clearSelectedActions(); // clear selection when switching quizzes
-        }}
-        onNewQuiz={newQuiz}
-        snippets={SNIPPETS}
-        draggingSnippet={draggingSnippet}
-        onSnippetDragStart={onSnippetDragStart}
-        onSnippetDragEnd={onSnippetDragEnd}
-        onSnippetClick={dropSnippet}
-      />
-
-      <Main
-        mode={mode}
-        setMode={setMode}
-        onOpenPalette={() => setPaletteOpen(true)}
-        onExport={handleExport}
-        selectedActionIds={selectedActionIds}
-        toggleSelectAction={toggleSelectAction}
-        dragActionId={dragActionId}
-        dragOverActionId={dragOverActionId}
-        onActionDragStart={onActionDragStart}
-        onActionDragEnd={onActionDragEnd}
-        onActionDragOver={onActionDragOver}
-        onActionDrop={onActionDrop}
-        deleteAction={deleteAction}
-        duplicateAction={duplicateAction}
-        dropOver={dropOver}
-        onDropZoneDragOver={onDropZoneDragOver}
-        onDropZoneDragLeave={onDropZoneDragLeave}
-        onDropZoneDrop={onDropZoneDrop}
-        aiPrompt={aiPrompt}
-        setAiPrompt={setAiPrompt}
-        onParsed={handleParsed}
-      />
-
-      <RightPanel
-        selectedAction={selectedAction}
-        multipleSelected={multipleSelected}
-        onActionUpdate={updateAction}
-        onQuestionUpdate={updateQuestion}
-      />
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\Main.tsx
-====================
-import React from "react";
-import { Toolbar } from "./Toolbar";
-import { VisualMode } from "./VisualMode/VisualMode";
-import { TextMode } from "./TextMode/TextMode";
-import { useQuiz } from "../../../contexts/QuizContext";
-import type { EditorMode, Question, Action } from "../../../types";
-
-interface MainProps {
-  mode: EditorMode;
-  setMode: (mode: EditorMode) => void;
-  onOpenPalette: () => void;
-  onExport: () => void;
-  selectedActionIds: Set<number>;
-  toggleSelectAction: (id: number, ctrlKey?: boolean) => void;
-  dragActionId: number | null;
-  dragOverActionId: number | null;
-  onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
-  onActionDragEnd: () => void;
-  onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
-  onActionDrop: (e: React.DragEvent<HTMLDivElement>, dropId: number) => void;
-  deleteAction: (id: number) => void;
-  duplicateAction: (id: number) => void;
-  dropOver: boolean;
-  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
-  onDropZoneDragLeave: () => void;
-  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
-  aiPrompt: string;
-  setAiPrompt: (v: string) => void;
-  onParsed: (questions: Question[], actions: Action[]) => void;
-}
-
-export const Main: React.FC<MainProps> = ({
-  mode,
-  setMode,
-  onOpenPalette,
-  onExport,
-  selectedActionIds,
-  toggleSelectAction,
-  dragActionId,
-  dragOverActionId,
-  onActionDragStart,
-  onActionDragEnd,
-  onActionDragOver,
-  onActionDrop,
-  deleteAction,
-  duplicateAction,
-  dropOver,
-  onDropZoneDragOver,
-  onDropZoneDragLeave,
-  onDropZoneDrop,
-  aiPrompt,
-  setAiPrompt,
-  onParsed,
-}) => {
-  const { quiz, renderItems } = useQuiz();
-
-  return (
-    <main className="jqzz-main">
-      <Toolbar
-        mode={mode}
-        setMode={setMode}
-        onOpenPalette={onOpenPalette}
-        onExport={onExport}
-      />
-
-      <div
-        className="jqzz-body"
-        onDragOver={mode === "visual" ? onDropZoneDragOver : undefined}
-        onDragLeave={mode === "visual" ? onDropZoneDragLeave : undefined}
-        onDrop={mode === "visual" ? onDropZoneDrop : undefined}
-      >
-        {mode === "visual" ? (
-          <VisualMode
-            quiz={quiz}
-            renderItems={renderItems}
-            selectedActionIds={selectedActionIds}
-            toggleSelectAction={toggleSelectAction}
-            dragActionId={dragActionId}
-            dragOverActionId={dragOverActionId}
-            onActionDragStart={onActionDragStart}
-            onActionDragEnd={onActionDragEnd}
-            onActionDragOver={onActionDragOver}
-            onActionDrop={onActionDrop}
-            deleteAction={deleteAction}
-            duplicateAction={duplicateAction}
-            dropOver={dropOver}
-            onDropZoneDragOver={onDropZoneDragOver}
-            onDropZoneDragLeave={onDropZoneDragLeave}
-            onDropZoneDrop={onDropZoneDrop}
-          />
-        ) : (
-          <TextMode
-            quiz={quiz}
-            aiPrompt={aiPrompt}
-            setAiPrompt={setAiPrompt}
-            onParsed={onParsed}
-          />
-        )}
-      </div>
-    </main>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\Toolbar.tsx
-====================
-import React from "react";
-import type { EditorMode } from "../../../types";
-
-interface ToolbarProps {
-  mode: EditorMode;
-  setMode: (mode: EditorMode) => void;
-  onOpenPalette: () => void;
-  onExport: () => void;
-}
-
-export const Toolbar: React.FC<ToolbarProps> = ({
-  mode,
-  setMode,
-  onOpenPalette,
-  onExport,
-}) => {
-  return (
-    <div className="jqzz-toolbar">
-      <div className="jqzz-tab-group">
-        <button
-          className={`jqzz-tab${mode === "visual" ? " active" : ""}`}
-          onClick={() => setMode("visual")}
-        >
-          ■ Visual
-        </button>
-        <button
-          className={`jqzz-tab${mode === "text" ? " active" : ""}`}
-          onClick={() => setMode("text")}
-        >
-          {"</>"} Text Mode
-        </button>
-      </div>
-      <div className="jqzz-spacer" />
-      <button className="jqzz-toolbar-btn" onClick={onOpenPalette}>
-        ⌘ Palette
-      </button>
-      <button className="jqzz-toolbar-btn" onClick={onExport}>
-        ↓ Export
-      </button>
-      <button
-        className="jqzz-toolbar-btn run"
-        onClick={() => alert("Starting quiz...")}
-      >
-        ▶ Start
-      </button>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\TextMode\HighlightedScript.tsx
-====================
-EMPTY!!!
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\TextMode\ScriptEditor.tsx
-====================
-import React, { useState, useEffect, useRef } from "react";
-import type { Quiz, Question, Action } from "../../../../types";
-import { quizToScript } from "../../../../utils/scriptSerializer";
-import { parseScript } from "../../../../utils/scriptParser";
-import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
-
-interface ScriptEditorProps {
-  quiz: Quiz | undefined;
-  aiPrompt: string;
-  onAiPromptChange: (v: string) => void;
-  onParsed: (questions: Question[], actions: Action[]) => void;
-}
-
-// Helper to extract unique questions in order of appearance from actions
-const extractQuestionsFromActions = (quiz: Quiz | undefined): Question[] => {
-  if (!quiz) return [];
-  const seen = new Set<number>();
-  const result: Question[] = [];
-  for (const action of quiz.actions) {
-    const q = action.question;
-    if (q && !seen.has(q.id)) {
-      seen.add(q.id);
-      result.push(q);
-    }
-  }
-  return result;
-};
-
-export const ScriptEditor: React.FC<ScriptEditorProps> = ({
-  quiz,
-  aiPrompt,
-  onAiPromptChange,
-  onParsed,
-}) => {
-  const [text, setText] = useState<string>(() => quizToScript(quiz));
-  const [parseOk, setParseOk] = useState<boolean>(true);
-  const taRef = useRef<HTMLTextAreaElement>(null);
-  const preRef = useRef<HTMLPreElement>(null);
-  const prevIdRef = useRef<number | undefined>(quiz?.id);
-
-  // Re-seed when active quiz changes
-  useEffect(() => {
-    if (quiz?.id !== prevIdRef.current) {
-      prevIdRef.current = quiz?.id;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setText(quizToScript(quiz));
-    }
-  }, [quiz]);
-
-  const syncScroll = () => {
-    if (taRef.current && preRef.current) {
-      preRef.current.scrollTop = taRef.current.scrollTop;
-      preRef.current.scrollLeft = taRef.current.scrollLeft;
-    }
-  };
-
-  // Parse when text changes, using existing questions from quiz actions
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (!quiz) return;
-      const existingQuestions = extractQuestionsFromActions(quiz);
-      const { questions, actions, errors } = parseScript(
-        text,
-        existingQuestions,
-      );
-      setParseOk(errors.length === 0);
-      onParsed(questions, actions);
-    }, 650);
-    return () => clearTimeout(t);
-  }, [text, quiz, onParsed]); // Include quiz and onParsed dependencies
-
-  const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key !== "Tab") return;
-    e.preventDefault();
-    const ta = taRef.current!;
-    const { selectionStart: s, selectionEnd: end } = ta;
-    const next = text.slice(0, s) + "  " + text.slice(end);
-    setText(next);
-    requestAnimationFrame(() => {
-      ta.selectionStart = ta.selectionEnd = s + 2;
-    });
-  };
-
-  return (
-    <div className="jqzz-text-editor">
-      <div className="jqzz-ai-bar">
-        <span className="jqzz-ai-label"># AI:</span>
-        <input
-          className="jqzz-ai-input"
-          placeholder="Create a chaotic party quiz with memes..."
-          value={aiPrompt}
-          onChange={(e) => onAiPromptChange(e.target.value)}
-        />
-        <span className={`jqzz-parse-badge${parseOk ? " ok" : " err"}`}>
-          {parseOk ? "✓ valid" : "⚠ errors"}
-        </span>
-        <button
-          className="jqzz-ai-btn"
-          onClick={() => alert("Generating quiz from AI prompt...")}
-        >
-          Generate
-        </button>
-      </div>
-      <div className="jqzz-editor-wrap">
-        <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
-          <HighlightedScript text={text} />
-        </pre>
-        <textarea
-          ref={taRef}
-          className="jqzz-script-ta"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onScroll={syncScroll}
-          onKeyDown={handleTab}
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-        />
-      </div>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\TextMode\TextMode.tsx
-====================
-import React from "react";
-import type { Quiz, Question, Action } from "../../../../types";
-import { ScriptEditor } from "./ScriptEditor";
-
-interface TextModeProps {
-  quiz: Quiz | undefined;
-  aiPrompt: string;
-  setAiPrompt: (v: string) => void;
-  onParsed: (questions: Question[], actions: Action[]) => void;
-}
-
-export const TextMode: React.FC<TextModeProps> = ({
-  quiz,
-  aiPrompt,
-  setAiPrompt,
-  onParsed,
-}) => {
-  return (
-    <ScriptEditor
-      quiz={quiz}
-      aiPrompt={aiPrompt}
-      onAiPromptChange={setAiPrompt}
-      onParsed={onParsed}
-    />
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\ActionCard.tsx
-====================
-import React from "react";
-import type { Action } from "../../../../types";
-import { useQuiz } from "../../../../contexts/QuizContext";
-
-interface ActionCardProps {
-  action: Action;
-  isSelected: boolean;
-  isDragging: boolean;
-  isOver: boolean;
-  onToggleSelect: (id: number, ctrlKey?: boolean, shiftKey?: boolean) => void;
-  onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
-  onActionDragEnd: () => void;
-  onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
-  onActionDrop: (e: React.DragEvent<HTMLDivElement>, dropId: number) => void;
-  deleteAction: (id: number) => void;
-  duplicateAction: (id: number) => void;
-}
-
-export const ActionCard: React.FC<ActionCardProps> = ({
-  action,
-  isSelected,
-  isDragging,
-  isOver,
-  onToggleSelect,
-  onActionDragStart,
-  onActionDragEnd,
-  onActionDragOver,
-  onActionDrop,
-  deleteAction,
-  duplicateAction,
-}) => {
-  const { shiftPressed } = useQuiz();
-
-  if (action.phase === "DIVIDER") {
-    return (
-      <div
-        key={action.id}
-        className={`jqzz-divider-block${isSelected ? " selected" : ""}`}
-        onMouseDown={(e) => {
-          if (e.shiftKey) {
-            e.preventDefault();
-          }
-        }}
-        onClick={(e) => {
-          e.preventDefault();
-          onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
-        }}
-        draggable
-        onDragStart={(e) => onActionDragStart(e, action.id)}
-        onDragEnd={onActionDragEnd}
-        onDragOver={(e) => onActionDragOver(e, action.id)}
-        onDrop={(e) => onActionDrop(e, action.id)}
-      >
-        <span style={{ color: "var(--txt3)", fontSize: 10, cursor: "grab" }}>
-          ⠿
-        </span>
-        <div className="jqzz-divider-line" />
-        <span className="jqzz-divider-label">DIVIDER</span>
-        <div className="jqzz-divider-line" />
-        <button
-          className="jqzz-card-action-btn del"
-          onClick={(e) => {
-            e.stopPropagation();
-            deleteAction(action.id);
-          }}
-          style={{ opacity: 0.6, marginLeft: 4 }}
-        >
-          ✕
-        </button>
-      </div>
-    );
-  }
-
-  if (action.phase === "TEXT") {
-    return (
-      <div
-        key={action.id}
-        className={`jqzz-text-block${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
-        onMouseDown={(e) => {
-          if (e.shiftKey) {
-            e.preventDefault();
-          }
-        }}
-        onClick={(e) => {
-          onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
-        }}
-        onDragOver={(e) => onActionDragOver(e, action.id)}
-        onDrop={(e) => onActionDrop(e, action.id)}
-      >
-        <div
-          className="jqzz-drag-handle"
-          draggable
-          onDragStart={(e) => {
-            e.stopPropagation();
-            onActionDragStart(e, action.id);
-          }}
-          onDragEnd={onActionDragEnd}
-        >
-          ⠿
-        </div>
-        <span style={{ color: "var(--txt3)", fontSize: 10, marginRight: 4 }}>
-          ✎
-        </span>
-        <span className="jqzz-text-block-content">
-          {action.preview || "empty note"}
-        </span>
-        <span
-          className="jqzz-card-actions"
-          style={{ opacity: 1, marginLeft: "auto", display: "flex", gap: 4 }}
-        >
-          <button
-            className="jqzz-card-action-btn del"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteAction(action.id);
-            }}
-          >
-            ✕
-          </button>
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      key={action.id}
-      className={`jqzz-card${isSelected ? " selected" : ""}${isDragging ? " dragging-self" : ""}${isOver ? " drag-over" : ""}`}
-      onMouseDown={(e) => {
-        if (e.shiftKey) {
-          e.preventDefault();
-        }
-      }}
-      onClick={(e) => {
-        onToggleSelect(action.id, e.ctrlKey, shiftPressed.current);
-      }}
-      onDragOver={(e) => onActionDragOver(e, action.id)}
-      onDrop={(e) => onActionDrop(e, action.id)}
-    >
-      <div
-        className="jqzz-drag-handle"
-        draggable
-        onDragStart={(e) => {
-          e.stopPropagation();
-          onActionDragStart(e, action.id);
-        }}
-        onDragEnd={onActionDragEnd}
-        title="Drag to reorder"
-      >
-        ⠿
-      </div>
-      <span className={`jqzz-phase-badge badge-${action.phase}`}>
-        {action.phase}
-      </span>
-      <span className="jqzz-card-time">{action.time}s</span>
-      <span className="jqzz-card-preview">{action.preview}</span>
-      <span className="jqzz-card-actions">
-        <button
-          className="jqzz-card-action-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            duplicateAction(action.id);
-          }}
-          title="Duplicate"
-        >
-          ⧉
-        </button>
-        <button
-          className="jqzz-card-action-btn del"
-          onClick={(e) => {
-            e.stopPropagation();
-            deleteAction(action.id);
-          }}
-          title="Delete"
-        >
-          ✕
-        </button>
-      </span>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\AddButton.tsx
-====================
-import React from "react";
-
-interface AddButtonProps {
-  dropOver: boolean;
-  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
-  onDropZoneDragLeave: () => void;
-  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
-}
-
-export const AddButton: React.FC<AddButtonProps> = ({
-  dropOver,
-  onDropZoneDragOver,
-  onDropZoneDragLeave,
-  onDropZoneDrop,
-}) => {
-  return (
-    <div
-      className={`jqzz-add-btn${dropOver ? " over" : ""}`}
-      onDragOver={onDropZoneDragOver}
-      onDragLeave={onDropZoneDragLeave}
-      onDrop={onDropZoneDrop}
-      onClick={() => alert("Add new action block")}
-    >
-      {dropOver ? "✦ Release to add snippet" : "+ Add Action / Drop Snippet"}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\EmptyState.tsx
-====================
-import React from "react";
-
-interface EmptyStateProps {
-  dropOver: boolean;
-  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
-  onDropZoneDragLeave: () => void;
-  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
-}
-
-export const EmptyState: React.FC<EmptyStateProps> = ({
-  dropOver,
-  onDropZoneDragOver,
-  onDropZoneDragLeave,
-  onDropZoneDrop,
-}) => {
-  return (
-    <div className="jqzz-empty-state">
-      <div className="jqzz-empty-icon">◈</div>
-      <div className="jqzz-empty-title">No actions yet</div>
-      <div className="jqzz-empty-sub">
-        Click a snippet in the sidebar to add it,
-        <br />
-        or drag one here.
-      </div>
-      <div
-        className={`jqzz-empty-drop${dropOver ? " over" : ""}`}
-        onDragOver={onDropZoneDragOver}
-        onDragLeave={onDropZoneDragLeave}
-        onDrop={onDropZoneDrop}
-      >
-        {dropOver ? "✦ Release to add" : "↓ Drop snippet here"}
-      </div>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\GroupLabel.tsx
-====================
-import React from "react";
-
-interface GroupLabelProps {
-  questionNumber: number | string;
-  questionText: string;
-}
-
-export const GroupLabel: React.FC<GroupLabelProps> = ({
-  questionNumber,
-  questionText,
-}) => {
-  return (
-    <div className="jqzz-group-label">
-      Q{questionNumber} — {questionText}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Main\VisualMode\VisualMode.tsx
-====================
-import React from "react";
-import type { Quiz, RenderItem } from "../../../../types";
-import { ActionCard } from "./ActionCard";
-import { EmptyState } from "./EmptyState";
-import { AddButton } from "./AddButton";
-import { Welcome } from "../../Welcome/Welcome";
-
-interface VisualModeProps {
-  quiz: Quiz | undefined;
-  renderItems: RenderItem[];
-  selectedActionIds: Set<number>;
-  toggleSelectAction: (
-    id: number,
-    ctrlKey?: boolean,
-    shiftKey?: boolean,
-  ) => void;
-  dragActionId: number | null;
-  dragOverActionId: number | null;
-  onActionDragStart: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
-  onActionDragEnd: () => void;
-  onActionDragOver: (e: React.DragEvent<HTMLDivElement>, id: number) => void;
-  onActionDrop: (e: React.DragEvent<HTMLDivElement>, dropId: number) => void;
-  deleteAction: (id: number) => void;
-  duplicateAction: (id: number) => void;
-  dropOver: boolean;
-  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
-  onDropZoneDragLeave: () => void;
-  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
-}
-
-export const VisualMode: React.FC<VisualModeProps> = ({
-  quiz,
-  renderItems,
-  selectedActionIds,
-  toggleSelectAction,
-  dragActionId,
-  dragOverActionId,
-  onActionDragStart,
-  onActionDragEnd,
-  onActionDragOver,
-  onActionDrop,
-  deleteAction,
-  duplicateAction,
-  dropOver,
-  onDropZoneDragOver,
-  onDropZoneDragLeave,
-  onDropZoneDrop,
-}) => {
-  if (!quiz) {
-    return <Welcome />;
-  }
-
-  if (renderItems.length === 0) {
-    return (
-      <EmptyState
-        dropOver={dropOver}
-        onDropZoneDragOver={onDropZoneDragOver}
-        onDropZoneDragLeave={onDropZoneDragLeave}
-        onDropZoneDrop={onDropZoneDrop}
-      />
-    );
-  }
-
-  // Compute question numbers dynamically
-  let questionNumber = 0;
-  let lastQuestionId: number | null = null;
-
-  return (
-    <>
-      {renderItems.map((item, idx) => {
-        if (item.kind === "divider") {
-          return (
-            <ActionCard
-              key={item.action.id}
-              action={item.action}
-              isSelected={selectedActionIds.has(item.action.id)}
-              isDragging={item.action.id === dragActionId}
-              isOver={
-                item.action.id === dragOverActionId &&
-                dragActionId !== item.action.id
-              }
-              onToggleSelect={toggleSelectAction}
-              onActionDragStart={onActionDragStart}
-              onActionDragEnd={onActionDragEnd}
-              onActionDragOver={onActionDragOver}
-              onActionDrop={onActionDrop}
-              deleteAction={deleteAction}
-              duplicateAction={duplicateAction}
-            />
-          );
-        }
-        if (item.kind === "text") {
-          return (
-            <ActionCard
-              key={item.action.id}
-              action={item.action}
-              isSelected={selectedActionIds.has(item.action.id)}
-              isDragging={item.action.id === dragActionId}
-              isOver={
-                item.action.id === dragOverActionId &&
-                dragActionId !== item.action.id
-              }
-              onToggleSelect={toggleSelectAction}
-              onActionDragStart={onActionDragStart}
-              onActionDragEnd={onActionDragEnd}
-              onActionDragOver={onActionDragOver}
-              onActionDrop={onActionDrop}
-              deleteAction={deleteAction}
-              duplicateAction={duplicateAction}
-            />
-          );
-        }
-        // group
-        const q = item.question;
-        if (q.id !== lastQuestionId) {
-          questionNumber++;
-          lastQuestionId = q.id;
-        }
-        const truncatedText =
-          q.text.length > 38 ? `${q.text.slice(0, 38)}…` : q.text;
-        return (
-          <div key={`${q.id}-${idx}`} className="jqzz-group">
-            <div className="jqzz-group-label">
-              Q{questionNumber} — "{truncatedText}"
-            </div>
-            {item.actions.map((a) => (
-              <ActionCard
-                key={a.id}
-                action={a}
-                isSelected={selectedActionIds.has(a.id)}
-                isDragging={a.id === dragActionId}
-                isOver={a.id === dragOverActionId && dragActionId !== a.id}
-                onToggleSelect={toggleSelectAction}
-                onActionDragStart={onActionDragStart}
-                onActionDragEnd={onActionDragEnd}
-                onActionDragOver={onActionDragOver}
-                onActionDrop={onActionDrop}
-                deleteAction={deleteAction}
-                duplicateAction={duplicateAction}
-              />
-            ))}
-          </div>
-        );
-      })}
-      <AddButton
-        dropOver={dropOver}
-        onDropZoneDragOver={onDropZoneDragOver}
-        onDropZoneDragLeave={onDropZoneDragLeave}
-        onDropZoneDrop={onDropZoneDrop}
-      />
-    </>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\ContextEditor.tsx
-====================
-import React, { useState, useEffect } from "react";
-import type { Action, Question, Answer, Phase } from "../../../types";
-import { generateId } from "../../../utils/idGenerator";
-
-interface ContextEditorProps {
-  action: Action | null;
-  question: Question | null;
-  onActionUpdate: (id: number, patch: Partial<Action>) => void;
-  onQuestionUpdate: (id: number, patch: Partial<Question>) => void;
-}
-
-export const ContextEditor: React.FC<ContextEditorProps> = ({
-  action,
-  question,
-  onActionUpdate,
-  onQuestionUpdate,
-}) => {
-  const [answers, setAnswers] = useState<Answer[]>(question?.answers ?? []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAnswers(question?.answers ?? []);
-  }, [question?.id, question?.answers]);
-
-  if (!action) {
-    return (
-      <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
-        Select an action card to edit.
-      </div>
-    );
-  }
-
-  if (action.phase === "TEXT" || action.phase === "DIVIDER") {
-    return (
-      <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
-        {action.phase === "TEXT" && (
-          <>
-            <div className="jqzz-section-label">Text Note</div>
-            <div className="jqzz-field-group">
-              <div className="jqzz-field-label">Content</div>
-              <textarea
-                className="jqzz-field-textarea"
-                value={action.preview}
-                onChange={(e) =>
-                  onActionUpdate(action.id, { preview: e.target.value })
-                }
-              />
-            </div>
-          </>
-        )}
-        {action.phase === "DIVIDER" && (
-          <div style={{ color: "var(--txt3)", fontSize: 11 }}>
-            Visual divider — separates sections in the timeline.
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const updateAnswer = (idx: number, field: keyof Answer, val: string) => {
-    const next = answers.map((a, i) =>
-      i === idx ? { ...a, [field]: field === "value" ? Number(val) : val } : a,
-    );
-    setAnswers(next);
-    if (question) onQuestionUpdate(question.id, { answers: next });
-  };
-
-  const addAnswer = () => {
-    const next = [...answers, { id: generateId(), text: "", value: 0 }];
-    setAnswers(next);
-    if (question) onQuestionUpdate(question.id, { answers: next });
-  };
-
-  const removeAnswer = (idx: number) => {
-    const next = answers.filter((_, i) => i !== idx);
-    setAnswers(next);
-    if (question) onQuestionUpdate(question.id, { answers: next });
-  };
-
-  return (
-    <>
-      <div className="jqzz-section-label">Phase</div>
-      <div className="jqzz-field-group">
-        <div className="jqzz-field-label">Type</div>
-        <select
-          className="jqzz-field-select"
-          value={action.phase}
-          onChange={(e) =>
-            onActionUpdate(action.id, { phase: e.target.value as Phase })
-          }
-        >
-          {(
-            ["WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"] as const
-          ).map((p) => (
-            <option key={p}>{p}</option>
-          ))}
-        </select>
-      </div>
-      <div className="jqzz-field-group">
-        <div className="jqzz-field-label">Duration (s)</div>
-        <input
-          className="jqzz-field-input"
-          type="number"
-          value={action.time}
-          onChange={(e) =>
-            onActionUpdate(action.id, { time: Number(e.target.value) })
-          }
-        />
-      </div>
-      {question && (
-        <>
-          <div className="jqzz-divider-sep" />
-          <div className="jqzz-section-label">Question</div>
-          <div className="jqzz-field-group">
-            <div className="jqzz-field-label">Prompt</div>
-            <textarea
-              className="jqzz-field-textarea"
-              value={question.text}
-              onChange={(e) =>
-                onQuestionUpdate(question.id, { text: e.target.value })
-              }
-            />
-          </div>
-          <div className="jqzz-field-group">
-            <div className="jqzz-field-label">Image URL</div>
-            <input
-              className="jqzz-field-input"
-              placeholder="optional..."
-              value={question.imageUrl || ""}
-              onChange={(e) =>
-                onQuestionUpdate(question.id, { imageUrl: e.target.value })
-              }
-            />
-          </div>
-          <div className="jqzz-field-group">
-            <div className="jqzz-field-label">Elaboration</div>
-            <textarea
-              className="jqzz-field-textarea"
-              style={{ minHeight: 44 }}
-              value={question.elaborationText || ""}
-              onChange={(e) =>
-                onQuestionUpdate(question.id, {
-                  elaborationText: e.target.value,
-                })
-              }
-            />
-          </div>
-          {(answers.length > 0 || question.type !== "USER_GENERATED") && (
-            <>
-              <div className="jqzz-divider-sep" />
-              <div className="jqzz-section-label">Answers</div>
-              {answers.map((a, i) => (
-                <div key={a.id} className="jqzz-answer-row">
-                  <input
-                    className="jqzz-answer-text"
-                    value={a.text}
-                    placeholder="Answer..."
-                    onChange={(e) => updateAnswer(i, "text", e.target.value)}
-                  />
-                  <input
-                    className="jqzz-answer-val"
-                    type="number"
-                    value={a.value}
-                    onChange={(e) => updateAnswer(i, "value", e.target.value)}
-                  />
-                  <button
-                    className="jqzz-answer-del"
-                    onClick={() => removeAnswer(i)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <button className="jqzz-add-answer" onClick={addAnswer}>
-                + Add Answer
-              </button>
-            </>
-          )}
-        </>
-      )}
-    </>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\RightPanel.tsx
-====================
-import React, { useState } from "react";
-import type { Action, Question, RightTab } from "../../../types";
-import { UsersTab } from "./UsersTab";
-import { ContextEditor } from "./ContextEditor";
-
-interface RightPanelProps {
-  selectedAction: Action | null;
-  multipleSelected: boolean;
-  onActionUpdate: (id: number, patch: Partial<Action>) => void;
-  onQuestionUpdate: (id: number, patch: Partial<Question>) => void;
-}
-
-export const RightPanel: React.FC<RightPanelProps> = ({
-  selectedAction,
-  multipleSelected,
-  onActionUpdate,
-  onQuestionUpdate,
-}) => {
-  const [activeTab, setActiveTab] = useState<RightTab>("context");
-
-  const action = selectedAction;
-  const question = action?.question ?? null;
-
-  const contextLabel = action
-    ? action.phase === "TEXT" || action.phase === "DIVIDER"
-      ? action.phase
-      : action.phase
-    : "Context";
-
-  return (
-    <div className="jqzz-rpanel">
-      <div className="jqzz-rpanel-tabs">
-        <button
-          className={`jqzz-rpanel-tab${activeTab === "context" ? " active" : ""}`}
-          onClick={() => setActiveTab("context")}
-        >
-          {contextLabel}
-        </button>
-        <button
-          className={`jqzz-rpanel-tab${activeTab === "users" ? " active" : ""}`}
-          onClick={() => setActiveTab("users")}
-        >
-          Users
-        </button>
-      </div>
-      <div className="jqzz-rpanel-body">
-        {activeTab === "users" ? (
-          <UsersTab />
-        ) : multipleSelected ? (
-          <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
-            Multiple actions selected. Click on a single action to edit.
-          </div>
-        ) : !action ? (
-          <div style={{ color: "var(--txt3)", fontSize: 12, marginTop: 12 }}>
-            Select an action card to edit.
-          </div>
-        ) : (
-          <ContextEditor
-            action={action}
-            question={question}
-            onActionUpdate={onActionUpdate}
-            onQuestionUpdate={onQuestionUpdate}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\RightPanel\UsersTab.tsx
-====================
-import React, { useState, useEffect } from "react";
-import type { User } from "../../../types";
-import { userService } from "../../../services/userService";
-import { useWebSocket } from "../../../hooks/useWebSocket";
-
-interface UserWebSocketMessage {
-  event: string;
-  user: User;
-}
-
-export const UsersTab: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-
-  useEffect(() => {
-    userService.getAll().then((res) => setUsers(res.data));
-  }, []);
-
-  useWebSocket<UserWebSocketMessage>("/topic/users", (msg) => {
-    const { event, user } = msg;
-    setUsers((prev) => {
-      switch (event) {
-        case "user_registered":
-        case "user_logged_in":
-        case "user_updated":
-          return prev.map((u) => (u.id === user.id ? user : u));
-        case "user_logged_out":
-          return prev.map((u) =>
-            u.id === user.id ? { ...u, online: false } : u,
-          );
-        default:
-          return prev;
-      }
-    });
-  });
-
-  const sorted = [...users].sort((a, b) => Number(b.online) - Number(a.online));
-  const online = sorted.filter((u) => u.online).length;
-  const offline = sorted.length - online;
-
-  return (
-    <div>
-      <div className="jqzz-stat-row">
-        <div className="jqzz-stat-box">
-          <div className="jqzz-stat-num" style={{ color: "var(--cyan)" }}>
-            {online}
-          </div>
-          <div className="jqzz-stat-label">Online</div>
-        </div>
-        <div className="jqzz-stat-box">
-          <div className="jqzz-stat-num" style={{ color: "var(--txt2)" }}>
-            {offline}
-          </div>
-          <div className="jqzz-stat-label">Offline</div>
-        </div>
-      </div>
-
-      {online > 0 && <div className="jqzz-section-label">Online</div>}
-      {sorted
-        .filter((u) => u.online)
-        .map((u) => (
-          <div key={u.id} className="jqzz-user-row">
-            <div className="jqzz-user-avatar online">
-              {u.name[0].toUpperCase()}
-            </div>
-            <div className="jqzz-user-info">
-              <div className="jqzz-user-name">{u.name}</div>
-              <div className="jqzz-user-handle">{u.handle}</div>
-            </div>
-          </div>
-        ))}
-
-      {offline > 0 && (
-        <div
-          className="jqzz-section-label"
-          style={{ marginTop: online > 0 ? 14 : 0 }}
-        >
-          Offline
-        </div>
-      )}
-      {sorted
-        .filter((u) => !u.online)
-        .map((u) => (
-          <div key={u.id} className="jqzz-user-row">
-            <div className="jqzz-user-avatar offline">
-              {u.name[0].toUpperCase()}
-            </div>
-            <div className="jqzz-user-info">
-              <div className="jqzz-user-name" style={{ color: "var(--txt2)" }}>
-                {u.name}
-              </div>
-              <div className="jqzz-user-handle">{u.handle}</div>
-            </div>
-            <div className="jqzz-online-dot off" />
-          </div>
-        ))}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\FooterShortcuts.tsx
-====================
-import React from "react";
-
-export const FooterShortcuts: React.FC = () => {
-  const shortcuts: [string, string][] = [
-    ["New quiz", "^N"],
-    ["Import", "^I"],
-    ["Start", "^↵"],
-    ["Palette", "^K"],
-  ];
-
-  return (
-    <div className="jqzz-sid-footer">
-      {shortcuts.map(([label, key]) => (
-        <div key={label} className="jqzz-shortcut-row">
-          <span>{label}</span>
-          <span className="jqzz-kbd">{key}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\Identity.tsx
-====================
-import React from "react";
-import type { User } from "../../../types";
-
-interface IdentityProps {
-  identity: User | null;
-  onClick: () => void;
-}
-
-export const Identity: React.FC<IdentityProps> = ({ identity, onClick }) => {
-  if (!identity) {
-    return (
-      <div className="jqzz-identity" onClick={onClick}>
-        <div className="jqzz-identity-row">
-          <div className="jqzz-avatar">?</div>
-          <div>
-            <div className="jqzz-identity-name">Set your identity</div>
-            <div className="jqzz-identity-handle">click to register</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  const avatarLetter = identity.name ? identity.name[0].toUpperCase() : "?";
-  const avatarStyle: React.CSSProperties = {
-    position: "relative",
-  };
-  const onlineDotStyle: React.CSSProperties = {
-    position: "absolute",
-    bottom: "2px",
-    right: "2px",
-    width: "10px",
-    height: "10px",
-    borderRadius: "50%",
-    backgroundColor: "var(--cyan)",
-    border: "1px solid var(--bg1)",
-    boxShadow: "0 0 2px rgba(0,0,0,0.2)",
-  };
-
-  return (
-    <div className="jqzz-identity" onClick={onClick}>
-      <div className="jqzz-identity-row">
-        <div style={avatarStyle}>
-          <div className="jqzz-avatar">{avatarLetter}</div>
-          {identity.online && <div style={onlineDotStyle} />}
-        </div>
-        <div>
-          <div className="jqzz-identity-name">{identity.name}</div>
-          <div className="jqzz-identity-handle">{identity.handle}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\QuizList.tsx
-====================
-import React from "react";
-import type { Quiz } from "../../../types";
-
-interface QuizListProps {
-  quizzes: Quiz[];
-  activeQuizId: number | null;
-  onSelectQuiz: (id: number) => void;
-}
-
-export const QuizList: React.FC<QuizListProps> = ({
-  quizzes,
-  activeQuizId,
-  onSelectQuiz,
-}) => {
-  return (
-    <div
-      className="jqzz-sid-section"
-      style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
-    >
-      <div className="jqzz-sid-label">Recent Quizzes</div>
-      {quizzes.map((q) => (
-        <div
-          key={q.id}
-          className={`jqzz-quiz-item${q.id === activeQuizId ? " active" : ""}`}
-          onClick={() => onSelectQuiz(q.id)}
-        >
-          <span className="jqzz-quiz-dot" />
-          <span className="jqzz-quiz-name">{q.name}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\Sidebar.tsx
-====================
-import React from "react";
-import type { User, Quiz, Snippet } from "../../../types";
-import { Identity as IdentityComponent } from "./Identity";
-import { QuizList } from "./QuizList";
-import { SnippetList } from "./SnippetList";
-import { FooterShortcuts } from "./FooterShortcuts";
-
-interface SidebarProps {
-  identity: User | null;
-  onIdentityClick: () => void;
-  quizzes: Quiz[];
-  activeQuizId: number | null;
-  onSelectQuiz: (id: number) => void;
-  onNewQuiz: () => void;
-  snippets: Snippet[];
-  draggingSnippet: string | null;
-  onSnippetDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
-  onSnippetDragEnd: () => void;
-  onSnippetClick: (id: string) => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({
-  identity,
-  onIdentityClick,
-  quizzes,
-  activeQuizId,
-  onSelectQuiz,
-  onNewQuiz,
-  snippets,
-  draggingSnippet,
-  onSnippetDragStart,
-  onSnippetDragEnd,
-  onSnippetClick,
-}) => {
-  return (
-    <aside className="jqzz-sidebar">
-      <div className="jqzz-logo">
-        <img
-          src="/icon-white.png"
-          alt="Logo"
-          className="jqzz-logo-img"
-          style={{
-            width: "64px",
-            height: "64px",
-            marginRight: "8px",
-          }}
-        />
-        <span className="jqzz-logo-badge">JQ</span>
-        <span className="jqzz-logo-name">ZZ</span>
-      </div>
-
-      <div className="jqzz-sid-section jqzz-sid-separator">
-        <div className="jqzz-sid-label">Navigaton</div>
-        <button className="jqzz-sid-btn">Home</button>
-      </div>
-
-      <div className="jqzz-sid-section">
-        <div className="jqzz-sid-label">Account</div>
-        <IdentityComponent identity={identity} onClick={onIdentityClick} />
-      </div>
-
-      <div className="jqzz-sid-section">
-        <div className="jqzz-sid-label">Quick Actions</div>
-        <button className="jqzz-sid-btn accent" onClick={onNewQuiz}>
-          + New Quiz <span className="jqzz-kbd">^N</span>
-        </button>
-        <button
-          className="jqzz-sid-btn"
-          onClick={() => alert("Import .txt flow")}
-        >
-          ↑ Import .txt <span className="jqzz-kbd">^I</span>
-        </button>
-        <button className="jqzz-sid-btn" onClick={() => alert("Join lobby")}>
-          ▶ Join Lobby
-        </button>
-      </div>
-
-      <QuizList
-        quizzes={quizzes}
-        activeQuizId={activeQuizId}
-        onSelectQuiz={onSelectQuiz}
-      />
-
-      <SnippetList
-        snippets={snippets}
-        draggingSnippet={draggingSnippet}
-        onSnippetDragStart={onSnippetDragStart}
-        onSnippetDragEnd={onSnippetDragEnd}
-        onSnippetClick={onSnippetClick}
-      />
-
-      <FooterShortcuts />
-    </aside>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Sidebar\SnippetList.tsx
-====================
-import React from "react";
-import type { Snippet } from "../../../types";
-
-interface SnippetListProps {
-  snippets: Snippet[];
-  draggingSnippet: string | null;
-  onSnippetDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
-  onSnippetDragEnd: () => void;
-  onSnippetClick: (id: string) => void;
-}
-
-export const SnippetList: React.FC<SnippetListProps> = ({
-  snippets,
-  draggingSnippet,
-  onSnippetDragStart,
-  onSnippetDragEnd,
-  onSnippetClick,
-}) => {
-  return (
-    <div
-      className="jqzz-sid-section"
-      style={{ borderTop: "1px solid var(--border)" }}
-    >
-      <div className="jqzz-sid-label">
-        Snippets{" "}
-        <span style={{ opacity: 0.4, fontSize: 9, letterSpacing: 0 }}>
-          click or drag ↓
-        </span>
-      </div>
-      {snippets.map((s) => (
-        <div
-          key={s.id}
-          className={`jqzz-snippet-item${draggingSnippet === s.id ? " dragging" : ""}`}
-          draggable
-          onDragStart={(e) => onSnippetDragStart(e, s.id)}
-          onDragEnd={onSnippetDragEnd}
-          onClick={() => onSnippetClick(s.id)}
-          title={`${s.steps.length} actions`}
-        >
-          <span className="jqzz-quiz-dot" style={{ background: s.color }} />
-          <span className="jqzz-quiz-name">{s.name}</span>
-          <span style={{ fontSize: 9, color: "var(--txt3)", flexShrink: 0 }}>
-            {s.steps.length}×
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Dashboard\Welcome\Welcome.tsx
-====================
-import React from "react";
-
-interface WelcomeProps {
-  onCreate?: () => void;
-  onOpen?: () => void;
-}
-
-export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onOpen }) => {
-  return (
-    <div className="jqzz-welcome-root">
-      <div className="jqzz-welcome-bg" />
-
-      <header className="jqzz-welcome-hero">
-        <div className="jqzz-welcome-hero-content">
-          <div className="jqzz-welcome-logo">
-            <img
-              src="logo.png"
-              alt="logo"
-              style={{
-                width: "256px",
-                height: "256px",
-                filter: "invert(100%)",
-                opacity: 1,
-                WebkitMask: "url(/icon-white.png) no-repeat center / contain",
-              }}
-            />
-          </div>
-
-          <h1 className="jqzz-welcome-title OEF">JQZZ</h1>
-
-          <p className="jqzz-welcome-subtitle">
-            Build interactive quiz experiences with drag-and-drop blocks,
-            real-time multiplayer, and AI-powered creativity. From memes to mind
-            games — everything belongs here.
-          </p>
-
-          <div className="jqzz-welcome-actions">
-            <button
-              className="jqzz-btn primary"
-              onClick={onCreate || (() => alert("Create Quiz"))}
-            >
-              + Create New Quiz
-            </button>
-
-            <button
-              className="jqzz-btn secondary"
-              onClick={onOpen || (() => alert("Open Quiz"))}
-            >
-              Open Existing
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <section className="jqzz-welcome-features">
-        <div className="jqzz-feature">
-          <h3>⚡ Visual Builder</h3>
-          <p>
-            Drag, drop, and rearrange actions like building blocks. Design your
-            quiz flow exactly how you imagine it — fast, flexible, and fun.
-          </p>
-        </div>
-
-        <div className="jqzz-feature">
-          <h3>🧠 AI-Powered Ideas</h3>
-          <p>
-            Stuck? Let AI generate chaotic, funny, or genius quiz concepts
-            instantly. Turn a single prompt into a full experience.
-          </p>
-        </div>
-
-        <div className="jqzz-feature">
-          <h3>🎮 Multiplayer Ready</h3>
-          <p>
-            Real-time lobbies, live scoring, and interactive phases. Perfect for
-            parties, classrooms, or late-night chaos.
-          </p>
-        </div>
-
-        <div className="jqzz-feature">
-          <h3>🧩 Flexible Question Types</h3>
-          <p>
-            From classic multiple choice to tierlists, battles, and
-            user-generated madness — mix mechanics however you want.
-          </p>
-        </div>
-      </section>
-
-      <section className="jqzz-welcome-showcase">
-        <div className="jqzz-showcase-card">
-          <h2>Visual Mode</h2>
-          <p>
-            See your quiz as a timeline of actions. Rearrange, duplicate, and
-            tweak everything with intuitive controls.
-          </p>
-        </div>
-
-        <div className="jqzz-showcase-card">
-          <h2>Text Mode</h2>
-          <p>
-            Prefer scripting? Write your quiz like code. Fast editing, full
-            control, and instant parsing.
-          </p>
-        </div>
-
-        <div className="jqzz-showcase-card">
-          <h2>Hybrid Workflow</h2>
-          <p>
-            Switch between visual and text modes anytime. Build your own
-            workflow — structured or chaotic.
-          </p>
-        </div>
-      </section>
-
-      <section className="jqzz-welcome-footer">
-        <p>Start creating. Break rules. Surprise your players.</p>
-      </section>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Modals\CommandPalette.tsx
-====================
-import React, { useState, useEffect, useRef } from "react";
-import type { KeyboardEvent } from "react";
-import { COMMANDS } from "../../constants/commands";
-
-interface CommandPaletteProps {
-  onClose: () => void;
-}
-
-export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
-  const [query, setQuery] = useState("");
-  const [activeIdx, setActiveIdx] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const filtered = COMMANDS.filter(
-    (c) => !query || c.label.toLowerCase().includes(query.toLowerCase()),
-  );
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActiveIdx(0);
-  }, [query]);
-
-  const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Escape") {
-      onClose();
-      return;
-    }
-    if (e.key === "ArrowDown") {
-      setActiveIdx((i) => Math.min(i + 1, filtered.length - 1));
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      setActiveIdx((i) => Math.max(i - 1, 0));
-      return;
-    }
-    if (e.key === "Enter" && filtered[activeIdx]) {
-      alert(`Executing: ${filtered[activeIdx].label}`);
-      onClose();
-    }
-  };
-
-  return (
-    <div className="jqzz-palette-overlay" onClick={onClose}>
-      <div
-        className="jqzz-palette"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKey}
-      >
-        <div className="jqzz-palette-input-wrap">
-          <span style={{ color: "var(--txt3)" }}>{">"}</span>
-          <input
-            ref={inputRef}
-            className="jqzz-palette-input"
-            placeholder="Type a command or search..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <div className="jqzz-cmd-list">
-          {filtered.map((cmd, i) => (
-            <div
-              key={cmd.label}
-              className={`jqzz-cmd-item${i === activeIdx ? " active" : ""}`}
-              onClick={() => {
-                alert(`Executing: ${cmd.label}`);
-                onClose();
-              }}
-              onMouseEnter={() => setActiveIdx(i)}
-            >
-              <span className="jqzz-cmd-icon">{cmd.icon}</span>
-              <span className="jqzz-cmd-label">{cmd.label}</span>
-              {cmd.sub && <span className="jqzz-cmd-sub">{cmd.sub}</span>}
-            </div>
-          ))}
-        </div>
-        <div className="jqzz-palette-footer">
-          {[
-            ["Enter", "select"],
-            ["Esc", "close"],
-            ["↑↓", "navigate"],
-          ].map(([k, v]) => (
-            <div key={k} className="jqzz-palette-hint">
-              <span className="jqzz-kbd">{k}</span> {v}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\components\Modals\IdentityModal.tsx
-====================
-import React, { useState, useRef } from "react";
-import type { User } from "../../types";
-import { useAuth } from "../../contexts/AuthContext";
-import { userService } from "../../services/userService";
-
-interface IdentityModalProps {
-  current: User | null;
-  onSave: (user: User) => void;
-  onClose: () => void;
-}
-
-export const IdentityModal: React.FC<IdentityModalProps> = ({
-  current,
-  onSave,
-  onClose,
-}) => {
-  const { updateUser, register, login, logout } = useAuth();
-  const [name, setName] = useState(current?.name ?? "");
-  const [handle, setHandle] = useState(current?.handle ?? "");
-  const [email, setEmail] = useState(current?.email ?? "");
-  const [profilePictureUrl, setProfilePictureUrl] = useState(
-    current?.profilePictureUrl ?? "",
-  );
-  const [loading, setLoading] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [loginId, setLoginId] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfilePictureUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-    setLoading(true);
-    try {
-      if (!current) {
-        // New user: register with the given name
-        const user = await register(name.trim());
-        if (user) {
-          onSave(user);
-        }
-      } else {
-        // Existing user: update fields
-        const updates: Partial<User> = {};
-        if (name !== current.name) updates.name = name;
-        if (handle !== current.handle && handle.trim())
-          updates.handle = handle.trim();
-        if (email !== current.email) updates.email = email;
-        if (profilePictureUrl !== current.profilePictureUrl)
-          updates.profilePictureUrl = profilePictureUrl;
-
-        if (Object.keys(updates).length > 0) {
-          await userService.update(current.id, updates);
-        }
-        const updated = { ...current, ...updates };
-        updateUser(updated);
-        onSave(updated);
-      }
-    } catch (error) {
-      alert(
-        "Failed to update identity" +
-          (error instanceof Error ? `: ${error.message}` : ""),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async () => {
-    if (!loginId.trim()) return;
-    setLoading(true);
-    try {
-      const user = await login(loginId.trim());
-      onSave(user);
-    } catch (error) {
-      alert(
-        "Login failed" + (error instanceof Error ? `: ${error.message}` : ""),
-      );
-    } finally {
-      setLoading(false);
-      setShowLogin(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    setLoading(true);
-    try {
-      await logout();
-      // After logout, create a new guest user
-      const newUser = await register("Guest");
-      onSave(newUser);
-    } catch (error) {
-      alert(
-        "Logout failed" + (error instanceof Error ? `: ${error.message}` : ""),
-      );
-    } finally {
-      setLoading(false);
-      onClose();
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!current) return;
-    if (
-      !confirm(
-        "Are you sure you want to delete your account? This cannot be undone.",
-      )
-    )
-      return;
-    setLoading(true);
-    try {
-      await userService.delete(current.id);
-      // After deletion, create a new guest user
-      const newUser = await register("Guest");
-      onSave(newUser);
-    } catch (error) {
-      alert(
-        "Failed to delete account" +
-          (error instanceof Error ? `: ${error.message}` : ""),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="jqzz-modal-overlay" onClick={onClose}>
-      <div className="jqzz-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{current ? "# Set Identity" : "# Create Account"}</h3>
-        <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
-          Display Name
-        </div>
-        <input
-          className="jqzz-modal-input"
-          placeholder="e.g. lonezsi"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {current && (
-          <>
-            <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
-              Handle
-            </div>
-            <input
-              className="jqzz-modal-input"
-              placeholder="@handle"
-              value={handle}
-              onChange={(e) =>
-                setHandle(
-                  e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""),
-                )
-              }
-            />
-            <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
-              Email
-            </div>
-            <input
-              className="jqzz-modal-input"
-              placeholder="email@example.com"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
-              Profile Picture
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "8px",
-                alignItems: "center",
-                marginBottom: "8px",
-              }}
-            >
-              {profilePictureUrl && (
-                <img
-                  src={profilePictureUrl}
-                  alt="Profile"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
-                />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                ref={fileInputRef}
-                style={{ display: "none" }}
-              />
-              <button
-                type="button"
-                className="jqzz-modal-btn"
-                onClick={() => fileInputRef.current?.click()}
-                style={{ flex: "0 0 auto" }}
-              >
-                {profilePictureUrl ? "Change" : "Upload"}
-              </button>
-              {profilePictureUrl && (
-                <button
-                  type="button"
-                  className="jqzz-modal-btn"
-                  onClick={() => setProfilePictureUrl("")}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        <div className="jqzz-modal-row" style={{ marginTop: "8px" }}>
-          {!current && !showLogin ? (
-            <>
-              <button
-                className="jqzz-modal-btn"
-                onClick={() => setShowLogin(true)}
-              >
-                Login
-              </button>
-              <button
-                className="jqzz-modal-btn primary"
-                onClick={handleSave}
-                disabled={loading || !name.trim()}
-              >
-                {loading ? "Creating..." : "Create"}
-              </button>
-            </>
-          ) : showLogin ? (
-            <>
-              <div style={{ width: "100%", marginBottom: "8px" }}>
-                <div className="jqzz-field-label">User ID</div>
-                <input
-                  className="jqzz-modal-input"
-                  placeholder="Enter your user ID"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                />
-              </div>
-              <div className="jqzz-modal-row" style={{ width: "100%" }}>
-                <button
-                  className="jqzz-modal-btn"
-                  onClick={() => setShowLogin(false)}
-                >
-                  Back
-                </button>
-                <button
-                  className="jqzz-modal-btn primary"
-                  onClick={handleLogin}
-                  disabled={loading || !loginId.trim()}
-                >
-                  {loading ? "Logging in..." : "Login"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                className="jqzz-modal-btn"
-                onClick={handleLogout}
-                disabled={loading}
-              >
-                Logout
-              </button>
-              <button
-                className="jqzz-modal-btn"
-                onClick={handleDeleteAccount}
-                disabled={loading}
-              >
-                Delete Account
-              </button>
-              <button
-                className="jqzz-modal-btn primary"
-                onClick={handleSave}
-                disabled={loading}
-              >
-                {loading ? "Saving..." : "Save"}
-              </button>
-            </>
-          )}
-        </div>
-        <div className="jqzz-modal-row" style={{ marginTop: "8px" }}>
-          <button
-            className="jqzz-modal-btn"
-            onClick={onClose}
-            disabled={loading}
-            style={{ width: "100%" }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\constants\commands.ts
-====================
-import type { Command } from "../types";
-
-export const COMMANDS: Command[] = [
-  { icon: "+", label: "New Quiz", sub: "Ctrl+N" },
-  { icon: "↑", label: "Import Quiz (.txt)", sub: "Ctrl+I" },
-  { icon: "↓", label: "Export Current Quiz", sub: "Ctrl+E" },
-  { icon: "▶", label: "Start Quiz", sub: "Ctrl+Enter" },
-  { icon: "#", label: "Join Lobby by Code", sub: "" },
-  { icon: "~", label: "Toggle Text Mode", sub: "Ctrl+`" },
-];
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\constants\phaseMaps.ts
-====================
-import type { Phase } from "../types";
-
-export const PHASE_FN_MAP: Partial<Record<Phase, string>> = {
-  WAITING: "ShowWaiting",
-  QUESTION: "ShowQuestion",
-  ANSWER: "ShowAnswers",
-  ELABORATION: "ShowElaboration",
-  RESULT: "ShowResult",
-};
-
-export const FN_PHASE_MAP: Record<string, Phase> = {
-  ShowWaiting: "WAITING",
-  ShowQuestion: "QUESTION",
-  ShowAnswers: "ANSWER",
-  ShowElaboration: "ELABORATION",
-  ShowResult: "RESULT",
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\constants\snippets.ts
-====================
-import type { Snippet } from "../types";
-
-export const SNIPPETS: Snippet[] = [
-  {
-    id: "s-mc",
-    name: "Full MC question",
-    color: "#00e5c8",
-    steps: [
-      { phase: "WAITING", time: 8, preview: "Pre-question buffer" },
-      { phase: "QUESTION", time: 30, preview: "Multiple-choice question" },
-      { phase: "ANSWER", time: 12, preview: "Answer reveal" },
-      { phase: "RESULT", time: 10, preview: "Leaderboard update" },
-    ],
-  },
-  {
-    id: "s-tf",
-    name: "True / False",
-    color: "#a3e635",
-    steps: [
-      { phase: "WAITING", time: 6, preview: "Pre-question buffer" },
-      { phase: "QUESTION", time: 20, preview: "True or False?" },
-      { phase: "ANSWER", time: 8, preview: "Answer reveal" },
-    ],
-  },
-  {
-    id: "s-elab",
-    name: "Question + explain",
-    color: "#fbbf24",
-    steps: [
-      { phase: "WAITING", time: 8, preview: "Pre-question buffer" },
-      { phase: "QUESTION", time: 30, preview: "Question phase" },
-      { phase: "ANSWER", time: 10, preview: "Answer locked" },
-      { phase: "ELABORATION", time: 20, preview: "Deep-dive explanation" },
-      { phase: "RESULT", time: 10, preview: "Leaderboard update" },
-    ],
-  },
-  {
-    id: "s-ugv",
-    name: "User-gen + vote",
-    color: "#f472b6",
-    steps: [
-      { phase: "WAITING", time: 6, preview: "Pre-question buffer" },
-      { phase: "QUESTION", time: 40, preview: "Players submit answers" },
-      { phase: "ANSWER", time: 20, preview: "Vote on best answer" },
-      { phase: "RESULT", time: 12, preview: "Winner revealed" },
-    ],
-  },
-  {
-    id: "s-tier",
-    name: "Tier list round",
-    color: "#a78bfa",
-    steps: [
-      { phase: "WAITING", time: 6, preview: "Pre-question buffer" },
-      { phase: "QUESTION", time: 60, preview: "Drag items into tiers" },
-      { phase: "RESULT", time: 15, preview: "Group tier comparison" },
-    ],
-  },
-  {
-    id: "s-bolt",
-    name: "Lightning round",
-    color: "#f87171",
-    steps: [
-      { phase: "WAITING", time: 3, preview: "Quick buffer" },
-      { phase: "QUESTION", time: 10, preview: "Fast question" },
-      { phase: "ANSWER", time: 5, preview: "Answer reveal" },
-    ],
-  },
-];
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\contexts\AuthContext.tsx
-====================
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
-  useRef,
-} from "react";
-import type { User } from "../types";
-import { userService } from "../services/userService";
-import { api } from "../services/api";
-
-interface AuthContextType {
-  user: User | null;
-  login: (id: string) => Promise<User>;
-  register: (name: string) => Promise<User>;
-  logout: () => Promise<void>;
-  updateUser: (data: Partial<User>) => void;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  login: async () => {
-    throw new Error("login not implemented");
-  },
-  register: async () => {
-    throw new Error("register not implemented");
-  },
-  logout: async () => {},
-  updateUser: () => {},
-});
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const initializing = useRef(false);
-
-  const login = useCallback(async (id: string): Promise<User> => {
-    const res = await userService.login({ id });
-    setUser(res.data);
-    localStorage.setItem("userId", res.data.id);
-    return res.data;
-  }, []);
-
-  const register = useCallback(
-    async (name: string): Promise<User> => {
-      const res = await userService.register({ name });
-      const user = await login(res.data.id);
-      return user;
-    },
-    [login],
-  );
-
-  const logout = useCallback(async () => {
-    if (user) {
-      await userService.logout(user.id);
-      setUser(null);
-      localStorage.removeItem("userId");
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (initializing.current) return;
-    initializing.current = true;
-
-    const stored = localStorage.getItem("userId");
-    if (stored) {
-      userService
-        .getOne(stored)
-        .then((res) => {
-          setUser(res.data);
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem("userId");
-          const randomSuffix = Math.floor(Math.random() * 10000);
-          register(`Guest_${randomSuffix}`)
-            .then(() => setLoading(false))
-            .catch((err) => {
-              console.error("Failed to create user", err);
-              setLoading(false);
-            });
-        });
-    } else {
-      const randomSuffix = Math.floor(Math.random() * 10000);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      register(`Guest_${randomSuffix}`)
-        .then(() => setLoading(false))
-        .catch((err) => {
-          console.error("Failed to create user", err);
-          setLoading(false);
-        });
-    }
-  }, [register]);
-
-  // Mark user offline when tab closes
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (user) {
-        const url = `${api.defaults.baseURL}/users/logout`;
-        const blob = new Blob([JSON.stringify({ id: user.id })], {
-          type: "application/json",
-        });
-        navigator.sendBeacon(url, blob);
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [user]);
-
-  const updateUser = useCallback((data: Partial<User>) => {
-    setUser((prev) => (prev ? { ...prev, ...data } : null));
-  }, []);
-
-  if (loading) {
-    return <div className="jqzz-dash">Initializing user...</div>;
-  }
-
-  return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useAuth = () => useContext(AuthContext);
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\contexts\QuizContext.tsx
-====================
-import React, {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
-import { useQuizzes } from "../hooks/useQuizzes";
-import { useQuizMutations } from "../hooks/useQuizMutations";
-import { useAuth } from "./AuthContext";
-import type { Quiz, Question, Action, EditorMode, RenderItem } from "../types";
-import { buildRenderItems } from "../utils/buildRenderItems";
-import { quizService } from "../services/quizService";
-import { convertToBackendQuiz } from "../utils/quizConverter";
-
-interface QuizContextType {
-  quizzes: Quiz[];
-  setQuizzes: React.Dispatch<React.SetStateAction<Quiz[]>>;
-  activeQuizId: number | null;
-  setActiveQuizId: (id: number | null) => void;
-  selectedActionIds: Set<number>;
-  toggleSelectAction: (
-    id: number,
-    ctrlKey?: boolean,
-    shiftKey?: boolean,
-  ) => void;
-  selectAllActions: () => void;
-  clearSelectedActions: () => void;
-  mode: EditorMode;
-  setMode: (mode: EditorMode) => void;
-  aiPrompt: string;
-  setAiPrompt: (prompt: string) => void;
-  // Derived
-  quiz: Quiz | undefined;
-  renderItems: RenderItem[];
-  // Mutations
-  updateAction: (id: number, patch: Partial<Action>) => void;
-  updateQuestion: (id: number, patch: Partial<Question>) => void;
-  deleteAction: (id: number) => void;
-  duplicateAction: (id: number) => void;
-  reorderActions: (dragId: number, dropId: number) => void;
-  newQuiz: () => Promise<number | undefined>;
-  dropSnippet: (snippetId: string) => void;
-  handleParsed: (questions: Question[], actions: Action[]) => void;
-  shiftPressed: React.RefObject<boolean>;
-}
-
-const QuizContext = createContext<QuizContextType | undefined>(undefined);
-
-export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const { quizzes, setQuizzes } = useQuizzes();
-  const { user } = useAuth();
-  const [activeQuizId, setActiveQuizId] = useState<number | null>(null);
-  const [selectedActionIds, setSelectedActionIds] = useState<Set<number>>(
-    new Set(),
-  );
-  const [lastSelectedActionId, setLastSelectedActionId] = useState<
-    number | null
-  >(null);
-  const [mode, setMode] = useState<EditorMode>("visual");
-  const [aiPrompt, setAiPrompt] = useState("");
-
-  const quiz = useMemo(
-    () => quizzes.find((q) => q.id === activeQuizId),
-    [quizzes, activeQuizId],
-  );
-
-  const renderItems = useMemo(() => buildRenderItems(quiz), [quiz]);
-
-  const authorId = user?.id || "";
-
-  const {
-    updateAction,
-    updateQuestion,
-    deleteAction,
-    duplicateAction,
-    reorderActions,
-    newQuiz,
-    dropSnippet,
-    handleParsed,
-  } = useQuizMutations(activeQuizId, setQuizzes, authorId);
-
-  // --- Persistence logic ---
-  const saveQuiz = useCallback(async (quizToSave: Quiz) => {
-    if (!quizToSave.id) return;
-    try {
-      const backendQuiz = convertToBackendQuiz(quizToSave);
-      await quizService.update(quizToSave.id, backendQuiz);
-      console.log("Quiz saved", quizToSave.id);
-    } catch (err) {
-      console.error("Failed to save quiz", err);
-    }
-  }, []);
-
-  const debouncedSave = useRef<number | undefined>(undefined);
-  const isSaving = useRef(false);
-
-  useEffect(() => {
-    if (!quiz || !quiz.id || isSaving.current) return;
-    if (debouncedSave.current) clearTimeout(debouncedSave.current);
-    debouncedSave.current = window.setTimeout(() => {
-      isSaving.current = true;
-      saveQuiz(quiz).finally(() => {
-        isSaving.current = false;
-      });
-    }, 1000);
-    return () => {
-      if (debouncedSave.current) clearTimeout(debouncedSave.current);
-    };
-  }, [quiz, saveQuiz]);
-
-  // --- Selection logic ---
-  const getActionIdsInOrder = useCallback((): number[] => {
-    if (!quiz) return [];
-    return quiz.actions.map((a) => a.id);
-  }, [quiz]);
-
-  const toggleSelectAction = useCallback(
-    (id: number, ctrlKey: boolean = false, shiftKey: boolean = false) => {
-      setSelectedActionIds((prev) => {
-        const newSet = new Set(prev);
-        const actionIds = getActionIdsInOrder();
-
-        if (shiftKey) {
-          if (lastSelectedActionId !== null) {
-            const lastIdx = actionIds.indexOf(lastSelectedActionId);
-            const currentIdx = actionIds.indexOf(id);
-            if (lastIdx !== -1 && currentIdx !== -1) {
-              const start = Math.min(lastIdx, currentIdx);
-              const end = Math.max(lastIdx, currentIdx);
-              for (let i = start; i <= end; i++) {
-                newSet.add(actionIds[i]);
-              }
-            }
-          } else {
-            newSet.clear();
-            newSet.add(id);
-          }
-          setLastSelectedActionId(id);
-          return newSet;
-        }
-
-        if (ctrlKey) {
-          if (newSet.has(id)) {
-            newSet.delete(id);
-          } else {
-            newSet.add(id);
-          }
-          setLastSelectedActionId(id);
-          return newSet;
-        }
-
-        if (newSet.size === 1 && newSet.has(id)) {
-          newSet.clear();
-          setLastSelectedActionId(null);
-        } else {
-          newSet.clear();
-          newSet.add(id);
-          setLastSelectedActionId(id);
-        }
-        return newSet;
-      });
-    },
-    [getActionIdsInOrder, lastSelectedActionId],
-  );
-
-  const selectAllActions = useCallback(() => {
-    const actionIds = getActionIdsInOrder();
-    setSelectedActionIds(new Set(actionIds));
-    if (actionIds.length > 0) {
-      setLastSelectedActionId(actionIds[actionIds.length - 1]);
-    }
-  }, [getActionIdsInOrder]);
-
-  const clearSelectedActions = useCallback(() => {
-    setSelectedActionIds(new Set());
-    setLastSelectedActionId(null);
-  }, []);
-
-  const shiftPressed = useRef(false);
-
-  // Reset selection when quiz changes and set up shift key listeners
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    clearSelectedActions();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Shift") shiftPressed.current = true;
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Shift") shiftPressed.current = false;
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [activeQuizId, clearSelectedActions]);
-
-  const value: QuizContextType = {
-    shiftPressed,
-    quizzes,
-    setQuizzes,
-    activeQuizId,
-    setActiveQuizId,
-    selectedActionIds,
-    toggleSelectAction,
-    selectAllActions,
-    clearSelectedActions,
-    mode,
-    setMode,
-    aiPrompt,
-    setAiPrompt,
-    quiz,
-    renderItems,
-    updateAction,
-    updateQuestion,
-    deleteAction,
-    duplicateAction,
-    reorderActions,
-    newQuiz,
-    dropSnippet,
-    handleParsed,
-  };
-
-  return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
-};
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useQuiz = () => {
-  const context = useContext(QuizContext);
-  if (!context) throw new Error("useQuiz must be used within a QuizProvider");
-  return context;
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\contexts\WebSocketContext.tsx
-====================
-import React, { createContext, useEffect, useState, useRef } from "react";
-import { Client } from "@stomp/stompjs";
-import type { IMessage, StompSubscription } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
-
-interface WebSocketContextType {
-  client: Client | null;
-  subscribe: (
-    destination: string,
-    callback: (msg: IMessage) => void,
-  ) => StompSubscription | undefined;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const WebSocketContext = createContext<WebSocketContextType>({
-  client: null,
-  subscribe: () => undefined,
-});
-
-export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [client, setClient] = useState<Client | null>(null);
-  const clientRef = useRef<Client | null>(null);
-
-  useEffect(() => {
-    const stompClient = new Client({
-      webSocketFactory: () => new SockJS("http://127.0.0.1:8080/ws"),
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("WebSocket connected");
-      },
-    });
-    stompClient.activate();
-    clientRef.current = stompClient;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setClient(stompClient);
-
-    return () => {
-      stompClient.deactivate();
-    };
-  }, []);
-
-  const subscribe = (
-    destination: string,
-    callback: (msg: IMessage) => void,
-  ) => {
-    return clientRef.current?.subscribe(destination, callback);
-  };
-
-  return (
-    <WebSocketContext.Provider value={{ client, subscribe }}>
-      {children}
-    </WebSocketContext.Provider>
-  );
-};
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useWebSocket = () => React.useContext(WebSocketContext);
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\hooks\useDragAndDrop.ts
-====================
-import { useState } from "react";
-import type { DragEvent } from "react";
-
-const DRAG_SNIPPET_KEY = "jqzz-snippet";
-const DRAG_ACTION_KEY = "jqzz-action";
-
-export const useDragAndDrop = (
-  dropSnippet: (snippetId: string) => void,
-  reorderActions: (dragId: number, dropId: number) => void,
-) => {
-  const [draggingSnippet, setDraggingSnippet] = useState<string | null>(null);
-  const [dropOver, setDropOver] = useState(false);
-  const [dragActionId, setDragActionId] = useState<number | null>(null);
-  const [dragOverActionId, setDragOverActionId] = useState<number | null>(null);
-
-  const onSnippetDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
-    e.dataTransfer.setData(DRAG_SNIPPET_KEY, id);
-    setDraggingSnippet(id);
-  };
-  const onSnippetDragEnd = () => {
-    setDraggingSnippet(null);
-    setDropOver(false);
-  };
-  const onDropZoneDragOver = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    setDropOver(true);
-  };
-  const onDropZoneDragLeave = () => setDropOver(false);
-  const onDropZoneDrop = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    const sid = e.dataTransfer.getData(DRAG_SNIPPET_KEY);
-    if (sid) dropSnippet(sid);
-    setDropOver(false);
-  };
-
-  const onActionDragStart = (e: DragEvent<HTMLDivElement>, id: number) => {
-    e.dataTransfer.setData(DRAG_ACTION_KEY, String(id));
-    e.dataTransfer.effectAllowed = "move";
-    setDragActionId(id);
-  };
-  const onActionDragEnd = () => {
-    setDragActionId(null);
-    setDragOverActionId(null);
-  };
-  const onActionDragOver = (e: DragEvent<HTMLDivElement>, id: number) => {
-    e.preventDefault();
-    if (e.dataTransfer.types.includes(DRAG_ACTION_KEY)) setDragOverActionId(id);
-  };
-  const onActionDrop = (e: DragEvent<HTMLDivElement>, dropId: number) => {
-    e.preventDefault();
-    const dragId = Number(e.dataTransfer.getData(DRAG_ACTION_KEY));
-    if (dragId && dragId !== dropId) reorderActions(dragId, dropId);
-    setDragActionId(null);
-    setDragOverActionId(null);
-  };
-
-  return {
-    draggingSnippet,
-    dropOver,
-    dragActionId,
-    dragOverActionId,
-    onSnippetDragStart,
-    onSnippetDragEnd,
-    onDropZoneDragOver,
-    onDropZoneDragLeave,
-    onDropZoneDrop,
-    onActionDragStart,
-    onActionDragEnd,
-    onActionDragOver,
-    onActionDrop,
-  };
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\hooks\useKeyboardShortcuts.ts
-====================
-import { useEffect } from "react";
-
-interface ShortcutHandlers {
-  onPalette?: () => void;
-  onNewQuiz?: () => void;
-  onToggleMode?: () => void;
-  onEscape?: () => void;
-  onExport?: () => void;
-  onSelectAll?: () => void;
-}
-
-export const useKeyboardShortcuts = ({
-  onPalette,
-  onNewQuiz,
-  onToggleMode,
-  onEscape,
-  onExport,
-  onSelectAll,
-}: ShortcutHandlers) => {
-  useEffect(() => {
-    const handler = (e: globalThis.KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key === "k") {
-        e.preventDefault();
-        onPalette?.();
-      }
-      if (mod && e.key === "n") {
-        e.preventDefault();
-        onNewQuiz?.();
-      }
-      if (mod && e.key === "`") {
-        e.preventDefault();
-        onToggleMode?.();
-      }
-      if (mod && e.key === "e") {
-        e.preventDefault();
-        onExport?.();
-      }
-      if (mod && e.key === "a") {
-        e.preventDefault();
-        onSelectAll?.(); // handle Ctrl+A
-      }
-      if (e.key === "Escape") {
-        onEscape?.();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onPalette, onNewQuiz, onToggleMode, onEscape, onExport, onSelectAll]);
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\hooks\useQuizMutations.ts
-====================
-import { useCallback } from "react";
-import type { Quiz, Action, Question } from "../types";
-import { quizService } from "../services/quizService";
-import { SNIPPETS } from "../constants/snippets";
-import { generateId } from "../utils/idGenerator";
-
-export const useQuizMutations = (
-  activeQuizId: number | null,
-  setQuizzes: React.Dispatch<React.SetStateAction<Quiz[]>>,
-  authorId: string,
-) => {
-  const updateQuiz = useCallback(
-    (updater: (quiz: Quiz) => Quiz) => {
-      setQuizzes((prev) =>
-        prev.map((q) => (q.id === activeQuizId ? updater(q) : q)),
-      );
-    },
-    [activeQuizId, setQuizzes],
-  );
-
-  const updateAction = useCallback(
-    (id: number, patch: Partial<Action>) => {
-      updateQuiz((quiz) => ({
-        ...quiz,
-        actions: quiz.actions.map((a) =>
-          a.id === id ? { ...a, ...patch } : a,
-        ),
-      }));
-    },
-    [updateQuiz],
-  );
-
-  const updateQuestion = useCallback(
-    (id: number, patch: Partial<Question>) => {
-      updateQuiz((quiz) => ({
-        ...quiz,
-        actions: quiz.actions.map((a) =>
-          a.question?.id === id
-            ? { ...a, question: { ...a.question, ...patch } }
-            : a,
-        ),
-      }));
-    },
-    [updateQuiz],
-  );
-
-  const deleteAction = useCallback(
-    (id: number) => {
-      updateQuiz((quiz) => ({
-        ...quiz,
-        actions: quiz.actions.filter((a) => a.id !== id),
-      }));
-    },
-    [updateQuiz],
-  );
-
-  const duplicateAction = useCallback(
-    (id: number) => {
-      updateQuiz((quiz) => {
-        const idx = quiz.actions.findIndex((a) => a.id === id);
-        if (idx === -1) return quiz;
-        const original = quiz.actions[idx];
-        const clone: Action = {
-          ...original,
-          id: generateId(),
-          question: original.question
-            ? { ...original.question, id: generateId() }
-            : null,
-        };
-        const newActions = [...quiz.actions];
-        newActions.splice(idx + 1, 0, clone);
-        return { ...quiz, actions: newActions };
-      });
-    },
-    [updateQuiz],
-  );
-
-  const reorderActions = useCallback(
-    (dragId: number, dropId: number) => {
-      if (dragId === dropId) return;
-      updateQuiz((quiz) => {
-        const arr = [...quiz.actions];
-        const from = arr.findIndex((a) => a.id === dragId);
-        const to = arr.findIndex((a) => a.id === dropId);
-        if (from === -1 || to === -1) return quiz;
-        const [moved] = arr.splice(from, 1);
-        arr.splice(to, 0, moved);
-        return { ...quiz, actions: arr };
-      });
-    },
-    [updateQuiz],
-  );
-
-  const newQuiz = useCallback(async () => {
-    try {
-      const response = await quizService.create({
-        name: `Quiz ${generateId()}`,
-        authorId,
-        actions: [],
-      });
-      setQuizzes((prev) => [...prev, response.data]);
-      return response.data.id;
-    } catch (error) {
-      console.error("Failed to create quiz", error);
-    }
-  }, [setQuizzes, authorId]);
-
-  const dropSnippet = useCallback(
-    (snippetId: string) => {
-      const snippet = SNIPPETS.find((s) => s.id === snippetId);
-      if (!snippet || !activeQuizId) return;
-
-      setQuizzes((prev) =>
-        prev.map((quiz) => {
-          if (quiz.id !== activeQuizId) return quiz;
-
-          const newQuestion: Question = {
-            id: generateId(),
-            text: "New Question",
-            imageUrl: "",
-            type: "PREWRITTEN_SINGLE",
-            elaborationText: "",
-            answers: [],
-          };
-
-          const newActions: Action[] = snippet.steps.map((s) => ({
-            id: generateId(),
-            phase: s.phase,
-            time: s.time,
-            question: newQuestion,
-            preview: s.preview,
-          }));
-
-          return {
-            ...quiz,
-            actions: [...quiz.actions, ...newActions],
-          };
-        }),
-      );
-    },
-    [activeQuizId, setQuizzes],
-  );
-
-  const handleParsed = useCallback(
-    (questions: Question[], actions: Action[]) => {
-      // Map each action's questionId to the full question object
-      const questionMap = new Map<number, Question>();
-      questions.forEach((q) => questionMap.set(q.id, q));
-
-      const updatedActions = actions.map((a) => ({
-        ...a,
-        question: a.question?.id
-          ? (questionMap.get(a.question.id) ?? null)
-          : null,
-      }));
-
-      updateQuiz((quiz) => ({ ...quiz, actions: updatedActions }));
-    },
-    [updateQuiz],
-  );
-
-  return {
-    updateAction,
-    updateQuestion,
-    deleteAction,
-    duplicateAction,
-    reorderActions,
-    newQuiz,
-    dropSnippet,
-    handleParsed,
-  };
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\hooks\useQuizzes.ts
-====================
-import { useState, useEffect, useCallback, useRef } from "react";
-import type { Quiz } from "../types";
-import { quizService } from "../services/quizService";
-
-export const useQuizzes = () => {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const hasFetched = useRef(false);
-
-  const fetchQuizzes = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await quizService.getAll();
-      setQuizzes(response.data);
-      setError(null);
-    } catch (err) {
-      console.error("Failed to fetch quizzes", err);
-      setError("Failed to load quizzes");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      fetchQuizzes();
-    }
-  }, [fetchQuizzes]);
-
-  return { quizzes, setQuizzes, loading, error, refetch: fetchQuizzes };
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\hooks\useWebSocket.ts
-====================
-import { useEffect, useContext } from "react";
-import { WebSocketContext } from "../contexts/WebSocketContext";
-
-export const useWebSocket = <T = object>(
-  destination: string,
-  callback: (data: T) => void,
-) => {
-  const { subscribe } = useContext(WebSocketContext);
-
-  useEffect(() => {
-    if (!subscribe) return;
-    const subscription = subscribe(destination, (message) => {
-      try {
-        const data = JSON.parse(message.body) as T;
-        callback(data);
-      } catch (err) {
-        console.error("Failed to parse WebSocket message", err);
-      }
-    });
-    return () => subscription?.unsubscribe();
-  }, [destination, callback, subscribe]);
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\services\api.ts
-====================
-import axios from "axios";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080";
-
-export const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-});
-
-// TODO evaluate to add auth token interceptor or not
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\services\lobbyService.ts
-====================
-EMPTY!!!
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\services\quizService.ts
-====================
-import { api } from "./api";
-import type { Quiz, CreateQuizRequest, UpdateQuizRequest } from "../types";
-
-export const quizService = {
-  getAll: () => api.get<Quiz[]>("/quizzes"),
-  getOne: (id: number) => api.get<Quiz>(`/quizzes/${id}`),
-  create: (data: CreateQuizRequest) => api.post<Quiz>("/quizzes", data),
-  update: (id: number, data: UpdateQuizRequest) =>
-    api.put<Quiz>(`/quizzes/${id}`, data),
-  delete: (id: number) => api.delete(`/quizzes/${id}`),
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\services\userService.ts
-====================
-import { api } from "./api";
-import type {
-  User,
-  RegisterRequest,
-  LoginRequest,
-  UpdateHandleRequest,
-  UpdateNameRequest,
-} from "../types";
-
-export const userService = {
-  register: (data: RegisterRequest) => api.post<User>("/users/register", data),
-  login: (data: LoginRequest) => api.post<User>("/users/login", data),
-  logout: (id: string) => api.post("/users/logout", { id }),
-  updateHandle: (id: string, data: UpdateHandleRequest) =>
-    api.post<User>(`/users/${id}/handle`, data),
-  updateName: (id: string, data: UpdateNameRequest) =>
-    api.post<User>(`/users/${id}/name`, data),
-  update: (id: string, data: Partial<User>) =>
-    api.post<User>(`/users/${id}/update`, data),
-  delete: (id: string) => api.delete(`/users/${id}`),
-  getAll: () => api.get<User[]>("/users"),
-  getOne: (id: string) => api.get<User>(`/users/${id}`),
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\services\websocket.ts
-====================
-import { Client } from "@stomp/stompjs";
-import type { IMessage } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
-
-class WebSocketService {
-  private client: Client | null = null;
-
-  connect(onConnect?: () => void, onError?: (error: string) => void) {
-    this.client = new Client({
-      webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("WebSocket connected");
-        onConnect?.();
-      },
-      onStompError: (frame) => {
-        console.error("STOMP error", frame);
-        onError?.(frame.headers["message"]);
-      },
-    });
-    this.client.activate();
-  }
-
-  disconnect() {
-    this.client?.deactivate();
-  }
-
-  subscribe(destination: string, callback: (message: IMessage) => void) {
-    return this.client?.subscribe(destination, callback);
-  }
-
-  send(destination: string, body: object) {
-    this.client?.publish({
-      destination,
-      body: JSON.stringify(body),
-    });
-  }
-}
-
-export const wsService = new WebSocketService();
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\components.css
-====================
-/* Action cards, text blocks, dividers, empty states, add button */
-/* Group label */
-.jqzz-group-label {
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.jqzz-group-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.jqzz-group {
-  margin-bottom: 14px;
-}
-
-/* Cards */
-.jqzz-card {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 9px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 4px;
-  cursor: pointer;
-  transition:
-    border-color 0.12s,
-    background 0.12s;
-  position: relative;
-}
-.jqzz-card:hover {
-  border-color: var(--border-light);
-  background: var(--bg-highlight);
-}
-.jqzz-card.selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-.jqzz-card.drag-over {
-  border-top: 2px solid var(--accent);
-}
-.jqzz-card.dragging-self {
-  opacity: 0.4;
-}
-.jqzz-drag-handle {
-  display: flex;
-  align-items: center;
-  color: var(--text-dim);
-  font-size: 14px;
-  cursor: grab;
-  padding: 0 4px 0 0;
-  flex-shrink: 0;
-  line-height: 1;
-  transition: color 0.1s;
-  user-select: none;
-}
-.jqzz-drag-handle:hover {
-  color: var(--text-muted);
-}
-.jqzz-drag-handle:active {
-  cursor: grabbing;
-}
-.jqzz-card-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.12s;
-  margin-left: auto;
-}
-.jqzz-card:hover .jqzz-card-actions {
-  opacity: 1;
-}
-.jqzz-card-action-btn {
-  background: var(--bg-accent);
-  border: 1px solid var(--border-light);
-  color: var(--text-dim);
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.1s;
-}
-.jqzz-card-action-btn:hover {
-  color: var(--text);
-  border-color: var(--text-muted);
-}
-.jqzz-card-action-btn.del:hover {
-  color: #f87171;
-  border-color: #f87171;
-}
-.jqzz-phase-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  min-width: 90px;
-  text-align: center;
-}
-.badge-WAITING {
-  background: rgba(72, 79, 102, 0.3);
-  color: #8890ab;
-  border: 1px solid #333748;
-}
-.badge-QUESTION {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-}
-.badge-ANSWER {
-  background: color-mix(in srgb, #a3e635 12%, transparent);
-  color: #a3e635;
-  border: 1px solid color-mix(in srgb, #a3e635 30%, transparent);
-}
-.badge-ELABORATION {
-  background: color-mix(in srgb, #fbbf24 12%, transparent);
-  color: #fbbf24;
-  border: 1px solid color-mix(in srgb, #fbbf24 30%, transparent);
-}
-.badge-RESULT {
-  background: color-mix(in srgb, #f472b6 12%, transparent);
-  color: #f472b6;
-  border: 1px solid color-mix(in srgb, #f472b6 30%, transparent);
-}
-.badge-TEXT {
-  background: rgba(100, 100, 120, 0.2);
-  color: #686e8a;
-  border: 1px solid #333748;
-}
-.jqzz-card-time {
-  color: var(--text-dim);
-  font-size: 11px;
-  min-width: 30px;
-}
-.jqzz-card-preview {
-  color: var(--text-muted);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-/* Text block */
-.jqzz-text-block {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 7px 12px;
-  background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 4px;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-.jqzz-text-block:hover {
-  border-color: var(--border-light);
-  background: var(--bg-elevated);
-}
-.jqzz-text-block-content {
-  color: var(--text-dim);
-  font-size: 11px;
-  font-style: italic;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Divider block */
-.jqzz-divider-block {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 6px 12px;
-  margin-bottom: 4px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.12s;
-}
-.jqzz-divider-block:hover {
-  opacity: 1;
-}
-.jqzz-divider-line {
-  flex: 1;
-  height: 1px;
-  background: var(--border-light);
-}
-.jqzz-divider-label {
-  color: var(--text-dim);
-  font-size: 9px;
-  letter-spacing: 2px;
-  flex-shrink: 0;
-}
-
-/* Add button */
-.jqzz-add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: var(--spacing-sm);
-  background: none;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-dim);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-top: 4px;
-}
-.jqzz-add-btn:hover,
-.jqzz-add-btn.over {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-/* Empty state */
-.jqzz-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 48px 20px 24px;
-}
-.jqzz-empty-icon {
-  font-size: 28px;
-  opacity: 0.3;
-}
-.jqzz-empty-title {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-.jqzz-empty-sub {
-  font-size: 11px;
-  color: var(--text-dim);
-  text-align: center;
-  line-height: 1.8;
-}
-.jqzz-empty-drop {
-  border: 1px dashed var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 16px 24px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-dim);
-  transition: all 0.15s;
-  margin-top: var(--spacing-sm);
-  width: 100%;
-  max-width: 280px;
-}
-.jqzz-empty-drop.over {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-.jqzz-card,
-.jqzz-card *,
-.jqzz-text-block,
-.jqzz-text-block *,
-.jqzz-divider-block,
-.jqzz-divider-block * {
-  user-select: none !important;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\editor.css
-====================
-/* Text editor and script highlighting */
-.jqzz-text-editor {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  border-radius: var(--radius-md);
-  padding: 14px;
-  height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-.jqzz-ai-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  flex-shrink: 0;
-}
-.jqzz-ai-label {
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 1px;
-  flex-shrink: 0;
-}
-.jqzz-ai-input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 11px;
-  flex: 1;
-}
-.jqzz-ai-input::placeholder {
-  color: var(--text-dim);
-}
-.jqzz-ai-btn {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 3px 10px;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.12s;
-}
-.jqzz-ai-btn:hover {
-  background: color-mix(in srgb, var(--accent) 85%, black);
-}
-.jqzz-parse-badge {
-  font-size: 9px;
-  color: var(--text-dim);
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--bg-highlight);
-  border: 1px solid var(--border);
-  letter-spacing: 0.5px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.jqzz-parse-badge.ok {
-  color: #a3e635;
-  border-color: color-mix(in srgb, #a3e635 30%, transparent);
-}
-.jqzz-parse-badge.err {
-  color: #f87171;
-  border-color: color-mix(in srgb, #f87171 30%, transparent);
-}
-
-/* Overlay editor */
-.jqzz-editor-wrap {
-  position: relative;
-  flex: 1;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-}
-.jqzz-highlight-pre {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: var(--spacing-md);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.8;
-  white-space: pre;
-  overflow: hidden;
-  pointer-events: none;
-  color: var(--text);
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  word-break: normal;
-}
-.jqzz-script-ta {
-  position: absolute;
-  inset: 0;
-  padding: var(--spacing-md);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.8;
-  color: transparent;
-  caret-color: var(--accent);
-  background: transparent;
-  border: none;
-  outline: none;
-  resize: none;
-  white-space: pre;
-  overflow: auto;
-  border-radius: var(--radius-sm);
-}
-.jqzz-script-ta::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-.jqzz-script-ta::-webkit-scrollbar-thumb {
-  background: var(--border-light);
-  border-radius: 2px;
-}
-.jqzz-script-ta::selection {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\glass.css
-====================
-/* Glass effect utilities */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-right-color: rgba(255, 255, 255, 0.05);
-  border-bottom-color: rgba(255, 255, 255, 0.05);
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\layout.css
-====================
-/* Dashboard layout */
-.jqzz-dash {
-  display: flex;
-  height: 100vh;
-  min-height: 600px;
-  background: var(--bg-base);
-  color: var(--text);
-  overflow: hidden;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\main.css
-====================
-/* Main area, toolbar */
-.jqzz-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-}
-
-/* Toolbar */
-.jqzz-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  flex-shrink: 0;
-}
-.jqzz-tab-group {
-  display: flex;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-md);
-  padding: 2px;
-  gap: 1px;
-}
-.jqzz-tab {
-  padding: 5px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  transition: all 0.12s;
-  letter-spacing: 0.5px;
-}
-.jqzz-tab.active {
-  background: var(--bg-accent);
-  color: var(--text);
-}
-.jqzz-spacer {
-  flex: 1;
-}
-.jqzz-toolbar-btn {
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  cursor: pointer;
-  border: 1px solid var(--border-light);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  transition: all 0.12s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.jqzz-toolbar-btn:hover {
-  background: var(--bg-highlight);
-  color: var(--text);
-}
-.jqzz-toolbar-btn.run {
-  background: var(--accent);
-  color: #000;
-  border-color: var(--accent);
-  font-weight: 700;
-}
-.jqzz-toolbar-btn.run:hover {
-  background: color-mix(in srgb, var(--accent) 85%, black);
-}
-
-/* Body */
-.jqzz-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px;
-}
-.jqzz-body::-webkit-scrollbar {
-  width: 4px;
-}
-.jqzz-body::-webkit-scrollbar-thumb {
-  background: var(--border-light);
-  border-radius: 2px;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\modals.css
-====================
-/* Modals and command palette */
-/* Command Palette */
-.jqzz-palette-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 50;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 80px;
-  backdrop-filter: blur(2px);
-}
-.jqzz-palette {
-  width: 500px;
-  max-width: 90vw;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
-  animation: paletteIn 0.15s ease;
-}
-@keyframes paletteIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.97);
-  }
-}
-.jqzz-palette-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: var(--spacing-md) 16px;
-  border-bottom: 1px solid var(--border);
-}
-.jqzz-palette-input {
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 14px;
-  flex: 1;
-}
-.jqzz-palette-input::placeholder {
-  color: var(--text-dim);
-}
-.jqzz-cmd-list {
-  padding: 6px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-.jqzz-cmd-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.1s;
-}
-.jqzz-cmd-item:hover,
-.jqzz-cmd-item.active {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-.jqzz-cmd-icon {
-  color: var(--text-dim);
-  font-size: 12px;
-  min-width: 16px;
-  text-align: center;
-}
-.jqzz-cmd-label {
-  color: var(--text);
-  font-size: 13px;
-}
-.jqzz-cmd-sub {
-  color: var(--text-dim);
-  font-size: 11px;
-  margin-left: auto;
-}
-.jqzz-cmd-item.active .jqzz-cmd-icon,
-.jqzz-cmd-item.active .jqzz-cmd-label {
-  color: var(--accent);
-}
-.jqzz-palette-footer {
-  padding: var(--spacing-sm) 16px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 16px;
-}
-.jqzz-palette-hint {
-  color: var(--text-dim);
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Identity Modal */
-.jqzz-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(2px);
-}
-.jqzz-modal {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  padding: 24px;
-  width: 340px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
-  animation: paletteIn 0.15s ease;
-}
-.jqzz-modal h3 {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  letter-spacing: 0.5px;
-}
-.jqzz-modal-input {
-  width: 100%;
-  background: var(--bg-highlight);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: 13px;
-  padding: var(--spacing-sm) 10px;
-  margin-bottom: 10px;
-  outline: none;
-  transition: border-color 0.12s;
-}
-.jqzz-modal-input:focus {
-  border-color: var(--accent);
-}
-.jqzz-modal-row {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-top: 4px;
-}
-.jqzz-modal-btn {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  cursor: pointer;
-  border: 1px solid var(--border-light);
-  background: var(--bg-highlight);
-  color: var(--text-muted);
-  transition: all 0.12s;
-}
-.jqzz-modal-btn:hover {
-  background: var(--bg-accent);
-  color: var(--text);
-}
-.jqzz-modal-btn.primary {
-  background: var(--accent);
-  color: #000;
-  border-color: var(--accent);
-  font-weight: 700;
-}
-.jqzz-modal-btn.primary:hover {
-  background: color-mix(in srgb, var(--accent) 85%, black);
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\reset.css
-====================
-/* Base resets */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  background: var(--bg-base);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--text);
-}
-
-button,
-input,
-textarea,
-select {
-  font-family: inherit;
-  font-size: inherit;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\right-panel.css
-====================
-/* Right panel, users, forms */
-.jqzz-rpanel {
-  width: 250px;
-  min-width: 250px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  border-left: 1px solid var(--border);
-}
-.jqzz-rpanel-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.jqzz-rpanel-tab {
-  flex: 1;
-  padding: 9px 6px;
-  font-size: 10px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--text-dim);
-  transition: all 0.12s;
-  border-bottom: 2px solid transparent;
-}
-.jqzz-rpanel-tab:hover {
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-}
-.jqzz-rpanel-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-.jqzz-rpanel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-}
-.jqzz-rpanel-body::-webkit-scrollbar {
-  width: 4px;
-}
-.jqzz-rpanel-body::-webkit-scrollbar-thumb {
-  background: var(--border-light);
-  border-radius: 2px;
-}
-.jqzz-section-label {
-  color: var(--text-dim);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: var(--spacing-sm);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.jqzz-section-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.jqzz-field-group {
-  margin-bottom: var(--spacing-md);
-}
-.jqzz-field-label {
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 1px;
-  margin-bottom: 5px;
-  text-transform: uppercase;
-}
-.jqzz-field-select,
-.jqzz-field-input,
-.jqzz-field-textarea {
-  width: 100%;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: 12px;
-  padding: 5px 8px;
-  outline: none;
-  transition: border-color 0.12s;
-}
-.jqzz-field-select:focus,
-.jqzz-field-input:focus,
-.jqzz-field-textarea:focus {
-  border-color: var(--accent);
-}
-.jqzz-field-textarea {
-  resize: vertical;
-  min-height: 58px;
-  line-height: 1.5;
-}
-.jqzz-divider-sep {
-  height: 1px;
-  background: var(--border);
-  margin: var(--spacing-md) 0;
-}
-
-/* Answer rows */
-.jqzz-answer-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 5px;
-}
-.jqzz-answer-text {
-  flex: 1;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: 11px;
-  padding: 4px 7px;
-  outline: none;
-}
-.jqzz-answer-text:focus {
-  border-color: var(--accent);
-}
-.jqzz-answer-val {
-  width: 38px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: #a3e635;
-  font-size: 11px;
-  padding: 4px 5px;
-  text-align: center;
-}
-.jqzz-answer-del {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 2px 4px;
-  font-size: 12px;
-  line-height: 1;
-  transition: color 0.1s;
-}
-.jqzz-answer-del:hover {
-  color: #f87171;
-}
-.jqzz-add-answer {
-  width: 100%;
-  background: none;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-size: 11px;
-  padding: 5px;
-  cursor: pointer;
-  transition: all 0.12s;
-  margin-top: 4px;
-}
-.jqzz-add-answer:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* Users */
-.jqzz-stat-row {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: 14px;
-}
-.jqzz-stat-box {
-  flex: 1;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) 10px;
-  border: 1px solid var(--border);
-}
-.jqzz-stat-num {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-.jqzz-stat-label {
-  color: var(--text-dim);
-  font-size: 9px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-.jqzz-user-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border);
-}
-.jqzz-user-row:last-child {
-  border-bottom: none;
-}
-.jqzz-user-avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.jqzz-user-avatar.online {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-}
-.jqzz-user-avatar.offline {
-  background: var(--bg-highlight);
-  border: 1px solid var(--border-light);
-  color: var(--text-dim);
-}
-.jqzz-user-info {
-  flex: 1;
-  min-width: 0;
-}
-.jqzz-user-name {
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.jqzz-user-handle {
-  font-size: 10px;
-  color: var(--text-dim);
-}
-.jqzz-online-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.jqzz-online-dot.on {
-  background: var(--accent);
-  box-shadow: 0 0 4px var(--accent);
-}
-.jqzz-online-dot.off {
-  background: var(--text-dim);
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\sidebar.css
-====================
-/* Sidebar components */
-.jqzz-sidebar {
-  width: 210px;
-  min-width: 210px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  border-right: 1px solid var(--border);
-}
-
-/* Logo */
-.jqzz-logo {
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-family: var(--font-oef);
-}
-.jqzz-logo-badge {
-  background: var(--accent);
-  color: #000;
-  font-weight: 700;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  letter-spacing: 1.5px;
-}
-.jqzz-logo-name {
-  color: var(--text-dim);
-  font-size: 11px;
-  letter-spacing: 3px;
-}
-
-/* Identity */
-.jqzz-identity {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition:
-    transform 0.1s cubic-bezier(0.77, 0, 0.175, 1),
-    box-shadow 0.15s ease,
-    border-radius 0.1s ease-in,
-    background 0.15s ease;
-}
-.jqzz-identity:hover {
-  background: var(--bg-elevated);
-  transform: translate(3px, -3px);
-  box-shadow: -2px 2px 0 var(--accent);
-  border-radius: 8px;
-}
-.jqzz-identity-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.jqzz-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.jqzz-identity-name {
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-}
-.jqzz-identity-handle {
-  color: var(--text-dim);
-  font-size: 10px;
-  margin-top: 1px;
-}
-
-/* Sections */
-.jqzz-sid-section {
-  padding: var(--spacing-sm) 0;
-}
-.jqzz-sid-label {
-  color: var(--text-dim);
-  font-size: 9px;
-  letter-spacing: 2px;
-  padding: 4px 13px 6px;
-  text-transform: uppercase;
-}
-.jqzz-sid-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 7px 13px;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 12px;
-  transition: all 0.12s;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-}
-.jqzz-sid-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text);
-
-  border-left: 3px solid var(--accent);
-}
-.jqzz-sid-btn.accent {
-  color: var(--accent);
-}
-.jqzz-sid-btn.accent:hover {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-.jqzz-kbd {
-  margin-left: auto;
-  background: var(--bg-highlight);
-  border: 1px solid var(--border-light);
-  border-radius: 3px;
-  font-size: 9px;
-  padding: 1px 5px;
-  color: var(--text-dim);
-}
-
-/* Quiz list */
-.jqzz-quiz-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 6px 13px;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 11px;
-  transition: all 0.12s;
-  border-left: 2px solid transparent;
-}
-.jqzz-quiz-item:hover {
-  background: var(--bg-elevated);
-  color: var(--text);
-}
-.jqzz-quiz-item.active {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
-  border-left-color: var(--accent);
-}
-.jqzz-quiz-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  flex-shrink: 0;
-}
-.jqzz-quiz-item.active .jqzz-quiz-dot {
-  background: var(--accent);
-}
-.jqzz-quiz-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Snippets */
-.jqzz-snippet-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 6px 13px;
-  cursor: grab;
-  color: var(--text-muted);
-  font-size: 11px;
-  transition: all 0.12s;
-  border-left: 2px solid transparent;
-  user-select: none;
-}
-.jqzz-snippet-item:hover {
-  background: var(--bg-elevated);
-  color: var(--text);
-}
-.jqzz-snippet-item:active {
-  cursor: grabbing;
-}
-.jqzz-snippet-item.dragging {
-  opacity: 0.35;
-}
-
-/* Footer shortcuts */
-.jqzz-sid-footer {
-  margin-top: auto;
-  padding: 10px 13px;
-  border-top: 1px solid var(--border);
-}
-.jqzz-shortcut-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 0;
-  color: var(--text-dim);
-  font-size: 10px;
-}
-
-.jqzz-sid-separator {
-  border-bottom: 1px solid var(--border);
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\styles\welcome.css
-====================
-.jqzz-welcome-root {
-  width: 100%;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  color: var(--text-primary);
-}
-
-.jqzz-welcome-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.05), transparent),
-    radial-gradient(circle at 80% 60%, rgba(0, 0, 0, 0.04), transparent);
-  z-index: 0;
-}
-
-/* HERO */
-.jqzz-welcome-hero {
-  padding: 0rem 2rem 4rem;
-  display: flex;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-}
-
-.jqzz-welcome-hero-content {
-  max-width: 900px;
-  text-align: center;
-}
-
-.jqzz-welcome-logo {
-  font-size: 4rem;
-  font-weight: 800;
-  letter-spacing: 6px;
-  margin-bottom: 1rem;
-}
-
-.jqzz-welcome-title {
-  font-size: 32px;
-  margin-bottom: 1rem;
-}
-
-.jqzz-welcome-subtitle {
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin-bottom: 2.5rem;
-}
-
-.jqzz-welcome-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
-
-/* BUTTONS */
-.jqzz-btn {
-  padding: 0.9rem 1.6rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.jqzz-btn.primary {
-  background: var(--primary);
-  color: white;
-}
-
-.jqzz-btn.primary:hover {
-  transform: translateY(-2px);
-}
-
-.jqzz-btn.secondary {
-  background: transparent;
-  border: 1px solid var(--border);
-}
-
-.jqzz-btn.secondary:hover {
-  background: var(--hover-bg-light);
-}
-
-/* FEATURES */
-.jqzz-welcome-features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-  padding: 3rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.jqzz-feature {
-  padding: 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-secondary);
-  transition: all 0.2s ease;
-}
-
-.jqzz-feature:hover {
-  transform: translateY(-5px);
-}
-
-/* SHOWCASE */
-.jqzz-welcome-showcase {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  padding: 3rem 2rem;
-  gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.jqzz-showcase-card {
-  padding: 2rem;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--bg-primary);
-}
-
-/* FOOTER */
-.jqzz-welcome-footer {
-  text-align: center;
-  padding: 3rem 1rem;
-  font-size: 1rem;
-  color: var(--text-secondary);
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\types\index.ts
-====================
-export type Phase =
-  | "WAITING"
-  | "QUESTION"
-  | "ANSWER"
-  | "ELABORATION"
-  | "RESULT"
-  | "TEXT"
-  | "DIVIDER";
-
-export type EditorMode = "visual" | "text";
-export type RightTab = "context" | "users";
-
-export interface Answer {
-  id: number;
-  text: string;
-  value: number;
-  imageUrl?: string;
-  userId?: string;
-}
-
-export interface Question {
-  id: number;
-  text: string;
-  imageUrl?: string;
-  elaborationText?: string;
-  elaborationImageUrl?: string;
-  type: string;
-  userId?: string;
-  answers: Answer[];
-}
-
-export interface Action {
-  id: number;
-  phase: Phase;
-  time: number;
-  question: Question | null; // null for TEXT/DIVIDER actions
-  preview: string; // derived in UI
-  orderIndex?: number;
-}
-
-export interface Quiz {
-  id: number;
-  name: string;
-  authorId: string;
-  actions: Action[];
-}
-
-export interface User {
-  id: string;
-  handle: string;
-  name: string;
-  password?: string;
-  email?: string;
-  profilePictureUrl?: string;
-  online: boolean;
-}
-
-export interface SnippetStep {
-  phase: Phase;
-  time: number;
-  preview: string;
-}
-
-export interface Snippet {
-  id: string;
-  name: string;
-  color: string;
-  steps: SnippetStep[];
-}
-
-export interface Command {
-  icon: string;
-  label: string;
-  sub: string;
-}
-
-export type RenderItem =
-  | { kind: "group"; question: Question; actions: Action[] }
-  | { kind: "divider"; action: Action }
-  | { kind: "text"; action: Action };
-
-// API request/response types
-export interface CreateQuizRequest {
-  name: string;
-  authorId: string;
-  actions?: Action[];
-}
-
-export interface UpdateQuizRequest {
-  name?: string;
-  actions?: Action[];
-  questions?: Question[];
-}
-
-export interface RegisterRequest {
-  name: string;
-}
-
-export interface LoginRequest {
-  id: string;
-}
-
-export interface LogoutRequest {
-  id: string;
-}
-
-export interface UpdateHandleRequest {
-  handle: string;
-}
-
-export interface UpdateNameRequest {
-  name: string;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\buildRenderItems.ts
-====================
-import type { Quiz, RenderItem, Question, Action } from "../types";
-
-export function buildRenderItems(quiz: Quiz | undefined): RenderItem[] {
-  if (!quiz) return [];
-  const items: RenderItem[] = [];
-  let currentGroup: {
-    kind: "group";
-    question: Question;
-    actions: Action[];
-  } | null = null;
-
-  for (const action of quiz.actions) {
-    if (action.phase === "DIVIDER") {
-      currentGroup = null;
-      items.push({ kind: "divider", action });
-    } else if (action.phase === "TEXT") {
-      currentGroup = null;
-      items.push({ kind: "text", action });
-    } else {
-      // action has a question
-      if (action.question) {
-        if (currentGroup && currentGroup.question.id === action.question.id) {
-          currentGroup.actions.push(action);
-        } else {
-          currentGroup = {
-            kind: "group",
-            question: action.question,
-            actions: [action],
-          };
-          items.push(currentGroup);
-        }
-      } else {
-        // fallback – should not happen for non-TEXT/DIVIDER actions
-        items.push({ kind: "text", action });
-      }
-    }
-  }
-  return items;
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\idGenerator.ts
-====================
-let counter = 0;
-export const generateId = (): number => {
-  // Combine timestamp and counter to ensure uniqueness
-  return Date.now() * 1000 + (counter++ % 1000);
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\quizConverter.ts
-====================
-import type { Quiz as FrontendQuiz } from "../types";
-
-export function convertToBackendQuiz(frontendQuiz: FrontendQuiz): object {
-  const actions = frontendQuiz.actions.map((action) => ({
-    id: action.id,
-    phase: action.phase,
-    time: action.time,
-    question: action.question, // full question object, will be saved via cascade
-  }));
-
-  return {
-    id: frontendQuiz.id,
-    name: frontendQuiz.name,
-    authorId: frontendQuiz.authorId,
-    actions,
-  };
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\scriptParser.ts
-====================
-import type { Question, Action, Answer } from "../types";
-import { FN_PHASE_MAP } from "../constants/phaseMaps";
-
-export interface ParseResult {
-  questions: Question[];
-  actions: Action[];
-  errors: string[];
-}
-
-export function parseScript(
-  text: string,
-  prevQuestions: Question[],
-): ParseResult {
-  const lines = text.split("\n");
-  const questions: Question[] = [];
-  const actions: Action[] = [];
-  const errors: string[] = [];
-  const qRefMap = new Map<string, Question>();
-  let aid = Date.now();
-  let i = 0;
-
-  while (i < lines.length) {
-    const raw = lines[i];
-    const line = raw.trim();
-    i++;
-
-    if (!line || line.startsWith("#")) continue;
-
-    if (line === "---") {
-      actions.push({
-        id: aid++,
-        phase: "DIVIDER",
-        time: 0,
-        questionId: 0,
-        preview: "---",
-      });
-      continue;
+C:\Users\karac\Documents\programming\web\JQZZ2\backend\jqzz\src\test\java\com\lonezsi\jqzz\service\ImageServiceTest.java
+====================
+package com.lonezsi.jqzz.service;
+
+import java.io.IOException;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.lonezsi.jqzz.model.Image;
+import com.lonezsi.jqzz.model.ImageVisibility;
+import com.lonezsi.jqzz.repository.ImageRepository;
+
+@ExtendWith(MockitoExtension.class)
+class ImageServiceTest {
+
+    @Mock
+    private ImageRepository imageRepository;
+
+    @InjectMocks
+    private ImageService imageService;
+
+    private MultipartFile mockFile;
+
+    @BeforeEach
+    void setUp() throws IOException {
+        mockFile = mock(MultipartFile.class);
+        when(mockFile.getBytes()).thenReturn("fake image data".getBytes());
+        when(mockFile.getContentType()).thenReturn("image/png");
     }
 
-    const newQMatch = line.match(/^NewQuestion\s+(Q\d+)\s*\(/);
-    if (newQMatch) {
-      const qRef = newQMatch[1];
-      const qIdx = parseInt(qRef.slice(1), 10) - 1;
-      const prev = prevQuestions[qIdx];
-      const question: Question = prev
-        ? { ...prev, answers: [...prev.answers] }
-        : {
-            id: Date.now() + questions.length * 7,
-            text: "",
-            imageUrl: "",
-            type: "PREWRITTEN_SINGLE",
-            elaborationText: "",
-            answers: [],
-          };
+    @Test
+    void uploadPublicImage_success() throws IOException {
+        String handle = "logo";
+        String ownerId = null;
+        ImageVisibility visibility = ImageVisibility.PUBLIC;
 
-      while (i < lines.length && lines[i].trim() !== ")") {
-        const fl = lines[i].trim();
-        i++;
-        const promptM = fl.match(/^prompt:\s*"(.*)"/);
-        if (promptM) question.text = promptM[1];
-        const typeM = fl.match(/^type:\s*"(.*)"/);
-        if (typeM) question.type = typeM[1].toUpperCase().replace(/-/g, "_");
-        const elabM = fl.match(/^elaboration:\s*"(.*)"/);
-        if (elabM) question.elaborationText = elabM[1];
+        when(imageRepository.existsByHandleAndOwnerIdIsNull(handle)).thenReturn(false);
+        when(imageRepository.save(any(Image.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        if (fl === "answers: [") {
-          const ans: Answer[] = [];
-          while (i < lines.length && lines[i].trim() !== "],") {
-            const al = lines[i].trim();
-            i++;
-            const am = al.match(
-              /\{\s*text:\s*"([^"]*)",\s*value:\s*(-?\d+)\s*\}/,
-            );
-            if (am)
-              ans.push({
-                id: Date.now() + ans.length * 3,
-                text: am[1],
-                value: Number(am[2]),
-              });
-          }
-          if (lines[i]?.trim() === "],") i++;
-          question.answers = ans;
-        }
-      }
-      if (i < lines.length && lines[i].trim() === ")") i++;
+        Image result = imageService.uploadImage(handle, ownerId, visibility, mockFile);
 
-      questions.push(question);
-      qRefMap.set(qRef, question);
-      continue;
+        assertThat(result.getHandle()).isEqualTo(handle);
+        assertThat(result.getOwnerId()).isNull();
+        assertThat(result.getVisibility()).isEqualTo(ImageVisibility.PUBLIC);
+        verify(imageRepository).save(any());
     }
 
-    const showMatch = line.match(/^(Show\w+)\((Q\d+),\s*time:\s*(\d+)\)/);
-    if (showMatch) {
-      const [, fn, qRef, t] = showMatch;
-      const phase = FN_PHASE_MAP[fn];
-      const q = qRefMap.get(qRef);
-      if (phase && q) {
-        actions.push({
-          id: aid++,
-          phase,
-          time: Number(t),
-          questionId: q.id,
-          preview: `${fn.replace("Show", "")}: "${q.text.slice(0, 30)}"`,
-        });
-      } else {
-        errors.push(`Unknown ref ${qRef} in "${line}"`);
-        actions.push({
-          id: aid++,
-          phase: "TEXT",
-          time: 0,
-          questionId: 0,
-          preview: line,
-        });
-      }
-      continue;
+    @Test
+    void uploadPublicImage_handleAlreadyExists_throwsException() {
+        String handle = "logo";
+        when(imageRepository.existsByHandleAndOwnerIdIsNull(handle)).thenReturn(true);
+
+        assertThatThrownBy(() -> imageService.uploadImage(handle, null, ImageVisibility.PUBLIC, mockFile))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already exists");
     }
 
-    actions.push({
-      id: aid++,
-      phase: "TEXT",
-      time: 0,
-      questionId: 0,
-      preview: line,
-    });
-  }
+    @Test
+    void uploadPrivateImage_success() throws IOException {
+        String handle = "mycat";
+        String ownerId = "user123";
+        ImageVisibility visibility = ImageVisibility.PRIVATE;
 
-  return { questions, actions, errors };
+        when(imageRepository.existsByOwnerIdAndHandle(ownerId, handle)).thenReturn(false);
+        when(imageRepository.save(any(Image.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Image result = imageService.uploadImage(handle, ownerId, visibility, mockFile);
+
+        assertThat(result.getHandle()).isEqualTo(handle);
+        assertThat(result.getOwnerId()).isEqualTo(ownerId);
+        assertThat(result.getVisibility()).isEqualTo(ImageVisibility.PRIVATE);
+    }
+
+    @Test
+    void resolveReference_publicImage() {
+        String ref = "logo";
+        String currentUserId = "user123";
+        Image publicImage = new Image("logo", null, ImageVisibility.PUBLIC, new byte[0], "image/png");
+        publicImage.setId(1L);
+        when(imageRepository.findByHandleAndOwnerIdIsNull("logo")).thenReturn(Optional.of(publicImage));
+
+        Optional<Long> result = imageService.resolveReference(ref, currentUserId);
+
+        assertThat(result).contains(1L);
+    }
+
+    @Test
+    void resolveReference_currentUserImage() {
+        String ref = ":mycat";
+        String currentUserId = "user123";
+        Image privateImage = new Image("mycat", currentUserId, ImageVisibility.PRIVATE, new byte[0], "image/png");
+        privateImage.setId(2L);
+        when(imageRepository.findByOwnerIdAndHandle(currentUserId, "mycat")).thenReturn(Optional.of(privateImage));
+
+        Optional<Long> result = imageService.resolveReference(ref, currentUserId);
+
+        assertThat(result).contains(2L);
+    }
+
+    @Test
+    void resolveReference_otherUserSemiPrivateImage() {
+        String ref = "other:cat";
+        String currentUserId = "user123";
+        Image semiPrivate = new Image("cat", "other", ImageVisibility.SEMI_PRIVATE, new byte[0], "image/png");
+        semiPrivate.setId(3L);
+        when(imageRepository.findByOwnerIdAndHandle("other", "cat")).thenReturn(Optional.of(semiPrivate));
+
+        Optional<Long> result = imageService.resolveReference(ref, currentUserId);
+
+        assertThat(result).contains(3L);
+    }
+
+    @Test
+    void resolveReference_otherUserPrivateImage_denied() {
+        String ref = "other:secret";
+        String currentUserId = "user123";
+        Image privateImage = new Image("secret", "other", ImageVisibility.PRIVATE, new byte[0], "image/png");
+        privateImage.setId(4L);
+        when(imageRepository.findByOwnerIdAndHandle("other", "secret")).thenReturn(Optional.of(privateImage));
+
+        Optional<Long> result = imageService.resolveReference(ref, currentUserId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getImageData_ownPrivateImage_allowed() {
+        Long id = 1L;
+        String currentUserId = "user123";
+        Image privateImage = new Image("mycat", currentUserId, ImageVisibility.PRIVATE, "data".getBytes(), "image/png");
+        privateImage.setId(id);
+        when(imageRepository.findById(id)).thenReturn(Optional.of(privateImage));
+
+        Optional<byte[]> result = imageService.getImageData(id, currentUserId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get()).isEqualTo("data".getBytes());
+    }
+
+    @Test
+    void getImageData_otherPrivateImage_denied() {
+        Long id = 1L;
+        String currentUserId = "user123";
+        Image privateImage = new Image("secret", "other", ImageVisibility.PRIVATE, "data".getBytes(), "image/png");
+        privateImage.setId(id);
+        when(imageRepository.findById(id)).thenReturn(Optional.of(privateImage));
+
+        Optional<byte[]> result = imageService.getImageData(id, currentUserId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void deleteImage_ownImage_success() {
+        Long id = 1L;
+        String currentUserId = "user123";
+        Image privateImage = new Image("mycat", currentUserId, ImageVisibility.PRIVATE, new byte[0], "image/png");
+        privateImage.setId(id);
+        when(imageRepository.findById(id)).thenReturn(Optional.of(privateImage));
+        doNothing().when(imageRepository).deleteById(id);
+
+        imageService.deleteImage(id, currentUserId);
+
+        verify(imageRepository).deleteById(id);
+    }
+
+    @Test
+    void deleteImage_otherUsersImage_throwsSecurityException() {
+        Long id = 1L;
+        String currentUserId = "user123";
+        Image privateImage = new Image("secret", "other", ImageVisibility.PRIVATE, new byte[0], "image/png");
+        privateImage.setId(id);
+        when(imageRepository.findById(id)).thenReturn(Optional.of(privateImage));
+
+        assertThatThrownBy(() -> imageService.deleteImage(id, currentUserId))
+                .isInstanceOf(SecurityException.class);
+    }
 }
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\scriptSerializer.ts
-====================
-import type { Quiz, Action, Question } from "../types";
-import { PHASE_FN_MAP } from "../constants/phaseMaps";
-
-export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
-# Author: you
-#
-# ─── How to write a quiz ─────────────────────────────
-#
-# NewQuestion Q1 (
-#   time: 30,
-#   type: "choose-answer",
-#   prompt: "Your question here?",
-#   elaboration: "Fun fact about the answer",
-#   answers: [
-#     { text: "Option A", value: 0   },
-#     { text: "Option B", value: 100 },
-#   ],
-# )
-#
-# ShowWaiting(Q1, time: 10)
-# ShowQuestion(Q1, time: 30)
-# ShowAnswers(Q1, time: 15)
-# ShowElaboration(Q1, time: 20)
-# ShowResult(Q1, time: 10)
-#
-# Use --- to insert a visual divider.
-# Any other line becomes a text note block.
-# ─────────────────────────────────────────────────────`;
-
-function getUniqueQuestionsFromActions(actions: Action[]): Question[] {
-  const seen = new Map<number, boolean>();
-  const result: Question[] = [];
-  for (const action of actions) {
-    const q = action.question;
-    if (q && !seen.has(q.id)) {
-      seen.set(q.id, true);
-      result.push(q);
-    }
-  }
-  return result;
-}
-
-export function quizToScript(quiz: Quiz | undefined): string {
-  if (!quiz || quiz.actions.length === 0) return EMPTY_SCRIPT;
-
-  const lines: string[] = [
-    `# ${quiz.name} — JQzz Script v1`,
-    `# Author: ${quiz.authorId}`,
-    "",
-  ];
-
-  const uniqueQuestions = getUniqueQuestionsFromActions(quiz.actions);
-
-  // Map question ID to index (starting from 1)
-  const qIndexMap = new Map<number, number>();
-  uniqueQuestions.forEach((q, idx) => qIndexMap.set(q.id, idx + 1));
-
-  // Write NewQuestion blocks
-  uniqueQuestions.forEach((q) => {
-    const qid = `Q${qIndexMap.get(q.id)}`;
-    lines.push(`NewQuestion ${qid} (`);
-    lines.push(`  time: 30,`);
-    lines.push(`  type: "${q.type.toLowerCase().replace(/_/g, "-")}",`);
-    lines.push(`  prompt: "${q.text || "..."}",`);
-    if (q.elaborationText) lines.push(`  elaboration: "${q.elaborationText}",`);
-    if (q.answers.length > 0) {
-      lines.push(`  answers: [`);
-      q.answers.forEach((a) =>
-        lines.push(`    { text: "${a.text}", value: ${a.value} },`),
-      );
-      lines.push(`  ],`);
-    }
-    lines.push(`)`);
-    lines.push("");
-  });
-
-  // Write actions
-  for (const a of quiz.actions) {
-    if (a.phase === "DIVIDER") {
-      lines.push("---");
-      lines.push("");
-      continue;
-    }
-    if (a.phase === "TEXT") {
-      lines.push(a.preview);
-      continue;
-    }
-    const fn = PHASE_FN_MAP[a.phase];
-    const qId = a.question?.id;
-    if (fn && qId) {
-      const qi = qIndexMap.get(qId);
-      if (qi) lines.push(`${fn}(Q${qi}, time: ${a.time})`);
-    }
-  }
-
-  return lines.join("\n");
-}
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\syntaxHighlighter.ts
-====================
-export type HToken = {
-  t:
-    | "comment"
-    | "kw"
-    | "fn"
-    | "str"
-    | "num"
-    | "key"
-    | "punc"
-    | "div"
-    | "plain"
-    | "ws";
-  v: string;
-};
-
-export function tokenizeLine(line: string): HToken[] {
-  const trimmed = line.trimStart();
-  if (trimmed.startsWith("#")) return [{ t: "comment", v: line }];
-  if (line.trim() === "---") return [{ t: "div", v: line }];
-
-  const tokens: HToken[] = [];
-  let rem = line;
-
-  const eat = (re: RegExp, t: HToken["t"]): boolean => {
-    const m = rem.match(re);
-    if (!m || m.index !== 0) return false;
-    tokens.push({ t, v: m[0] });
-    rem = rem.slice(m[0].length);
-    return true;
-  };
-
-  while (rem.length > 0) {
-    if (eat(/^(NewQuestion|Show\w+)\b/, "kw")) continue;
-    if (eat(/^Q\d+\b/, "fn")) continue;
-    if (eat(/^"[^"]*"/, "str")) continue;
-    if (eat(/^-?\d+/, "num")) continue;
-    if (
-      eat(/^(time|type|prompt|elaboration|answers|text|value)(?=\s*:)/, "key")
-    )
-      continue;
-    if (eat(/^[(),:[\]{}]/, "punc")) continue;
-    if (eat(/^\s+/, "ws")) continue;
-    if (eat(/^[^\s"(),:[\]{}]+/, "plain")) continue;
-    tokens.push({ t: "plain", v: rem[0] });
-    rem = rem.slice(1);
-  }
-  return tokens;
-}
-
-export const TOKEN_COLOR: Record<HToken["t"], string> = {
-  comment: "#444c6a",
-  kw: "#c792ea",
-  fn: "#82aaff",
-  str: "#c3e88d",
-  num: "#f78c6c",
-  key: "#89ddff",
-  punc: "#8890ab",
-  div: "#333748",
-  plain: "#dde1f0",
-  ws: "transparent",
-};
-
-
-====================
-C:\Users\karac\Documents\programming\web\JQZZ2\frontend\src\utils\syntaxHighlighterScript.tsx
-====================
-import { tokenizeLine, TOKEN_COLOR } from "./syntaxHighlighter";
-
-export const HighlightedScript = ({ text }: { text: string }) => {
-  return (
-    <>
-      {text.split("\n").map((line, li) => (
-        <span key={li} style={{ display: "block", minHeight: "1.8em" }}>
-          {line === "---" ? (
-            <span
-              style={{
-                color: TOKEN_COLOR.div,
-                borderBottom: "1px solid #333748",
-                display: "block",
-              }}
-            >
-              {line || " "}
-            </span>
-          ) : (
-            tokenizeLine(line).map((tk, ti) => (
-              <span key={ti} style={{ color: TOKEN_COLOR[tk.t] }}>
-                {tk.v}
-              </span>
-            ))
-          )}
-          {line.length === 0 && "\u00a0"}
-        </span>
-      ))}
-    </>
-  );
-};
-
 

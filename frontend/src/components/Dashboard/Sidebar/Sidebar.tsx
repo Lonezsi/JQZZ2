@@ -17,6 +17,7 @@ interface SidebarProps {
   onSnippetDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
   onSnippetDragEnd: () => void;
   onSnippetClick: (id: string) => void;
+  onHomeClick: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSnippetDragStart,
   onSnippetDragEnd,
   onSnippetClick,
+  onHomeClick,
 }) => {
   return (
     <aside className="jqzz-sidebar">
@@ -51,7 +53,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="jqzz-sid-section jqzz-sid-separator">
         <div className="jqzz-sid-label">Navigaton</div>
-        <button className="jqzz-sid-btn">Home</button>
+        <button className="jqzz-sid-btn" onClick={onHomeClick}>
+          Home
+        </button>
       </div>
 
       <div className="jqzz-sid-section">

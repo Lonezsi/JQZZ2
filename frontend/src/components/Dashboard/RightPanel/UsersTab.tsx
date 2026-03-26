@@ -11,10 +11,20 @@ interface UserWebSocketMessage {
 export const UsersTab: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
 
+  // Initial fetch
   useEffect(() => {
     userService.getAll().then((res) => setUsers(res.data));
   }, []);
 
+  // Refresh users every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      userService.getAll().then((res) => setUsers(res.data));
+    }, 60000); // 60 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  // WebSocket updates (still keep for instant updates)
   useWebSocket<UserWebSocketMessage>("/topic/users", (msg) => {
     const { event, user } = msg;
     setUsers((prev) => {
@@ -52,6 +62,12 @@ export const UsersTab: React.FC = () => {
           </div>
           <div className="jqzz-stat-label">Offline</div>
         </div>
+        <button
+          onClick={() => userService.getAll().then((res) => setUsers(res.data))}
+          className="jqzz-refresh-btn"
+        >
+          ↻ Refresh
+        </button>
       </div>
 
       {online > 0 && <div className="jqzz-section-label">Online</div>}
@@ -61,7 +77,6 @@ export const UsersTab: React.FC = () => {
           <div key={u.id} className="jqzz-user-row">
             <div className="jqzz-user-avatar online">
               {u.name[0].toUpperCase()}
-              {/* Green dot inside avatar? The online class already gives a cyan border; we'll add a dot outside */}
             </div>
             <div className="jqzz-user-info">
               <div className="jqzz-user-name">{u.name}</div>
