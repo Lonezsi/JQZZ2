@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { User } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
-import { ImageUploadModal } from "./ImageUploadModal";
+import { ImagePicker } from "./ImagePicker";
 
 interface IdentityModalProps {
   current: User | null;
@@ -25,25 +25,15 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginId, setLoginId] = useState("");
-  const [showImageModal, setShowImageModal] = useState(false);
-
-  const handleImageSave = (imageUrl: string) => {
-    setProfilePictureUrl(imageUrl);
-    setShowImageModal(false);
-  };
 
   const handleSave = async () => {
     if (!name.trim()) return;
     setLoading(true);
     try {
       if (!current) {
-        // New user: register with the given name
         const user = await register(name.trim());
-        if (user) {
-          onSave(user);
-        }
+        if (user) onSave(user);
       } else {
-        // Existing user: update fields
         const updates: Partial<User> = {};
         if (name !== current.name) updates.name = name;
         if (handle !== current.handle && handle.trim())
@@ -89,7 +79,6 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
     setLoading(true);
     try {
       await logout();
-      // After logout, create a new guest user
       const newUser = await register("Guest");
       onSave(newUser);
     } catch (error) {
@@ -113,7 +102,6 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
     setLoading(true);
     try {
       await userService.delete(current.id);
-      // After deletion, create a new guest user
       const newUser = await register("Guest");
       onSave(newUser);
     } catch (error) {
@@ -180,50 +168,21 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
-                    <div
-                      className="jqzz-field-label"
-                      style={{ marginBottom: 5 }}
-                    >
-                      Profile Picture
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "8px",
-                        alignItems: "center",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      {profilePictureUrl && (
-                        <img
-                          src={profilePictureUrl}
-                          alt="Profile"
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                            borderRadius: "50%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      )}
+                    <div className="jqzz-field-label">Profile Picture</div>
+                    <ImagePicker
+                      value={profilePictureUrl}
+                      onChange={setProfilePictureUrl}
+                    />
+                    {profilePictureUrl && (
                       <button
                         type="button"
                         className="jqzz-modal-btn"
-                        onClick={() => setShowImageModal(true)}
-                        style={{ flex: "0 0 auto" }}
+                        onClick={() => setProfilePictureUrl("")}
+                        style={{ marginTop: "4px", width: "100%" }}
                       >
-                        {profilePictureUrl ? "Change Image" : "Upload Image"}
+                        Remove
                       </button>
-                      {profilePictureUrl && (
-                        <button
-                          type="button"
-                          className="jqzz-modal-btn"
-                          onClick={() => setProfilePictureUrl("")}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </>
                 )}
 
@@ -312,15 +271,6 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Image Upload Modal */}
-      {showImageModal && (
-        <ImageUploadModal
-          currentImageUrl={profilePictureUrl}
-          onClose={() => setShowImageModal(false)}
-          onSave={handleImageSave}
-        />
-      )}
     </>
   );
 };

@@ -7,6 +7,8 @@ export type Phase =
   | "TEXT"
   | "DIVIDER";
 
+export type ImageVisibility = "PUBLIC" | "PRIVATE" | "SEMI_PRIVATE";
+
 export type EditorMode = "visual" | "text";
 export type RightTab = "context" | "users";
 

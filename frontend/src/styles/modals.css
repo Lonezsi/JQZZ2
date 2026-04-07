@@ -210,3 +210,6 @@
 .jqzz-modal-btn.primary:hover {
   background: color-mix(in srgb, var(--accent) 85%, black);
 }
+.jqzz-image-gallery-item:hover {
+  background: var(--bg-highlight);
+}

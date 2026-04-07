@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Action, Question, Answer, Phase } from "../../../types";
 import { generateId } from "../../../utils/idGenerator";
+import { ImagePicker } from "../../Modals/ImagePicker";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -122,13 +123,11 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
             />
           </div>
           <div className="jqzz-field-group">
-            <div className="jqzz-field-label">Image URL</div>
-            <input
-              className="jqzz-field-input"
-              placeholder="optional..."
+            <div className="jqzz-field-label">Image</div>
+            <ImagePicker
               value={question.imageUrl || ""}
-              onChange={(e) =>
-                onQuestionUpdate(question.id, { imageUrl: e.target.value })
+              onChange={(url) =>
+                onQuestionUpdate(question.id, { imageUrl: url })
               }
             />
           </div>

@@ -46,6 +46,7 @@ export const Welcome: React.FC<WelcomeProps> = () => {
         </div>
         <div className="jqzz-feature">
           <h3>AI-Slopify</h3>
+          <h4>/coming soon/</h4>
           <p>
             You can type a prompt and it'll generate something. Probably
             garbage. But maybe garbage you can fix.

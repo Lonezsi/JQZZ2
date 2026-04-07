@@ -1,64 +1,56 @@
-import React, { useState, useRef } from "react";
+import { useState } from "react";
+import { api } from "../../services/api";
+import type { ImageVisibility } from "../../types";
 
 interface ImageUploadModalProps {
   onClose: () => void;
-  onSave: (imageUrl: string) => void;
-  currentImageUrl?: string;
+  onSave: (reference: string) => void;
+  userId: string;
 }
 
 export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   onClose,
   onSave,
-  currentImageUrl = "",
+  userId,
 }) => {
-  const [imageUrl, setImageUrl] = useState(currentImageUrl);
-  const [previewUrl, setPreviewUrl] = useState(currentImageUrl);
-  const [activeTab, setActiveTab] = useState<"url" | "upload">("url");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [handle, setHandle] = useState("");
+  const [visibility, setVisibility] = useState<ImageVisibility>("PRIVATE");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size must be less than 5MB");
-      return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      setPreviewUrl(URL.createObjectURL(f));
     }
-
-    // Check file type
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setPreviewUrl(result);
-      setImageUrl(result);
-    };
-    reader.readAsDataURL(file);
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value;
-    setImageUrl(url);
-    setPreviewUrl(url);
-  };
-
-  const handleSave = () => {
-    if (imageUrl && imageUrl.trim()) {
-      onSave(imageUrl.trim());
-    }
-    onClose();
-  };
-
-  const handleRemove = () => {
-    setImageUrl("");
-    setPreviewUrl("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const handleSave = async () => {
+    if (!file || !handle.trim()) return;
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("handle", handle.trim());
+    formData.append("ownerId", userId);
+    formData.append("visibility", visibility);
+    formData.append("file", file);
+    try {
+      const response = await api.post("/images/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "X-User-Id": userId,
+        },
+      });
+      const data = response.data;
+      const ref = visibility === "PUBLIC" ? data.handle : `:${data.handle}`;
+      onSave(ref);
+      onClose();
+    } catch (err) {
+      const msg = (err as Error).message;
+      alert(`Upload failed: ${msg}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,108 +59,46 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       <div
         className="jqzz-modal img-upload"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "400px" }}
       >
-        <h3>Profile Picture</h3>
-
-        {/* Preview section */}
+        <h3>Upload Image</h3>
+        <div className="jqzz-field-label">Handle</div>
+        <input
+          className="jqzz-modal-input"
+          placeholder="mycat (optional)"
+          value={handle}
+          onChange={(e) =>
+            setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+          }
+        />
+        <div className="jqzz-field-label">Visibility</div>
+        <select
+          className="jqzz-field-select"
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value as ImageVisibility)}
+        >
+          <option value="PUBLIC">Public (global)</option>
+          <option value="PRIVATE">Private (only me)</option>
+          <option value="SEMI_PRIVATE">Semi‑private (others can use)</option>
+        </select>
+        <div className="jqzz-field-label">Image File</div>
+        <input type="file" accept="image/*" onChange={handleFileChange} />
         {previewUrl && (
-          <div style={{ textAlign: "center", marginBottom: "20px" }}>
-            <img
-              src={previewUrl}
-              alt="Preview"
-              style={{
-                width: "120px",
-                height: "120px",
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: `2px solid var(--accent)`,
-              }}
-            />
-
-            <button
-              className="jqzz-modal-btn"
-              onClick={handleRemove}
-              style={{
-                width: "100%",
-              }}
-            >
-              Remove
-            </button>
-          </div>
+          <img
+            src={previewUrl}
+            alt="Preview"
+            style={{ maxWidth: "100%", marginTop: 8 }}
+          />
         )}
-
-        {/* Tab switcher */}
-        <div className="jqzz-rpanel-tabs" style={{ marginBottom: "16px" }}>
-          <button
-            className={`jqzz-rpanel-tab${activeTab === "url" ? " active" : ""}`}
-            onClick={() => setActiveTab("url")}
-          >
-            URL
-          </button>
-          <button
-            className={`jqzz-rpanel-tab${activeTab === "upload" ? " active" : ""}`}
-            onClick={() => setActiveTab("upload")}
-          >
-            Upload
-          </button>
-        </div>
-
-        {/* URL input tab */}
-        {activeTab === "url" && (
-          <div>
-            <div className="jqzz-field-label">Image URL</div>
-            <input
-              className="jqzz-modal-input"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={handleUrlChange}
-            />
-          </div>
-        )}
-
-        {/* File upload tab */}
-        {activeTab === "upload" && (
-          <div>
-            <div className="jqzz-field-label">Upload Image</div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              ref={fileInputRef}
-              style={{
-                width: "100%",
-                padding: "8px",
-                background: "var(--bg-highlight)",
-                border: "1px solid var(--border-light)",
-                borderRadius: "var(--radius-sm)",
-                color: "var(--text)",
-                cursor: "pointer",
-              }}
-            />
-            <div
-              style={{
-                fontSize: "10px",
-                color: "var(--text-dim)",
-                marginTop: "8px",
-              }}
-            >
-              Supports JPG, PNG, GIF. Max size 5MB.
-            </div>
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="jqzz-modal-row" style={{ marginTop: "20px" }}>
+        <div className="jqzz-modal-row">
           <button className="jqzz-modal-btn" onClick={onClose}>
             Cancel
           </button>
           <button
             className="jqzz-modal-btn primary"
             onClick={handleSave}
-            disabled={!imageUrl?.trim()}
+            disabled={loading || !file}
           >
-            Save
+            {loading ? "Uploading..." : "Upload"}
           </button>
         </div>
       </div>

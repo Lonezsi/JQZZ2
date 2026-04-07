@@ -1,6 +1,6 @@
 $files = Get-ChildItem -Recurse -File | Where-Object {
     $_.FullName -notmatch '\\node_modules\\' -and
-    $_.Extension -in '.java'
+    $_.Extension -in '.java', '.ts', '.tsx', '.md'
 }
 
 $out = "combined.txt"
