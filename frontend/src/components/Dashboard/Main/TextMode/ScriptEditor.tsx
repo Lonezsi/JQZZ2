@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import type { Quiz, Question, Action } from "../../../../types";
 import { quizToScript } from "../../../../utils/scriptSerializer";
 import { parseScript } from "../../../../utils/scriptParser";
+import { EMPTY_SCRIPT } from "../../../../utils/scriptSerializer";
 import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
 
 interface ScriptEditorProps {
@@ -96,7 +97,32 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
         </span>
         <button
           className="jqzz-ai-btn"
-          onClick={() => alert("Generating quiz from AI prompt...")}
+          onClick={() => {
+            if (!aiPrompt.trim()) {
+              setText(EMPTY_SCRIPT);
+              return;
+            }
+            // Insert a starter template based on the prompt
+            const template = `# ${aiPrompt.trim()} — JQzz Script v1
+# Author: generated
+
+NewQuestion Q1 (
+  prompt: "${aiPrompt.trim()}?",
+  type: "prewritten-single",
+  elaboration: "Add your explanation here",
+  answers: [
+    { text: "Answer A", value: 100 },
+    { text: "Answer B", value: 0 },
+  ],
+)
+
+ShowWaiting(Q1, time: 8)
+ShowQuestion(Q1, time: 30)
+ShowAnswers(Q1, time: 15)
+ShowResult(Q1, time: 10)
+`;
+            setText(template);
+          }}
         >
           Generate
         </button>

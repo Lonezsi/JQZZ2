@@ -12,6 +12,8 @@ interface SidebarProps {
   activeQuizId: number | null;
   onSelectQuiz: (id: number) => void;
   onNewQuiz: () => void;
+  onImport: () => void;
+  onJoinLobby: () => void;
   snippets: Snippet[];
   draggingSnippet: string | null;
   onSnippetDragStart: (e: React.DragEvent<HTMLDivElement>, id: string) => void;
@@ -27,6 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeQuizId,
   onSelectQuiz,
   onNewQuiz,
+  onImport,
+  onJoinLobby,
   snippets,
   draggingSnippet,
   onSnippetDragStart,
@@ -70,11 +74,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
         <button
           className="jqzz-sid-btn"
-          onClick={() => alert("Import .txt flow")}
+          onClick={onImport}
         >
           ↑ Import .txt <span className="jqzz-kbd">^I</span>
         </button>
-        <button className="jqzz-sid-btn" onClick={() => alert("Join lobby")}>
+        <button className="jqzz-sid-btn" onClick={onJoinLobby}>
           ▶ Join Lobby
         </button>
       </div>

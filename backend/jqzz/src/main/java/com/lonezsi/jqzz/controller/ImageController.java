@@ -70,7 +70,9 @@ public class ImageController {
 
     @GetMapping("/{id}")
     public ResponseEntity<byte[]> getImage(@PathVariable Long id,
-                                           @RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+                                           @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                           @RequestParam(value = "userId", required = false) String queryUserId) {
+        String currentUserId = headerUserId != null ? headerUserId : queryUserId;
         if (currentUserId == null) {
             return ResponseEntity.badRequest().build();
         }
@@ -86,7 +88,10 @@ public class ImageController {
     }
 
     @GetMapping
-    public ResponseEntity<?> listAccessibleImages(@RequestHeader("X-User-Id") String currentUserId) {
+    public ResponseEntity<?> listAccessibleImages(@RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+        if (currentUserId == null || currentUserId.isBlank()) {
+            return ResponseEntity.badRequest().body("User ID required");
+        }
         return ResponseEntity.ok(imageService.listAccessibleImages(currentUserId));
     }
 

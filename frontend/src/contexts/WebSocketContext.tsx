@@ -25,7 +25,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const stompClient = new Client({
-      webSocketFactory: () => new SockJS("http://127.0.0.1:8080/ws"),
+      webSocketFactory: () => new SockJS(`${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080"}/ws`),
       reconnectDelay: 5000,
       onConnect: () => {
         console.log("WebSocket connected");

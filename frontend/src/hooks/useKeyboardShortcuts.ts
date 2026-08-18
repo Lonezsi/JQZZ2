@@ -19,6 +19,10 @@ export const useKeyboardShortcuts = ({
 }: ShortcutHandlers) => {
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
+      // Don't intercept shortcuts when typing in text fields
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable;
+
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key === "k") {
         e.preventDefault();
@@ -36,9 +40,9 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         onExport?.();
       }
-      if (mod && e.key === "a") {
+      if (mod && e.key === "a" && !isTextInput) {
         e.preventDefault();
-        onSelectAll?.(); // handle Ctrl+A
+        onSelectAll?.();
       }
       if (e.key === "Escape") {
         onEscape?.();

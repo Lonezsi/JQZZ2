@@ -35,7 +35,18 @@ public class Action {
         this.time = time;
     }
 
+    public Long getId(){return id;}
+    public void setId(Long id){this.id=id;}
+
     public Question getQuestion(){return question;}
+    public void setQuestion(Question question){this.question=question;}
+
     public Phase getPhase(){return phase;}
+    public void setPhase(Phase phase){this.phase=phase;}
+
     public int getTime(){return time;}
+    public void setTime(int time){this.time=time;}
+
+    public int getOrderIndex(){return orderIndex;}
+    public void setOrderIndex(int orderIndex){this.orderIndex=orderIndex;}
 }

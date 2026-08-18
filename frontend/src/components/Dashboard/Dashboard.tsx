@@ -138,12 +138,28 @@ export const Dashboard: React.FC = () => {
     return () => clearInterval(cleanupInterval);
   }, [user]);
 
+  const handleCommand = useCallback((label: string) => {
+    switch (label) {
+      case "New Quiz":
+        newQuiz();
+        break;
+      case "Export Current Quiz":
+        handleExport();
+        break;
+      case "Toggle Text Mode":
+        setMode(mode === "visual" ? "text" : "visual");
+        break;
+      default:
+        console.log("Unhandled command:", label);
+    }
+  }, [newQuiz, handleExport, mode, setMode]);
+
   return (
     <div className="surface-imperfection-light-full">
       <div className="surface-imperfection-light-scratch">
         <div className="jqzz-dash surface surface-imperfection-floor">
           {paletteOpen && (
-            <CommandPalette onClose={() => setPaletteOpen(false)} />
+            <CommandPalette onClose={() => setPaletteOpen(false)} onExecute={handleCommand} />
           )}
           {identityOpen && user && (
             <IdentityModal
@@ -160,9 +176,31 @@ export const Dashboard: React.FC = () => {
             activeQuizId={activeQuizId}
             onSelectQuiz={(id) => {
               setActiveQuizId(id);
-              clearSelectedActions(); // clear selection when switching quizzes
+              clearSelectedActions();
             }}
             onNewQuiz={newQuiz}
+            onImport={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = ".txt";
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (!file) return;
+                const text = await file.text();
+                import("../../utils/scriptParser").then(({ parseScript }) => {
+                  const existingQuestions = quiz?.actions
+                    .map((a) => a.question)
+                    .filter(Boolean) ?? [];
+                  const { questions, actions, errors } = parseScript(text, existingQuestions);
+                  if (errors.length > 0) {
+                    console.warn("Parse errors:", errors);
+                  }
+                  handleParsed(questions, actions);
+                });
+              };
+              input.click();
+            }}
+            onJoinLobby={() => alert("Lobby list not implemented yet")}
             snippets={SNIPPETS}
             draggingSnippet={draggingSnippet}
             onSnippetDragStart={onSnippetDragStart}
@@ -176,6 +214,18 @@ export const Dashboard: React.FC = () => {
             setMode={setMode}
             onOpenPalette={() => setPaletteOpen(true)}
             onExport={handleExport}
+            onStart={() => {
+              if (!quiz) {
+                newQuiz();
+                return;
+              }
+              if (quiz.actions.length === 0) {
+                alert("Quiz has no actions yet. Add some questions first!");
+                return;
+              }
+              setMode("visual");
+              setPaletteOpen(true);
+            }}
             selectedActionIds={selectedActionIds}
             toggleSelectAction={toggleSelectAction}
             dragActionId={dragActionId}

@@ -4,9 +4,10 @@ import { COMMANDS } from "../../constants/commands";
 
 interface CommandPaletteProps {
   onClose: () => void;
+  onExecute: (label: string) => void;
 }
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose, onExecute }) => {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +25,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
     setActiveIdx(0);
   }, [query]);
 
+  const execute = (label: string) => {
+    onExecute(label);
+    onClose();
+  };
+
   const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       onClose();
@@ -38,8 +44,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
       return;
     }
     if (e.key === "Enter" && filtered[activeIdx]) {
-      alert(`Executing: ${filtered[activeIdx].label}`);
-      onClose();
+      execute(filtered[activeIdx].label);
     }
   };
 
@@ -65,10 +70,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose }) => {
             <div
               key={cmd.label}
               className={`jqzz-cmd-item${i === activeIdx ? " active" : ""}`}
-              onClick={() => {
-                alert(`Executing: ${cmd.label}`);
-                onClose();
-              }}
+              onClick={() => execute(cmd.label)}
               onMouseEnter={() => setActiveIdx(i)}
             >
               <span className="jqzz-cmd-icon">{cmd.icon}</span>

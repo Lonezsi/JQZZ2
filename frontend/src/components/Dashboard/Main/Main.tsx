@@ -27,6 +27,7 @@ interface MainProps {
   aiPrompt: string;
   setAiPrompt: (v: string) => void;
   onParsed: (questions: Question[], actions: Action[]) => void;
+  onStart: () => void;
 }
 
 export const Main: React.FC<MainProps> = ({
@@ -51,6 +52,7 @@ export const Main: React.FC<MainProps> = ({
   aiPrompt,
   setAiPrompt,
   onParsed,
+  onStart,
 }) => {
   const { quiz, renderItems } = useQuiz();
 
@@ -61,6 +63,7 @@ export const Main: React.FC<MainProps> = ({
         setMode={setMode}
         onOpenPalette={onOpenPalette}
         onExport={onExport}
+        onStart={onStart}
       />
 
       <div

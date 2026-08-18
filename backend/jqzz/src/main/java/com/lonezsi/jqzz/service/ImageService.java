@@ -116,7 +116,7 @@ public class ImageService {
     public void deleteImage(Long id, String currentUserId) {
         Image img = imageRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Image not found"));
-        if (!img.getOwnerId().equals(currentUserId)) {
+        if (img.getOwnerId() == null || !img.getOwnerId().equals(currentUserId)) {
             throw new SecurityException("You can only delete your own images");
         }
         imageRepository.deleteById(id);

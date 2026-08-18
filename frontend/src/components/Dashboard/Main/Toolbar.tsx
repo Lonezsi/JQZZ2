@@ -6,6 +6,7 @@ interface ToolbarProps {
   setMode: (mode: EditorMode) => void;
   onOpenPalette: () => void;
   onExport: () => void;
+  onStart: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -13,6 +14,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setMode,
   onOpenPalette,
   onExport,
+  onStart,
 }) => {
   return (
     <div className="jqzz-toolbar">
@@ -39,7 +41,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </button>
       <button
         className="jqzz-toolbar-btn run"
-        onClick={() => alert("Starting quiz...")}
+        onClick={onStart}
       >
         ▶ Start
       </button>

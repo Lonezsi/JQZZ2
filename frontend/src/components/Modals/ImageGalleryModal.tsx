@@ -48,11 +48,14 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
     if (user) fetchImages();
   }, [user]);
 
+  const toRef = (img: Image): string => {
+    if (img.ownerId == null) return img.handle; // public
+    if (img.ownerId === user?.id) return `:${img.handle}`; // self
+    return `${img.ownerId}:${img.handle}`; // other user
+  };
+
   const filtered = images.filter((img) => {
-    const ref =
-      img.ownerId === user?.id
-        ? `:${img.handle}`
-        : `${img.ownerId}:${img.handle}`;
+    const ref = toRef(img);
     return ref.toLowerCase().includes(search.toLowerCase());
   });
 
@@ -83,10 +86,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
         >
           {loading && <div>Loading...</div>}
           {filtered.map((img) => {
-            const ref =
-              img.ownerId === user?.id
-                ? `:${img.handle}`
-                : `${img.ownerId}:${img.handle}`;
+            const ref = toRef(img);
             const url = imageUrls.get(img.id);
             return (
               <div
