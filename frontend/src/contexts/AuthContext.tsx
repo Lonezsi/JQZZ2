@@ -6,9 +6,11 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import axios from "axios";
 import type { User } from "../types";
 import { userService } from "../services/userService";
-import { api } from "../services/api";
+import { guestName } from "../utils/guestName";
+import { Atmosphere } from "../components/common/Atmosphere";
 
 interface AuthContextType {
   user: User | null;
@@ -36,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreachable, setUnreachable] = useState(false);
   const initializing = useRef(false);
 
   const login = useCallback(async (id: string): Promise<User> => {
@@ -66,59 +69,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (initializing.current) return;
     initializing.current = true;
 
-    const stored = localStorage.getItem("userId");
-    if (stored) {
-      userService
-        .getOne(stored)
-        .then((res) => {
-          setUser(res.data);
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem("userId");
-          const randomSuffix = Math.floor(Math.random() * 10000);
-          register(`Guest_${randomSuffix}`)
-            .then(() => setLoading(false))
-            .catch((err) => {
-              console.error("Failed to create user", err);
-              setLoading(false);
-            });
-        });
-    } else {
-      const randomSuffix = Math.floor(Math.random() * 10000);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      register(`Guest_${randomSuffix}`)
-        .then(() => setLoading(false))
-        .catch((err) => {
-          console.error("Failed to create user", err);
-          setLoading(false);
-        });
-    }
-  }, [register]);
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (user) {
-        const url = `${api.defaults.baseURL}/users/logout`;
-        const body = JSON.stringify({ id: user.id });
-        fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: body,
-          keepalive: true,
-        }).catch((err) => console.error("Logout beacon failed", err));
+    // Keep the stored identity unless the server says it no longer exists:
+    // a backend that is down or restarting must not cost the user their account.
+    const restore = async (attempt: number) => {
+      const stored = localStorage.getItem("userId");
+      try {
+        if (stored) {
+          try {
+            await login(stored);
+          } catch (err) {
+            if (!axios.isAxiosError(err) || err.response?.status !== 404) throw err;
+            localStorage.removeItem("userId");
+            await register(guestName());
+          }
+        } else {
+          await register(guestName());
+        }
+        setUnreachable(false);
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed to initialize user, retrying", err);
+        setUnreachable(true);
+        setTimeout(() => restore(attempt + 1), Math.min(10000, 1000 * 2 ** attempt));
       }
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [user]);
+    restore(0);
+  }, [login, register]);
 
   const updateUser = useCallback((data: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...data } : null));
   }, []);
 
   if (loading) {
-    return <div className="jqzz-dash">Initializing user...</div>;
+    return (
+      <div className="jqzz-app">
+        <Atmosphere />
+        <div className="jqzz-status-screen" role="status">
+          <span className="jqzz-annot">{unreachable ? "server · down" : "server · connecting"}</span>
+          <p>
+            {unreachable
+              ? "can't reach the server. is the backend running? trying again…"
+              : "logging you in…"}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -22,6 +22,7 @@ public class Answer {
     @JsonIgnore
     private Question question;
 
+    @Column(length = 1000)
     private String text;
 
     @Column(name = "answer_value")

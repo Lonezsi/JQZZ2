@@ -1,145 +1,161 @@
+/* Welcome: a poster. One burst of light, a lot of air, notes in the margins. */
 .jqzz-welcome-root {
-  width: 100%;
+  position: relative;
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  color: var(--text-primary);
+  align-items: center;
+  padding: 40px 56px 32px;
 }
 
-.jqzz-welcome-bg {
+.jqzz-welcome-notes {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  pointer-events: none;
+}
+.jqzz-welcome-notes > * {
+  position: absolute;
+}
+.w-tl {
+  top: 4px;
+  left: 4px;
+  line-height: 1.5;
+}
+.w-vert-l {
+  top: 220px;
+  left: 2px;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  transform: rotate(180deg);
 }
 
-/* HERO */
+/* Hero */
 .jqzz-welcome-hero {
-  padding: 0rem 2rem 4rem;
-  display: flex;
-  justify-content: center;
   position: relative;
-  z-index: 1;
-}
-
-.jqzz-welcome-hero-content {
-  max-width: 900px;
-  text-align: center;
-}
-
-.jqzz-welcome-logo {
-  font-size: 4rem;
-  font-weight: 800;
-  letter-spacing: 6px;
-  margin-bottom: 1rem;
-}
-
-.jqzz-welcome-title {
-  font-size: 32px;
-  margin-bottom: 1rem;
-}
-
-.jqzz-welcome-subtitle {
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  margin-bottom: 2.5rem;
-}
-
-.jqzz-welcome-actions {
   display: flex;
-  gap: 1rem;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 12px;
+  max-width: 720px;
+}
+.jqzz-welcome-burst {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  width: 520px;
+  height: 420px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.jqzz-welcome-burst::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side at 42% 46%, var(--phase-QUESTION), transparent),
+    radial-gradient(closest-side at 64% 60%, var(--warm), transparent 80%);
+  opacity: 0.55;
+}
+.jqzz-welcome-burst::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image: var(--grain);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
+  -webkit-mask: radial-gradient(closest-side, #000, transparent);
+  mask: radial-gradient(closest-side, #000, transparent);
+}
+.jqzz-welcome-dots {
+  inset: 10% 6% 0 30%;
+  opacity: 0.55;
+}
+.jqzz-welcome-axis {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  bottom: -40px;
+  width: 1px;
+  background: linear-gradient(transparent, var(--text-3) 20%, var(--text-3) 80%, transparent);
+}
+.jqzz-welcome-orbit {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 34%;
+  height: 120%;
+  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
+  border-radius: 50%;
+  -webkit-mask: linear-gradient(#000 40%, transparent 70%);
+  mask: linear-gradient(#000 40%, transparent 70%);
+}
+.jqzz-welcome-logo {
+  position: relative;
+  width: 210px;
+  height: 210px;
+  background: var(--text);
+  -webkit-mask: url("/icon-white.png") center / contain no-repeat;
+  mask: url("/icon-white.png") center / contain no-repeat;
+}
+.jqzz-welcome-subtitle {
+  position: relative;
+  margin-top: 22px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--text);
+  max-width: 46ch;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-strong);
+}
+.jqzz-welcome-actions {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+.jqzz-welcome-actions .jqzz-toolbar-btn {
+  min-height: 38px;
+  padding: 6px 20px;
+  font-size: var(--fs-body);
+}
+.jqzz-welcome-hint {
+  position: relative;
+  margin-top: 12px;
 }
 
-/* BUTTONS */
-.jqzz-btn {
-  padding: 0.9rem 1.6rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.jqzz-btn.primary {
-  background: var(--primary);
-  color: white;
-}
-
-.jqzz-btn.primary:hover {
-  transform: translateY(-2px);
-}
-
-.jqzz-btn.secondary {
-  background: transparent;
-  border: 1px solid var(--border);
-}
-
-.jqzz-btn.secondary:hover {
-  background: var(--hover-bg-light);
-}
-
-/* FEATURES */
+/* What it is: four notes, the author's own words */
 .jqzz-welcome-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-  padding: 3rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0;
+  width: 100%;
+  max-width: 1040px;
+  margin-top: 64px;
+  border-top: 1px solid var(--line-strong);
 }
-
 .jqzz-feature {
-  padding: 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: transparent;
-  transition: all 0.2s ease;
-  backdrop-filter: brightness(0.5);
-  z-index: 2;
+  padding: 18px 20px 22px;
+  border-right: 1px solid var(--line);
 }
-
+.jqzz-feature:last-child {
+  border-right: none;
+}
 .jqzz-feature h3 {
-  margin-bottom: 20px;
+  margin: 6px 0 8px;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--text);
+}
+.jqzz-feature p {
+  color: var(--text-2);
+  line-height: 1.6;
 }
 
-.jqzz-feature:hover {
-  transform: translateY(-5px);
-  border-left: 2px solid var(--accent);
-}
-
-/* SHOWCASE */
-.jqzz-welcome-showcase {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  padding: 3rem 2rem;
-  gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.jqzz-showcase-card {
-  padding: 2rem;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
-  backdrop-filter: brightness(0.5);
-  z-index: 2;
-}
-
-.jqzz-showcase-card:hover {
-  transform: translateY(-5px);
-  border-left: 2px solid var(--accent);
-}
-
-.jqzz-showcase-card h2 {
-  color: var(--accent);
-}
-
-/* FOOTER */
 .jqzz-welcome-footer {
-  text-align: center;
-  padding: 3rem 1rem;
-  font-size: 1rem;
-  color: var(--text-secondary);
+  margin-top: 48px;
+  color: var(--text-3);
+  font-size: var(--fs-small);
 }

@@ -37,7 +37,7 @@ JQZZ is a real-time, multiplayer quiz platform built for flexibility and speed. 
 |-----------|------------------------------------------------|
 | Frontend  | React 19, TypeScript, Vite 7, Zustand, STOMP   |
 | Backend   | Spring Boot 4, Spring Data JPA, Lombok          |
-| Database  | MySQL (production), H2 (dev)                    |
+| Database  | H2 file database (default), MySQL (Docker)      |
 | Real-Time | STOMP over SockJS (WebSocket)                   |
 | Deploy    | Docker, Docker Compose                          |
 
@@ -51,6 +51,8 @@ JQZZ is a real-time, multiplayer quiz platform built for flexibility and speed. 
 docker-compose up --build
 ```
 
+Runs MySQL, the backend and the frontend (nginx proxies the API).
+
 - Frontend: [http://localhost:3000](http://localhost:3000)
 - Backend API: [http://localhost:8080](http://localhost:8080)
 - Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -58,7 +60,7 @@ docker-compose up --build
 ### Without Docker (Development)
 
 ```bash
-# Backend (requires Java 17+ and Maven)
+# Backend (requires Java 17+; no database server needed)
 cd backend/jqzz
 ./mvnw spring-boot:run
 

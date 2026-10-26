@@ -52,49 +52,37 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   };
 
   return (
-    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-      <div style={{ width: "40px", height: "40px" }}>
-        {loading && <div>...</div>}
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="Preview"
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "4px",
-              objectFit: "cover",
-            }}
-          />
-        )}
+    <div className="jqzz-picker">
+      <div className="jqzz-picker-thumb" title={value || undefined}>
+        {loading && <span className="jqzz-annot">…</span>}
+        {imageUrl && <img src={imageUrl} alt="Preview" />}
         {!imageUrl && !loading && value && (
-          <div style={{ fontSize: "12px", color: "var(--text-dim)" }}>?</div>
+          <span className="jqzz-annot" title="can't find this image">?</span>
         )}
-        {!value && (
-          <div style={{ fontSize: "12px", color: "var(--text-dim)" }}>none</div>
-        )}
+        {!value && <span className="jqzz-annot">none</span>}
       </div>
-      <div style={{ display: "flex", gap: "8px" }}>
-        <button
-          type="button"
-          className="jqzz-modal-btn"
-          onClick={() => setShowGallery(true)}
-        >
-          Select
-        </button>
-        <button
-          type="button"
-          className="jqzz-modal-btn"
-          onClick={() => setShowUpload(true)}
-        >
-          Upload
-        </button>
-      </div>
+      <button
+        type="button"
+        className="jqzz-modal-btn"
+        onClick={() => setShowGallery(true)}
+      >
+        Pick
+      </button>
+      <button
+        type="button"
+        className="jqzz-modal-btn"
+        onClick={() => setShowUpload(true)}
+      >
+        Upload
+      </button>
 
       {showGallery && (
         <ImageGalleryModal
           onClose={() => setShowGallery(false)}
-          onSelect={onChange}
+          onSelect={(reference) => {
+            onChange(reference);
+            setShowGallery(false);
+          }}
         />
       )}
       {showUpload && user && (

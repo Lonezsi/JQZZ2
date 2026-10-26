@@ -1,9 +1,67 @@
-/* Dashboard layout */
+/* App shell: aura behind, two columns in front, overlays on top */
+.jqzz-app {
+  position: relative;
+  height: 100vh;
+  isolation: isolate;
+}
+
 .jqzz-dash {
+  position: relative;
+  z-index: 1;
   display: flex;
   height: 100vh;
-  min-height: 600px;
-  background: var(--bg-base);
+  min-height: 560px;
   color: var(--text);
   overflow: hidden;
+}
+
+/* Narrower windows: same functions, less chrome */
+@media (max-width: 1180px) {
+  .jqzz-sidebar {
+    width: 212px;
+    min-width: 212px;
+  }
+}
+@media (max-width: 980px) {
+  .jqzz-notes,
+  .jqzz-welcome-notes {
+    display: none;
+  }
+  .jqzz-body.with-notes {
+    padding: 20px 16px 32px 4px;
+  }
+  .jqzz-welcome-root {
+    padding: 28px 20px;
+  }
+  .jqzz-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  /* beats main.css's flex: 1, which loads later */
+  .jqzz-toolbar .jqzz-toolbar-title {
+    order: 10;
+    flex: 1 0 100%;
+  }
+  .jqzz-inspector {
+    width: min(320px, 70%);
+  }
+}
+
+/* standalone status screens (loading, server unreachable) */
+.jqzz-status-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 24px;
+}
+.jqzz-status-screen p {
+  color: var(--text-2);
+  max-width: 34ch;
 }

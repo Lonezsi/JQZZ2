@@ -9,7 +9,7 @@ export const HighlightedScript = ({ text }: { text: string }) => {
             <span
               style={{
                 color: TOKEN_COLOR.div,
-                borderBottom: "1px solid #333748",
+                borderBottom: "1px solid var(--line-strong)",
                 display: "block",
               }}
             >

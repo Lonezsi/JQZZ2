@@ -20,7 +20,7 @@ public class Lobby {
 
     private String name;
 
-    private Long adminId;
+    private String adminId;
 
     @ManyToOne
     @JoinColumn(name="quiz_id")
@@ -39,8 +39,8 @@ public class Lobby {
     public String getName(){return name;}
     public void setName(String name){this.name=name;}
 
-    public Long getAdminId(){return adminId;}
-    public void setAdminId(Long adminId){this.adminId=adminId;}
+    public String getAdminId(){return adminId;}
+    public void setAdminId(String adminId){this.adminId=adminId;}
 
     public Quiz getQuiz(){return quiz;}
     public void setQuiz(Quiz quiz){this.quiz=quiz;}
@@ -69,24 +69,40 @@ public class Lobby {
         }
     }
 
+    /** Advances to the next playable action; returns null once the quiz is over. */
     public Action nextAction(){
+        List<Action> actions = quiz != null ? quiz.getActions() : List.of();
 
-        currentActionIndex++;
+        do {
+            currentActionIndex++;
+        } while (currentActionIndex < actions.size()
+                && !isPlayable(actions.get(currentActionIndex)));
 
-        if(currentActionIndex >= quiz.getActions().size())
+        if(currentActionIndex >= actions.size()){
+            currentActionIndex = actions.size();
+            time = 0;
             return null;
+        }
 
-        Action action = quiz.getActions().get(currentActionIndex);
+        Action action = actions.get(currentActionIndex);
         time = action.getTime();
 
         return action;
     }
 
     public boolean isQuizOver(){
-        if (quiz == null || quiz.getActions() == null || quiz.getActions().isEmpty()) {
+        if (quiz == null || quiz.getActions() == null) {
             return true;
         }
-        return currentActionIndex >= quiz.getActions().size() - 1;
+        List<Action> actions = quiz.getActions();
+        for (int i = currentActionIndex + 1; i < actions.size(); i++) {
+            if (isPlayable(actions.get(i))) return false;
+        }
+        return true;
+    }
+
+    private static boolean isPlayable(Action action){
+        return action.getPhase() != null && action.getPhase().isPlayable();
     }
 
     public Action getCurrentAction(){

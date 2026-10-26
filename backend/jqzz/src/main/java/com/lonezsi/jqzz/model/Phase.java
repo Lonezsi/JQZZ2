@@ -5,7 +5,15 @@ public enum Phase {
     QUESTION,
     ANSWER,
     ELABORATION,
-    RESULT;
+    RESULT,
+    // editor-only blocks, skipped when a game runs through the quiz
+    TEXT,
+    DIVIDER;
+
+    public boolean isPlayable() {
+        return this != TEXT && this != DIVIDER;
+    }
+
     public static Phase fromString(String phase) {
         try {
             return Phase.valueOf(phase.toUpperCase());

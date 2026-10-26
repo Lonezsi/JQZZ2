@@ -1,7 +1,9 @@
 package com.lonezsi.jqzz.controller;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.lonezsi.jqzz.model.Action;
 import com.lonezsi.jqzz.model.Lobby;
@@ -30,10 +33,19 @@ public class GameController {
         this.messaging = messaging;
     }
 
+    private Lobby findLobbyWithQuiz(Long lobbyId) {
+        Lobby lobby = lobbyRepository.findById(lobbyId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lobby not found"));
+        if (lobby.getQuiz() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Lobby has no quiz");
+        }
+        return lobby;
+    }
+
     @PostMapping("/{lobbyId}/start")
     public void start(@PathVariable Long lobbyId){
 
-        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+        Lobby lobby = findLobbyWithQuiz(lobbyId);
 
         lobby.reset();
         lobbyRepository.save(lobby);
@@ -47,19 +59,21 @@ public class GameController {
     @PostMapping("/{lobbyId}/next")
     public void next(@PathVariable Long lobbyId){
 
-        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+        Lobby lobby = findLobbyWithQuiz(lobbyId);
 
         Action action = lobby.nextAction();
 
         lobbyRepository.save(lobby);
 
-        messaging.convertAndSend(
-            "/topic/lobby/" + lobbyId,
-            (Object) Map.of(
-                "event","action",
-                "action", action
-            )
-        );
+        // Map.of rejects null values, and action is null once the quiz is over
+        Map<String, Object> message = new HashMap<>();
+        if (action == null) {
+            message.put("event", "quiz_finished");
+        } else {
+            message.put("event", "action");
+            message.put("action", action);
+        }
+        messaging.convertAndSend("/topic/lobby/" + lobbyId, (Object) message);
     }
 
     @MessageMapping("/lobby/{lobbyId}/timer")
@@ -68,9 +82,9 @@ public class GameController {
             return;
         }
 
-        Lobby lobby = lobbyRepository.findById(lobbyId).orElseThrow();
+        Lobby lobby = lobbyRepository.findById(lobbyId).orElse(null);
 
-        if (lobby.getAdminId() == null || !lobby.getAdminId().equals(update.getAdminId())) {
+        if (lobby == null || lobby.getAdminId() == null || !lobby.getAdminId().equals(update.getAdminId())) {
             // ignore non-admin timer updates
             return;
         }
@@ -93,14 +107,14 @@ public class GameController {
     }
 
     public static class TimerUpdate {
-        private Long adminId;
+        private String adminId;
         private Integer remaining;
 
-        public Long getAdminId() {
+        public String getAdminId() {
             return adminId;
         }
 
-        public void setAdminId(Long adminId) {
+        public void setAdminId(String adminId) {
             this.adminId = adminId;
         }
 

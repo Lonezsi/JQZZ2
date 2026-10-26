@@ -16,12 +16,16 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.lonezsi.jqzz.model.Lobby;
 import com.lonezsi.jqzz.model.Player;
 import com.lonezsi.jqzz.repository.LobbyRepository;
+import com.lonezsi.jqzz.repository.QuizRepository;
 
 @ExtendWith(MockitoExtension.class)
 class LobbyControllerTest {
 
     @Mock
     private LobbyRepository lobbyRepository;
+
+    @Mock
+    private QuizRepository quizRepository;
 
     @Mock
     private SimpMessagingTemplate messaging;
@@ -33,12 +37,12 @@ class LobbyControllerTest {
     void create_shouldSaveLobbyAndSendWebSocketEvent() {
         LobbyController.CreateLobbyRequest request = new LobbyController.CreateLobbyRequest();
         request.setName("Test Lobby");
-        request.setAdminId(123L);
+        request.setAdminId("123");
 
         Lobby savedLobby = new Lobby();
         savedLobby.setId(1L);
         savedLobby.setName("Test Lobby");
-        savedLobby.setAdminId(123L);
+        savedLobby.setAdminId("123");
         savedLobby.setCurrentActionIndex(-1);
         savedLobby.getPlayers().add(new Player("123", 0));
 
@@ -49,7 +53,7 @@ class LobbyControllerTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getName()).isEqualTo("Test Lobby");
-        assertThat(result.getAdminId()).isEqualTo(123L);
+        assertThat(result.getAdminId()).isEqualTo("123");
         assertThat(result.getCurrentActionIndex()).isEqualTo(-1);
         assertThat(result.getPlayers()).hasSize(1);
         assertThat(result.isQuizOver()).isTrue();
@@ -65,7 +69,7 @@ class LobbyControllerTest {
         Lobby lobby = new Lobby();
         lobby.setId(1L);
         lobby.setName("Test Lobby");
-        lobby.setAdminId(123L);
+        lobby.setAdminId("123");
 
         when(lobbyRepository.findById(1L)).thenReturn(Optional.of(lobby));
         when(lobbyRepository.save(org.mockito.ArgumentMatchers.any(Lobby.class))).thenAnswer(i -> i.getArgument(0));

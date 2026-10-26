@@ -59,97 +59,62 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
     return ref.toLowerCase().includes(search.toLowerCase());
   });
 
+  const visibilityLabel: Record<string, string> = {
+    PUBLIC: "public",
+    PRIVATE: "only you",
+    SEMI_PRIVATE: "shared",
+  };
+
   return createPortal(
     <div className="jqzz-modal-overlay" onClick={onClose}>
+      <div className="jqzz-overlay-bloom" aria-hidden="true" />
       <div
-        className="jqzz-modal"
-        style={{ width: "600px" }}
+        className="jqzz-modal wide jqzz-holo sheen"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="jqzz-gallery-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3>Select Image</h3>
+        <div className="jqzz-holo-dots" aria-hidden="true" />
+        <div className="jqzz-modal-head">
+          <h3 id="jqzz-gallery-title" className="jqzz-chroma">pick a picture</h3>
+          <span className="jqzz-annot">{images.length} available</span>
+        </div>
         <input
-          type="text"
-          placeholder="Search by reference..."
+          type="search"
+          placeholder="search by name"
+          aria-label="Search pictures"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="jqzz-modal-input"
         />
-        <div
-          style={{
-            maxHeight: "400px",
-            overflowY: "auto",
-            marginTop: "12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
-          {loading && <div>Loading...</div>}
+        <div className="jqzz-gallery-grid">
+          {loading && <p className="jqzz-panel-hint">loading…</p>}
           {filtered.map((img) => {
             const ref = toRef(img);
             const url = imageUrls.get(img.id);
             return (
-              <div
+              <button
                 key={img.id}
                 onClick={() => onSelect(ref)}
                 className="jqzz-image-gallery-item"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "8px",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  transition: "background 0.1s",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    "var(--bg-highlight)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "transparent")
-                }
+                style={{ "--i": filtered.indexOf(img) } as React.CSSProperties}
               >
-                {url ? (
-                  <img
-                    src={url}
-                    alt={ref}
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "4px",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      background: "var(--bg-elevated)",
-                      borderRadius: "4px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "12px",
-                    }}
-                  >
-                    ?
-                  </div>
-                )}
-                <span style={{ fontFamily: "monospace", fontSize: "12px" }}>
-                  {ref}
+                <span className="jqzz-gallery-thumb">
+                  {url ? <img src={url} alt="" /> : <span aria-hidden="true">?</span>}
                 </span>
-              </div>
+                <span className="jqzz-gallery-ref">{ref}</span>
+                <span className="jqzz-annot">{visibilityLabel[img.visibility] ?? img.visibility}</span>
+              </button>
             );
           })}
-          {filtered.length === 0 && !loading && (
-            <div style={{ textAlign: "center", padding: "20px" }}>
-              No images found.
-            </div>
-          )}
         </div>
-        <div className="jqzz-modal-row" style={{ marginTop: "16px" }}>
+        {filtered.length === 0 && !loading && (
+          <p className="jqzz-panel-hint">
+            {images.length === 0 ? "no pictures yet. upload one first." : "nothing matches that."}
+          </p>
+        )}
+        <div className="jqzz-modal-row">
           <button className="jqzz-modal-btn" onClick={onClose}>
             Cancel
           </button>

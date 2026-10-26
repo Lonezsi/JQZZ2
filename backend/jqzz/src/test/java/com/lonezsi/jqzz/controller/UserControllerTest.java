@@ -117,7 +117,7 @@ class UserControllerTest {
         user.setName("Test User");
 
         when(userRepository.findById("test123")).thenReturn(Optional.of(user));
-        when(userRepository.existsByHandle("newhandle")).thenReturn(false);
+        when(userRepository.findByHandle("newhandle")).thenReturn(null);
         when(userRepository.save(any(User.class))).thenReturn(user);
 
         mockMvc.perform(post("/users/test123/handle")
@@ -135,7 +135,10 @@ class UserControllerTest {
 
         // Use lenient() to avoid unnecessary stubbing error
         lenient().when(userRepository.findById("test123")).thenReturn(Optional.of(user));
-        when(userRepository.existsByHandle("existing")).thenReturn(true);
+        User other = new User();
+        other.setId("other456");
+        other.setHandle("existing");
+        when(userRepository.findByHandle("existing")).thenReturn(other);
 
         mockMvc.perform(post("/users/test123/handle")
                         .contentType(MediaType.APPLICATION_JSON)

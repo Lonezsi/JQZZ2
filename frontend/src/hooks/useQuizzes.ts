@@ -11,7 +11,7 @@ function derivePreview(action: Action): string {
   if (!q) return action.phase;
   const label = action.phase.charAt(0) + action.phase.slice(1).toLowerCase();
   const snippet = q.text?.length > 40 ? q.text.slice(0, 40) + "\u2026" : q.text || "\u2026";
-  return `${label}: \"${snippet}\"`;
+  return `${label}: "${snippet}"`;
 }
 
 /** Ensure all actions in a quiz have a derived preview */

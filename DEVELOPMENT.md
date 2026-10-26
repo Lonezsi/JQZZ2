@@ -29,7 +29,7 @@ cd backend/jqzz
 # First time: make mvnw executable (Linux/Mac)
 chmod +x mvnw
 
-# Run with dev profile (uses H2 in-memory database)
+# Run (uses a file-based H2 database in ./data, no setup needed)
 ./mvnw spring-boot:run
 
 # Or build and run
@@ -42,12 +42,13 @@ The backend starts on **http://localhost:8080** with:
 - WebSocket at `/ws` (STOMP)
 - Swagger UI at `/swagger-ui.html`
 
-**Database**: By default connects to MySQL (`localhost:3306/jqzzdb`). For local dev without MySQL, you can switch to H2 by adding to `application.properties`:
-```properties
-spring.datasource.url=jdbc:h2:mem:testdb
-spring.datasource.driverClassName=org.h2.Driver
-spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+**Database**: By default the backend stores everything in a file-based H2 database at `backend/jqzz/data/` (git-ignored), so it runs with no database server and keeps data across restarts. Delete that folder to start fresh.
+
+To use a local MySQL/MariaDB instead (`root` with no password on `localhost:3306/jqzzdb`, e.g. XAMPP), run with the `mysql` profile:
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
 ```
+Any other database can be set with `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD`.
 
 ### 2. Frontend
 
@@ -60,10 +61,11 @@ npm run dev
 
 The dev server starts on **http://localhost:5173** with hot reload.
 
-**API Proxy**: The frontend calls `http://127.0.0.1:8080` by default. Override with:
+**API Proxy**: The frontend calls the API with relative paths and the Vite dev server proxies `/quizzes`, `/users`, `/lobbies`, `/game`, `/images` and `/ws` to `http://127.0.0.1:8080`. To proxy to another backend:
 ```bash
-VITE_API_BASE_URL=http://localhost:8080 npm run dev
+JQZZ_BACKEND_URL=http://localhost:9090 npm run dev
 ```
+`VITE_API_BASE_URL` still exists to call a backend directly instead of through the proxy.
 
 ### 3. Running Both Together
 
@@ -193,16 +195,16 @@ Then add test scripts to `package.json`.
 ## Common Issues
 
 ### CORS Errors
-The backend allows `localhost:5173`, `localhost:3000`, and `127.0.0.1:5173`. If you use a different port, update `CorsConfig.java`.
+In dev and Docker the API is same-origin through a proxy, so CORS doesn't apply. For direct calls the backend allows any `localhost` / `127.0.0.1` port; other origins need `CorsConfig.java`.
 
 ### WebSocket Connection Fails
 - Ensure backend is running on port 8080
-- Check `WebSocketContext.tsx` — it hardcodes `http://127.0.0.1:8080/ws`
+- Through the dev server it goes via the Vite proxy at `/ws`; check `vite.config.ts`
 - SockJS falls back to HTTP long-polling if WebSocket is blocked
 
 ### Database Connection Refused
-- Ensure MySQL is running with a `jqzzdb` database
-- Or switch to H2 in-memory by modifying `application.properties`
+- Only happens with the `mysql` profile or a custom `SPRING_DATASOURCE_URL`: ensure that server is running
+- Without either, the backend uses its built-in H2 file database
 
 ### Build Fails
 - Frontend: Run `npm install` first, check Node.js version (22+)
@@ -214,8 +216,9 @@ The backend allows `localhost:5173`, `localhost:3000`, and `127.0.0.1:5173`. If 
 
 | Variable              | Default                          | Description          |
 |-----------------------|----------------------------------|----------------------|
-| `VITE_API_BASE_URL`   | `http://127.0.0.1:8080`         | Backend API URL      |
-| `SPRING_DATASOURCE_URL` | `jdbc:mysql://localhost:3306/jqzzdb` | Database URL    |
+| `VITE_API_BASE_URL`   | *(empty: same origin)*           | Backend API URL      |
+| `JQZZ_BACKEND_URL`    | `http://127.0.0.1:8080`          | Vite dev proxy target |
+| `SPRING_DATASOURCE_URL` | `jdbc:h2:file:./data/jqzzdb`   | Database URL    |
 
 ---
 

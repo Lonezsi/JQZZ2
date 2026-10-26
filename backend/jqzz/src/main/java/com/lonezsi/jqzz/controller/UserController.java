@@ -2,6 +2,7 @@ package com.lonezsi.jqzz.controller;
 
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
@@ -83,30 +85,36 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public void logout(@RequestBody LogoutRequest request) {
-        User user = userRepository.findById(request.getId()).orElseThrow();
-        user.setOnline(false);
-
-        userRepository.save(user);
-
-        messaging.convertAndSend(
-            "/topic/users",
-            (Object) Map.of("event", "user_logged_out", "user", user)
-        );
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest request) {
+        if (request.getId() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return userRepository.findById(request.getId())
+                .map(user -> {
+                    user.setOnline(false);
+                    userRepository.save(user);
+                    messaging.convertAndSend(
+                        "/topic/users",
+                        (Object) Map.of("event", "user_logged_out", "user", user)
+                    );
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/{id}/handle")
     public ResponseEntity<User> updateHandle(@PathVariable String id, @RequestBody Map<String,String> body) {
 
-        String newHandle = body.get("handle")
-            .toLowerCase()
-            .replaceAll("[^a-z0-9]", "");
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
 
-        if(userRepository.existsByHandle(newHandle)){
+        String newHandle = sanitizeHandle(body.get("handle"));
+        if (newHandle == null || isHandleTakenByOther(newHandle, id)) {
             return ResponseEntity.badRequest().build();
         }
 
-        User user = userRepository.findById(id).orElseThrow();
         user.setHandle(newHandle);
 
         User saved = userRepository.save(user);
@@ -135,7 +143,16 @@ public class UserController {
         return userRepository.findById(id)
                 .map(user -> {
                     if (body.containsKey("name")) user.setName(body.get("name"));
-                    if (body.containsKey("handle")) user.setHandle(body.get("handle"));
+                    if (body.containsKey("handle")) {
+                        String newHandle = sanitizeHandle(body.get("handle"));
+                        if (newHandle == null) {
+                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Handle must contain letters or numbers");
+                        }
+                        if (isHandleTakenByOther(newHandle, id)) {
+                            throw new ResponseStatusException(HttpStatus.CONFLICT, "Handle @" + newHandle + " is already taken");
+                        }
+                        user.setHandle(newHandle);
+                    }
                     if (body.containsKey("email")) user.setEmail(body.get("email"));
                     if (body.containsKey("profilePictureUrl")) user.setProfilePictureUrl(body.get("profilePictureUrl"));
 
@@ -157,6 +174,10 @@ public class UserController {
             return ResponseEntity.notFound().build();
         }
         userRepository.deleteById(id);
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_deleted", "user", Map.of("id", id))
+        );
         return ResponseEntity.noContent().build();
     }
 
@@ -170,6 +191,17 @@ public class UserController {
         return userRepository.findById(userId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    private static String sanitizeHandle(String raw) {
+        if (raw == null) return null;
+        String handle = raw.toLowerCase().replaceAll("[^a-z0-9]", "");
+        return handle.isEmpty() ? null : handle;
+    }
+
+    private boolean isHandleTakenByOther(String handle, String userId) {
+        User owner = userRepository.findByHandle(handle);
+        return owner != null && !owner.getId().equals(userId);
     }
 
     public static class RegisterRequest {

@@ -1,7 +1,7 @@
 package com.lonezsi.jqzz.controller;
 
 import com.lonezsi.jqzz.model.Quiz;
-import com.lonezsi.jqzz.repository.QuizRepository;
+import com.lonezsi.jqzz.service.QuizService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -24,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class QuizControllerTest {
 
     @Mock
-    private QuizRepository quizRepository;
+    private QuizService quizService;
 
     @InjectMocks
     private QuizController quizController;
@@ -46,7 +47,7 @@ class QuizControllerTest {
         quiz2.setId(2L);
         quiz2.setName("Quiz 2");
 
-        when(quizRepository.findAll()).thenReturn(Arrays.asList(quiz1, quiz2));
+        when(quizService.findAll()).thenReturn(Arrays.asList(quiz1, quiz2));
 
         mockMvc.perform(get("/quizzes"))
                 .andExpect(status().isOk())
@@ -61,7 +62,7 @@ class QuizControllerTest {
         quiz.setId(1L);
         quiz.setName("Test Quiz");
 
-        when(quizRepository.findById(1L)).thenReturn(Optional.of(quiz));
+        when(quizService.findById(1L)).thenReturn(Optional.of(quiz));
 
         mockMvc.perform(get("/quizzes/1"))
                 .andExpect(status().isOk())
@@ -71,7 +72,7 @@ class QuizControllerTest {
 
     @Test
     void getQuizById_notFound_throwsException() throws Exception {
-        when(quizRepository.findById(999L)).thenReturn(Optional.empty());
+        when(quizService.findById(999L)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/quizzes/999"))
                 .andExpect(status().isNotFound());
@@ -83,7 +84,7 @@ class QuizControllerTest {
         quiz.setId(1L);
         quiz.setName("New Quiz");
 
-        when(quizRepository.save(any(Quiz.class))).thenReturn(quiz);
+        when(quizService.create(any(Quiz.class))).thenReturn(quiz);
 
         mockMvc.perform(post("/quizzes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,7 +104,7 @@ class QuizControllerTest {
         updatedQuiz.setId(1L);
         updatedQuiz.setName("New Name");
 
-        when(quizRepository.save(any(Quiz.class))).thenReturn(updatedQuiz);
+        when(quizService.update(eq(1L), any(Quiz.class))).thenReturn(Optional.of(updatedQuiz));
 
         mockMvc.perform(put("/quizzes/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,8 +115,20 @@ class QuizControllerTest {
     }
 
     @Test
+    void updateQuiz_notFound() throws Exception {
+        when(quizService.update(eq(999L), any(Quiz.class))).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/quizzes/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"New Name\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void deleteQuiz_success() throws Exception {
+        when(quizService.delete(1L)).thenReturn(true);
+
         mockMvc.perform(delete("/quizzes/1"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 }

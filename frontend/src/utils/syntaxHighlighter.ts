@@ -47,15 +47,16 @@ export function tokenizeLine(line: string): HToken[] {
   return tokens;
 }
 
+// theme tokens, so the script reads in both appearances
 export const TOKEN_COLOR: Record<HToken["t"], string> = {
-  comment: "#444c6a",
-  kw: "#c792ea",
-  fn: "#82aaff",
-  str: "#c3e88d",
-  num: "#f78c6c",
-  key: "#89ddff",
-  punc: "#8890ab",
-  div: "#333748",
-  plain: "#dde1f0",
+  comment: "var(--text-3)",
+  kw: "var(--accent)",
+  fn: "var(--phase-ANSWER)",
+  str: "var(--text)",
+  num: "var(--warm)",
+  key: "var(--text-2)",
+  punc: "var(--text-3)",
+  div: "var(--text-3)",
+  plain: "var(--text-2)",
   ws: "transparent",
 };

@@ -1,10 +1,13 @@
-import React, { createContext, useEffect, useState, useRef } from "react";
+import React, { createContext, useCallback, useEffect, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import type { IMessage, StompSubscription } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { API_BASE_URL } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 interface WebSocketContextType {
   client: Client | null;
+  connected: boolean;
   subscribe: (
     destination: string,
     callback: (msg: IMessage) => void,
@@ -14,48 +17,52 @@ interface WebSocketContextType {
 // eslint-disable-next-line react-refresh/only-export-components
 export const WebSocketContext = createContext<WebSocketContextType>({
   client: null,
+  connected: false,
   subscribe: () => undefined,
 });
 
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [client, setClient] = useState<Client | null>(null);
-  const clientRef = useRef<Client | null>(null);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     const stompClient = new Client({
-      webSocketFactory: () => new SockJS(`${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080"}/ws`),
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("WebSocket connected");
-      },
+      webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
+      // lets the backend track presence: online while any tab is connected
+      connectHeaders: userId ? { userId } : {},
+      reconnectDelay: 3000,
+      onConnect: () => setConnected(true),
+      onWebSocketClose: () => setConnected(false),
+      onStompError: (frame) => console.error("STOMP error", frame.headers.message),
     });
     stompClient.activate();
-    clientRef.current = stompClient;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setClient(stompClient);
 
     return () => {
+      setConnected(false);
       stompClient.deactivate();
     };
-  }, []);
+  }, [userId]);
 
-  const subscribe = (
-    destination: string,
-    callback: (msg: IMessage) => void,
-  ) => {
-    const client = clientRef.current;
-    if (client && client.connected) {
-      return client.subscribe(destination, callback);
-    }
-    // Not connected yet – subscription will be skipped (component will rely on polling)
-    console.warn("WebSocket not ready, subscription skipped for", destination);
-    return undefined;
-  };
+  // Changes identity whenever the connection (re)opens, so subscribers re-run
+  // their effects and resubscribe after a reconnect.
+  const subscribe = useCallback(
+    (destination: string, callback: (msg: IMessage) => void) => {
+      if (client && connected && client.connected) {
+        return client.subscribe(destination, callback);
+      }
+      return undefined;
+    },
+    [client, connected],
+  );
 
   return (
-    <WebSocketContext.Provider value={{ client, subscribe }}>
+    <WebSocketContext.Provider value={{ client, connected, subscribe }}>
       {children}
     </WebSocketContext.Provider>
   );

@@ -1,33 +1,82 @@
 import React from "react";
 import type { Quiz } from "../../../types";
+import { formatTimecode, quizCode, quizRuntime } from "../../../utils/timecode";
+import { matchQuiz } from "../../../utils/quizSearch";
 
 interface QuizListProps {
   quizzes: Quiz[];
+  query: string;
   activeQuizId: number | null;
   onSelectQuiz: (id: number) => void;
 }
 
+function Highlight({ text, query }: { text: string; query: string }) {
+  const needle = query.trim();
+  const i = needle ? text.toLowerCase().indexOf(needle.toLowerCase()) : -1;
+  if (i < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark>{text.slice(i, i + needle.length)}</mark>
+      {text.slice(i + needle.length)}
+    </>
+  );
+}
+
 export const QuizList: React.FC<QuizListProps> = ({
   quizzes,
+  query,
   activeQuizId,
   onSelectQuiz,
 }) => {
+  const results = quizzes
+    .map((q) => ({ q, m: matchQuiz(q, query) }))
+    .filter((r) => r.m.hit);
+
   return (
-    <div
-      className="jqzz-sid-section"
-      style={{ flex: 1, overflowY: "auto", minHeight: 0 }}
-    >
-      <div className="jqzz-sid-label">Recent Quizzes</div>
-      {quizzes.map((q) => (
-        <div
-          key={q.id}
-          className={`jqzz-quiz-item${q.id === activeQuizId ? " active" : ""}`}
-          onClick={() => onSelectQuiz(q.id)}
-        >
-          <span className="jqzz-quiz-dot" />
-          <span className="jqzz-quiz-name">{q.name}</span>
+    <nav className="jqzz-quiz-list" aria-label="Quizzes">
+      {quizzes.length === 0 && (
+        <div className="jqzz-sid-empty">none yet. make one above.</div>
+      )}
+      {quizzes.length > 0 && results.length === 0 && (
+        <div className="jqzz-sid-empty">nothing called that, and no question says it either.</div>
+      )}
+      {query.trim() && results.length > 0 && (
+        <div className="jqzz-annot jqzz-search-count" role="status">
+          {results.length} of {quizzes.length}
         </div>
-      ))}
-    </div>
+      )}
+      {results.map(({ q, m }) => {
+        const active = q.id === activeQuizId;
+        return (
+          <button
+            key={q.id}
+            className={`jqzz-quiz-item${active ? " active" : ""}`}
+            aria-current={active ? "true" : undefined}
+            title={
+              active
+                ? undefined
+                : `${quizCode(q.id)} · ${q.actions.length} actions · ${formatTimecode(quizRuntime(q))}`
+            }
+            onClick={() => onSelectQuiz(q.id)}
+          >
+            <span className="jqzz-quiz-name">
+              <Highlight text={q.name} query={query} />
+            </span>
+            {m.via && (
+              <span className="jqzz-quiz-via">
+                “<Highlight text={m.via} query={query} />”
+              </span>
+            )}
+            {/* details only for the open quiz; others show them as a tooltip */}
+            <span className="jqzz-quiz-meta-wrap">
+              <span className="jqzz-annot jqzz-quiz-meta">
+                {quizCode(q.id)} · {q.actions.length} act · {formatTimecode(quizRuntime(q))}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </nav>
   );
 };

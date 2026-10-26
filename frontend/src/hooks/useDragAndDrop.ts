@@ -28,6 +28,8 @@ export const useDragAndDrop = (
   const onDropZoneDragLeave = () => setDropOver(false);
   const onDropZoneDrop = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
+    // drop zones are nested inside the editor body, which handles drops too
+    e.stopPropagation();
     const sid = e.dataTransfer.getData(DRAG_SNIPPET_KEY);
     if (sid) dropSnippet(sid);
     setDropOver(false);

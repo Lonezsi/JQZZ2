@@ -7,6 +7,8 @@ interface ShortcutHandlers {
   onEscape?: () => void;
   onExport?: () => void;
   onSelectAll?: () => void;
+  onImport?: () => void;
+  onStart?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
@@ -16,6 +18,8 @@ export const useKeyboardShortcuts = ({
   onEscape,
   onExport,
   onSelectAll,
+  onImport,
+  onStart,
 }: ShortcutHandlers) => {
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
@@ -40,6 +44,14 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         onExport?.();
       }
+      if (mod && e.key === "i") {
+        e.preventDefault();
+        onImport?.();
+      }
+      if (mod && e.key === "Enter") {
+        e.preventDefault();
+        onStart?.();
+      }
       if (mod && e.key === "a" && !isTextInput) {
         e.preventDefault();
         onSelectAll?.();
@@ -50,5 +62,5 @@ export const useKeyboardShortcuts = ({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onPalette, onNewQuiz, onToggleMode, onEscape, onExport, onSelectAll]);
+  }, [onPalette, onNewQuiz, onToggleMode, onEscape, onExport, onSelectAll, onImport, onStart]);
 };

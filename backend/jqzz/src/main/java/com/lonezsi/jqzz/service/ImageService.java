@@ -29,6 +29,13 @@ public class ImageService {
             throw new IllegalArgumentException("Handle must contain only letters, numbers, and underscores");
         }
 
+        // Public images belong to everyone: they are looked up by handle with no owner
+        if (visibility == ImageVisibility.PUBLIC) {
+            ownerId = null;
+        } else if (ownerId == null || ownerId.isBlank()) {
+            throw new IllegalArgumentException("Owner ID required for non-public images");
+        }
+
         // Check uniqueness
         if (visibility == ImageVisibility.PUBLIC) {
             if (imageRepository.existsByHandleAndOwnerIdIsNull(handle)) {

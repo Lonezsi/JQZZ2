@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import type { Quiz, Question, Action } from "../../../../types";
 import { quizToScript } from "../../../../utils/scriptSerializer";
 import { parseScript } from "../../../../utils/scriptParser";
-import { EMPTY_SCRIPT } from "../../../../utils/scriptSerializer";
 import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
 
 interface ScriptEditorProps {
@@ -34,19 +33,35 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   onParsed,
 }) => {
   const [text, setText] = useState<string>(() => quizToScript(quiz));
-  const [parseOk, setParseOk] = useState<boolean>(true);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [summary, setSummary] = useState({ questions: 0, actions: 0 });
   const taRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
-  const prevIdRef = useRef<number | undefined>(quiz?.id);
+  const aiRef = useRef<HTMLInputElement>(null);
 
-  // Re-seed when active quiz changes
+  // The script of the quiz state the text currently corresponds to. Only the
+  // user's own edits are parsed back into the quiz; a quiz that changes in any
+  // other way (switching quizzes, adding a snippet) re-seeds the text.
+  const syncedScript = useRef(quizToScript(quiz));
+  const hasUserEdits = useRef(false);
+  const quizRef = useRef(quiz);
   useEffect(() => {
-    if (quiz?.id !== prevIdRef.current) {
-      prevIdRef.current = quiz?.id;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setText(quizToScript(quiz));
-    }
+    quizRef.current = quiz;
+  });
+
+  useEffect(() => {
+    const script = quizToScript(quiz);
+    if (script === syncedScript.current) return;
+    syncedScript.current = script;
+    hasUserEdits.current = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setText(script);
   }, [quiz]);
+
+  const edit = (next: string) => {
+    hasUserEdits.current = true;
+    setText(next);
+  };
 
   const syncScroll = () => {
     if (taRef.current && preRef.current) {
@@ -55,20 +70,24 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     }
   };
 
-  // Parse when text changes, using existing questions from quiz actions
+  // Parse after typing pauses; apply only scripts without errors, so a
+  // half-typed line never wipes questions from the quiz.
   useEffect(() => {
     const t = setTimeout(() => {
-      if (!quiz) return;
-      const existingQuestions = extractQuestionsFromActions(quiz);
+      const current = quizRef.current;
       const { questions, actions, errors } = parseScript(
         text,
-        existingQuestions,
+        extractQuestionsFromActions(current),
       );
-      setParseOk(errors.length === 0);
+      setErrors(errors);
+      setSummary({ questions: questions.length, actions: actions.length });
+      if (!current || !hasUserEdits.current || errors.length > 0) return;
+      hasUserEdits.current = false;
+      syncedScript.current = quizToScript({ ...current, actions });
       onParsed(questions, actions);
     }, 650);
     return () => clearTimeout(t);
-  }, [text, quiz, onParsed]); // Include quiz and onParsed dependencies
+  }, [text, onParsed]);
 
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Tab") return;
@@ -76,38 +95,45 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     const ta = taRef.current!;
     const { selectionStart: s, selectionEnd: end } = ta;
     const next = text.slice(0, s) + "  " + text.slice(end);
-    setText(next);
+    edit(next);
     requestAnimationFrame(() => {
       ta.selectionStart = ta.selectionEnd = s + 2;
     });
   };
 
+  const parseOk = errors.length === 0;
+
   return (
-    <div className="jqzz-text-editor">
+    <div className="jqzz-text-editor jqzz-view-in">
       <div className="jqzz-ai-bar">
-        <span className="jqzz-ai-label"># AI:</span>
+        <span className="jqzz-ai-label"># quick add</span>
         <input
+          ref={aiRef}
           className="jqzz-ai-input"
-          placeholder="Create a chaotic party quiz with memes..."
+          placeholder="type a question, it gets added to the end"
           value={aiPrompt}
           onChange={(e) => onAiPromptChange(e.target.value)}
         />
-        <span className={`jqzz-parse-badge${parseOk ? " ok" : " err"}`}>
-          {parseOk ? "✓ valid" : "⚠ errors"}
+        <span
+          className={`jqzz-parse-badge${parseOk ? " ok" : " err"}`}
+          role="status"
+          title={errors.join("\n")}
+        >
+          {parseOk ? "valid" : `${errors.length} error${errors.length > 1 ? "s" : ""}`}
         </span>
         <button
           className="jqzz-ai-btn"
+          title="adds a question with this text to the end of the script"
           onClick={() => {
-            if (!aiPrompt.trim()) {
-              setText(EMPTY_SCRIPT);
+            const prompt = aiPrompt.trim();
+            if (!prompt) {
+              aiRef.current?.focus();
               return;
             }
-            // Insert a starter template based on the prompt
-            const template = `# ${aiPrompt.trim()} — JQzz Script v1
-# Author: generated
-
-NewQuestion Q1 (
-  prompt: "${aiPrompt.trim()}?",
+            const used = [...text.matchAll(/NewQuestion\s+Q(\d+)/g)].map((m) => Number(m[1]));
+            const q = `Q${used.length > 0 ? Math.max(...used) + 1 : 1}`;
+            const block = `NewQuestion ${q} (
+  prompt: ${JSON.stringify(`${prompt}?`)},
   type: "prewritten-single",
   elaboration: "Add your explanation here",
   answers: [
@@ -116,17 +142,31 @@ NewQuestion Q1 (
   ],
 )
 
-ShowWaiting(Q1, time: 8)
-ShowQuestion(Q1, time: 30)
-ShowAnswers(Q1, time: 15)
-ShowResult(Q1, time: 10)
+ShowWaiting(${q}, time: 8)
+ShowQuestion(${q}, time: 30)
+ShowAnswers(${q}, time: 15)
+ShowResult(${q}, time: 10)
 `;
-            setText(template);
+            const hasContent = text
+              .split("\n")
+              .some((l) => l.trim() && !l.trim().startsWith("#"));
+            edit(
+              hasContent
+                ? `${text.trimEnd()}\n\n${block}`
+                : `# ${prompt} — JQzz Script v1\n# Author: generated\n\n${block}`,
+            );
           }}
         >
-          Generate
+          Add
         </button>
       </div>
+      {!parseOk && (
+        <div className="jqzz-parse-errors" role="alert">
+          {errors[0]}
+          {errors.length > 1 && ` (+${errors.length - 1} more)`}. nothing gets
+          applied until this is fixed.
+        </div>
+      )}
       <div className="jqzz-editor-wrap">
         <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
           <HighlightedScript text={text} />
@@ -135,14 +175,19 @@ ShowResult(Q1, time: 10)
           ref={taRef}
           className="jqzz-script-ta"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => edit(e.target.value)}
           onScroll={syncScroll}
           onKeyDown={handleTab}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
+          aria-label="Quiz script"
         />
+      </div>
+      <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
+        jqzz script v1 · {text.split("\n").length} lines · {summary.questions} questions ·{" "}
+        {summary.actions} actions
       </div>
     </div>
   );

@@ -2,6 +2,8 @@ package com.lonezsi.jqzz.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -34,8 +36,11 @@ public class Image {
     @Column(nullable = false)
     private ImageVisibility visibility;
 
+    // large enough that MySQL uses LONGBLOB (plain BLOB caps at 64 KB);
+    // served through GET /images/{id}, never inlined in JSON
     @Lob
-    @Column(columnDefinition = "BLOB")
+    @Column(length = 16 * 1024 * 1024)
+    @JsonIgnore
     private byte[] data;
 
     private String mimeType;

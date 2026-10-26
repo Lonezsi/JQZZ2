@@ -7,8 +7,7 @@ export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
 # ─── How to write a quiz ─────────────────────────────
 #
 # NewQuestion Q1 (
-#   time: 30,
-#   type: "choose-answer",
+#   type: "prewritten-single",
 #   prompt: "Your question here?",
 #   elaboration: "Fun fact about the answer",
 #   answers: [
@@ -26,6 +25,9 @@ export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
 # Use --- to insert a visual divider.
 # Any other line becomes a text note block.
 # ─────────────────────────────────────────────────────`;
+
+// JSON string syntax, which the parser reads back (quotes and newlines survive)
+const str = (s: string | undefined) => JSON.stringify(s ?? "");
 
 function getUniqueQuestionsFromActions(actions: Action[]): Question[] {
   const seen = new Map<number, boolean>();
@@ -59,14 +61,15 @@ export function quizToScript(quiz: Quiz | undefined): string {
   uniqueQuestions.forEach((q) => {
     const qid = `Q${qIndexMap.get(q.id)}`;
     lines.push(`NewQuestion ${qid} (`);
-    lines.push(`  time: 30,`);
-    lines.push(`  type: "${q.type.toLowerCase().replace(/_/g, "-")}",`);
-    lines.push(`  prompt: "${q.text || "..."}",`);
-    if (q.elaborationText) lines.push(`  elaboration: "${q.elaborationText}",`);
-    if (q.answers.length > 0) {
+    const type = (q.type || "PREWRITTEN_SINGLE").toLowerCase().replace(/_/g, "-");
+    const answers = q.answers ?? [];
+    lines.push(`  type: ${str(type)},`);
+    lines.push(`  prompt: ${str(q.text)},`);
+    if (q.elaborationText) lines.push(`  elaboration: ${str(q.elaborationText)},`);
+    if (answers.length > 0) {
       lines.push(`  answers: [`);
-      q.answers.forEach((a) =>
-        lines.push(`    { text: "${a.text}", value: ${a.value} },`),
+      answers.forEach((a) =>
+        lines.push(`    { text: ${str(a.text)}, value: ${a.value} },`),
       );
       lines.push(`  ],`);
     }

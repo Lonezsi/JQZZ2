@@ -1,8 +1,312 @@
-/* Glass effect utilities */
+/* ─── Atmosphere ──────────────────────────────────────────────────
+   Grainy light behind everything. The phase light is one pre-painted
+   layer per phase; switching phases only crossfades opacity, which the
+   GPU does without repainting the gradients. */
+.jqzz-aura {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--paper) center / cover, var(--bg);
+}
+.jqzz-aura > span {
+  position: absolute;
+  border-radius: 50%;
+}
+.jqzz-aura .warm {
+  width: 55vmax;
+  height: 55vmax;
+  right: -14%;
+  bottom: -26%;
+  background: radial-gradient(closest-side, var(--aura-b), transparent);
+  opacity: calc(var(--aura-opacity) * 0.8);
+}
+.jqzz-aura .shadow {
+  width: 60vmax;
+  height: 60vmax;
+  left: -18%;
+  bottom: -30%;
+  background: radial-gradient(closest-side, var(--aura-c), transparent);
+  opacity: var(--aura-opacity);
+}
+.jqzz-aura .phase {
+  width: 70vmax;
+  height: 70vmax;
+  left: 34%;
+  top: -28%;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity var(--dur-aura) var(--ease-in-out);
+}
+.jqzz-aura .phase-IDLE { background: radial-gradient(closest-side, #6b4cff, transparent); }
+.jqzz-aura .phase-WAITING { background: radial-gradient(closest-side, var(--phase-WAITING), transparent); }
+.jqzz-aura .phase-QUESTION { background: radial-gradient(closest-side, var(--phase-QUESTION), transparent); }
+.jqzz-aura .phase-ANSWER { background: radial-gradient(closest-side, var(--phase-ANSWER), transparent); }
+.jqzz-aura .phase-ELABORATION { background: radial-gradient(closest-side, var(--phase-ELABORATION), transparent); }
+.jqzz-aura .phase-RESULT { background: radial-gradient(closest-side, var(--phase-RESULT), transparent); }
+
+.jqzz-app:not([data-phase]) .phase-IDLE,
+.jqzz-app[data-phase="IDLE"] .phase-IDLE,
+.jqzz-app[data-phase="TEXT"] .phase-IDLE,
+.jqzz-app[data-phase="DIVIDER"] .phase-IDLE,
+.jqzz-app[data-phase="WAITING"] .phase-WAITING,
+.jqzz-app[data-phase="QUESTION"] .phase-QUESTION,
+.jqzz-app[data-phase="ANSWER"] .phase-ANSWER,
+.jqzz-app[data-phase="ELABORATION"] .phase-ELABORATION,
+.jqzz-app[data-phase="RESULT"] .phase-RESULT {
+  opacity: var(--aura-opacity);
+}
+
+/* dithered blobs: one small canvas, scaled up with hard edges */
+.jqzz-dither {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  opacity: var(--dither-opacity);
+  mix-blend-mode: var(--dither-blend);
+  /* loud at the right edge, quiet over the reading column */
+  -webkit-mask: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.22) 30%, rgba(0, 0, 0, 0.4) 62%, rgba(0, 0, 0, 0.7) 85%);
+  mask: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.22) 30%, rgba(0, 0, 0, 0.4) 62%, rgba(0, 0, 0, 0.7) 85%);
+}
+
+/* the original blended textures: paper floor + two lens scans */
+.jqzz-aura .tex {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.jqzz-aura .tex-floor {
+  background-image: url("/bg.jpg");
+  mix-blend-mode: color-dodge;
+  filter: contrast(0.5);
+  opacity: var(--tex-floor-opacity);
+}
+.jqzz-aura .tex-lens-a {
+  background-image: url("https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_171S.jpg");
+  mix-blend-mode: soft-light;
+  filter: hue-rotate(-20deg) brightness(3) saturate(0.5);
+  opacity: var(--lens-a-opacity);
+}
+.jqzz-aura .tex-lens-b {
+  background-image: url("https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_130S.jpg");
+  mix-blend-mode: var(--lens-b-blend);
+  filter: blur(2px) hue-rotate(-80deg);
+  opacity: var(--lens-b-opacity);
+}
+
+.jqzz-aura::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
+}
+
+/* ─── Imperfections ───────────────────────────────────────────────
+   Light leaks, dust and film scratches over the whole app, like a
+   scanned print. Never takes a click. */
+.jqzz-imperfections {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.jqzz-imperfections > span {
+  position: absolute;
+  inset: 0;
+}
+.jqzz-imperfections .leaks {
+  inset: -10%;
+  background:
+    radial-gradient(38% 30% at 2% 4%, var(--leak-a), transparent 70%),
+    radial-gradient(30% 45% at 102% 38%, var(--leak-b), transparent 70%),
+    linear-gradient(115deg, transparent 58%, rgba(255, 214, 196, 0.1) 63%, transparent 68%);
+  mix-blend-mode: var(--leak-blend);
+  opacity: var(--imperfection-opacity);
+  animation: leakDrift 38s var(--ease-in-out) infinite alternate;
+}
+/* the huge grain: a coarse noise tile scaled up, over everything */
+.jqzz-imperfections .grain-huge {
+  background-image: var(--grain-coarse);
+  background-size: 480px 480px;
+  mix-blend-mode: overlay;
+  opacity: var(--grain-huge-opacity);
+}
+.jqzz-imperfections .dust,
+.jqzz-imperfections .scratches {
+  mix-blend-mode: screen;
+}
+.jqzz-imperfections .dust {
+  background-image: var(--dust);
+  opacity: calc(var(--imperfection-opacity) * 0.6);
+}
+.jqzz-imperfections .scratches {
+  background-image: var(--scratches);
+  opacity: calc(var(--imperfection-opacity) * 0.4);
+}
+@media (prefers-color-scheme: light) {
+  .jqzz-imperfections .dust,
+  .jqzz-imperfections .scratches {
+    filter: invert(1);
+    mix-blend-mode: multiply;
+  }
+}
+@keyframes leakDrift {
+  to {
+    transform: translate3d(2.5%, 1.5%, 0) scale(1.04);
+  }
+}
+
+/* ─── Holo: the material for overlays (palette, popovers, dialogs) ──
+   prismatic rim that slowly turns, light leak inside, dust on top,
+   one sheen that sweeps across when it opens */
+.jqzz-holo {
+  position: relative;
+  isolation: isolate;
+  overflow: clip; /* keeps the sheen and dot field inside the card */
+  border: none;
+  background:
+    radial-gradient(70% 55% at 0% 0%, color-mix(in srgb, var(--warm) 20%, transparent), transparent 70%),
+    radial-gradient(60% 60% at 100% 100%, color-mix(in srgb, var(--phase-QUESTION) 22%, transparent), transparent 70%),
+    var(--grain),
+    var(--surface-solid);
+  background-blend-mode: normal, normal, overlay, normal;
+  box-shadow:
+    0 30px 80px -10px rgba(0, 0, 0, 0.55),
+    0 0 70px -24px var(--phase-QUESTION);
+}
+.jqzz-holo::before {
+  /* the prismatic rim: a 1px ring, the only thing that repaints as it turns */
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--holo-angle),
+    #8b6cff,
+    #f2a989,
+    #7fd6ff,
+    #f08cb0,
+    #b9a6ff,
+    #8b6cff
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: holoTurn 14s linear infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+.jqzz-holo::after {
+  /* the sheen */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(185, 166, 255, 0.14) 50%,
+    rgba(242, 169, 137, 0.1) 55%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  pointer-events: none;
+  z-index: 2;
+}
+.jqzz-holo[data-state="open"]::after,
+.jqzz-holo.sheen::after {
+  animation: sheen 1.1s var(--ease) 0.08s backwards;
+}
+@keyframes holoTurn {
+  to {
+    --holo-angle: 360deg;
+  }
+}
+@keyframes sheen {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* dust and halftone corner, for bigger overlays (under the content) */
+.jqzz-holo-dust {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--dust);
+  mix-blend-mode: screen;
+  opacity: 0.3;
+  z-index: 0;
+}
+/* translucent variant for the floating inspector */
+.jqzz-holo.is-glass {
+  background:
+    radial-gradient(70% 45% at 0% 0%, color-mix(in srgb, var(--warm) 16%, transparent), transparent 70%),
+    radial-gradient(60% 50% at 100% 100%, color-mix(in srgb, var(--phase-QUESTION) 18%, transparent), transparent 70%),
+    var(--surface);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(22px) saturate(1.35);
+}
+.jqzz-holo-dots {
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 200px;
+  height: 200px;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--dot) 0.9px, transparent 1.4px) 0 0 / 7px 7px;
+  -webkit-mask: radial-gradient(closest-side, #000 15%, transparent);
+  mask: radial-gradient(closest-side, #000 15%, transparent);
+  opacity: 0.45;
+  z-index: 0;
+}
+
+/* blackletter with a little chromatic split */
+.jqzz-chroma {
+  text-shadow:
+    -1.5px 0 rgba(255, 92, 140, 0.55),
+    1.5px 0 rgba(90, 170, 255, 0.55);
+}
+
+/* halftone dot field, masked into a soft blob */
+.jqzz-halftone {
+  position: absolute;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--dot) 0.9px, transparent 1.4px) 0 0 / 7px 7px;
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent);
+  mask: radial-gradient(closest-side, #000 20%, transparent);
+}
+
+/* frosted surface for floating functional layers */
 .glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-right-color: rgba(255, 255, 255, 0.05);
-  border-bottom-color: rgba(255, 255, 255, 0.05);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.3);
+  backdrop-filter: blur(var(--blur)) saturate(1.3);
+}
+
+/* things that appear: views, lists */
+.jqzz-view-in {
+  animation: viewIn var(--dur-3) var(--ease) backwards;
+}
+@keyframes viewIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }

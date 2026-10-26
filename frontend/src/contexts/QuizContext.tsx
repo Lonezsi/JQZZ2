@@ -13,7 +13,11 @@ import { useAuth } from "./AuthContext";
 import type { Quiz, Question, Action, EditorMode, RenderItem } from "../types";
 import { buildRenderItems } from "../utils/buildRenderItems";
 import { quizService } from "../services/quizService";
+import { API_BASE_URL, errorMessage } from "../services/api";
 import { convertToBackendQuiz } from "../utils/quizConverter";
+import { parseScript } from "../utils/scriptParser";
+
+export type SaveState = "saved" | "saving" | "error";
 
 interface QuizContextType {
   quizzes: Quiz[];
@@ -32,6 +36,8 @@ interface QuizContextType {
   setMode: (mode: EditorMode) => void;
   aiPrompt: string;
   setAiPrompt: (prompt: string) => void;
+  saveState: SaveState;
+  lastSavedAt: Date | null;
   // Derived
   quiz: Quiz | undefined;
   renderItems: RenderItem[];
@@ -42,12 +48,19 @@ interface QuizContextType {
   duplicateAction: (id: number) => void;
   reorderActions: (dragId: number, dropId: number) => void;
   newQuiz: () => Promise<number | undefined>;
+  renameQuiz: (id: number, name: string) => void;
+  importScript: (name: string, script: string) => Promise<void>;
   dropSnippet: (snippetId: string) => void;
   handleParsed: (questions: Question[], actions: Action[]) => void;
-  shiftPressed: React.RefObject<boolean>;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
+
+const SAVE_DELAY_MS = 800;
+const RETRY_DELAY_MS = 3000;
+
+const isDirty = (persisted: Map<number, Quiz>, q: Quiz) =>
+  persisted.get(q.id) !== q;
 
 export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -79,39 +92,122 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     deleteAction,
     duplicateAction,
     reorderActions,
-    newQuiz,
+    newQuiz: createQuiz,
     dropSnippet,
     handleParsed,
   } = useQuizMutations(activeQuizId, setQuizzes, authorId);
 
+  const newQuiz = useCallback(async () => {
+    const id = await createQuiz();
+    if (id) setActiveQuizId(id);
+    return id;
+  }, [createQuiz]);
+
+  const importScript = useCallback(
+    async (name: string, script: string) => {
+      const { actions, errors } = parseScript(script, []);
+      if (errors.length > 0) {
+        alert(`couldn't import ${name}:\n\n${errors.slice(0, 10).join("\n")}`);
+        return;
+      }
+      try {
+        const res = await quizService.create(
+          convertToBackendQuiz({ id: 0, name, authorId, actions }),
+        );
+        setQuizzes((prev) => [...prev, res.data]);
+        setActiveQuizId(res.data.id);
+      } catch (err) {
+        alert(`import failed: ${errorMessage(err)}`);
+      }
+    },
+    [authorId, setQuizzes],
+  );
+
+  const renameQuiz = useCallback(
+    (id: number, name: string) =>
+      setQuizzes((prev) => prev.map((q) => (q.id === id ? { ...q, name } : q))),
+    [setQuizzes],
+  );
+
   // --- Persistence logic ---
-  const saveQuiz = useCallback(async (quizToSave: Quiz) => {
-    if (!quizToSave.id) return;
-    try {
-      const backendQuiz = convertToBackendQuiz(quizToSave);
-      await quizService.update(quizToSave.id, backendQuiz);
-      console.log("Quiz saved", quizToSave.id);
-    } catch (err) {
-      console.error("Failed to save quiz", err);
+  // A quiz is dirty when its object differs from the one last loaded from or
+  // saved to the server; every edit produces a new object. Saves are queued
+  // per quiz, so edits made while a save is in flight are saved right after.
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const quizzesRef = useRef(quizzes);
+  const persisted = useRef(new Map<number, Quiz>());
+  const inFlight = useRef(new Set<number>());
+  const saveTimer = useRef<number | undefined>(undefined);
+
+  const flush = useCallback(async () => {
+    saveTimer.current = undefined;
+    const pending = quizzesRef.current.filter(
+      (q) => isDirty(persisted.current, q) && !inFlight.current.has(q.id),
+    );
+    if (pending.length === 0) return;
+
+    setSaveState("saving");
+    let failed = false;
+    await Promise.all(
+      pending.map(async (q) => {
+        inFlight.current.add(q.id);
+        try {
+          await quizService.update(q.id, convertToBackendQuiz(q));
+          persisted.current.set(q.id, q);
+        } catch (err) {
+          failed = true;
+          console.error("Failed to save quiz", q.id, errorMessage(err));
+        } finally {
+          inFlight.current.delete(q.id);
+        }
+      }),
+    );
+
+    if (failed) {
+      setSaveState("error");
+      saveTimer.current = window.setTimeout(flush, RETRY_DELAY_MS);
+    } else if (quizzesRef.current.some((q) => isDirty(persisted.current, q))) {
+      saveTimer.current = window.setTimeout(flush, SAVE_DELAY_MS);
+    } else {
+      setSaveState("saved");
+      setLastSavedAt(new Date());
     }
   }, []);
 
-  const debouncedSave = useRef<number | undefined>(undefined);
-  const isSaving = useRef(false);
-
   useEffect(() => {
-    if (!quiz || !quiz.id || isSaving.current) return;
-    if (debouncedSave.current) clearTimeout(debouncedSave.current);
-    debouncedSave.current = window.setTimeout(() => {
-      isSaving.current = true;
-      saveQuiz(quiz).finally(() => {
-        isSaving.current = false;
-      });
-    }, 1000);
-    return () => {
-      if (debouncedSave.current) clearTimeout(debouncedSave.current);
+    quizzesRef.current = quizzes;
+    let dirty = false;
+    for (const q of quizzes) {
+      // first sighting = fresh from the server
+      if (!persisted.current.has(q.id)) persisted.current.set(q.id, q);
+      else if (isDirty(persisted.current, q)) dirty = true;
+    }
+    if (!dirty) return;
+    setSaveState("saving");
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(flush, SAVE_DELAY_MS);
+  }, [quizzes, flush]);
+
+  // Last-chance save when the tab closes or reloads mid-debounce.
+  useEffect(() => {
+    const onUnload = () => {
+      for (const q of quizzesRef.current) {
+        if (!isDirty(persisted.current, q)) continue;
+        fetch(`${API_BASE_URL}/quizzes/${q.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(convertToBackendQuiz(q)),
+          keepalive: true,
+        }).catch(() => {});
+      }
     };
-  }, [quiz, saveQuiz]);
+    window.addEventListener("pagehide", onUnload);
+    return () => {
+      window.removeEventListener("pagehide", onUnload);
+      window.clearTimeout(saveTimer.current);
+    };
+  }, []);
 
   // --- Selection logic ---
   const getActionIdsInOrder = useCallback((): number[] => {
@@ -181,29 +277,12 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     setLastSelectedActionId(null);
   }, []);
 
-  const shiftPressed = useRef(false);
-
-  // Reset selection when quiz changes and set up shift key listeners
+  // Reset selection when quiz changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     clearSelectedActions();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Shift") shiftPressed.current = true;
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Shift") shiftPressed.current = false;
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
   }, [activeQuizId, clearSelectedActions]);
 
   const value: QuizContextType = {
-    shiftPressed,
     quizzes,
     setQuizzes,
     activeQuizId,
@@ -216,6 +295,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     setMode,
     aiPrompt,
     setAiPrompt,
+    saveState,
+    lastSavedAt,
     quiz,
     renderItems,
     updateAction,
@@ -224,6 +305,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     duplicateAction,
     reorderActions,
     newQuiz,
+    renameQuiz,
+    importScript,
     dropSnippet,
     handleParsed,
   };

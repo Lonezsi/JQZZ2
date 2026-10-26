@@ -10,10 +10,12 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--bg-base);
-  font-family: var(--font-mono);
-  font-size: 13px;
+  background: var(--bg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: 1.45;
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -22,4 +24,14 @@ textarea,
 select {
   font-family: inherit;
   font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
 }

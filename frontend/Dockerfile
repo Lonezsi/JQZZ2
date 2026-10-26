@@ -1,9 +1,11 @@
 FROM node:22 AS build
 WORKDIR /app
-ARG VITE_API_BASE_URL=http://127.0.0.1:8080
+# Empty = same origin; nginx proxies the API and WebSocket paths to the backend.
+ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-RUN npm install
 RUN npm run build
 
 FROM nginx:alpine

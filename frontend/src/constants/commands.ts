@@ -1,10 +1,10 @@
 import type { Command } from "../types";
 
+// sub is the shortcut; "Mod" becomes ⌘ or Ctrl when drawn
 export const COMMANDS: Command[] = [
-  { icon: "+", label: "New Quiz", sub: "Ctrl+N" },
-  { icon: "↑", label: "Import Quiz (.txt)", sub: "Ctrl+I" },
-  { icon: "↓", label: "Export Current Quiz", sub: "Ctrl+E" },
-  { icon: "▶", label: "Start Quiz", sub: "Ctrl+Enter" },
-  { icon: "#", label: "Join Lobby by Code", sub: "" },
-  { icon: "~", label: "Toggle Text Mode", sub: "Ctrl+`" },
+  { icon: "+", label: "New quiz", sub: "Mod N" },
+  { icon: "↑", label: "Import a .txt", sub: "Mod I" },
+  { icon: "↓", label: "Export this quiz", sub: "Mod E" },
+  { icon: "~", label: "Switch visual / text", sub: "Mod `" },
+  { icon: "▷", label: "Start", sub: "Mod ↵" },
 ];

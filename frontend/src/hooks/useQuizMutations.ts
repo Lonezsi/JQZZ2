@@ -3,6 +3,7 @@ import type { Quiz, Action, Question } from "../types";
 import { quizService } from "../services/quizService";
 import { SNIPPETS } from "../constants/snippets";
 import { generateId } from "../utils/idGenerator";
+import { errorMessage } from "../services/api";
 
 export const useQuizMutations = (
   activeQuizId: number | null,
@@ -59,14 +60,8 @@ export const useQuizMutations = (
       updateQuiz((quiz) => {
         const idx = quiz.actions.findIndex((a) => a.id === id);
         if (idx === -1) return quiz;
-        const original = quiz.actions[idx];
-        const clone: Action = {
-          ...original,
-          id: generateId(),
-          question: original.question
-            ? { ...original.question, id: generateId() }
-            : null,
-        };
+        // the copy shows the same question again, so it stays in its group
+        const clone: Action = { ...quiz.actions[idx], id: generateId() };
         const newActions = [...quiz.actions];
         newActions.splice(idx + 1, 0, clone);
         return { ...quiz, actions: newActions };
@@ -94,7 +89,7 @@ export const useQuizMutations = (
   const newQuiz = useCallback(async () => {
     try {
       const response = await quizService.create({
-        name: `Quiz ${generateId()}`,
+        name: "untitled quiz",
         authorId,
         actions: [],
       });
@@ -102,6 +97,7 @@ export const useQuizMutations = (
       return response.data.id;
     } catch (error) {
       console.error("Failed to create quiz", error);
+      alert(`couldn't make a new quiz: ${errorMessage(error)}`);
     }
   }, [setQuizzes, authorId]);
 
