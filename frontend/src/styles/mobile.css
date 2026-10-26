@@ -1,0 +1,380 @@
+/* Phones and touch screens. Loaded last, so it wins ties.
+   The desktop layout stays as it is; everything here is under a media query. */
+
+/* things that only make sense with fingers (move up/down instead of dragging) */
+.jqzz-touch-only {
+  display: none;
+}
+/* the menu button, the drawer's scrim and the sheet's grip only exist on a phone */
+.jqzz-menu-btn,
+.jqzz-nav-scrim,
+.jqzz-sheet-grip {
+  display: none;
+}
+
+/* ─── No mouse: no hover, no keyboard ───────────────────────────────
+   A phone-width window is treated the same way: whatever reports a
+   mouse at that size is almost always a phone in desktop mode. */
+@media (hover: none), (max-width: 760px) {
+  /* keycaps advertise shortcuts nobody can press (:root, because index.css
+     declares .jqzz-keys after its imports and would otherwise win) */
+  :root .jqzz-keys,
+  .jqzz-welcome-hint,
+  .jqzz-palette-footer {
+    display: none;
+  }
+  /* dragging does not work on a touch screen; up/down buttons do the job */
+  .jqzz-drag-handle {
+    display: none;
+  }
+  .jqzz-touch-only {
+    display: grid;
+  }
+  .jqzz-card-action-btn:disabled {
+    opacity: 0.3;
+  }
+  .jqzz-snippet {
+    cursor: pointer;
+  }
+}
+
+/* ─── Phone layout ────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  /* the browser's own bars come and go; dvh follows them, vh does not */
+  .jqzz-app,
+  .jqzz-dash {
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  /* iOS zooms the page into any field with text under 16px */
+  input,
+  textarea,
+  select,
+  .jqzz-highlight-pre,
+  .jqzz-script-ta {
+    font-size: 16px !important;
+  }
+
+  /* Sidebar: a drawer from the left, over the page */
+  .jqzz-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: min(300px, 84vw);
+    min-width: 0;
+    background: var(--surface-solid);
+    box-shadow: 24px 0 60px -20px rgba(0, 0, 0, 0.7);
+    transform: translateX(-104%);
+    transition: transform var(--dur-3) var(--ease);
+    visibility: hidden;
+  }
+  .jqzz-sidebar.open {
+    transform: none;
+    visibility: visible;
+  }
+  .jqzz-sidebar:not(.open) {
+    transition:
+      transform var(--dur-3) var(--ease),
+      visibility 0s linear var(--dur-3);
+  }
+  .jqzz-nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: color-mix(in srgb, var(--bg) 62%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-2) var(--ease);
+  }
+  .jqzz-nav-scrim.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* mid-swipe: the drawer and the dim follow the finger (useSwipeDrawer) */
+  .jqzz-sidebar[data-drag] {
+    visibility: visible;
+    transition: none;
+    transform: translateX(calc((var(--drawer-p, 0) - 1) * 104%));
+  }
+  .jqzz-nav-scrim[data-drag] {
+    transition: none;
+    opacity: var(--drawer-p, 0);
+    pointer-events: none;
+  }
+  /* the people list opens upward from the bottom of the drawer */
+  .jqzz-people-pop {
+    left: auto;
+    right: -8px;
+    width: min(300px, 80vw);
+  }
+  .jqzz-sid-action,
+  .jqzz-quiz-item,
+  .jqzz-search {
+    min-height: 44px;
+  }
+
+  /* Toolbar: menu, mode, commands, start; the name gets its own line */
+  .jqzz-menu-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--raised);
+    color: var(--text);
+  }
+  .jqzz-menu-btn span,
+  .jqzz-menu-btn span::before,
+  .jqzz-menu-btn span::after {
+    display: block;
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+  .jqzz-menu-btn span {
+    position: relative;
+  }
+  .jqzz-menu-btn span::before,
+  .jqzz-menu-btn span::after {
+    content: "";
+    position: absolute;
+    left: 0;
+  }
+  .jqzz-menu-btn span::before {
+    top: -5px;
+  }
+  .jqzz-menu-btn span::after {
+    top: 5px;
+  }
+  .jqzz-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px 6px;
+    min-height: 0;
+  }
+  .jqzz-toolbar .jqzz-toolbar-title {
+    order: 10;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+  .jqzz-toolbar-name {
+    max-width: none;
+  }
+  .jqzz-seg button {
+    min-height: 34px;
+    min-width: 58px;
+  }
+  /* commands: the star alone, as a round button */
+  .jqzz-cmdk {
+    margin-left: auto;
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .jqzz-cmdk-label {
+    display: none;
+  }
+  .jqzz-cmdk .jqzz-star {
+    width: 14px;
+    height: 14px;
+  }
+  .jqzz-toolbar-btn {
+    min-height: 40px;
+  }
+  /* the save notice would push things around; it rides on the name line instead */
+  .jqzz-save {
+    order: 11;
+  }
+
+  /* Canvas and timeline */
+  .jqzz-body,
+  .jqzz-body.with-notes {
+    padding: 12px 12px 40px 6px;
+  }
+  .jqzz-timeline {
+    --tc-w: 42px;
+    --node-w: 18px;
+  }
+  .jqzz-tc {
+    padding-right: 3px;
+    letter-spacing: -0.02em;
+    font-size: 9px;
+  }
+  .jqzz-group-num {
+    padding-right: 4px;
+    font-size: 16px;
+  }
+  .jqzz-group-num .q {
+    font-size: 21px;
+  }
+  .jqzz-group::before {
+    right: -6px;
+  }
+  .jqzz-card,
+  .jqzz-text-block,
+  .jqzz-divider-block {
+    flex-wrap: wrap;
+  }
+  /* a card's buttons take a row of their own, and only on the picked card */
+  .jqzz-card-actions {
+    display: none;
+  }
+  .selected .jqzz-card-actions {
+    display: flex;
+    flex: 1 0 100%;
+    justify-content: flex-end;
+    margin: 6px 0 0;
+  }
+  .jqzz-card-action-btn {
+    width: 40px;
+    height: 36px;
+    font-size: 15px;
+  }
+  .jqzz-prev {
+    flex-wrap: wrap;
+  }
+
+  /* Inspector: a sheet over the bottom of the screen instead of a side panel */
+  .jqzz-inspector {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: min(64dvh, 560px);
+    border-radius: 20px 20px 0 0;
+    transform-origin: 50% 100%;
+  }
+  .jqzz-inspector[data-state="closed"] {
+    transform: translateY(40px);
+  }
+  /* the top of the sheet is its handle: drag it down to put it away */
+  .jqzz-insp-head {
+    padding: 20px 12px 10px 18px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .jqzz-sheet-grip {
+    display: block;
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    margin-left: -19px;
+    border-radius: 4px;
+    background: var(--line-strong);
+  }
+  .jqzz-inspector[data-drag] {
+    transition: none;
+  }
+  .jqzz-inspector[data-drag] .jqzz-sheet-grip {
+    background: var(--accent);
+  }
+  /* the toolbar's glow sits right against the screen's edges here */
+  .jqzz-toolbar::after {
+    left: 0;
+    right: 0;
+  }
+  .jqzz-insp-head .jqzz-icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .jqzz-insp-body {
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  /* a picked card scrolls up to just below the faded top edge, not into it */
+  .jqzz-row {
+    scroll-margin-top: 52px;
+  }
+  /* no easing on the padding here: the picked card scrolls into the room it makes */
+  .jqzz-body {
+    transition: none;
+  }
+  /* room to scroll the timeline up above the sheet */
+  .jqzz-canvas.has-inspector .jqzz-body,
+  .jqzz-canvas.has-inspector .jqzz-body.with-notes {
+    padding-right: 12px;
+    padding-bottom: min(66dvh, 580px);
+  }
+
+  /* Snippets: two to a row */
+  .jqzz-tray-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .jqzz-snippet {
+    padding: 10px 12px 11px;
+  }
+  .jqzz-add-tray .jqzz-tray-grid {
+    padding: 0 10px 10px;
+  }
+
+  /* Welcome */
+  .jqzz-welcome-root {
+    padding: 16px 16px 28px;
+  }
+  .jqzz-welcome-burst {
+    width: 100%;
+    height: 300px;
+  }
+  .jqzz-welcome-logo {
+    width: 140px;
+    height: 140px;
+  }
+  .jqzz-welcome-subtitle {
+    font-size: 16px;
+  }
+  .jqzz-welcome-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .jqzz-welcome-actions .jqzz-toolbar-btn {
+    min-height: 44px;
+  }
+  .jqzz-welcome-features {
+    margin-top: 40px;
+    grid-template-columns: 1fr;
+  }
+  .jqzz-feature {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding: 16px 4px 18px;
+  }
+  .jqzz-feature:last-child {
+    border-bottom: none;
+  }
+
+  /* Dialogs: closer to the edges, under the top of the screen */
+  .jqzz-modal-overlay {
+    padding: 12px;
+  }
+  .jqzz-modal {
+    max-height: calc(100dvh - 24px);
+    padding: 20px 18px 16px;
+  }
+  .jqzz-palette-overlay {
+    padding-top: 10dvh;
+  }
+  .jqzz-palette {
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Text mode: the quick-add field needs the width more than its label does */
+  .jqzz-ai-label {
+    display: none;
+  }
+
+  /* the margin notes have no margin to live in */
+  .jqzz-notes {
+    display: none;
+  }
+}

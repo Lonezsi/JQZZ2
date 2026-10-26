@@ -1,16 +1,23 @@
 import React, { useState } from "react";
+import axios from "axios";
 import type { User } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
+import { errorMessage } from "../../services/api";
+import { avatarSeed, guestName } from "../../utils/guestName";
+import { Avatar } from "../common/Avatar";
 import { ImagePicker } from "./ImagePicker";
+import type { PresenceState } from "../../hooks/usePresence";
 
 interface IdentityModalProps {
+  state?: PresenceState;
   current: User | null;
   onSave: (user: User) => void;
   onClose: () => void;
 }
 
 export const IdentityModal: React.FC<IdentityModalProps> = ({
+  state = "open",
   current,
   onSave,
   onClose,
@@ -25,10 +32,12 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginId, setLoginId] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
     if (!name.trim()) return;
     setLoading(true);
+    setError(null);
     try {
       if (!current) {
         const user = await register(name.trim());
@@ -49,11 +58,8 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
         updateUser(updated);
         onSave(updated);
       }
-    } catch (error) {
-      alert(
-        "Failed to update identity" +
-          (error instanceof Error ? `: ${error.message}` : ""),
-      );
+    } catch (err) {
+      setError(`couldn't save: ${errorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -62,215 +68,260 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   const handleLogin = async () => {
     if (!loginId.trim()) return;
     setLoading(true);
+    setError(null);
     try {
       const user = await login(loginId.trim());
       onSave(user);
-    } catch (error) {
-      alert(
-        "Login failed" + (error instanceof Error ? `: ${error.message}` : ""),
+    } catch (err) {
+      setError(
+        axios.isAxiosError(err) && err.response?.status === 404
+          ? "no user with that id."
+          : `couldn't log in: ${errorMessage(err)}`,
       );
     } finally {
       setLoading(false);
-      setShowLogin(false);
     }
   };
 
   const handleLogout = async () => {
     setLoading(true);
+    setError(null);
     try {
       await logout();
-      const newUser = await register("Guest");
+      const newUser = await register(guestName());
       onSave(newUser);
-    } catch (error) {
-      alert(
-        "Logout failed" + (error instanceof Error ? `: ${error.message}` : ""),
-      );
+      onClose();
+    } catch (err) {
+      setError(`couldn't log out: ${errorMessage(err)}`);
     } finally {
       setLoading(false);
-      onClose();
     }
   };
 
   const handleDeleteAccount = async () => {
     if (!current) return;
-    if (
-      !confirm(
-        "Are you sure you want to delete your account? This cannot be undone.",
-      )
-    )
-      return;
+    if (!confirm("delete your account? this can't be undone.")) return;
     setLoading(true);
+    setError(null);
     try {
       await userService.delete(current.id);
-      const newUser = await register("Guest");
+      const newUser = await register(guestName());
       onSave(newUser);
-    } catch (error) {
-      alert(
-        "Failed to delete account" +
-          (error instanceof Error ? `: ${error.message}` : ""),
-      );
+    } catch (err) {
+      setError(`couldn't delete it: ${errorMessage(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      <div className="jqzz-modal-overlay" onClick={onClose}>
-        {name && <h1 className="jqzz-identity-modal-name">{name}</h1>}
-        <div className="surface-imperfection-light-full">
-          <div className="surface-imperfection-light-scratch">
-            <div className="surface-imperfection-floor">
-              <div className="jqzz-modal" onClick={(e) => e.stopPropagation()}>
-                <h3>{current ? "# Set Identity" : "# Create Account"}</h3>
+    <div className="jqzz-modal-overlay" data-state={state} onClick={onClose}>
+      <div className="jqzz-overlay-bloom" aria-hidden="true" />
+      {name && (
+        <div className="jqzz-identity-modal-name OEF" aria-hidden="true">
+          {name}
+        </div>
+      )}
+      <div
+        className="jqzz-modal jqzz-holo"
+        data-state={state}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="jqzz-identity-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="jqzz-holo-dots" aria-hidden="true" />
+        <div className="jqzz-holo-dust" aria-hidden="true" />
+        <div className="jqzz-modal-head">
+          <h3 id="jqzz-identity-title" className="jqzz-chroma">
+            {showLogin ? "log in" : current ? "you" : "new account"}
+          </h3>
+          {/* out of focus until you look at it */}
+          {handle && !showLogin && <span className="jqzz-handle-glow">_{handle}_</span>}
+        </div>
 
-                {handle && <h2 className="tag">_{handle}_</h2>}
-
-                <div className="jqzz-field-label" style={{ marginBottom: 5 }}>
-                  Display Name
-                </div>
+        {showLogin ? (
+          <>
+            <label className="jqzz-field-label" htmlFor="jqzz-login-id">
+              user id
+            </label>
+            <input
+              id="jqzz-login-id"
+              className="jqzz-modal-input"
+              placeholder="the 10 letter id from your other browser"
+              value={loginId}
+              autoFocus
+              onChange={(e) => setLoginId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            />
+          </>
+        ) : (
+          <>
+            <label className="jqzz-field-label" htmlFor="jqzz-name">
+              name
+            </label>
+            <div className="jqzz-modal-inline">
+              <input
+                id="jqzz-name"
+                className="jqzz-modal-input"
+                placeholder="e.g. lonezsi"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button
+                type="button"
+                className="jqzz-dice"
+                onClick={() => setName(guestName())}
+                title="random name"
+                aria-label="Random name"
+              >
+                <span aria-hidden="true">⚄</span>
+              </button>
+            </div>
+            {current && (
+              <>
+                <label className="jqzz-field-label" htmlFor="jqzz-handle">
+                  handle
+                </label>
                 <input
+                  id="jqzz-handle"
                   className="jqzz-modal-input"
-                  placeholder="e.g. lonezsi"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  placeholder="letters and numbers only"
+                  value={handle}
+                  onChange={(e) =>
+                    setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))
+                  }
                 />
-                {current && (
-                  <>
-                    <div
-                      className="jqzz-field-label"
-                      style={{ marginBottom: 5 }}
+                <label className="jqzz-field-label" htmlFor="jqzz-email">
+                  email <span className="jqzz-optional">optional</span>
+                </label>
+                <input
+                  id="jqzz-email"
+                  className="jqzz-modal-input"
+                  placeholder="email@example.com"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <div className="jqzz-field-label">picture</div>
+                <div className="jqzz-modal-picture">
+                  <Avatar
+                    user={{ id: current.id, name, profilePictureUrl }}
+                    viewerId={current.id}
+                    className="jqzz-identity-preview"
+                  />
+                  <ImagePicker
+                    value={profilePictureUrl.startsWith("gen:") ? "" : profilePictureUrl}
+                    onChange={setProfilePictureUrl}
+                  />
+                  <button
+                    type="button"
+                    className="jqzz-dice"
+                    onClick={() => setProfilePictureUrl(avatarSeed())}
+                    title="random picture"
+                    aria-label="Random picture"
+                  >
+                    <span aria-hidden="true">⚄</span>
+                  </button>
+                  {profilePictureUrl && (
+                    <button
+                      type="button"
+                      className="jqzz-modal-btn ghost"
+                      onClick={() => setProfilePictureUrl("")}
                     >
-                      Handle
-                    </div>
-                    <input
-                      className="jqzz-modal-input"
-                      placeholder="@handle"
-                      value={handle}
-                      onChange={(e) =>
-                        setHandle(
-                          e.target.value
-                            .toLowerCase()
-                            .replace(/[^a-z0-9]/g, ""),
-                        )
-                      }
-                    />
-                    <div
-                      className="jqzz-field-label"
-                      style={{ marginBottom: 5 }}
-                    >
-                      Email
-                    </div>
-                    <input
-                      className="jqzz-modal-input"
-                      placeholder="email@example.com"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                    <div className="jqzz-field-label">Profile Picture</div>
-                    <ImagePicker
-                      value={profilePictureUrl}
-                      onChange={setProfilePictureUrl}
-                    />
-                    {profilePictureUrl && (
-                      <button
-                        type="button"
-                        className="jqzz-modal-btn"
-                        onClick={() => setProfilePictureUrl("")}
-                        style={{ marginTop: "4px", width: "100%" }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </>
-                )}
-
-                <div className="jqzz-modal-row" style={{ marginTop: "8px" }}>
-                  {!current && !showLogin ? (
-                    <>
-                      <button
-                        className="jqzz-modal-btn"
-                        onClick={() => setShowLogin(true)}
-                      >
-                        Login
-                      </button>
-                      <button
-                        className="jqzz-modal-btn primary"
-                        onClick={handleSave}
-                        disabled={loading || !name.trim()}
-                      >
-                        {loading ? "Creating..." : "Create"}
-                      </button>
-                    </>
-                  ) : showLogin ? (
-                    <>
-                      <div style={{ width: "100%", marginBottom: "8px" }}>
-                        <div className="jqzz-field-label">User ID</div>
-                        <input
-                          className="jqzz-modal-input"
-                          placeholder="Enter your user ID"
-                          value={loginId}
-                          onChange={(e) => setLoginId(e.target.value)}
-                        />
-                      </div>
-                      <div className="jqzz-modal-row" style={{ width: "100%" }}>
-                        <button
-                          className="jqzz-modal-btn"
-                          onClick={() => setShowLogin(false)}
-                        >
-                          Back
-                        </button>
-                        <button
-                          className="jqzz-modal-btn primary"
-                          onClick={handleLogin}
-                          disabled={loading || !loginId.trim()}
-                        >
-                          {loading ? "Logging in..." : "Login"}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className="jqzz-modal-btn"
-                        onClick={handleLogout}
-                        disabled={loading}
-                      >
-                        Logout
-                      </button>
-                      <button
-                        className="jqzz-modal-btn"
-                        onClick={handleDeleteAccount}
-                        disabled={loading}
-                      >
-                        Delete Account
-                      </button>
-                      <button
-                        className="jqzz-modal-btn primary"
-                        onClick={handleSave}
-                        disabled={loading}
-                      >
-                        {loading ? "Saving..." : "Save"}
-                      </button>
-                    </>
+                      Remove
+                    </button>
                   )}
                 </div>
-                <div className="jqzz-modal-row" style={{ marginTop: "8px" }}>
-                  <button
-                    className="jqzz-modal-btn"
-                    onClick={onClose}
-                    disabled={loading}
-                    style={{ width: "100%" }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+                <label className="jqzz-field-label" htmlFor="jqzz-id">
+                  your id <span className="jqzz-optional">log in with it somewhere else</span>
+                </label>
+                <input
+                  id="jqzz-id"
+                  className="jqzz-modal-input mono"
+                  readOnly
+                  value={current.id}
+                  onFocus={(e) => e.target.select()}
+                />
+              </>
+            )}
+          </>
+        )}
+
+        {error && (
+          <p className="jqzz-modal-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="jqzz-modal-row">
+          {showLogin ? (
+            <>
+              <button className="jqzz-modal-btn" onClick={() => setShowLogin(false)}>
+                Back
+              </button>
+              <button
+                className="jqzz-modal-btn primary"
+                onClick={handleLogin}
+                disabled={loading || !loginId.trim()}
+              >
+                {loading ? "logging in…" : "Log in"}
+              </button>
+            </>
+          ) : !current ? (
+            <>
+              <button className="jqzz-modal-btn" onClick={() => setShowLogin(true)}>
+                Log in instead
+              </button>
+              <button
+                className="jqzz-modal-btn primary"
+                onClick={handleSave}
+                disabled={loading || !name.trim()}
+              >
+                {loading ? "making it…" : "Create"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="jqzz-modal-btn" onClick={onClose} disabled={loading}>
+                Cancel
+              </button>
+              <button
+                className="jqzz-modal-btn primary"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? "saving…" : "Save"}
+              </button>
+            </>
+          )}
         </div>
+
+        {current && !showLogin && (
+          <div className="jqzz-modal-row secondary">
+            <button className="jqzz-modal-btn ghost" onClick={handleLogout} disabled={loading}>
+              Log out
+            </button>
+            <button
+              className="jqzz-modal-btn ghost"
+              onClick={() => {
+                setError(null);
+                setShowLogin(true);
+              }}
+              disabled={loading}
+            >
+              Switch user
+            </button>
+            <button
+              className="jqzz-modal-btn ghost danger"
+              onClick={handleDeleteAccount}
+              disabled={loading}
+            >
+              Delete account
+            </button>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };

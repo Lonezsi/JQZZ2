@@ -1,87 +1,414 @@
-/* Main area, toolbar */
+/* Main column: a quiet toolbar, then the canvas open to the aura */
 .jqzz-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
 }
 
 /* Toolbar */
 .jqzz-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
+  gap: 12px;
+  padding: 14px 24px 10px;
   flex-shrink: 0;
-}
-.jqzz-tab-group {
-  display: flex;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-md);
-  padding: 2px;
-  gap: 1px;
-}
-.jqzz-tab {
-  padding: 5px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  transition: all 0.12s;
-  letter-spacing: 0.5px;
-}
-.jqzz-tab.active {
-  background: var(--bg-accent);
-  color: var(--text);
-}
-.jqzz-spacer {
-  flex: 1;
-}
-.jqzz-toolbar-btn {
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  cursor: pointer;
-  border: 1px solid var(--border-light);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  transition: all 0.12s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.jqzz-toolbar-btn:hover {
-  background: var(--bg-highlight);
-  color: var(--text);
-}
-.jqzz-toolbar-btn.run {
-  background: var(--accent);
-  color: #000;
-  border-color: var(--accent);
-  font-weight: 700;
-}
-.jqzz-toolbar-btn.run:hover {
-  background: color-mix(in srgb, var(--accent) 85%, black);
+  min-height: 60px;
 }
 
-/* Body */
+/* segmented control: the thumb glides, the labels stay put */
+.jqzz-seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--sunken);
+  flex-shrink: 0;
+}
+.jqzz-seg-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--raised-hover);
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 4px 14px -6px rgba(0, 0, 0, 0.5);
+  transition: transform var(--dur-3) var(--ease);
+}
+.jqzz-seg[data-mode="text"] .jqzz-seg-thumb {
+  transform: translateX(100%);
+}
+.jqzz-seg button {
+  position: relative;
+  min-width: 64px;
+  min-height: 26px;
+  padding: 3px 14px;
+  border: none;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  transition: color var(--dur-2) var(--ease);
+}
+.jqzz-seg button[aria-pressed="true"] {
+  color: var(--text);
+}
+
+.jqzz-toolbar-title {
+  display: flex;
+  min-width: 110px;
+  flex: 1;
+}
+/* the quiz name is edited in place */
+.jqzz-toolbar-name {
+  width: 100%;
+  max-width: 460px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  outline: none;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-toolbar-name:hover {
+  border-color: var(--line);
+}
+.jqzz-toolbar-name:focus-visible {
+  border-color: var(--accent);
+  background: var(--sunken);
+}
+
+/* save notice: only while it matters */
+.jqzz-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition:
+    opacity var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease);
+}
+.jqzz-save.on {
+  opacity: 1;
+  transform: none;
+}
+.jqzz-save-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.jqzz-save.is-saving .jqzz-save-dot {
+  background: var(--warm);
+  animation: pulse 0.9s var(--ease-in-out) infinite alternate;
+}
+.jqzz-save.is-error {
+  color: var(--danger);
+}
+.jqzz-save.is-error .jqzz-save-dot {
+  background: var(--danger);
+}
+@keyframes pulse {
+  to {
+    transform: scale(0.5);
+    opacity: 0.5;
+  }
+}
+
+/* the way into the command palette */
+.jqzz-cmdk {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 7px 4px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  overflow: hidden;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.jqzz-cmdk::before {
+  /* a prismatic wash on hover */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--phase-QUESTION) 26%, transparent),
+    color-mix(in srgb, var(--warm) 22%, transparent),
+    color-mix(in srgb, var(--phase-ANSWER) 22%, transparent)
+  );
+  opacity: 0;
+  transition: opacity var(--dur-2) var(--ease);
+}
+.jqzz-cmdk:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+}
+.jqzz-cmdk:hover::before {
+  opacity: 1;
+}
+.jqzz-cmdk > * {
+  position: relative;
+}
+.jqzz-cmdk .jqzz-star {
+  width: 11px;
+  height: 11px;
+  color: var(--accent);
+  transition: transform 0.7s var(--ease);
+}
+.jqzz-cmdk:hover .jqzz-star {
+  transform: rotate(180deg) scale(1.15);
+}
+.jqzz-cmdk .jqzz-keys {
+  margin-left: 4px;
+}
+
+.jqzz-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 4px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background var(--dur-1) var(--ease),
+    box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.jqzz-toolbar-btn:hover:not(:disabled) {
+  background: var(--raised-hover);
+}
+.jqzz-toolbar-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+/* the one prominent action on the screen */
+.jqzz-toolbar-btn.run {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--on-accent);
+  font-weight: 700;
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+}
+.jqzz-toolbar-btn.run:hover {
+  background: var(--accent-fill);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent-fill) 22%, transparent),
+    0 0 26px -4px var(--accent-fill);
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* Canvas */
+.jqzz-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  container-type: inline-size;
+}
 .jqzz-body {
   flex: 1;
   overflow-y: auto;
-  padding: 14px;
+  padding: 20px 28px 40px;
+  position: relative;
+  transition: padding var(--dur-3) var(--ease);
+  /* the content dissolves into the edges instead of being cut by them; the
+     fades only open up once something is actually past an edge (Main.tsx) */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--edge-top),
+    #000 calc(100% - var(--edge-bottom)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--edge-top),
+    #000 calc(100% - var(--edge-bottom)),
+    transparent 100%
+  );
 }
-.jqzz-body::-webkit-scrollbar {
-  width: 4px;
+
+/* ─── Scroll edges ────────────────────────────────────────────────
+   registered so the fade depth can ease in rather than snap */
+@property --edge-top {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
 }
-.jqzz-body::-webkit-scrollbar-thumb {
-  background: var(--border-light);
-  border-radius: 2px;
+@property --edge-bottom {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+.jqzz-main {
+  transition:
+    --edge-top var(--dur-3) var(--ease),
+    --edge-bottom var(--dur-3) var(--ease);
+}
+.jqzz-main[data-under] {
+  --edge-top: 48px;
+}
+.jqzz-main[data-more] {
+  --edge-bottom: 40px;
+}
+/* where the toolbar ends: a hairline of the aura's colours, lit only while
+   there is content underneath it */
+.jqzz-toolbar {
+  position: relative;
+}
+.jqzz-toolbar::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--phase-QUESTION) 70%, transparent) 22%,
+    color-mix(in srgb, var(--warm) 60%, transparent) 62%,
+    color-mix(in srgb, var(--phase-ANSWER) 50%, transparent) 84%,
+    transparent
+  );
+  box-shadow: 0 0 14px 0 color-mix(in srgb, var(--phase-QUESTION) 55%, transparent);
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition:
+    opacity var(--dur-3) var(--ease),
+    transform var(--dur-3) var(--ease);
+  pointer-events: none;
+}
+.jqzz-main[data-under] .jqzz-toolbar::after {
+  opacity: 1;
+  transform: none;
+}
+.jqzz-body.with-notes {
+  padding: 72px 64px 72px 24px;
+}
+/* narrow canvas: make room for the floating inspector instead of hiding under it */
+@container (max-width: 1140px) {
+  .jqzz-canvas.has-inspector .jqzz-body.with-notes {
+    padding-right: 356px;
+  }
+}
+
+.jqzz-notes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.jqzz-notes > * {
+  text-shadow:
+    0 0 1px var(--bg),
+    0 0 6px var(--bg),
+    0 0 14px var(--bg);
+  position: absolute;
+  transition:
+    opacity var(--dur-2) var(--ease),
+    transform var(--dur-2) var(--ease);
+}
+.jqzz-note-tl {
+  top: 14px;
+  left: 24px;
+  line-height: 1.5;
+}
+.jqzz-note-tr {
+  top: 14px;
+  right: 22px;
+  color: var(--text-2);
+}
+.jqzz-note-vert {
+  top: 50%;
+  right: 20px;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  letter-spacing: 0.1em;
+}
+.jqzz-note-bl {
+  bottom: 14px;
+  left: 24px;
+  color: var(--warm);
+  line-height: 1.35;
+}
+/* selection notes only exist while something is selected */
+.jqzz-note-tr,
+.jqzz-note-bl {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.jqzz-note-tr.on,
+.jqzz-note-bl.on {
+  opacity: 1;
+  transform: none;
+}
+/* the inspector floats where the log sits */
+.jqzz-canvas.has-inspector .jqzz-note-vert,
+.jqzz-canvas.has-inspector .jqzz-note-tr {
+  opacity: 0;
+}
+
+/* Floating inspector */
+.jqzz-inspector {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  bottom: 14px;
+  width: 330px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  transform-origin: 100% 30%;
+  transition:
+    transform var(--dur-3) var(--ease),
+    opacity var(--dur-2) var(--ease);
+  will-change: transform, opacity;
+}
+.jqzz-inspector[data-state="closed"] {
+  opacity: 0;
+  transform: translateX(28px) scale(0.98);
+}
+/* long-lived panel: the rim only turns while you're on it */
+.jqzz-inspector::before {
+  animation-play-state: paused;
+}
+.jqzz-inspector:hover::before {
+  animation-play-state: running;
 }

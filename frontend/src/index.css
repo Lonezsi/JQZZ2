@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
 @import "./styles/reset.css";
 @import "./styles/glass.css";
 @import "./styles/layout.css";
@@ -9,153 +9,338 @@
 @import "./styles/right-panel.css";
 @import "./styles/modals.css";
 @import "./styles/welcome.css";
+@import "./styles/mobile.css";
 
 @font-face {
   font-family: "Old English Five";
   src: url("/OldEnglishFive.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
+/* angle of the prismatic rim on overlays; registered so it can rotate */
+@property --holo-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* ─── Ink (dark, default) ─────────────────────────────────────────
+   contrast figures are worst case: text on a panel sitting over the
+   brightest part of the aura (#211b3d) */
 :root {
-  /* Backgrounds – from dark to light */
-  --bg-base: #0b0c10; /* deepest background */
-  --bg-surface: #111318; /* panels */
-  --bg-elevated: #181a21; /* cards, inputs */
-  --bg-highlight: #1e2029; /* hover states */
-  --bg-accent: #272a35; /* active tab, etc. */
+  color-scheme: dark;
 
-  --lime: #a3e635;
+  --bg: #07060c;
+  --surface: rgba(16, 13, 25, 0.92);
+  --surface-solid: #110e1a;
+  --raised: rgba(25, 21, 38, 0.94);
+  --raised-hover: rgba(39, 33, 59, 0.96);
+  --sunken: rgba(3, 2, 7, 0.62);
+  --line: rgba(226, 219, 255, 0.16);
+  --line-strong: rgba(226, 219, 255, 0.32);
 
-  /* Borders */
-  --border: #252830;
-  --border-light: #333748;
+  --text: #f8f5fd; /* 15.1:1 */
+  --text-2: #d3cce5; /* 10.5:1 */
+  --text-3: #aea7c6; /* 7.1:1 */
 
-  /* Accent */
-  --accent: #7700ff;
+  --accent: #b9a6ff; /* selection, focus, links: 7.7:1 */
+  --accent-fill: #b9a6ff; /* primary button */
+  --on-accent: #0b0912; /* 9.4:1 on the fill */
+  --accent-soft: rgba(185, 166, 255, 0.13);
+  --warm: #f2a989; /* time and timecodes: 8.4:1 */
+  --danger: #ff9a9a;
+  --ok: #9fe0b8;
 
-  /* Text */
-  --text: hsl(227, 39%, 95%);
-  --text-muted: hsl(226, 17%, 80%);
-  --text-dim: hsl(226, 17%, 70%);
+  /* phase hues sit along the aura gradient, navy → violet → peach → rose */
+  --phase-WAITING: #8fa3c7;
+  --phase-QUESTION: #a48cff;
+  --phase-ANSWER: #7fb2ff;
+  --phase-ELABORATION: #f2a989;
+  --phase-RESULT: #f08cb0;
+  --phase-TEXT: #9a93b3;
+  --phase-DIVIDER: #9a93b3;
 
-  /* Font & radii */
-  --font-mono: "JetBrains Mono", monospace;
-  --font-oef: "Old English Five", serif;
-  --radius-sm: 4px;
-  --radius-md: 6px;
+  --aura-a: #6b4cff;
+  --aura-b: #f2a989;
+  --aura-c: #23195f;
+  --aura-opacity: 0.5;
+  --paper: none;
+  --grain-opacity: 0.24;
+  --grain-blend: overlay;
+  --dot: rgba(239, 234, 248, 0.5);
 
-  /* Spacing – optional, but can be used with calc() */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --font-display: "Old English Five", "UnifrakturMaguntia", serif;
+  /* kept for older class names */
+  --font-mono: var(--font-data);
+  --font-oef: var(--font-display);
+
+  --fs-annot: 10.5px;
+  --fs-small: 11.5px;
+  --fs-body: 13px;
+  --fs-title: 15px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
 
-  /* Glass effect (will be applied with backdrop-filter) */
-  --glass-bg: rgba(17, 19, 24, 0.7);
-  --glass-blur: 12px;
+  --blur: 18px;
+
+  /* motion: one family of curves, only transform/opacity get animated */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1); /* settle */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* crossfades */
+  --ease-pop: cubic-bezier(0.34, 1.45, 0.64, 1); /* small things that land */
+  --dur-1: 140ms; /* hover, press */
+  --dur-2: 240ms; /* open, close */
+  --dur-3: 420ms; /* views, lists */
+  --dur-aura: 1100ms;
+
+  /* overlay candy */
+  /* texture stack */
+  --dither-opacity: 0.1;
+  --dither-blend: screen;
+  --tex-floor-opacity: 0.2;
+  --lens-a-opacity: 0.32;
+  --lens-b-opacity: 0.14;
+  --lens-b-blend: color-dodge;
+  --grain-huge-opacity: 0.045;
+  --grain-coarse: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='1.9' intercept='-0.45'/%3E%3CfeFuncG type='linear' slope='1.9' intercept='-0.45'/%3E%3CfeFuncB type='linear' slope='1.9' intercept='-0.45'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  --leak-a: rgba(255, 168, 120, 0.55);
+  --leak-b: rgba(139, 108, 255, 0.55);
+  --leak-blend: screen;
+  --imperfection-opacity: 0.32;
+  --dust: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 9 -7.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23d)'/%3E%3C/svg%3E");
+  --scratches: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.42 0.0018' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 14 -11.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+
+  /* legacy aliases used by inline styles */
+  --txt2: var(--text-2);
+  --txt3: var(--text-3);
+  --text-muted: var(--text-2);
+  --text-dim: var(--text-3);
+  --red: var(--danger);
+  --lime: var(--ok);
+  --border: var(--line);
+  --border-light: var(--line-strong);
+  --bg-elevated: var(--raised);
+  --bg-highlight: var(--raised-hover);
+
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0C12.6 7.2 16.8 11.4 24 12 16.8 12.6 12.6 16.8 12 24 11.4 16.8 7.2 12.6 0 12 7.2 11.4 11.4 7.2 12 0Z'/%3E%3C/svg%3E");
 
   scrollbar-width: thin;
-  scrollbar-color: var(--accent) var(--bg-surface);
+  scrollbar-color: var(--line-strong) transparent;
 }
 
-.surface-imperfection-floor::before {
-  background: url("https://imagedelivery.net/6Q4HLLMjcXxpmSYfQ3vMaw/fd7427f1-c196-4b0f-0038-17ec820ccc00/2000px");
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-  mix-blend-mode: color-dodge;
-  filter: contrast(0.5);
-  opacity: 0.6;
-  z-index: 2;
+/* ─── Paper (light) ───────────────────────────────────────────────
+   worst case: panel over the aura (#e6e0f1) */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --bg: #ebe7e0;
+    --surface: rgba(250, 248, 244, 0.84);
+    --surface-solid: #faf8f4;
+    --raised: rgba(253, 252, 249, 0.9);
+    --raised-hover: #ffffff;
+    --sunken: rgba(232, 227, 219, 0.7);
+    --line: rgba(22, 19, 31, 0.16);
+    --line-strong: rgba(22, 19, 31, 0.32);
+
+    --text: #0f0c17; /* 15.0:1 */
+    --text-2: #37314a; /* 9.6:1 */
+    --text-3: #4f4a62; /* 6.5:1 */
+
+    --accent: #4a2fbf; /* 6.7:1 */
+    --accent-fill: #5236c9;
+    --on-accent: #ffffff; /* 7.7:1 on the fill */
+    --accent-soft: rgba(82, 54, 201, 0.1);
+    --warm: #a0482a; /* 4.7:1 */
+    --danger: #b3261e;
+    --ok: #1f7a4a;
+
+    --phase-WAITING: #4f6286;
+    --phase-QUESTION: #5236c9;
+    --phase-ANSWER: #2f62b8;
+    --phase-ELABORATION: #a0482a;
+    --phase-RESULT: #a3325e;
+    --phase-TEXT: #5e5870;
+    --phase-DIVIDER: #5e5870;
+
+    --aura-a: #7b5cff;
+    --aura-b: #f6a684;
+    --aura-c: #b9a6ff;
+    --aura-opacity: 0.5;
+    --paper: url("/bg.jpg");
+    --grain-opacity: 0.13;
+    --grain-blend: multiply;
+    --dot: rgba(22, 19, 31, 0.45);
+
+    --dither-opacity: 0.07;
+    --dither-blend: multiply;
+    --tex-floor-opacity: 0;
+    --lens-a-opacity: 0.32;
+    --lens-b-opacity: 0.1;
+    --lens-b-blend: multiply;
+    --grain-huge-opacity: 0.04;
+
+    /* on paper, leaks tint instead of glow */
+    --leak-a: rgba(246, 166, 132, 0.5);
+    --leak-b: rgba(123, 92, 255, 0.35);
+    --leak-blend: multiply;
+    --imperfection-opacity: 0.24;
+  }
 }
 
-.surface-imperfection-light-scratch::before {
-  background: url("https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_130S.jpg");
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-  mix-blend-mode: color-dodge;
-  filter: blur(2px) hue-rotate(-80deg);
-  backdrop-filter: contrast(1.01);
-  opacity: 0.2;
-  z-index: 1;
+/* ─── Accessibility settings ────────────────────────────────────── */
+@media (prefers-contrast: more) {
+  :root {
+    --text-3: var(--text-2);
+    --line: var(--line-strong);
+    --grain-opacity: 0.2;
+    --aura-opacity: 0.3;
+    --grain-huge-opacity: 0.05;
+    --dither-opacity: 0.05;
+    --imperfection-opacity: 0.25;
+  }
 }
 
-.surface-imperfection-light-full::before {
-  background: url("https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_171S.jpg");
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-  mix-blend-mode: soft-light;
-  opacity: 0.5;
-  filter: hue-rotate(-20deg) brightness(3) saturate(0.5);
-  z-index: 1;
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --surface: var(--surface-solid);
+    --raised: var(--surface-solid);
+    --blur: 0px;
+    --aura-opacity: 0.25;
+    --imperfection-opacity: 0;
+    --grain-huge-opacity: 0.04;
+    --dither-opacity: 0.04;
+  }
 }
 
-/* .surface-imperfection-light-full::before {} */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Shared bits ───────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
 
 .OEF {
-  font-family: var(--font-oef);
+  font-family: var(--font-display);
+  font-weight: normal;
+}
+
+/* small mono label that carries data: ids, timecodes, counts */
+.jqzz-annot {
+  font-family: var(--font-data);
+  font-size: var(--fs-annot);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* keycaps: physical-looking keys, used for every shortcut hint */
+.jqzz-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.jqzz-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: linear-gradient(var(--raised-hover), var(--raised));
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-2);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+/* on a filled button the caps go translucent so they read as part of it */
+.primary .jqzz-key,
+.run .jqzz-key {
+  border-color: color-mix(in srgb, var(--on-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--on-accent) 12%, transparent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.jqzz-star {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: var(--star) center / contain no-repeat;
+  mask: var(--star) center / contain no-repeat;
+  flex-shrink: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .disabled {
-  opacity: 0.5;
-  filter: brightness(0.5);
+  opacity: 0.45;
   pointer-events: none;
 }
 
 .tag {
   position: relative;
-  margin-bottom: 0px;
-  bottom: 0;
   right: 5px;
   opacity: 0.2;
   z-index: -1;
 }
 
-/* Chrome, Edge, Safari */
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
-
 *::-webkit-scrollbar-track {
-  background: var(--bg-surface);
-  border-radius: var(--radius-md);
+  background: transparent;
 }
-
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--accent), #4c00aa);
-  border-radius: var(--radius-md);
-  border: 2px solid var(--bg-surface);
+  background: var(--line-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
-
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #9d4dff, var(--accent));
+  background: var(--text-3);
+  background-clip: padding-box;
 }
-
 *::-webkit-scrollbar-corner {
-  background: var(--bg-surface);
+  background: transparent;
 }

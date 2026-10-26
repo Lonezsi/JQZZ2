@@ -5,12 +5,15 @@ import { useDragAndDrop } from "../../hooks/useDragAndDrop";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { Sidebar } from "./Sidebar/Sidebar";
 import { Main } from "./Main/Main";
-import { RightPanel } from "./RightPanel/RightPanel";
+import { Inspector } from "./Inspector/Inspector";
 import { CommandPalette } from "../Modals/CommandPalette";
 import { IdentityModal } from "../Modals/IdentityModal";
-import { SNIPPETS } from "../../constants/snippets";
 import { userService } from "../../services/userService";
 import { quizService } from "../../services/quizService";
+import { Atmosphere, Imperfections } from "../common/Atmosphere";
+import { usePresence } from "../../hooks/usePresence";
+import { isGuestName } from "../../utils/guestName";
+import { useSwipeDrawer } from "../../hooks/useSwipeDrawer";
 import "../../index.css";
 
 export const Dashboard: React.FC = () => {
@@ -33,6 +36,7 @@ export const Dashboard: React.FC = () => {
     duplicateAction,
     reorderActions,
     newQuiz,
+    importScript,
     dropSnippet: dropSnippetMutation,
     handleParsed,
     quiz,
@@ -46,12 +50,9 @@ export const Dashboard: React.FC = () => {
   );
 
   const {
-    draggingSnippet,
     dropOver,
     dragActionId,
     dragOverActionId,
-    onSnippetDragStart,
-    onSnippetDragEnd,
     onDropZoneDragOver,
     onDropZoneDragLeave,
     onDropZoneDrop,
@@ -62,7 +63,25 @@ export const Dashboard: React.FC = () => {
   } = useDragAndDrop(dropSnippet, reorderActions);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // on a phone the sidebar is a drawer; this is whether it is pulled out
+  const [navOpen, setNavOpen] = useState(false);
+  useSwipeDrawer(navOpen, setNavOpen);
   const [identityOpen, setIdentityOpen] = useState(false);
+  const identityPresence = usePresence(identityOpen, 240);
+
+  // Imports a .txt script as a new quiz
+  const handleImport = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".txt";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      await importScript(file.name.replace(/\.txt$/i, ""), text);
+    };
+    input.click();
+  }, [importScript]);
 
   const handleExport = useCallback(() => {
     if (!quiz) return;
@@ -83,16 +102,33 @@ export const Dashboard: React.FC = () => {
     : null;
   const multipleSelected = selectedActionIdsArray.length > 1;
 
+  const handleStart = useCallback(() => {
+    if (!quiz) {
+      newQuiz();
+      return;
+    }
+    if (quiz.actions.length === 0) {
+      alert("this quiz is empty. add some questions first.");
+      return;
+    }
+    alert("running a quiz isn't built yet. the backend can do it, the play screens don't exist yet.");
+  }, [quiz, newQuiz]);
+
   useKeyboardShortcuts({
     onPalette: () => setPaletteOpen(true),
     onNewQuiz: newQuiz,
     onToggleMode: () => setMode(mode === "visual" ? "text" : "visual"),
+    // one thing at a time: dialog, then palette, then the selection
     onEscape: () => {
-      setPaletteOpen(false);
-      setIdentityOpen(false);
+      if (navOpen) setNavOpen(false);
+      else if (identityOpen) setIdentityOpen(false);
+      else if (paletteOpen) setPaletteOpen(false);
+      else clearSelectedActions();
     },
     onExport: handleExport,
     onSelectAll: selectAllActions, // Ctrl+A
+    onImport: handleImport, // Ctrl+I
+    onStart: handleStart, // Ctrl+Enter
   });
 
   useEffect(() => {
@@ -122,7 +158,7 @@ export const Dashboard: React.FC = () => {
         // Delete offline guest users with no quizzes
         for (const u of allUsers) {
           if (u.id === user.id) continue; // never delete current user
-          if (u.name.startsWith("Guest_") && !u.online) {
+          if (isGuestName(u.name) && !u.online) {
             const hasQuizzes = quizCountByAuthor.has(u.id);
             if (!hasQuizzes) {
               await userService.delete(u.id);
@@ -140,119 +176,115 @@ export const Dashboard: React.FC = () => {
 
   const handleCommand = useCallback((label: string) => {
     switch (label) {
-      case "New Quiz":
+      case "New quiz":
         newQuiz();
         break;
-      case "Export Current Quiz":
+      case "Import a .txt":
+        handleImport();
+        break;
+      case "Export this quiz":
         handleExport();
         break;
-      case "Toggle Text Mode":
+      case "Switch visual / text":
         setMode(mode === "visual" ? "text" : "visual");
         break;
-      default:
-        console.log("Unhandled command:", label);
+      case "Start":
+        handleStart();
+        break;
     }
-  }, [newQuiz, handleExport, mode, setMode]);
+  }, [newQuiz, handleImport, handleExport, handleStart, mode, setMode]);
 
   return (
-    <div className="surface-imperfection-light-full">
-      <div className="surface-imperfection-light-scratch">
-        <div className="jqzz-dash surface surface-imperfection-floor">
-          {paletteOpen && (
-            <CommandPalette onClose={() => setPaletteOpen(false)} onExecute={handleCommand} />
-          )}
-          {identityOpen && user && (
-            <IdentityModal
-              current={user}
-              onSave={() => setIdentityOpen(false)}
-              onClose={() => setIdentityOpen(false)}
+    <div className="jqzz-app" data-phase={selectedAction?.phase ?? "IDLE"}>
+      <Atmosphere />
+      <div className="jqzz-dash">
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onExecute={handleCommand}
+          quizzes={quizzes}
+          onOpenQuiz={(id) => {
+            setActiveQuizId(id);
+            clearSelectedActions();
+          }}
+        />
+        {identityPresence.mounted && user && (
+          <IdentityModal
+            state={identityPresence.state}
+            current={user}
+            onSave={() => setIdentityOpen(false)}
+            onClose={() => setIdentityOpen(false)}
+          />
+        )}
+
+        {/* phone only: dims the page behind the drawer, a tap on it closes it */}
+        <div
+          className={`jqzz-nav-scrim${navOpen ? " open" : ""}`}
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+        <Sidebar
+          open={navOpen}
+          identity={user}
+          onIdentityClick={() => setIdentityOpen(true)}
+          quizzes={quizzes}
+          activeQuizId={activeQuizId}
+          onSelectQuiz={(id) => {
+            setActiveQuizId(id);
+            clearSelectedActions();
+            setNavOpen(false);
+          }}
+          onNewQuiz={() => {
+            newQuiz();
+            setNavOpen(false);
+          }}
+          onImport={() => {
+            handleImport();
+            setNavOpen(false);
+          }}
+          onHomeClick={() => {
+            setActiveQuizId(null);
+            setNavOpen(false);
+          }}
+        />
+
+        <Main
+          mode={mode}
+          setMode={setMode}
+          onOpenPalette={() => setPaletteOpen(true)}
+          onMenu={() => setNavOpen(true)}
+          onNewQuiz={newQuiz}
+          onImport={handleImport}
+          onStart={handleStart}
+          selectedActionIds={selectedActionIds}
+          toggleSelectAction={toggleSelectAction}
+          dragActionId={dragActionId}
+          dragOverActionId={dragOverActionId}
+          onActionDragStart={onActionDragStart}
+          onActionDragEnd={onActionDragEnd}
+          onActionDragOver={onActionDragOver}
+          onActionDrop={onActionDrop}
+          deleteAction={deleteAction}
+          duplicateAction={duplicateAction}
+          dropOver={dropOver}
+          onDropZoneDragOver={onDropZoneDragOver}
+          onDropZoneDragLeave={onDropZoneDragLeave}
+          onDropZoneDrop={onDropZoneDrop}
+          aiPrompt={aiPrompt}
+          setAiPrompt={setAiPrompt}
+          onParsed={handleParsed}
+          inspector={
+            <Inspector
+              selectedAction={selectedAction}
+              multipleSelected={multipleSelected}
+              onActionUpdate={updateAction}
+              onQuestionUpdate={updateQuestion}
+              onClose={clearSelectedActions}
             />
-          )}
-
-          <Sidebar
-            identity={user}
-            onIdentityClick={() => setIdentityOpen(true)}
-            quizzes={quizzes}
-            activeQuizId={activeQuizId}
-            onSelectQuiz={(id) => {
-              setActiveQuizId(id);
-              clearSelectedActions();
-            }}
-            onNewQuiz={newQuiz}
-            onImport={() => {
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = ".txt";
-              input.onchange = async (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (!file) return;
-                const text = await file.text();
-                import("../../utils/scriptParser").then(({ parseScript }) => {
-                  const existingQuestions = quiz?.actions
-                    .map((a) => a.question)
-                    .filter(Boolean) ?? [];
-                  const { questions, actions, errors } = parseScript(text, existingQuestions);
-                  if (errors.length > 0) {
-                    console.warn("Parse errors:", errors);
-                  }
-                  handleParsed(questions, actions);
-                });
-              };
-              input.click();
-            }}
-            onJoinLobby={() => alert("Lobby list not implemented yet")}
-            snippets={SNIPPETS}
-            draggingSnippet={draggingSnippet}
-            onSnippetDragStart={onSnippetDragStart}
-            onSnippetDragEnd={onSnippetDragEnd}
-            onSnippetClick={dropSnippet}
-            onHomeClick={() => setActiveQuizId(null)}
-          />
-
-          <Main
-            mode={mode}
-            setMode={setMode}
-            onOpenPalette={() => setPaletteOpen(true)}
-            onExport={handleExport}
-            onStart={() => {
-              if (!quiz) {
-                newQuiz();
-                return;
-              }
-              if (quiz.actions.length === 0) {
-                alert("Quiz has no actions yet. Add some questions first!");
-                return;
-              }
-              setMode("visual");
-              setPaletteOpen(true);
-            }}
-            selectedActionIds={selectedActionIds}
-            toggleSelectAction={toggleSelectAction}
-            dragActionId={dragActionId}
-            dragOverActionId={dragOverActionId}
-            onActionDragStart={onActionDragStart}
-            onActionDragEnd={onActionDragEnd}
-            onActionDragOver={onActionDragOver}
-            onActionDrop={onActionDrop}
-            deleteAction={deleteAction}
-            duplicateAction={duplicateAction}
-            dropOver={dropOver}
-            onDropZoneDragOver={onDropZoneDragOver}
-            onDropZoneDragLeave={onDropZoneDragLeave}
-            onDropZoneDrop={onDropZoneDrop}
-            aiPrompt={aiPrompt}
-            setAiPrompt={setAiPrompt}
-            onParsed={handleParsed}
-          />
-
-          <RightPanel
-            selectedAction={selectedAction}
-            multipleSelected={multipleSelected}
-            onActionUpdate={updateAction}
-            onQuestionUpdate={updateQuestion}
-          />
-        </div>
+          }
+        />
       </div>
+      <Imperfections />
     </div>
   );
 };
