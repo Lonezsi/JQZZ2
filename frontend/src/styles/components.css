@@ -910,3 +910,13 @@
   opacity: 1;
   transform: none;
 }
+
+.jqzz-snippet-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-snippet-name svg {
+  flex-shrink: 0;
+  color: var(--phase-QUESTION);
+}

@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { go } from "../../hooks/useHashRoute";
 import { errorMessage } from "../../services/api";
-import { historyService } from "../../services/stashService";
+import { historyService, stashService } from "../../services/stashService";
 import { playService } from "../../services/playService";
 import type { HistoryRecord, HistorySummary, QuestionResult, StashedQuestion } from "../../types/stash";
 import { PlayFrame } from "../Play/PlayCommon";
 import { BackButton } from "../common/BackButton";
-import { SaveFromGame } from "./SaveFromGame";
+import { Glyph } from "../common/Glyph";
 import { plural, when } from "../../utils/format";
 import { typeLabel } from "../../utils/questionInfo";
 
@@ -108,11 +108,22 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
                 {record.hosted ? "you hosted" : `you came #${record.you?.ranking}`} · code {record.code}
               </p>
               <div className="jqzz-play-row">
-                <button className="jqzz-play-btn primary" onClick={rematch} disabled={busy || !record.quizId}>
+                <button
+                  className="jqzz-play-btn primary"
+                  onClick={rematch}
+                  disabled={busy || !record.quizId}
+                  title="hosts it again and invites everyone who was in it"
+                >
+                  <Glyph name="RESET" size={14} />
                   {busy ? "starting…" : "rematch"}
                 </button>
+                <SaveButton
+                  icon="QUIZ"
+                  label="save the quiz"
+                  done="quiz saved"
+                  run={() => stashService.fromGame(me, record.id)}
+                />
               </div>
-              <p className="jqzz-annot">a rematch hosts it again and invites everyone who was in it</p>
               <ol className="jqzz-board">
                 {record.players.map((p, i) => (
                   <li
@@ -129,7 +140,6 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
                 ))}
               </ol>
               <Answers record={record} me={me} />
-              <SaveFromGame recordId={record.id} me={me} record={record} />
             </div>
           )}
         </main>
@@ -141,30 +151,63 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
 /** Every question as it was played: what was picked, ranked, written. */
 const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }) => {
   const results = record.content.results ?? {};
-  const asked = record.content.questions.filter((q) => {
-    const r = results[String(q.key)];
-    return r && Object.keys(r).length > 0;
-  });
-  if (asked.length === 0) return null;
+  const questions = record.content.questions;
+  if (questions.length === 0) return null;
   return (
-    <section className="jqzz-answers" aria-label="What everyone answered">
-      <h2 className="jqzz-annot">what everyone answered</h2>
+    <section className="jqzz-answers" aria-label="The questions, and what everyone answered">
+      <h2 className="jqzz-annot">the questions · what everyone answered</h2>
       <ol>
-        {asked.map((q, i) => (
-          <li key={q.key} className="jqzz-answer-card" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
-            <div className="jqzz-answer-head">
-              <span className="jqzz-board-rank">{i + 1}</span>
-              <span className="jqzz-keep-text">
-                {q.text || "untitled question"}
-                <span className="jqzz-annot">{typeLabel(q.type)}</span>
-              </span>
-              {results[String(q.key)].gains?.[me] ? (
-                <span className="jqzz-board-gain">+{results[String(q.key)].gains?.[me]}</span>
-              ) : null}
-            </div>
-            <Result q={q} r={results[String(q.key)]} />
-          </li>
-        ))}
+        {questions.map((q, i) => {
+          const r = results[String(q.key)];
+          const gain = r?.gains?.[me];
+          return (
+            <li key={q.key} className="jqzz-answer-card" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
+              <div className="jqzz-answer-head">
+                <span className="jqzz-answer-tile" aria-hidden="true">
+                  <Glyph name={q.type} size={16} />
+                </span>
+                <span className="jqzz-keep-text">
+                  <span className="jqzz-answer-q">
+                    <span className="jqzz-annot">{i + 1}</span> {q.text || "untitled question"}
+                  </span>
+                  <span className="jqzz-annot">
+                    {typeLabel(q.type)}
+                    {gain ? <b className="jqzz-board-gain"> +{gain}</b> : null}
+                  </span>
+                </span>
+                <span className="jqzz-answer-actions">
+                  <SaveButton
+                    small
+                    icon="ITEM_QUESTION"
+                    label="save"
+                    done="saved"
+                    title="this question, words and all"
+                    run={() => stashService.fromGame(me, record.id, q.key)}
+                  />
+                  <SaveButton
+                    small
+                    icon="TYPE"
+                    label="save as type"
+                    done="type saved"
+                    title="its type and steps, without the words, for new questions"
+                    run={() =>
+                      stashService.asType(
+                        me,
+                        { recordId: record.id, questionKey: q.key },
+                        `${typeLabel(q.type)}: ${q.text || "question"}`.slice(0, 60),
+                      )
+                    }
+                  />
+                </span>
+              </div>
+              {r && Object.keys(r).length > 0 ? (
+                <Result q={q} r={r} />
+              ) : (
+                <p className="jqzz-annot">the game ended before this one</p>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
@@ -225,4 +268,36 @@ const Result: React.FC<{ q: StashedQuestion; r: QuestionResult }> = ({ q, r }) =
     );
   }
   return null;
+};
+
+/** A button that saves something once, then says so. */
+const SaveButton: React.FC<{
+  icon: string;
+  label: string;
+  done: string;
+  title?: string;
+  small?: boolean;
+  run: () => Promise<unknown>;
+}> = ({ icon, label, done, title, small, run }) => {
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <button
+      className={`jqzz-play-btn${small ? " small ghost" : ""}${state === "done" ? " is-done" : ""}`}
+      title={error ?? title}
+      disabled={state === "busy" || state === "done"}
+      onClick={() => {
+        setState("busy");
+        run()
+          .then(() => setState("done"))
+          .catch((err) => {
+            setError(errorMessage(err));
+            setState("error");
+          });
+      }}
+    >
+      <Glyph name={state === "done" ? "ANSWER" : icon} size={small ? 13 : 14} />
+      {state === "busy" ? "saving…" : state === "done" ? done : state === "error" ? "try again" : label}
+    </button>
+  );
 };

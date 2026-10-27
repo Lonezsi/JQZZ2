@@ -3,6 +3,9 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* phones paint a blue box over whatever is tapped, ignoring its shape;
+     every control has its own pressed state instead */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,

@@ -100,7 +100,24 @@ public class StashController {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid visibility");
             }
         }
-        return stash.update(id, userId, (String) body.get("handle"), visibility, (String) body.get("title"));
+        Object payload = body.get("payload");
+        return stash.update(id, userId, (String) body.get("handle"), visibility, (String) body.get("title"),
+                payload == null ? null : String.valueOf(payload));
+    }
+
+    /** {mode: "full" | "add"}: your question types back to the defaults, or the missing defaults added */
+    @PostMapping("/types/reset")
+    public List<StashItem> resetTypes(@RequestHeader(value = "X-User-Id", required = false) String userId,
+                                      @RequestBody Map<String, Object> body) {
+        return stash.resetTypes(userId, "full".equals(body.get("mode")));
+    }
+
+    /** {recordId, questionKey} or {itemId}, and a title: a question's shape as a new type */
+    @PostMapping("/as-type")
+    public StashItem asType(@RequestHeader(value = "X-User-Id", required = false) String userId,
+                            @RequestBody Map<String, Object> body) {
+        return stash.asType(userId, asLong(body.get("recordId")), asLong(body.get("questionKey")),
+                asLong(body.get("itemId")), (String) body.get("title"));
     }
 
     @DeleteMapping("/{id}")

@@ -2,7 +2,15 @@ import type { ImageVisibility, Phase } from "./index";
 
 /* The stash and the game history: what /stash and /history send back. */
 
-export type StashKind = "QUIZ" | "QUESTION" | "IMAGE";
+export type StashKind = "QUIZ" | "QUESTION" | "IMAGE" | "TYPE";
+
+/** A question's shape without its words: what a TYPE item holds, and what the add tray offers. */
+export interface TypeShape {
+  name: string;
+  questionType: string;
+  answers: { text: string; value: number }[];
+  steps: { phase: Phase; time: number; preview: string | null }[];
+}
 
 /** Named and shared like images: "handle" when public, "owner:handle" otherwise. */
 export interface StashItem {

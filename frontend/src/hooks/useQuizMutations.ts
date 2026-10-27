@@ -4,7 +4,7 @@ import { quizService } from "../services/quizService";
 import { SNIPPETS } from "../constants/snippets";
 import { generateId } from "../utils/idGenerator";
 import { errorMessage } from "../services/api";
-import { contentToActions, readContent } from "../utils/stashContent";
+import { contentToActions, readContent, readType, typeToActions } from "../utils/stashContent";
 
 export const useQuizMutations = (
   activeQuizId: number | null,
@@ -116,6 +116,19 @@ export const useQuizMutations = (
         };
         setQuizzes((prev) =>
           prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, block] } : quiz)),
+        );
+        return;
+      }
+      // "type:{json}": a new question of a stashed type
+      if (snippetId.startsWith("type:")) {
+        let added: Action[] = [];
+        try {
+          added = typeToActions(readType({ payload: snippetId.slice(5), title: null }));
+        } catch {
+          return;
+        }
+        setQuizzes((prev) =>
+          prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, ...added] } : quiz)),
         );
         return;
       }

@@ -481,18 +481,29 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px 8px 8px 16px;
+  padding: 16px 8px 8px;
   border-radius: var(--radius-lg);
   transform-origin: 70% 100%;
 }
-.jqzz-people-pop .jqzz-pop-head {
-  padding-right: 8px;
+/* the head and labels line up with the names in the rows, whose plates
+   (hover, you) keep a margin from the edge of the card */
+.jqzz-people-pop .jqzz-pop-head,
+.jqzz-people-pop .jqzz-section-label,
+.jqzz-people-pop .jqzz-people-empty {
+  padding-left: 10px;
+  padding-right: 10px;
 }
 .jqzz-people-pop .jqzz-people {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 8px;
+}
+.jqzz-people-pop .jqzz-user-row {
+  padding: 8px 10px;
+  border-bottom: none;
 }
 .jqzz-people-empty {
   padding: 8px 0;
@@ -506,8 +517,12 @@ button.jqzz-user-row {
   border-radius: var(--radius-sm);
   transition: background var(--dur-1) var(--ease);
 }
-button.jqzz-user-row:hover {
+button.jqzz-user-row:hover,
+button.jqzz-user-row:focus-visible {
   background: var(--raised-hover);
+}
+button.jqzz-user-row:active {
+  transform: scale(0.99);
 }
 
 /* history and stash: yours, so they sit just above you */
@@ -553,4 +568,69 @@ button.jqzz-user-row:hover {
 /* the account row loses its own line when the places sit on top */
 .jqzz-sid-places + .jqzz-sid-account {
   border-top: none;
+}
+
+/* a quiz in the list, with its delete button on the right when you look at it */
+.jqzz-quiz-row {
+  position: relative;
+}
+.jqzz-quiz-row .jqzz-quiz-item {
+  padding-right: 34px;
+}
+.jqzz-delete-quiz.in-list {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+}
+.jqzz-quiz-row:hover .jqzz-delete-quiz.in-list,
+.jqzz-quiz-row:focus-within .jqzz-delete-quiz.in-list,
+.jqzz-delete-quiz.in-list.armed {
+  opacity: 1;
+}
+@media (hover: none) {
+  .jqzz-quiz-row.active .jqzz-delete-quiz.in-list {
+    opacity: 1;
+  }
+}
+.jqzz-delete-quiz {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  transition:
+    opacity var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-delete-quiz:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+}
+.jqzz-delete-quiz.armed {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface-solid));
+}
+
+.jqzz-make-named {
+  width: calc(100% - 20px);
+  margin: 4px 10px;
+  text-align: left;
+}
+.jqzz-make-named-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }

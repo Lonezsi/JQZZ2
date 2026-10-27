@@ -412,3 +412,18 @@
 .jqzz-inspector:hover::before {
   animation-play-state: running;
 }
+
+/* under the quiz name: who made it, and a way to delete it */
+.jqzz-toolbar-title {
+  flex-direction: column;
+  gap: 2px;
+}
+.jqzz-toolbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 9px;
+}
+.jqzz-toolbar-meta .jqzz-delete-quiz {
+  height: 22px;
+}

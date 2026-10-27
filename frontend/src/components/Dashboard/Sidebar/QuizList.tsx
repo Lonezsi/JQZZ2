@@ -2,12 +2,16 @@ import React from "react";
 import type { Quiz } from "../../../types";
 import { formatTimecode, quizCode, quizRuntime } from "../../../utils/timecode";
 import { matchQuiz } from "../../../utils/quizSearch";
+import { Keys } from "../../common/Keys";
+import { DeleteQuizButton } from "../../common/DeleteQuizButton";
 
 interface QuizListProps {
   quizzes: Quiz[];
   query: string;
   activeQuizId: number | null;
   onSelectQuiz: (id: number) => void;
+  /** nothing matched: make a quiz called what was searched for */
+  onCreate?: (name: string) => void;
 }
 
 function Highlight({ text, query }: { text: string; query: string }) {
@@ -28,6 +32,7 @@ export const QuizList: React.FC<QuizListProps> = ({
   query,
   activeQuizId,
   onSelectQuiz,
+  onCreate,
 }) => {
   const results = quizzes
     .map((q) => ({ q, m: matchQuiz(q, query) }))
@@ -41,6 +46,15 @@ export const QuizList: React.FC<QuizListProps> = ({
       {quizzes.length > 0 && results.length === 0 && (
         <div className="jqzz-sid-empty">nothing called that, and no question says it either.</div>
       )}
+      {query.trim() && results.length === 0 && onCreate && (
+        <button className="jqzz-sid-action jqzz-make-named" onClick={() => onCreate(query.trim())}>
+          <span className="jqzz-plus" aria-hidden="true" />
+          <span className="jqzz-make-named-text">
+            make a quiz named <b>{query.trim()}</b>
+          </span>
+          <Keys combo="↵" />
+        </button>
+      )}
       {query.trim() && results.length > 0 && (
         <div className="jqzz-annot jqzz-search-count" role="status">
           {results.length} of {quizzes.length}
@@ -49,8 +63,8 @@ export const QuizList: React.FC<QuizListProps> = ({
       {results.map(({ q, m }) => {
         const active = q.id === activeQuizId;
         return (
+          <div key={q.id} className={`jqzz-quiz-row${active ? " active" : ""}`}>
           <button
-            key={q.id}
             className={`jqzz-quiz-item${active ? " active" : ""}`}
             aria-current={active ? "true" : undefined}
             title={
@@ -75,6 +89,8 @@ export const QuizList: React.FC<QuizListProps> = ({
               </span>
             </span>
           </button>
+          <DeleteQuizButton quizId={q.id} name={q.name} className="in-list" />
+          </div>
         );
       })}
     </nav>

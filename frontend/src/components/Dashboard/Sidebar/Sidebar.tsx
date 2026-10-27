@@ -8,7 +8,9 @@ import { usePeople } from "../../../hooks/usePeople";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
 import { Keys } from "../../common/Keys";
 import { ariaShortcut, modLabel } from "../../../utils/shortcuts";
+import { useQuiz } from "../../../contexts/QuizContext";
 import { go } from "../../../hooks/useHashRoute";
+import { matchQuiz } from "../../../utils/quizSearch";
 
 interface SidebarProps {
   /** phone only: the drawer is pulled out */
@@ -39,6 +41,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const { newQuiz, renameQuiz } = useQuiz();
+  const makeNamed = async (name: string) => {
+    const id = await newQuiz();
+    if (id) renameQuiz(id, name);
+    setQuery("");
+  };
 
   // "/" jumps to search from anywhere that isn't a text field
   useEffect(() => {
@@ -111,6 +119,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               setQuery("");
               e.currentTarget.blur();
             }
+            // nothing matched: Enter makes it
+            if (e.key === "Enter" && query.trim() && !quizzes.some((q) => matchQuiz(q, query).hit)) {
+              e.preventDefault();
+              makeNamed(query.trim());
+            }
           }}
         />
         {!query && <Keys combo="/" />}
@@ -121,6 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         query={query}
         activeQuizId={activeQuizId}
         onSelectQuiz={onSelectQuiz}
+        onCreate={makeNamed}
       />
 
       {/* your own places: they live on your profile */}
@@ -142,12 +156,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <div className="jqzz-sid-account">
-        {/* you: your profile, where your history and stash live */}
         <button
           className="jqzz-identity"
-          onClick={() => (identity ? go("/me") : onIdentityClick())}
-          aria-label={identity ? `${identity.name}, @${identity.handle}. Your profile, history and stash` : "Make an identity"}
-          title="your profile: history and stash"
+          onClick={onIdentityClick}
+          aria-label={identity ? `${identity.name}, @${identity.handle}. Edit identity` : "Make an identity"}
         >
           <span className="jqzz-avatar-wrap">
             {identity ? (

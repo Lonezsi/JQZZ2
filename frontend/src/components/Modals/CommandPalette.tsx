@@ -41,6 +41,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return () => window.clearTimeout(t);
   }, [open]);
 
+  // the arrow keys move the highlight past the edge of the list: bring it into view
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const rows = listRef.current?.querySelectorAll<HTMLElement>(".jqzz-cmd-item");
+    if (!rows || rows.length === 0) return;
+    rows[Math.min(activeIdx, rows.length - 1)].scrollIntoView({ block: "nearest" });
+  }, [activeIdx, query, mounted]);
+
   if (!mounted) return null;
 
   const q = query.toLowerCase();
@@ -121,6 +129,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           <span className="jqzz-annot">{items.length} results</span>
         </div>
         <div
+          ref={listRef}
           className="jqzz-cmd-list"
           role="listbox"
           aria-label="Results"

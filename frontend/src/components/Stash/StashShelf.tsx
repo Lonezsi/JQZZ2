@@ -9,20 +9,27 @@ import { playService } from "../../services/playService";
 import type { ImageVisibility } from "../../types";
 import type { LibraryImage, StashItem, StashKind, StashList } from "../../types/stash";
 import { typeLabel } from "../../utils/questionInfo";
-import { contentToActions, readContent } from "../../utils/stashContent";
+import { contentToActions, readContent, readType } from "../../utils/stashContent";
+import type { TypeShape } from "../../types/stash";
+import type { Phase } from "../../types";
+import { Glide } from "../common/Glide";
+import { Glyph } from "../common/Glyph";
+import { setTypesCache } from "../../hooks/useTypes";
+import { QUESTION_TYPE_LABEL } from "../../utils/questionInfo";
 import { QuestionImage } from "../Play/PlayCommon";
 import { ConfirmButton, RefChip, VisibilitySwitch } from "./StashBits";
 import { plural, when } from "../../utils/format";
 
-type Tab = "quizzes" | "questions" | "images" | "browse";
-const TABS: { tab: Tab; kind: StashKind | null; label: string }[] = [
-  { tab: "quizzes", kind: "QUIZ", label: "quizzes" },
-  { tab: "questions", kind: "QUESTION", label: "questions" },
-  { tab: "images", kind: "IMAGE", label: "images" },
-  { tab: "browse", kind: null, label: "browse" },
+type Tab = "quizzes" | "questions" | "types" | "images" | "browse";
+const TABS: { tab: Tab; kind: StashKind | null; label: string; icon: string }[] = [
+  { tab: "quizzes", kind: "QUIZ", label: "quizzes", icon: "QUIZ" },
+  { tab: "questions", kind: "QUESTION", label: "questions", icon: "ITEM_QUESTION" },
+  { tab: "types", kind: "TYPE", label: "types", icon: "TYPE" },
+  { tab: "images", kind: "IMAGE", label: "images", icon: "IMAGE" },
+  { tab: "browse", kind: null, label: "browse", icon: "BROWSE" },
 ];
 
-const KINDS: Record<string, StashKind> = { quiz: "QUIZ", question: "QUESTION", image: "IMAGE" };
+const KINDS: Record<string, StashKind> = { quiz: "QUIZ", question: "QUESTION", image: "IMAGE", type: "TYPE" };
 
 /**
  * Everything you saved: whole quizzes, single questions, pictures. Each has an
@@ -96,27 +103,31 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
   }, [me, data, add, addKind, put, tab.tab]);
 
   const items = useMemo(() => data?.items.filter((i) => i.kind === tab.kind) ?? [], [data, tab.kind]);
+
+  // the add tray shows the same types: keep it in step with edits here
+  useEffect(() => {
+    if (data && me) setTypesCache(me, data.items.filter((i) => i.kind === "TYPE"));
+  }, [data, me]);
   const counts = useMemo(() => {
-    const c: Record<StashKind, number> = { QUIZ: 0, QUESTION: 0, IMAGE: data?.images.length ?? 0 };
+    const c: Record<StashKind, number> = { QUIZ: 0, QUESTION: 0, TYPE: 0, IMAGE: data?.images.length ?? 0 };
     data?.items.forEach((i) => c[i.kind]++);
     return c;
   }, [data]);
 
   return (
     <div className="jqzz-shelf-body-wrap">
-      <nav
-        className="jqzz-glide jqzz-shelf-tabs"
-        aria-label="What you saved"
-        style={{ "--n": TABS.length, "--at": TABS.indexOf(tab) } as React.CSSProperties}
-      >
-        <span className="jqzz-glide-thumb" aria-hidden="true" />
-        {TABS.map((t) => (
-          <a key={t.tab} href={`#/me/stash/${t.tab}`} aria-current={t.tab === tab.tab ? "page" : undefined}>
-            {t.label}
-            {t.kind && <span className="jqzz-annot">{counts[t.kind]}</span>}
-          </a>
-        ))}
-      </nav>
+      <Glide
+        className="jqzz-shelf-tabs"
+        label="What you saved"
+        value={tab.tab}
+        options={TABS.map((t) => ({
+          key: t.tab,
+          label: t.label,
+          icon: t.icon,
+          href: `#/me/stash/${t.tab}`,
+          extra: t.kind ? <span className="jqzz-annot">{counts[t.kind]}</span> : undefined,
+        }))}
+      />
 
       {linkNote && (
         <p className={`jqzz-play-note${linkNote.bad ? " bad" : ""} jqzz-shelf-linknote`} role="status">
@@ -127,7 +138,8 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
       {!data && !error && <p className="jqzz-annot jqzz-shelf-empty">loading…</p>}
 
       {data && tab.tab === "browse" && <Browse me={me} onAdded={put} />}
-      {data && tab.kind && <AddByRef kind={tab.kind} me={me} onAdded={put} />}
+      {data && tab.kind && tab.kind !== "TYPE" && <AddByRef kind={tab.kind} me={me} onAdded={put} />}
+      {data && tab.kind === "TYPE" && <TypesTab types={items} me={me} put={put} drop={drop} reload={setData} />}
       {data && tab.kind === "IMAGE" && (
         <ImagesTab images={data.images} saved={items} me={me} put={put} drop={drop} putImage={putImage} />
       )}
@@ -173,23 +185,21 @@ const Browse: React.FC<{ me: string; onAdded: (item: StashItem) => void }> = ({ 
     };
   }, [kind, q]);
 
-  const kinds: StashKind[] = ["QUIZ", "QUESTION", "IMAGE"];
+  const kinds: StashKind[] = ["QUIZ", "QUESTION", "TYPE", "IMAGE"];
   return (
     <>
       <div className="jqzz-shelf-add">
-        <div
-          className="jqzz-glide"
-          role="radiogroup"
-          aria-label="What to browse"
-          style={{ "--n": kinds.length, "--at": kinds.indexOf(kind) } as React.CSSProperties}
-        >
-          <span className="jqzz-glide-thumb" aria-hidden="true" />
-          {kinds.map((k) => (
-            <button key={k} role="radio" aria-checked={kind === k} onClick={() => setKind(k)}>
-              {k === "QUIZ" ? "quizzes" : k === "QUESTION" ? "questions" : "images"}
-            </button>
-          ))}
-        </div>
+        <Glide
+          kind="radio"
+          label="What to browse"
+          value={kind}
+          onPick={(k) => setKind(k as StashKind)}
+          options={kinds.map((k) => ({
+            key: k,
+            icon: k === "QUESTION" ? "ITEM_QUESTION" : k,
+            label: k === "QUIZ" ? "quizzes" : k === "QUESTION" ? "questions" : k === "TYPE" ? "types" : "images",
+          }))}
+        />
         <input
           className="jqzz-field-input"
           type="search"
@@ -217,7 +227,9 @@ const Browse: React.FC<{ me: string; onAdded: (item: StashItem) => void }> = ({ 
                     ? plural(content.questions.length, "question")
                     : item.kind === "QUESTION"
                       ? typeLabel(content.questions[0]?.type)
-                      : "picture"}
+                      : item.kind === "TYPE"
+                        ? "question type"
+                        : "picture"}
                   {` · `}
                   <a href={`#/u/${encodeURIComponent(item.savedBy)}`}>{mine ? "yours" : "whose is it"}</a>
                 </span>
@@ -469,6 +481,23 @@ const StashRow: React.FC<{
         >
           practice
         </button>
+        {item.kind === "QUESTION" && (
+          <button
+            className="jqzz-play-btn small ghost"
+            disabled={c.busy}
+            title="keep its type and steps, without the words, for new questions"
+            onClick={() =>
+              c.run(
+                stashService
+                  .asType(me, { itemId: item.id }, `${typeLabel(first?.type)}: ${item.title ?? "question"}`.slice(0, 60))
+                  .then(put),
+              )
+            }
+          >
+            <Glyph name="TYPE" size={13} />
+            save as type
+          </button>
+        )}
         {item.visibility !== "PRIVATE" && <ShareButton kind={item.kind} reference={item.reference} />}
         <button className="jqzz-play-btn small ghost" onClick={() => setRenaming(true)} disabled={c.busy}>
           rename
@@ -627,5 +656,264 @@ const ShareButton: React.FC<{ kind: StashKind; reference: string }> = ({ kind, r
     >
       {done ? "link copied" : "share link"}
     </button>
+  );
+};
+
+const PHASES: Phase[] = ["WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"];
+const WRITTEN = (t: string) => t.startsWith("USER_GENERATED") || t === "KNOCKOUT_BATTLE";
+
+/**
+ * Question types: what "add" offers in the editor. Everyone starts with the
+ * defaults; edit them, add your own from any question, or go back.
+ */
+const TypesTab: React.FC<{
+  types: StashItem[];
+  me: string;
+  put: (i: StashItem) => void;
+  drop: (id: number) => void;
+  reload: React.Dispatch<React.SetStateAction<StashList | null>>;
+}> = ({ types, me, put, drop, reload }) => {
+  const [resetting, setResetting] = useState(false);
+  return (
+    <>
+      <div className="jqzz-shelf-bar">
+        <p className="jqzz-annot">
+          {plural(types.length, "type")} · these are what "add" offers in the editor
+        </p>
+        <button className="jqzz-play-btn small" onClick={() => setResetting(true)}>
+          <Glyph name="RESET" size={13} />
+          reset to default
+        </button>
+      </div>
+      {types.length === 0 && (
+        <p className="jqzz-shelf-empty">no types left. reset to default to get the built-in ones back.</p>
+      )}
+      <ul className="jqzz-type-grid">
+        {types.map((t, i) => (
+          <TypeCard key={`${t.id}:${t.payload}`} item={t} me={me} index={i} put={put} drop={drop} />
+        ))}
+      </ul>
+      {resetting && (
+        <ResetDialog
+          me={me}
+          onClose={() => setResetting(false)}
+          onDone={(fresh) => {
+            reload((d) => d && { ...d, items: [...d.items.filter((x) => x.kind !== "TYPE"), ...fresh] });
+            setResetting(false);
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+/** One type, edited in place: name, question type, answer slots, steps. */
+const TypeCard: React.FC<{
+  item: StashItem;
+  me: string;
+  index: number;
+  put: (i: StashItem) => void;
+  drop: (id: number) => void;
+}> = ({ item, me, index, put, drop }) => {
+  const c = useItemControls(item, me, put, drop);
+  const saved = useMemo(() => readType(item), [item]);
+  // a fresh card is mounted when the saved shape changes (see its key), so the draft starts from it
+  const [draft, setDraft] = useState<TypeShape>(saved);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const total = draft.steps.reduce((sum, s) => sum + (s.time || 0), 0);
+  const written = WRITTEN(draft.questionType);
+  const set = (patch: Partial<TypeShape>) => setDraft((d) => ({ ...d, ...patch }));
+  const setStep = (i: number, patch: Partial<TypeShape["steps"][number]>) =>
+    set({ steps: draft.steps.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+  const slots = (n: number) =>
+    set({
+      answers: Array.from({ length: n }, (_, i) => draft.answers[i] ?? { text: "", value: i === 0 ? 100 : 0 }),
+    });
+
+  return (
+    <li className="jqzz-type-card" style={{ "--i": Math.min(index, 12) } as React.CSSProperties}>
+      <div className="jqzz-type-head">
+        <span className="jqzz-type-tile" aria-hidden="true">
+          <Glyph name={draft.questionType} size={18} />
+        </span>
+        <input
+          className="jqzz-type-name"
+          value={draft.name}
+          onChange={(e) => set({ name: e.target.value })}
+          aria-label="Type name"
+        />
+        <ConfirmButton onConfirm={c.remove} disabled={c.busy}>
+          remove
+        </ConfirmButton>
+      </div>
+      <div className="jqzz-type-fields">
+        <label className="jqzz-annot">
+          question
+          <select
+            className="jqzz-field-select"
+            value={draft.questionType}
+            onChange={(e) => set({ questionType: e.target.value })}
+          >
+            {Object.entries(QUESTION_TYPE_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {!written && (
+          <label className="jqzz-annot">
+            answers
+            <input
+              className="jqzz-field-input"
+              type="number"
+              min={0}
+              max={12}
+              value={draft.answers.length}
+              onChange={(e) => slots(Math.max(0, Math.min(12, Number(e.target.value) || 0)))}
+            />
+          </label>
+        )}
+      </div>
+      <ol className="jqzz-type-steps">
+        {draft.steps.map((s, i) => (
+          <li key={i} style={{ "--node": `var(--phase-${s.phase})` } as React.CSSProperties}>
+            <Glyph name={s.phase} size={13} />
+            <select
+              className="jqzz-field-select"
+              value={s.phase}
+              onChange={(e) => setStep(i, { phase: e.target.value as Phase })}
+              aria-label={`Step ${i + 1}`}
+            >
+              {PHASES.map((p) => (
+                <option key={p} value={p}>
+                  {p.toLowerCase()}
+                </option>
+              ))}
+            </select>
+            <input
+              className="jqzz-field-input"
+              type="number"
+              min={1}
+              value={s.time}
+              onChange={(e) => setStep(i, { time: Math.max(1, Number(e.target.value) || 1) })}
+              aria-label={`Seconds for step ${i + 1}`}
+            />
+            <span className="jqzz-annot">s</span>
+            <button
+              className="jqzz-icon-btn"
+              onClick={() => set({ steps: draft.steps.filter((_, j) => j !== i) })}
+              disabled={draft.steps.length <= 1}
+              aria-label={`Remove step ${i + 1}`}
+            >
+              <Glyph name="CLOSE" size={12} />
+            </button>
+          </li>
+        ))}
+      </ol>
+      <span className="jqzz-phase-strip" aria-hidden="true">
+        {draft.steps.map((s, j) => (
+          <span key={j} style={{ flexGrow: Math.max(s.time, 1), background: `var(--phase-${s.phase})` }} />
+        ))}
+      </span>
+      <div className="jqzz-type-foot">
+        <button
+          className="jqzz-play-btn small ghost"
+          onClick={() => set({ steps: [...draft.steps, { phase: "RESULT", time: 10, preview: "" }] })}
+        >
+          <Glyph name="ADD" size={12} />
+          step
+        </button>
+        <span className="jqzz-annot">{total}s</span>
+        <span className="jqzz-type-save">
+          {dirty && (
+            <button className="jqzz-play-btn small ghost" onClick={() => setDraft(saved)} disabled={c.busy}>
+              undo
+            </button>
+          )}
+          <button
+            className="jqzz-play-btn small primary"
+            disabled={!dirty || c.busy || !draft.name.trim()}
+            onClick={() =>
+              c.run(
+                stashService
+                  .update(me, item.id, { title: draft.name.trim(), payload: JSON.stringify(draft) })
+                  .then(put),
+              )
+            }
+          >
+            {c.busy ? "saving…" : "save"}
+          </button>
+        </span>
+      </div>
+      <div className="jqzz-type-share">
+        <RefChip reference={item.reference} me={me} />
+        <VisibilitySwitch value={item.visibility} onChange={c.setVisibility} busy={c.busy} />
+      </div>
+      {c.error && <p className="jqzz-play-note bad">{c.error}</p>}
+    </li>
+  );
+};
+
+/** Before the types go back to the defaults: what that means, and the three ways out. */
+const ResetDialog: React.FC<{ me: string; onClose: () => void; onDone: (types: StashItem[]) => void }> = ({
+  me,
+  onClose,
+  onDone,
+}) => {
+  const [busy, setBusy] = useState<"full" | "add" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const go = (mode: "full" | "add") => {
+    setBusy(mode);
+    setError(null);
+    stashService
+      .resetTypes(me, mode)
+      .then(onDone)
+      .catch((err) => {
+        setError(errorMessage(err));
+        setBusy(null);
+      });
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="jqzz-modal-overlay" data-state="open" onClick={onClose}>
+      <div
+        className="jqzz-modal jqzz-holo jqzz-reset"
+        data-state="open"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="jqzz-reset-title"
+        aria-describedby="jqzz-reset-text"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="jqzz-reset-title" className="jqzz-chroma">reset types</h3>
+        <p id="jqzz-reset-text" className="jqzz-reset-text">
+          <b>full reset</b> throws away every type in your stash, the ones you made and the ones you edited,
+          and puts the built-in ones back as they came. This can't be undone.
+          <br />
+          <br />
+          <b>add the defaults</b> only puts back the built-in ones you're missing. Nothing is removed.
+        </p>
+        {error && <p className="jqzz-modal-error">{error}</p>}
+        <div className="jqzz-reset-choices">
+          <button className="jqzz-play-btn danger" onClick={() => go("full")} disabled={busy !== null}>
+            <Glyph name="RESET" size={14} />
+            {busy === "full" ? "resetting…" : "full reset"}
+          </button>
+          <button className="jqzz-play-btn primary" onClick={() => go("add")} disabled={busy !== null} autoFocus>
+            <Glyph name="ADD" size={14} />
+            {busy === "add" ? "adding…" : "add the defaults"}
+          </button>
+          <button className="jqzz-play-btn ghost" onClick={onClose} disabled={busy !== null}>
+            <Glyph name="CLOSE" size={14} />
+            cancel
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };

@@ -49,6 +49,8 @@ interface QuizContextType {
   reorderActions: (dragId: number, dropId: number) => void;
   newQuiz: () => Promise<number | undefined>;
   renameQuiz: (id: number, name: string) => void;
+  /** gone for good, from the server and the list */
+  deleteQuiz: (id: number) => Promise<void>;
   /** a quiz the server just made, e.g. one opened from the stash */
   addQuiz: (quiz: Quiz) => void;
   /** steps from the stash, added to the end of a quiz */
@@ -135,6 +137,20 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addQuiz = useCallback(
     (quiz: Quiz) => setQuizzes((prev) => [...prev.filter((q) => q.id !== quiz.id), quiz]),
+    [setQuizzes],
+  );
+
+  const deleteQuiz = useCallback(
+    async (id: number) => {
+      try {
+        await quizService.delete(id);
+      } catch (err) {
+        alert(`couldn't delete it: ${errorMessage(err)}`);
+        return;
+      }
+      setQuizzes((prev) => prev.filter((q) => q.id !== id));
+      setActiveQuizId((current) => (current === id ? null : current));
+    },
     [setQuizzes],
   );
 
@@ -324,6 +340,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     newQuiz,
     renameQuiz,
     addQuiz,
+    deleteQuiz,
     appendActions,
     importScript,
     dropSnippet,

@@ -1,5 +1,7 @@
 package com.lonezsi.jqzz.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -22,6 +24,13 @@ public class User {
     private String profilePictureUrl;
 
     private boolean online;
+
+    /** has been given the default question types in their stash, once */
+    @JsonIgnore
+    private Boolean typesSeeded;
+
+    public Boolean getTypesSeeded(){return typesSeeded;}
+    public void setTypesSeeded(Boolean typesSeeded){this.typesSeeded=typesSeeded;}
 
     // constructors, getters, setters unchanged
     public User() {}

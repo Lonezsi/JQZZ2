@@ -29,6 +29,8 @@ import com.lonezsi.jqzz.model.StashKind;
 import com.lonezsi.jqzz.repository.GameRecordRepository;
 import com.lonezsi.jqzz.repository.QuizRepository;
 import com.lonezsi.jqzz.repository.StashItemRepository;
+import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.model.User;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -52,21 +54,162 @@ public class StashService {
     private final QuizRepository quizzes;
     private final QuizService quizService;
     private final ImageService images;
+    private final UserRepository users;
     private final JsonMapper json;
 
     public StashService(StashItemRepository stash, GameRecordRepository records, QuizRepository quizzes,
-            QuizService quizService, ImageService images, JsonMapper json) {
+            QuizService quizService, ImageService images, UserRepository users, JsonMapper json) {
         this.stash = stash;
         this.records = records;
         this.quizzes = quizzes;
         this.quizService = quizService;
         this.images = images;
+        this.users = users;
         this.json = json;
     }
 
-    @Transactional(readOnly = true)
+    /** Everything you saved. The first time, the default question types are put in. */
+    @Transactional
     public List<StashItem> list(String userId) {
-        return stash.findBySavedByOrderByCreatedAtDesc(require(userId));
+        require(userId);
+        users.findById(userId).filter(u -> !Boolean.TRUE.equals(u.getTypesSeeded())).ifPresent(u -> {
+            addDefaultTypes(userId, false);
+            u.setTypesSeeded(true);
+            users.save(u);
+        });
+        return stash.findBySavedByOrderByCreatedAtDesc(userId);
+    }
+
+    // ─── question types ────────────────────────────────────────────────
+
+    /**
+     * The shapes a new question can take, as everyone starts with them: a
+     * type, its steps, and its answer slots. Stash items of kind TYPE hold
+     * {"name", "questionType", "answers": [{text, value}], "steps": [{phase, time, preview}]}.
+     */
+    static final List<Map<String, Object>> DEFAULT_TYPES = List.of(
+            type("Full MC question", "PREWRITTEN_SINGLE", 4,
+                    step("WAITING", 8, "Pre-question buffer"), step("QUESTION", 30, "Multiple-choice question"),
+                    step("ANSWER", 12, "Answer reveal"), step("RESULT", 10, "Leaderboard update")),
+            type("True / False", "PREWRITTEN_SINGLE", List.of(answer("True", 100), answer("False", 0)),
+                    step("WAITING", 6, "Pre-question buffer"), step("QUESTION", 20, "True or False?"),
+                    step("ANSWER", 8, "Answer reveal")),
+            type("Question + explain", "PREWRITTEN_SINGLE", 4,
+                    step("WAITING", 8, "Pre-question buffer"), step("QUESTION", 30, "Question phase"),
+                    step("ANSWER", 10, "Answer locked"), step("ELABORATION", 20, "Deep-dive explanation"),
+                    step("RESULT", 10, "Leaderboard update")),
+            type("User-gen + vote", "USER_GENERATED_VOTE", 0,
+                    step("WAITING", 6, "Pre-question buffer"), step("QUESTION", 40, "Players submit answers"),
+                    step("ANSWER", 20, "Vote on best answer"), step("RESULT", 12, "Winner revealed")),
+            type("Tier list round", "TIERLIST", 4,
+                    step("WAITING", 6, "Pre-question buffer"), step("QUESTION", 60, "Drag items into tiers"),
+                    step("RESULT", 15, "Group tier comparison")),
+            type("Lightning round", "PREWRITTEN_SINGLE", 4,
+                    step("WAITING", 3, "Quick buffer"), step("QUESTION", 10, "Fast question"),
+                    step("ANSWER", 5, "Answer reveal")));
+
+    /**
+     * full: your types are thrown away and the defaults put back.
+     * add: the defaults you don't have (by name) are added, nothing is removed.
+     */
+    @Transactional
+    public List<StashItem> resetTypes(String userId, boolean full) {
+        require(userId);
+        if (full) stash.deleteAll(stash.findBySavedByAndKind(userId, StashKind.TYPE));
+        addDefaultTypes(userId, !full);
+        return stash.findBySavedByAndKind(userId, StashKind.TYPE);
+    }
+
+    private void addDefaultTypes(String userId, boolean skipExisting) {
+        Set<String> have = new LinkedHashSet<>();
+        if (skipExisting) stash.findBySavedByAndKind(userId, StashKind.TYPE).forEach(i -> have.add(i.getTitle()));
+        for (Map<String, Object> t : DEFAULT_TYPES) {
+            String name = (String) t.get("name");
+            if (!have.contains(name)) store(StashKind.TYPE, name, "default", t, userId);
+        }
+    }
+
+    /**
+     * A question's shape as a new type: from a game you were in (recordId +
+     * questionKey) or from a question in your stash (itemId).
+     */
+    @Transactional
+    public StashItem asType(String userId, Long recordId, Long questionKey, Long itemId, String title) {
+        require(userId);
+        Map<String, Object> single;
+        String source;
+        if (itemId != null) {
+            StashItem item = get(itemId, userId);
+            if (item.getKind() != StashKind.QUESTION) throw bad("Only a question has a type to save");
+            single = read(item.getPayload());
+            source = item.getTitle();
+        } else {
+            GameRecord record = records.findById(recordId == null ? -1 : recordId)
+                    .orElseThrow(() -> notFound("No such game"));
+            if (!record.involves(userId)) throw forbidden("You weren't in that game");
+            single = questionKey == null ? null : singleQuestion(read(record.getContent()), questionKey);
+            if (single == null) throw notFound("That question isn't in this game");
+            source = record.getQuizName();
+        }
+        Map<String, Object> shape = shapeOf(single);
+        if (title != null && !title.isBlank()) shape.put("name", title.trim());
+        return store(StashKind.TYPE, (String) shape.get("name"), source, shape, userId).get(0);
+    }
+
+    /** What a question looks like with its words taken out. */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> shapeOf(Map<String, Object> single) {
+        List<Map<String, Object>> qs = (List<Map<String, Object>>) single.getOrDefault("questions", List.of());
+        Map<String, Object> q = qs.isEmpty() ? Map.of() : qs.get(0);
+        String type = str(q.get("type")) == null ? "PREWRITTEN_SINGLE" : str(q.get("type"));
+        List<Map<String, Object>> answers = new ArrayList<>();
+        for (Map<String, Object> a : (List<Map<String, Object>>) q.getOrDefault("answers", List.of())) {
+            answers.add(answer("", a.get("value") instanceof Number n ? n.intValue() : 0));
+        }
+        List<Map<String, Object>> steps = new ArrayList<>();
+        for (Map<String, Object> s : (List<Map<String, Object>>) single.getOrDefault("steps", List.of())) {
+            steps.add(step(String.valueOf(s.get("phase")), s.get("time") instanceof Number n ? n.intValue() : 10,
+                    str(s.get("preview"))));
+        }
+        Map<String, Object> shape = new LinkedHashMap<>();
+        shape.put("name", type.toLowerCase().replace('_', ' ') + " shape");
+        shape.put("questionType", type);
+        shape.put("answers", answers);
+        shape.put("steps", steps);
+        return shape;
+    }
+
+    @SafeVarargs
+    private static Map<String, Object> type(String name, String questionType, int blanks, Map<String, Object>... steps) {
+        List<Map<String, Object>> answers = new ArrayList<>();
+        for (int i = 0; i < blanks; i++) answers.add(answer("", i == 0 ? 100 : 0));
+        return type(name, questionType, answers, steps);
+    }
+
+    @SafeVarargs
+    private static Map<String, Object> type(String name, String questionType, List<Map<String, Object>> answers,
+            Map<String, Object>... steps) {
+        Map<String, Object> t = new LinkedHashMap<>();
+        t.put("name", name);
+        t.put("questionType", questionType);
+        t.put("answers", answers);
+        t.put("steps", List.of(steps));
+        return t;
+    }
+
+    private static Map<String, Object> step(String phase, int time, String preview) {
+        Map<String, Object> s = new LinkedHashMap<>();
+        s.put("phase", phase);
+        s.put("time", time);
+        s.put("preview", preview);
+        return s;
+    }
+
+    private static Map<String, Object> answer(String text, int value) {
+        Map<String, Object> a = new LinkedHashMap<>();
+        a.put("text", text);
+        a.put("value", value);
+        return a;
     }
 
     // ─── putting things in ─────────────────────────────────────────────
@@ -122,7 +265,28 @@ public class StashService {
     /** New handle, title or visibility. Handles follow the image rules for the namespace it lands in. */
     @Transactional
     public StashItem update(Long id, String userId, String handle, ImageVisibility visibility, String title) {
+        return update(id, userId, handle, visibility, title, null);
+    }
+
+    /** payload: a type's new shape, as JSON. Only types are edited this way. */
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public StashItem update(Long id, String userId, String handle, ImageVisibility visibility, String title,
+            String payload) {
         StashItem item = mine(id, userId);
+        if (payload != null) {
+            if (item.getKind() != StashKind.TYPE) throw bad("Only a question type can be edited");
+            Map<String, Object> shape;
+            try {
+                shape = json.readValue(payload, Map.class);
+            } catch (RuntimeException e) {
+                throw bad("That isn't a question type");
+            }
+            if (!(shape.get("steps") instanceof List<?> steps) || steps.isEmpty()) {
+                throw bad("A question type needs at least one step");
+            }
+            item.setPayload(json.writeValueAsString(shape));
+        }
         String newHandle = handle == null || handle.isBlank() ? item.getHandle() : handle.trim();
         if (!newHandle.matches(HANDLE)) {
             throw bad("Handle must contain only letters, numbers, and underscores");

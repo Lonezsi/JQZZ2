@@ -809,3 +809,277 @@ a.jqzz-board-name:hover {
     border-top: 1px solid var(--line);
   }
 }
+
+/* ─── Icons in every switch ───────────────────────────────────────── */
+.jqzz-glide > button svg,
+.jqzz-glide > a svg {
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition: opacity var(--dur-2) var(--ease);
+}
+.jqzz-glide > [aria-selected="true"] svg,
+.jqzz-glide > [aria-checked="true"] svg,
+.jqzz-glide > [aria-current="page"] svg {
+  opacity: 1;
+  color: var(--space, var(--accent));
+}
+.jqzz-play-btn svg {
+  flex-shrink: 0;
+}
+.jqzz-play-btn.is-done {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+/* ─── Stash: a bar above each shelf ───────────────────────────────── */
+.jqzz-shelf-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.jqzz-shelf-bar p {
+  margin: 0;
+}
+
+/* stash rows: a little more air and a clearer title */
+.jqzz-shelf-row {
+  padding: 14px 16px;
+  box-shadow: 0 10px 30px -22px rgba(0, 0, 0, 0.7);
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-shelf-row:hover {
+  border-color: var(--line-strong);
+}
+.jqzz-shelf-title {
+  font-size: var(--fs-title);
+}
+
+/* ─── Question types: editable cards ──────────────────────────────── */
+.jqzz-type-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.jqzz-type-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-top: 2px solid color-mix(in srgb, var(--space, var(--warm)) 55%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 10px 30px -22px rgba(0, 0, 0, 0.7);
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.jqzz-type-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.jqzz-type-tile,
+.jqzz-answer-tile {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--phase-QUESTION);
+  background: color-mix(in srgb, var(--phase-QUESTION) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--phase-QUESTION) 32%, transparent);
+}
+.jqzz-type-name {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font-size: var(--fs-title);
+  font-weight: 600;
+  outline: none;
+  transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+.jqzz-type-name:hover {
+  border-color: var(--line);
+}
+.jqzz-type-name:focus-visible {
+  border-color: var(--accent);
+  background: var(--sunken);
+}
+.jqzz-type-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 8px;
+}
+.jqzz-type-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jqzz-type-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jqzz-type-steps li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 64px auto 24px;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-type-steps li > svg {
+  color: var(--node);
+}
+.jqzz-type-steps .jqzz-field-select,
+.jqzz-type-steps .jqzz-field-input {
+  min-height: 28px;
+  padding: 3px 8px;
+}
+.jqzz-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-3);
+  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+.jqzz-icon-btn:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--raised-hover);
+}
+.jqzz-type-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.jqzz-type-save {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.jqzz-type-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+/* ─── Reset to default ────────────────────────────────────────────── */
+.jqzz-reset {
+  max-width: 440px;
+}
+.jqzz-reset h3 {
+  margin-bottom: 12px;
+}
+.jqzz-reset-text {
+  position: relative;
+  z-index: 1;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+.jqzz-reset-text b {
+  color: var(--text);
+}
+.jqzz-reset-choices {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.jqzz-reset-choices .jqzz-play-btn {
+  justify-content: flex-start;
+}
+.jqzz-play-btn.danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--raised));
+}
+
+/* ─── History: question cards, their save buttons up top ─────────── */
+.jqzz-answer-card {
+  padding: 14px 16px;
+  box-shadow: 0 10px 30px -22px rgba(0, 0, 0, 0.7);
+}
+.jqzz-answer-head {
+  align-items: center;
+}
+.jqzz-answer-q {
+  font-weight: 600;
+  line-height: 1.35;
+}
+.jqzz-answer-q .jqzz-annot {
+  margin-right: 4px;
+  color: var(--space, var(--text-3));
+}
+.jqzz-answer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+  align-self: flex-start;
+}
+.jqzz-game .jqzz-play-row {
+  gap: 8px;
+}
+
+/* the identity card, as a page */
+.jqzz-you-page {
+  display: flex;
+  justify-content: center;
+}
+.jqzz-modal.inline {
+  width: 100%;
+  max-width: 440px;
+  transform: none;
+  opacity: 1;
+}
+.jqzz-modal-page {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  text-decoration: none;
+}
+.jqzz-modal-page:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .jqzz-answer-head {
+    flex-wrap: wrap;
+  }
+  .jqzz-answer-actions {
+    margin-left: 46px;
+    justify-content: flex-start;
+  }
+  .jqzz-glide-label {
+    display: none;
+  }
+  .jqzz-glide > [aria-selected="true"] .jqzz-glide-label,
+  .jqzz-glide > [aria-current="page"] .jqzz-glide-label,
+  .jqzz-glide > [aria-checked="true"] .jqzz-glide-label {
+    display: inline;
+  }
+}

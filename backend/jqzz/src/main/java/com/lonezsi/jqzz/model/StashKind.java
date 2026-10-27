@@ -4,5 +4,7 @@ package com.lonezsi.jqzz.model;
 public enum StashKind {
     QUIZ,
     QUESTION,
-    IMAGE
+    IMAGE,
+    /** a question's shape without its content: its type, its steps, its answer slots */
+    TYPE
 }

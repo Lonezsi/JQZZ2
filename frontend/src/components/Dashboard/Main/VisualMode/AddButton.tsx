@@ -8,6 +8,7 @@ import { SETTING_PRESETS } from "../../../../utils/settings";
 import { readContent } from "../../../../utils/stashContent";
 import { typeLabel } from "../../../../utils/questionInfo";
 import { plural } from "../../../../utils/format";
+import { Glide } from "../../../common/Glide";
 
 const DRAG_SNIPPET_KEY = "jqzz-snippet";
 
@@ -19,8 +20,12 @@ interface AddButtonProps {
   onPick: (snippetId: string) => void;
 }
 
-type Tab = "snippets" | "settings" | "stash";
-const TABS: Tab[] = ["snippets", "settings", "stash"];
+type Tab = "types" | "settings" | "stash";
+const TABS = [
+  { key: "types", label: "types", icon: "TYPE", title: "a new question of a type" },
+  { key: "settings", label: "settings", icon: "SETTING", title: "settings for what follows" },
+  { key: "stash", label: "stash", icon: "STASH", title: "questions you saved" },
+];
 
 /** End of the timeline: opens the add tray in place, or takes a drop. */
 export const AddButton: React.FC<AddButtonProps> = ({
@@ -31,7 +36,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   onPick,
 }) => {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>("snippets");
+  const [tab, setTab] = useState<Tab>("types");
 
   return (
     <div
@@ -51,19 +56,14 @@ export const AddButton: React.FC<AddButtonProps> = ({
       </button>
       <div className="jqzz-add-tray" inert={!open}>
         <div className="jqzz-add-tray-inner">
-          <div
-            className="jqzz-glide jqzz-add-tabs"
-            role="tablist"
-            style={{ "--n": TABS.length, "--at": TABS.indexOf(tab) } as React.CSSProperties}
-          >
-            <span className="jqzz-glide-thumb" aria-hidden="true" />
-            {TABS.map((t) => (
-              <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-          {tab === "snippets" && <SnippetTray onPick={onPick} />}
+          <Glide
+            className="jqzz-add-tabs"
+            label="What to add"
+            options={TABS}
+            value={tab}
+            onPick={(k) => setTab(k as Tab)}
+          />
+          {tab === "types" && <SnippetTray onPick={onPick} />}
           {tab === "settings" && <SettingsTray onPick={onPick} />}
           {tab === "stash" && open && <StashTray onPick={onPick} />}
         </div>

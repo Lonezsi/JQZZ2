@@ -14,8 +14,10 @@ import { IdentityModal } from "../Modals/IdentityModal";
 import { GameList } from "./HistoryPage";
 import { StashShelf } from "./StashShelf";
 import { RefChip } from "./StashBits";
+import { Glide } from "../common/Glide";
+import { go } from "../../hooks/useHashRoute";
 
-type Tab = "history" | "stash" | "shelf";
+type Tab = "history" | "stash" | "you" | "shelf";
 
 /**
  * Someone's page. Yours holds your history and your stash, each its own
@@ -33,7 +35,7 @@ export const ProfilePage: React.FC<{
   const me = user?.id ?? "";
   const id = userId || me;
   const self = id === me;
-  const tabs: Tab[] = self ? ["history", "stash"] : ["history", "shelf"];
+  const tabs: Tab[] = self ? ["history", "stash", "you"] : ["history", "shelf"];
   const tab: Tab = tabs.includes(fromRoute as Tab) ? (fromRoute as Tab) : "history";
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,10 +52,10 @@ export const ProfilePage: React.FC<{
   useEffect(load, [load]);
 
   const base = self ? "#/me" : `#/u/${id}`;
-  const space = tab === "history" ? "history" : "stash";
+  const space = tab === "history" ? "history" : tab === "you" ? "you" : "stash";
 
   return (
-    <PlayFrame phase={space === "history" ? "ANSWER" : "ELABORATION"}>
+    <PlayFrame phase={space === "history" ? "ANSWER" : space === "you" ? "QUESTION" : "ELABORATION"}>
       <div className={`jqzz-space jqzz-space-${space}`}>
         <header className="jqzz-play-bar compact">
           <BackButton />
@@ -88,18 +90,17 @@ export const ProfilePage: React.FC<{
             </section>
           )}
 
-          <nav
-            className="jqzz-glide jqzz-space-tabs"
-            aria-label="Sections"
-            style={{ "--n": tabs.length, "--at": tabs.indexOf(tab) } as React.CSSProperties}
-          >
-            <span className="jqzz-glide-thumb" aria-hidden="true" />
-            {tabs.map((t) => (
-              <a key={t} href={`${base}/${t}`} aria-current={t === tab ? "page" : undefined}>
-                {t === "history" ? (self ? "history" : "games together") : t === "stash" ? "stash" : "their shelf"}
-              </a>
-            ))}
-          </nav>
+          <Glide
+            className="jqzz-space-tabs"
+            label="Sections"
+            value={tab}
+            options={tabs.map((t) => ({
+              key: t,
+              href: `${base}/${t}`,
+              icon: t === "history" ? "HISTORY" : t === "you" ? "YOU" : "STASH",
+              label: t === "history" ? (self ? "history" : "games together") : t === "shelf" ? "their shelf" : t,
+            }))}
+          />
 
           {tab === "history" && profile && (
             <GameList
@@ -118,6 +119,11 @@ export const ProfilePage: React.FC<{
             />
           )}
           {tab === "stash" && self && <StashShelf tab={sub} add={add} />}
+          {tab === "you" && self && user && (
+            <div className="jqzz-you-page">
+              <IdentityModal inline current={user} onSave={() => load()} onClose={() => go("/me")} />
+            </div>
+          )}
           {tab === "shelf" && profile && <Shelf items={profile.shelf} me={me} />}
         </main>
       </div>
@@ -190,7 +196,9 @@ const Shelf: React.FC<{ items: StashItem[]; me: string }> = ({ items, me }) => {
                     ? `quiz · ${plural(content.questions.length, "question")}`
                     : item.kind === "QUESTION"
                       ? typeLabel(content.questions[0]?.type)
-                      : "picture"}
+                      : item.kind === "TYPE"
+                        ? "question type"
+                        : "picture"}
                 </span>
               </div>
               <RefChip reference={item.reference} me={me} />

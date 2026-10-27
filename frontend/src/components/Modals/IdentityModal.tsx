@@ -14,6 +14,8 @@ interface IdentityModalProps {
   current: User | null;
   onSave: (user: User) => void;
   onClose: () => void;
+  /** drawn in the page instead of over it: the "you" tab of your profile */
+  inline?: boolean;
 }
 
 export const IdentityModal: React.FC<IdentityModalProps> = ({
@@ -21,6 +23,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   current,
   onSave,
   onClose,
+  inline = false,
 }) => {
   const { updateUser, register, login, logout } = useAuth();
   const [name, setName] = useState(current?.name ?? "");
@@ -114,6 +117,218 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
     }
   };
 
+  const card = (
+        <div
+          className={`jqzz-modal jqzz-holo${inline ? " inline" : ""}`}
+          data-state={inline ? "open" : state}
+          role={inline ? "region" : "dialog"}
+          aria-modal={inline ? undefined : true}
+          aria-labelledby="jqzz-identity-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="jqzz-holo-dots" aria-hidden="true" />
+          <div className="jqzz-holo-dust" aria-hidden="true" />
+          <div className="jqzz-modal-head">
+            <h3 id="jqzz-identity-title" className="jqzz-chroma">
+              {showLogin ? "log in" : current ? "you" : "new account"}
+            </h3>
+            {/* out of focus until you look at it */}
+            {handle && !showLogin && <span className="jqzz-handle-glow">_{handle}_</span>}
+            {current && !showLogin && !inline && (
+              <a className="jqzz-modal-page" href="#/me/you" onClick={onClose} title="the same, as a page">
+                open as a page
+                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                  <path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </a>
+            )}
+          </div>
+
+          {showLogin ? (
+            <>
+              <label className="jqzz-field-label" htmlFor="jqzz-login-id">
+                user id
+              </label>
+              <input
+                id="jqzz-login-id"
+                className="jqzz-modal-input"
+                placeholder="the 10 letter id from your other browser"
+                value={loginId}
+                autoFocus
+                onChange={(e) => setLoginId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              />
+            </>
+          ) : (
+            <>
+              <label className="jqzz-field-label" htmlFor="jqzz-name">
+                name
+              </label>
+              <div className="jqzz-modal-inline">
+                <input
+                  id="jqzz-name"
+                  className="jqzz-modal-input"
+                  placeholder="e.g. lonezsi"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="jqzz-dice"
+                  onClick={() => setName(guestName())}
+                  title="random name"
+                  aria-label="Random name"
+                >
+                  <span aria-hidden="true">⚄</span>
+                </button>
+              </div>
+              {current && (
+                <>
+                  <label className="jqzz-field-label" htmlFor="jqzz-handle">
+                    handle
+                  </label>
+                  <input
+                    id="jqzz-handle"
+                    className="jqzz-modal-input"
+                    placeholder="letters and numbers only"
+                    value={handle}
+                    onChange={(e) =>
+                      setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))
+                    }
+                  />
+                  <label className="jqzz-field-label" htmlFor="jqzz-email">
+                    email <span className="jqzz-optional">optional</span>
+                  </label>
+                  <input
+                    id="jqzz-email"
+                    className="jqzz-modal-input"
+                    placeholder="email@example.com"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <div className="jqzz-field-label">picture</div>
+                  <div className="jqzz-modal-picture">
+                    <Avatar
+                      user={{ id: current.id, name, profilePictureUrl }}
+                      viewerId={current.id}
+                      className="jqzz-identity-preview"
+                    />
+                    <ImagePicker
+                      value={profilePictureUrl.startsWith("gen:") ? "" : profilePictureUrl}
+                      onChange={setProfilePictureUrl}
+                    />
+                    <button
+                      type="button"
+                      className="jqzz-dice"
+                      onClick={() => setProfilePictureUrl(avatarSeed())}
+                      title="random picture"
+                      aria-label="Random picture"
+                    >
+                      <span aria-hidden="true">⚄</span>
+                    </button>
+                    {profilePictureUrl && (
+                      <button
+                        type="button"
+                        className="jqzz-modal-btn ghost"
+                        onClick={() => setProfilePictureUrl("")}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <label className="jqzz-field-label" htmlFor="jqzz-id">
+                    your id <span className="jqzz-optional">log in with it somewhere else</span>
+                  </label>
+                  <input
+                    id="jqzz-id"
+                    className="jqzz-modal-input mono"
+                    readOnly
+                    value={current.id}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </>
+              )}
+            </>
+          )}
+
+          {error && (
+            <p className="jqzz-modal-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="jqzz-modal-row">
+            {showLogin ? (
+              <>
+                <button className="jqzz-modal-btn" onClick={() => setShowLogin(false)}>
+                  Back
+                </button>
+                <button
+                  className="jqzz-modal-btn primary"
+                  onClick={handleLogin}
+                  disabled={loading || !loginId.trim()}
+                >
+                  {loading ? "logging in…" : "Log in"}
+                </button>
+              </>
+            ) : !current ? (
+              <>
+                <button className="jqzz-modal-btn" onClick={() => setShowLogin(true)}>
+                  Log in instead
+                </button>
+                <button
+                  className="jqzz-modal-btn primary"
+                  onClick={handleSave}
+                  disabled={loading || !name.trim()}
+                >
+                  {loading ? "making it…" : "Create"}
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="jqzz-modal-btn" onClick={onClose} disabled={loading}>
+                  Cancel
+                </button>
+                <button
+                  className="jqzz-modal-btn primary"
+                  onClick={handleSave}
+                  disabled={loading}
+                >
+                  {loading ? "saving…" : "Save"}
+                </button>
+              </>
+            )}
+          </div>
+
+          {current && !showLogin && (
+            <div className="jqzz-modal-row secondary">
+              <button className="jqzz-modal-btn ghost" onClick={handleLogout} disabled={loading}>
+                Log out
+              </button>
+              <button
+                className="jqzz-modal-btn ghost"
+                onClick={() => {
+                  setError(null);
+                  setShowLogin(true);
+                }}
+                disabled={loading}
+              >
+                Switch user
+              </button>
+              <button
+                className="jqzz-modal-btn ghost danger"
+                onClick={handleDeleteAccount}
+                disabled={loading}
+              >
+                Delete account
+              </button>
+            </div>
+          )}
+        </div>
+  );
+
+  if (inline) return card;
   return (
     <div className="jqzz-modal-overlay" data-state={state} onClick={onClose}>
       <div className="jqzz-overlay-bloom" aria-hidden="true" />
@@ -122,206 +337,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
           {name}
         </div>
       )}
-      <div
-        className="jqzz-modal jqzz-holo"
-        data-state={state}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="jqzz-identity-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="jqzz-holo-dots" aria-hidden="true" />
-        <div className="jqzz-holo-dust" aria-hidden="true" />
-        <div className="jqzz-modal-head">
-          <h3 id="jqzz-identity-title" className="jqzz-chroma">
-            {showLogin ? "log in" : current ? "you" : "new account"}
-          </h3>
-          {/* out of focus until you look at it */}
-          {handle && !showLogin && <span className="jqzz-handle-glow">_{handle}_</span>}
-        </div>
-
-        {showLogin ? (
-          <>
-            <label className="jqzz-field-label" htmlFor="jqzz-login-id">
-              user id
-            </label>
-            <input
-              id="jqzz-login-id"
-              className="jqzz-modal-input"
-              placeholder="the 10 letter id from your other browser"
-              value={loginId}
-              autoFocus
-              onChange={(e) => setLoginId(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
-          </>
-        ) : (
-          <>
-            <label className="jqzz-field-label" htmlFor="jqzz-name">
-              name
-            </label>
-            <div className="jqzz-modal-inline">
-              <input
-                id="jqzz-name"
-                className="jqzz-modal-input"
-                placeholder="e.g. lonezsi"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <button
-                type="button"
-                className="jqzz-dice"
-                onClick={() => setName(guestName())}
-                title="random name"
-                aria-label="Random name"
-              >
-                <span aria-hidden="true">⚄</span>
-              </button>
-            </div>
-            {current && (
-              <>
-                <label className="jqzz-field-label" htmlFor="jqzz-handle">
-                  handle
-                </label>
-                <input
-                  id="jqzz-handle"
-                  className="jqzz-modal-input"
-                  placeholder="letters and numbers only"
-                  value={handle}
-                  onChange={(e) =>
-                    setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))
-                  }
-                />
-                <label className="jqzz-field-label" htmlFor="jqzz-email">
-                  email <span className="jqzz-optional">optional</span>
-                </label>
-                <input
-                  id="jqzz-email"
-                  className="jqzz-modal-input"
-                  placeholder="email@example.com"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <div className="jqzz-field-label">picture</div>
-                <div className="jqzz-modal-picture">
-                  <Avatar
-                    user={{ id: current.id, name, profilePictureUrl }}
-                    viewerId={current.id}
-                    className="jqzz-identity-preview"
-                  />
-                  <ImagePicker
-                    value={profilePictureUrl.startsWith("gen:") ? "" : profilePictureUrl}
-                    onChange={setProfilePictureUrl}
-                  />
-                  <button
-                    type="button"
-                    className="jqzz-dice"
-                    onClick={() => setProfilePictureUrl(avatarSeed())}
-                    title="random picture"
-                    aria-label="Random picture"
-                  >
-                    <span aria-hidden="true">⚄</span>
-                  </button>
-                  {profilePictureUrl && (
-                    <button
-                      type="button"
-                      className="jqzz-modal-btn ghost"
-                      onClick={() => setProfilePictureUrl("")}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <label className="jqzz-field-label" htmlFor="jqzz-id">
-                  your id <span className="jqzz-optional">log in with it somewhere else</span>
-                </label>
-                <input
-                  id="jqzz-id"
-                  className="jqzz-modal-input mono"
-                  readOnly
-                  value={current.id}
-                  onFocus={(e) => e.target.select()}
-                />
-              </>
-            )}
-          </>
-        )}
-
-        {error && (
-          <p className="jqzz-modal-error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="jqzz-modal-row">
-          {showLogin ? (
-            <>
-              <button className="jqzz-modal-btn" onClick={() => setShowLogin(false)}>
-                Back
-              </button>
-              <button
-                className="jqzz-modal-btn primary"
-                onClick={handleLogin}
-                disabled={loading || !loginId.trim()}
-              >
-                {loading ? "logging in…" : "Log in"}
-              </button>
-            </>
-          ) : !current ? (
-            <>
-              <button className="jqzz-modal-btn" onClick={() => setShowLogin(true)}>
-                Log in instead
-              </button>
-              <button
-                className="jqzz-modal-btn primary"
-                onClick={handleSave}
-                disabled={loading || !name.trim()}
-              >
-                {loading ? "making it…" : "Create"}
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="jqzz-modal-btn" onClick={onClose} disabled={loading}>
-                Cancel
-              </button>
-              <button
-                className="jqzz-modal-btn primary"
-                onClick={handleSave}
-                disabled={loading}
-              >
-                {loading ? "saving…" : "Save"}
-              </button>
-            </>
-          )}
-        </div>
-
-        {current && !showLogin && (
-          <div className="jqzz-modal-row secondary">
-            <button className="jqzz-modal-btn ghost" onClick={handleLogout} disabled={loading}>
-              Log out
-            </button>
-            <button
-              className="jqzz-modal-btn ghost"
-              onClick={() => {
-                setError(null);
-                setShowLogin(true);
-              }}
-              disabled={loading}
-            >
-              Switch user
-            </button>
-            <button
-              className="jqzz-modal-btn ghost danger"
-              onClick={handleDeleteAccount}
-              disabled={loading}
-            >
-              Delete account
-            </button>
-          </div>
-        )}
-      </div>
+      {card}
     </div>
   );
 };

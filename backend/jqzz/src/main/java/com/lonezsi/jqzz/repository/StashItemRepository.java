@@ -25,4 +25,6 @@ public interface StashItemRepository extends JpaRepository<StashItem, Long> {
     List<StashItem> findTop200ByKindAndOwnerIdIsNullOrderByCreatedAtDesc(StashKind kind);
 
     List<StashItem> findBySavedByAndOwnerIdIsNullOrderByCreatedAtDesc(String savedBy);
+
+    List<StashItem> findBySavedByAndKind(String savedBy, StashKind kind);
 }

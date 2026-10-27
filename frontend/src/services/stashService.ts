@@ -29,8 +29,18 @@ export const stashService = {
   update: (
     userId: string,
     id: number,
-    patch: { handle?: string; visibility?: ImageVisibility; title?: string },
+    patch: { handle?: string; visibility?: ImageVisibility; title?: string; payload?: string },
   ) => api.patch<StashItem>(`/stash/${id}`, patch, as(userId)).then((r) => r.data),
+
+  /** full: your types thrown away, the defaults back. add: just the defaults you're missing. */
+  resetTypes: (userId: string, mode: "full" | "add") =>
+    api.post<StashItem[]>("/stash/types/reset", { mode }, as(userId)).then((r) => r.data),
+  /** a question's shape as a new type, from a game or from a stashed question */
+  asType: (
+    userId: string,
+    from: { recordId?: number; questionKey?: number; itemId?: number },
+    title?: string,
+  ) => api.post<StashItem>("/stash/as-type", { ...from, title }, as(userId)).then((r) => r.data),
   remove: (userId: string, id: number) => api.delete(`/stash/${id}`, as(userId)),
 
   /** public items anyone can copy in */

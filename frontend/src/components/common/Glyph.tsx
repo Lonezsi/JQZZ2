@@ -59,6 +59,94 @@ const PATHS: Record<string, React.ReactNode> = {
       <circle cx="10.5" cy="11" r="1.6" fill="var(--glyph-fill, transparent)" />
     </>
   ),
+  // places and things in the stash
+  QUIZ: (
+    <>
+      <path d="M3 2.5h7.5L13 5v8.5H3z" />
+      <path d="M5.5 6.5h5M5.5 9h5M5.5 11.5h3" />
+    </>
+  ),
+  ITEM_QUESTION: (
+    <>
+      <circle cx="8" cy="8" r="5.8" />
+      <path d="M6.6 6.3a1.5 1.5 0 1 1 2 1.4c-.4.2-.6.5-.6.9v.4M8 11v.05" />
+    </>
+  ),
+  IMAGE: (
+    <>
+      <rect x="2.5" y="3" width="11" height="10" rx="1.5" />
+      <circle cx="6" cy="6.5" r="1.1" />
+      <path d="m3 12 3.5-3.5 2.5 2.5 1.5-1.5 2.5 2.5" />
+    </>
+  ),
+  TYPE: (
+    <>
+      <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
+      <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
+      <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
+      <path d="M11.25 9v4.5M9 11.25h4.5" />
+    </>
+  ),
+  BROWSE: (
+    <>
+      <circle cx="7" cy="7" r="4.3" />
+      <path d="m10.2 10.2 3.3 3.3" />
+    </>
+  ),
+  HISTORY: (
+    <>
+      <path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8M2.5 2.5v2.4h2.4M8 5v3.2l2 1.4" />
+    </>
+  ),
+  STASH: (
+    <>
+      <path d="M2.5 5.5h11v7.5h-11zM4 5.5 5.2 3h5.6L12 5.5M6.2 8.5h3.6" />
+    </>
+  ),
+  YOU: (
+    <>
+      <circle cx="8" cy="5.5" r="2.6" />
+      <path d="M3 13.5c.6-2.6 2.6-4 5-4s4.4 1.4 5 4" />
+    </>
+  ),
+  PRIVATE: (
+    <>
+      <rect x="3.5" y="7" width="9" height="6.5" rx="1.3" />
+      <path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" />
+    </>
+  ),
+  SEMI_PRIVATE: (
+    <>
+      <path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2-2a2.6 2.6 0 0 0-3.7-3.7l-.6.6" />
+      <path d="M9.2 6.8a2.6 2.6 0 0 0-3.7 0l-2 2a2.6 2.6 0 0 0 3.7 3.7l.6-.6" />
+    </>
+  ),
+  PUBLIC: (
+    <>
+      <circle cx="8" cy="8" r="5.8" />
+      <path d="M2.2 8h11.6M8 2.2c1.7 1.6 2.5 3.5 2.5 5.8S9.7 12.2 8 13.8C6.3 12.2 5.5 10.3 5.5 8S6.3 3.8 8 2.2z" />
+    </>
+  ),
+  SNIPPETS: (
+    <>
+      <path d="M2.5 4h11M2.5 8h7M2.5 12h9" />
+    </>
+  ),
+  RESET: (
+    <>
+      <path d="M3 8a5 5 0 1 0 1.5-3.5M3 2.8v2.7h2.7" />
+    </>
+  ),
+  ADD: (
+    <>
+      <path d="M8 3v10M3 8h10" />
+    </>
+  ),
+  CLOSE: (
+    <>
+      <path d="m4 4 8 8M12 4l-8 8" />
+    </>
+  ),
   // question types
   PREWRITTEN_SINGLE: (
     <>

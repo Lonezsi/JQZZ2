@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import type { EditorMode, Quiz } from "../../../types";
 import { useQuiz, type SaveState } from "../../../contexts/QuizContext";
 import { Keys } from "../../common/Keys";
+import { DeleteQuizButton } from "../../common/DeleteQuizButton";
+import { usePeople } from "../../../hooks/usePeople";
+import { useAuth } from "../../../contexts/AuthContext";
 import { ariaShortcut, modLabel } from "../../../utils/shortcuts";
 
 interface ToolbarProps {
@@ -47,6 +50,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   saveState,
 }) => {
   const { renameQuiz } = useQuiz();
+  const { users } = usePeople();
+  const { user } = useAuth();
+  const author =
+    quiz && (quiz.authorId === user?.id ? "you" : (users.find((u) => u.id === quiz.authorId)?.name ?? "someone"));
   const notice = useSaveNotice(saveState);
   const canStart =
     !!quiz && quiz.actions.some((a) => a.phase !== "TEXT" && a.phase !== "DIVIDER");
@@ -85,6 +92,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         ) : (
           <span className="jqzz-annot">no quiz open</span>
+        )}
+        {quiz && (
+          <span className="jqzz-toolbar-meta">
+            <span className="jqzz-annot jqzz-author">by {author}</span>
+            <DeleteQuizButton quizId={quiz.id} name={quiz.name} label />
+          </span>
         )}
       </div>
 

@@ -97,6 +97,23 @@ export const SaveFromGame: React.FC<{
                 >
                   {saved.has(key) ? "saved ✓" : busy === key ? "…" : "save"}
                 </button>
+                <button
+                  className="jqzz-play-btn small ghost"
+                  disabled={busy !== null || saved.has(`t${q.key}`)}
+                  title="its type and steps, without the words"
+                  onClick={() => {
+                    const k = `t${q.key}`;
+                    setBusy(k);
+                    setError(null);
+                    stashService
+                      .asType(me, { recordId, questionKey: q.key }, `${typeLabel(q.type)}: ${q.text || "question"}`.slice(0, 60))
+                      .then(() => setSaved((s) => new Set(s).add(k)))
+                      .catch((err) => setError(errorMessage(err)))
+                      .finally(() => setBusy(null));
+                  }}
+                >
+                  {saved.has(`t${q.key}`) ? "type ✓" : "as type"}
+                </button>
               </li>
             );
           })}

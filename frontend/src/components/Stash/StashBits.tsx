@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ImageVisibility } from "../../types";
+import { Glide } from "../common/Glide";
 
 /* Small pieces the stash and history pages share. */
 
@@ -15,28 +16,15 @@ export const VisibilitySwitch: React.FC<{
   onChange: (v: ImageVisibility) => void;
   busy?: boolean;
 }> = ({ value, onChange, busy }) => (
-  <div
-    className="jqzz-glide jqzz-vis"
-    role="radiogroup"
-    aria-label="Who can reach it"
-    data-value={value}
-    style={{ "--n": VISIBILITY.length, "--at": VISIBILITY.findIndex((v) => v.value === value) } as React.CSSProperties}
-  >
-    <span className="jqzz-glide-thumb" aria-hidden="true" />
-    {VISIBILITY.map((v) => (
-      <button
-        key={v.value}
-        type="button"
-        role="radio"
-        aria-checked={value === v.value}
-        title={v.title}
-        disabled={busy}
-        onClick={() => value !== v.value && onChange(v.value)}
-      >
-        {v.label}
-      </button>
-    ))}
-  </div>
+  <Glide
+    kind="radio"
+    className="jqzz-vis"
+    label="Who can reach it"
+    value={value}
+    disabled={busy}
+    onPick={(k) => onChange(k as ImageVisibility)}
+    options={VISIBILITY.map((v) => ({ key: v.value, label: v.label, icon: v.value, title: v.title }))}
+  />
 );
 
 /** The id people use to reach it. A tap copies it. */

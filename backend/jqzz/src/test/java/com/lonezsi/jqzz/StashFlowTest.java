@@ -114,7 +114,26 @@ class StashFlowTest {
         assertThat(JsonPath.<String>read(again, "$[0].handle")).isEqualTo("longest_river_2");
 
         String stash = send("GET", "/stash", bob, null).body();
-        assertThat(JsonPath.<List<Object>>read(stash, "$.items")).hasSize(4);
+        assertThat(JsonPath.<List<Object>>read(stash, "$.items[?(@.kind != 'TYPE')]")).hasSize(4);
+
+        // everyone starts with the default question types; resetting brings them back
+        List<Number> types = JsonPath.read(stash, "$.items[?(@.kind == 'TYPE')].id");
+        assertThat(types).hasSize(6);
+        send("DELETE", "/stash/" + types.get(0).longValue(), bob, null);
+        assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"add\"}").body(), "$"))
+                .hasSize(6);
+        assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"add\"}").body(), "$"))
+                .hasSize(6);
+        // a question from the game, kept as a shape: its type and steps, no words
+        String shape = send("POST", "/stash/as-type", bob,
+                "{\"recordId\": %d, \"questionKey\": %d, \"title\": \"river style\"}".formatted(recordId, firstKey)).body();
+        assertThat(JsonPath.<String>read(shape, "$.kind")).isEqualTo("TYPE");
+        assertThat(JsonPath.<String>read(shape, "$.payload")).contains("PREWRITTEN_SINGLE").doesNotContain("Nile");
+        long shapeId = id(shape, "$.id");
+        assertThat(send("PATCH", "/stash/" + shapeId, bob, "{\"payload\": \"{\\\"steps\\\": []}\"}").statusCode())
+                .isEqualTo(400);
+        assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"full\"}").body(), "$"))
+                .hasSize(6);
 
         // private: only bob. semi-private: anyone with bob's id. public: by handle alone.
         String ref = "/stash/resolve?kind=QUIZ&ref=";
