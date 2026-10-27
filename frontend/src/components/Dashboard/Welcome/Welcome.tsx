@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useQuiz } from "../../../contexts/QuizContext";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
 
@@ -34,6 +34,28 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
   const { quizzes } = useQuiz();
   const { connected } = useWebSocket();
   const totalActions = quizzes.reduce((sum, q) => sum + q.actions.length, 0);
+
+  // the background leans toward the pointer: --mx and --my run -1..1 across the
+  // window, and the aura layers follow them at their own depths (motion.css)
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const root = document.documentElement;
+    let raf = 0;
+    const onMove = (e: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        root.style.setProperty("--mx", ((e.clientX / window.innerWidth) * 2 - 1).toFixed(3));
+        root.style.setProperty("--my", ((e.clientY / window.innerHeight) * 2 - 1).toFixed(3));
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(raf);
+      root.style.removeProperty("--mx");
+      root.style.removeProperty("--my");
+    };
+  }, []);
 
   return (
     <div className="jqzz-welcome-root jqzz-view-in">

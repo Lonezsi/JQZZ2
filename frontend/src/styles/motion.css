@@ -96,12 +96,6 @@ a.jqzz-board-name {
 }
 
 /* ─── sidebar: each quiz shows its rhythm, the open one glows ─────── */
-.jqzz-sidebar {
-  background:
-    radial-gradient(120% 40% at 0% 0%, color-mix(in srgb, var(--phase-QUESTION) 14%, transparent), transparent 70%),
-    radial-gradient(100% 30% at 100% 100%, color-mix(in srgb, var(--warm) 9%, transparent), transparent 70%),
-    color-mix(in srgb, var(--surface-solid) 88%, transparent);
-}
 .jqzz-logo-word {
   transition: transform var(--dur-2) var(--ease-pop), text-shadow var(--dur-2) var(--ease);
 }
@@ -186,34 +180,6 @@ a.jqzz-board-name {
 }
 
 /* ─── the game: a stage that arrives, a question that glows ───────── */
-.jqzz-play-frame::before {
-  /* embers drifting up behind everything, on their own layer */
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 200%;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle, color-mix(in srgb, var(--warm) 70%, transparent) 0 1.2px, transparent 2px),
-    radial-gradient(circle, color-mix(in srgb, var(--accent) 70%, transparent) 0 1px, transparent 1.8px);
-  background-size:
-    230px 190px,
-    170px 260px;
-  background-position:
-    0 0,
-    60px 90px;
-  opacity: 0.35;
-  animation: embers 60s linear infinite;
-  will-change: transform;
-}
-@keyframes embers {
-  to {
-    transform: translateY(-50%);
-  }
-}
 
 .jqzz-stage,
 .jqzz-phone {
@@ -463,9 +429,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 
 /* ─── the front page: the mark floats, the orbit turns, things arrive ── */
 .jqzz-welcome-logo {
-  animation:
-    logoIn 1s var(--ease-pop) backwards,
-    logoFloat 7s var(--ease-in-out) 1s infinite;
+  animation: logoIn 1s var(--ease-pop) backwards;
   filter:
     drop-shadow(-1.5px 0 rgba(255, 92, 140, 0.45))
     drop-shadow(1.5px 0 rgba(90, 170, 255, 0.45));
@@ -476,10 +440,6 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     transform: scale(0.7) rotate(-6deg);
     filter: blur(12px);
   }
-}
-@keyframes logoFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(1.5deg); }
 }
 .jqzz-welcome-burst::before {
   animation: burstBreathe 9s var(--ease-in-out) infinite alternate;
@@ -541,4 +501,136 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-stage-final > .jqzz-play-btn,
 .jqzz-phone-final > .jqzz-play-btn {
   align-self: center;
+}
+
+/* ─── frosted glass: the sidebar, the editor's top bar, the game's bar ──
+   see-through enough that the aura and the dither glow behind them,
+   blurred and brightened so text stays crisp on top. A light top edge
+   and a faint sheen make them read as panes rather than tinted boxes. */
+.jqzz-sidebar,
+.jqzz-toolbar,
+.jqzz-play-bar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 38%, transparent 70%),
+    color-mix(in srgb, var(--surface-solid) 40%, transparent);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7) brightness(1.06);
+  backdrop-filter: blur(30px) saturate(1.7) brightness(1.06);
+}
+.jqzz-sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    24px 0 60px -40px rgba(0, 0, 0, 0.7);
+}
+.jqzz-toolbar {
+  z-index: 3;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 40px -32px rgba(0, 0, 0, 0.8);
+}
+.jqzz-toolbar::after {
+  display: none;
+}
+.jqzz-play-bar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 40px -32px rgba(0, 0, 0, 0.8);
+}
+.jqzz-space .jqzz-play-bar {
+  border-bottom-color: color-mix(in srgb, var(--space) 30%, rgba(255, 255, 255, 0.1));
+}
+
+/* ─── the game's embers: scattered, uneven sizes, two layers at two speeds ── */
+.jqzz-play-frame::before,
+.jqzz-play-frame::after {
+  content: "";
+  position: fixed;
+  left: -10%;
+  right: -10%;
+  top: 0;
+  height: 220%;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform;
+}
+.jqzz-play-frame::before {
+  /* near: fewer, bigger, warmer, faster */
+  background-image:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--warm) 85%, transparent) 0 2.2px, transparent 3.4px),
+    radial-gradient(circle at 71% 9%, color-mix(in srgb, var(--accent) 75%, transparent) 0 1.4px, transparent 2.4px),
+    radial-gradient(circle at 43% 61%, color-mix(in srgb, var(--warm) 60%, transparent) 0 1px, transparent 1.9px),
+    radial-gradient(circle at 88% 74%, color-mix(in srgb, var(--phase-RESULT) 70%, transparent) 0 2.6px, transparent 4px),
+    radial-gradient(circle at 26% 87%, color-mix(in srgb, var(--accent) 60%, transparent) 0 1.2px, transparent 2px);
+  background-size: 683px 571px;
+  opacity: 0.4;
+  animation: embersNear 48s linear infinite;
+}
+.jqzz-play-frame::after {
+  /* far: many, small, faint, slow, drifting sideways a little */
+  background-image:
+    radial-gradient(circle at 5% 34%, rgba(255, 255, 255, 0.7) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 37% 12%, color-mix(in srgb, var(--accent) 80%, transparent) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 58% 47%, rgba(255, 255, 255, 0.55) 0 0.7px, transparent 1.3px),
+    radial-gradient(circle at 81% 29%, color-mix(in srgb, var(--warm) 70%, transparent) 0 0.9px, transparent 1.5px),
+    radial-gradient(circle at 19% 66%, color-mix(in srgb, var(--phase-ANSWER) 80%, transparent) 0 1.1px, transparent 1.7px),
+    radial-gradient(circle at 66% 83%, rgba(255, 255, 255, 0.5) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 93% 58%, color-mix(in srgb, var(--accent) 60%, transparent) 0 0.8px, transparent 1.4px);
+  background-size: 397px 443px;
+  opacity: 0.32;
+  animation: embersFar 95s linear infinite;
+}
+@keyframes embersNear {
+  from { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(14px, -25%, 0); }
+  to { transform: translate3d(0, -50%, 0); }
+}
+@keyframes embersFar {
+  from { transform: translate3d(0, 0, 0); }
+  33% { transform: translate3d(-22px, -16%, 0); }
+  66% { transform: translate3d(10px, -33%, 0); }
+  to { transform: translate3d(0, -50%, 0); }
+}
+
+/* ─── the front page: the background drifts and leans toward the pointer ──
+   each layer at its own depth, so it reads as space rather than a slide */
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .warm,
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .shadow,
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .phase,
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-dither,
+.jqzz-welcome-burst {
+  transition: translate 1.4s var(--ease);
+}
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .phase {
+  translate: calc(var(--mx, 0) * 70px) calc(var(--my, 0) * 50px);
+  animation: auraDriftA 26s var(--ease-in-out) infinite alternate;
+}
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .warm {
+  translate: calc(var(--mx, 0) * -90px) calc(var(--my, 0) * -60px);
+  animation: auraDriftB 31s var(--ease-in-out) infinite alternate;
+}
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .shadow {
+  translate: calc(var(--mx, 0) * 40px) calc(var(--my, 0) * -30px);
+  animation: auraDriftC 37s var(--ease-in-out) infinite alternate;
+}
+.jqzz-app:has(.jqzz-welcome-root) .jqzz-dither {
+  translate: calc(var(--mx, 0) * -18px) calc(var(--my, 0) * -14px);
+  scale: 1.05;
+}
+.jqzz-welcome-burst {
+  translate: calc(var(--mx, 0) * 24px) calc(var(--my, 0) * 18px);
+}
+@keyframes auraDriftA {
+  from { transform: translate(-4%, 2%) scale(1); }
+  to { transform: translate(5%, -3%) scale(1.12); }
+}
+@keyframes auraDriftB {
+  from { transform: translate(3%, 0) scale(1.05); }
+  to { transform: translate(-6%, -5%) scale(0.95); }
+}
+@keyframes auraDriftC {
+  from { transform: translate(0, -2%) scale(0.96); }
+  to { transform: translate(6%, 4%) scale(1.08); }
 }
