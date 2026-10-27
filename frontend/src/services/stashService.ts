@@ -35,6 +35,9 @@ export const stashService = {
   /** full: your types thrown away, the defaults back. add: just the defaults you're missing. */
   resetTypes: (userId: string, mode: "full" | "add") =>
     api.post<StashItem[]>("/stash/types/reset", { mode }, as(userId)).then((r) => r.data),
+  /** a type made in the editor from one of its questions */
+  addType: (userId: string, shape: import("../types/stash").TypeShape) =>
+    api.post<StashItem>("/stash/types", shape, as(userId)).then((r) => r.data),
   /** a question's shape as a new type, from a game or from a stashed question */
   asType: (
     userId: string,

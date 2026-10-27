@@ -77,6 +77,18 @@ export const QuizList: React.FC<QuizListProps> = ({
             <span className="jqzz-quiz-name">
               <Highlight text={q.name} query={query} />
             </span>
+            {/* its phases in their colours, one tick each */}
+            <span className="jqzz-quiz-rhythm" aria-hidden="true">
+              {q.actions
+                .filter((a) => a.phase !== "TEXT" && a.phase !== "DIVIDER")
+                .slice(0, 28)
+                .map((a) => (
+                  <span
+                    key={a.id}
+                    style={{ background: `var(--phase-${a.phase})`, flexGrow: Math.max(1, Math.min(a.time, 40)) }}
+                  />
+                ))}
+            </span>
             {m.via && (
               <span className="jqzz-quiz-via">
                 “<Highlight text={m.via} query={query} />”

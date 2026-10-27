@@ -156,6 +156,23 @@ public class StashService {
         return store(StashKind.TYPE, (String) shape.get("name"), source, shape, userId).get(0);
     }
 
+    /** A type made in the editor: {name, questionType, answers, steps}, straight in. */
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public StashItem addType(String userId, Map<String, Object> shape) {
+        require(userId);
+        if (shape == null || !(shape.get("steps") instanceof List<?> steps) || steps.isEmpty()) {
+            throw bad("A question type needs at least one step");
+        }
+        Map<String, Object> clean = new LinkedHashMap<>();
+        String name = str(shape.get("name"));
+        clean.put("name", name == null || name.isBlank() ? "question type" : clip(name.trim(), 60));
+        clean.put("questionType", str(shape.getOrDefault("questionType", "PREWRITTEN_SINGLE")));
+        clean.put("answers", shape.getOrDefault("answers", List.of()));
+        clean.put("steps", steps);
+        return store(StashKind.TYPE, (String) clean.get("name"), "editor", clean, userId).get(0);
+    }
+
     /** What a question looks like with its words taken out. */
     @SuppressWarnings("unchecked")
     static Map<String, Object> shapeOf(Map<String, Object> single) {

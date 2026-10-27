@@ -9,6 +9,7 @@ import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
+import { Confetti } from "../common/Confetti";
 
 /** The big screen: what the room looks at while the host runs the game. */
 export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
@@ -87,6 +88,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
         {live && <HostStep game={game} me={me} serverNow={serverNow} />}
         {game.status === "FINISHED" && (
           <div className="jqzz-stage-final">
+            {game.players.length > 0 && <Confetti />}
             <h1 className="jqzz-stage-title OEF jqzz-chroma">final scores</h1>
             {game.players.length ? (
               <Podium players={game.players} viewerId={me} />
@@ -224,7 +226,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
         <QuestionHead game={game} />
         <Countdown game={game} serverNow={serverNow} size={phase === "QUESTION" ? 88 : 56} />
       </div>
-      <h1 className={`jqzz-stage-prompt${phase === "QUESTION" ? "" : " small"}`}>{q.text}</h1>
+      <h1 className={`jqzz-stage-prompt jqzz-holo sheen${phase === "QUESTION" ? "" : " small"}`}>{q.text}</h1>
 
       {phase === "QUESTION" && (
         <>

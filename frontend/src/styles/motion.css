@@ -1,0 +1,544 @@
+/* Motion and finish: the editor's spacing and links, a sidebar with some
+   life, the game with real movement, the front page breathing.
+   Everything here only moves transform, opacity and filters; the global
+   prefers-reduced-motion rule in index.css stills all of it. */
+
+/* ─── links you can read ──────────────────────────────────────────── */
+.jqzz-link-btn,
+.jqzz-linkish,
+.jqzz-keep-link,
+.jqzz-shelf-empty a,
+.jqzz-tray-note a,
+.jqzz-pcard-line a,
+a.jqzz-board-name {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.jqzz-link-btn:hover,
+.jqzz-linkish:hover,
+.jqzz-keep-link:hover,
+.jqzz-shelf-empty a:hover,
+.jqzz-tray-note a:hover,
+.jqzz-pcard-line a:hover,
+a.jqzz-board-name:hover {
+  color: var(--text);
+  text-decoration-color: var(--warm);
+}
+a.jqzz-board-name {
+  text-decoration-color: transparent;
+}
+
+/* ─── editor: room between a block and the question after it ──────── */
+/* a question's frame reaches 10px above its first line, so whatever sits
+   right before it needs that much more air */
+.jqzz-row + .jqzz-group {
+  margin-top: 24px;
+}
+.jqzz-group + .jqzz-row.kind-setting {
+  margin-top: -8px;
+}
+
+/* "add type", in the right corner of the question's top row */
+.jqzz-plate-top {
+  align-items: center;
+}
+.jqzz-add-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0 9px 0 7px;
+  border: 1px dashed color-mix(in srgb, var(--warm) 55%, var(--line));
+  border-radius: 999px;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition:
+    opacity var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.jqzz-group:hover .jqzz-add-type,
+.jqzz-add-type:focus-visible {
+  opacity: 1;
+}
+.jqzz-add-type:hover {
+  border-style: solid;
+  border-color: var(--warm);
+  color: var(--text);
+  background: color-mix(in srgb, var(--warm) 12%, transparent);
+}
+.jqzz-add-type:active {
+  transform: scale(0.96);
+}
+.jqzz-add-type svg {
+  color: var(--warm);
+}
+.jqzz-add-type.is-done {
+  border-style: solid;
+  border-color: var(--ok);
+  color: var(--ok);
+  opacity: 1;
+}
+.jqzz-add-type.is-done svg {
+  color: var(--ok);
+}
+
+/* ─── sidebar: each quiz shows its rhythm, the open one glows ─────── */
+.jqzz-sidebar {
+  background:
+    radial-gradient(120% 40% at 0% 0%, color-mix(in srgb, var(--phase-QUESTION) 14%, transparent), transparent 70%),
+    radial-gradient(100% 30% at 100% 100%, color-mix(in srgb, var(--warm) 9%, transparent), transparent 70%),
+    color-mix(in srgb, var(--surface-solid) 88%, transparent);
+}
+.jqzz-logo-word {
+  transition: transform var(--dur-2) var(--ease-pop), text-shadow var(--dur-2) var(--ease);
+}
+.jqzz-logo:hover .jqzz-logo-word {
+  transform: rotate(-3deg) scale(1.06);
+  text-shadow:
+    -1.5px 0 rgba(255, 92, 140, 0.6),
+    1.5px 0 rgba(90, 170, 255, 0.6);
+}
+.jqzz-sid-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.jqzz-sid-head {
+  position: relative;
+}
+.jqzz-sid-head::after {
+  content: "";
+  position: absolute;
+  left: 92px;
+  right: 14px;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-strong), transparent);
+}
+.jqzz-quiz-rhythm {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+  margin-top: 6px;
+  max-width: 150px;
+  opacity: 0.55;
+  transition: opacity var(--dur-2) var(--ease), max-width var(--dur-3) var(--ease);
+}
+.jqzz-quiz-rhythm > span {
+  min-width: 2px;
+  border-radius: 2px;
+}
+.jqzz-quiz-row {
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+}
+.jqzz-quiz-row:nth-child(2) { animation-delay: 40ms; }
+.jqzz-quiz-row:nth-child(3) { animation-delay: 80ms; }
+.jqzz-quiz-row:nth-child(4) { animation-delay: 120ms; }
+.jqzz-quiz-row:nth-child(5) { animation-delay: 160ms; }
+.jqzz-quiz-row:nth-child(n + 6) { animation-delay: 200ms; }
+.jqzz-quiz-item {
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    transform var(--dur-2) var(--ease);
+}
+.jqzz-quiz-item:hover {
+  transform: translateX(3px);
+}
+.jqzz-quiz-item:hover .jqzz-quiz-rhythm {
+  opacity: 0.9;
+  max-width: 100%;
+}
+.jqzz-quiz-item.active {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 85%),
+    var(--raised);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.jqzz-quiz-item.active .jqzz-quiz-rhythm {
+  opacity: 1;
+  max-width: 100%;
+}
+.jqzz-quiz-item.active .jqzz-quiz-name {
+  color: var(--text);
+}
+.jqzz-sid-action {
+  transition:
+    background var(--dur-1) var(--ease),
+    transform var(--dur-2) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.jqzz-sid-action:hover {
+  transform: translateX(2px);
+}
+
+/* ─── the game: a stage that arrives, a question that glows ───────── */
+.jqzz-play-frame::before {
+  /* embers drifting up behind everything, on their own layer */
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 200%;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, color-mix(in srgb, var(--warm) 70%, transparent) 0 1.2px, transparent 2px),
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 70%, transparent) 0 1px, transparent 1.8px);
+  background-size:
+    230px 190px,
+    170px 260px;
+  background-position:
+    0 0,
+    60px 90px;
+  opacity: 0.35;
+  animation: embers 60s linear infinite;
+  will-change: transform;
+}
+@keyframes embers {
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.jqzz-stage,
+.jqzz-phone {
+  animation: stageIn 650ms var(--ease) backwards;
+}
+@keyframes stageIn {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.97);
+    filter: blur(8px);
+  }
+}
+
+/* the question number lands like a stamp */
+.jqzz-play-qnum {
+  display: inline-block;
+  animation: stamp 700ms var(--ease-pop) 80ms backwards;
+}
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(2.6) rotate(-10deg);
+    filter: blur(10px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+.jqzz-qtrack > .now {
+  animation: nowPulse 1.6s var(--ease-in-out) infinite alternate;
+}
+@keyframes nowPulse {
+  to {
+    box-shadow: 0 0 16px 1px var(--warm);
+    opacity: 0.75;
+  }
+}
+
+/* the question card: prismatic rim turning, a slow breathing glow */
+.jqzz-stage-prompt.jqzz-holo::before,
+.jqzz-play-prompt.jqzz-holo::before {
+  animation-play-state: running;
+  animation-duration: 9s;
+}
+.jqzz-stage-prompt.jqzz-holo,
+.jqzz-play-prompt.jqzz-holo {
+  overflow: hidden;
+  animation:
+    promptIn 800ms var(--ease) 120ms backwards,
+    breathe 4.5s var(--ease-in-out) 1s infinite alternate;
+}
+@keyframes promptIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    letter-spacing: 0.08em;
+  }
+}
+@keyframes breathe {
+  from {
+    box-shadow:
+      0 24px 60px -30px rgba(0, 0, 0, 0.85),
+      0 0 0 0 transparent;
+  }
+  to {
+    box-shadow:
+      0 24px 60px -30px rgba(0, 0, 0, 0.85),
+      0 0 60px -18px color-mix(in srgb, var(--phase-QUESTION) 80%, transparent);
+  }
+}
+
+/* a band of light crosses the stage once per step */
+.jqzz-stage-q {
+  position: relative;
+}
+.jqzz-stage-q::after {
+  content: "";
+  position: absolute;
+  inset: -60px -30%;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 50%,
+    color-mix(in srgb, var(--warm) 8%, transparent) 54%,
+    transparent 62%
+  );
+  transform: translateX(-70%);
+  animation: sweep 1.8s var(--ease) 0.25s forwards;
+}
+.jqzz-stage-q > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes sweep {
+  to {
+    transform: translateX(70%);
+  }
+}
+
+/* tiles flip up one after another, then catch the light now and then */
+.jqzz-tiles {
+  perspective: 900px;
+}
+.jqzz-tile {
+  animation: tileFlip 650ms var(--ease-pop) backwards;
+  transform-origin: 50% 100%;
+}
+.jqzz-tile:nth-child(1) { animation-delay: 260ms; }
+.jqzz-tile:nth-child(2) { animation-delay: 340ms; }
+.jqzz-tile:nth-child(3) { animation-delay: 420ms; }
+.jqzz-tile:nth-child(4) { animation-delay: 500ms; }
+.jqzz-tile:nth-child(5) { animation-delay: 580ms; }
+.jqzz-tile:nth-child(6) { animation-delay: 660ms; }
+@keyframes tileFlip {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotateX(-40deg) scale(0.94);
+  }
+}
+.jqzz-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.09) 48%,
+    color-mix(in srgb, var(--tile) 22%, transparent) 52%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  animation: tileSheen 6s var(--ease) 1.4s infinite;
+}
+.jqzz-tile:nth-child(2)::after { animation-delay: 1.9s; }
+.jqzz-tile:nth-child(3)::after { animation-delay: 2.4s; }
+.jqzz-tile:nth-child(4)::after { animation-delay: 2.9s; }
+@keyframes tileSheen {
+  0%,
+  70% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+.jqzz-tile-letter {
+  transition: transform var(--dur-2) var(--ease-pop);
+}
+button.jqzz-tile:hover .jqzz-tile-letter {
+  transform: rotate(-8deg) scale(1.1);
+}
+.jqzz-tile.picked .jqzz-tile-letter {
+  animation: chipPop 500ms var(--ease-pop);
+}
+@keyframes chipPop {
+  40% {
+    transform: scale(1.35) rotate(8deg);
+  }
+}
+
+/* the reveal: the right one glows and grows, the rest step back */
+.jqzz-tiles.revealed .jqzz-tile {
+  transition:
+    transform 500ms var(--ease-pop),
+    filter 500ms var(--ease),
+    opacity 500ms var(--ease);
+}
+.jqzz-tiles.revealed .jqzz-tile.right {
+  transform: scale(1.03);
+  animation: rightGlow 1.3s var(--ease-in-out) infinite alternate;
+  z-index: 1;
+}
+.jqzz-tiles.revealed .jqzz-tile.wrong {
+  transform: scale(0.97);
+  filter: grayscale(0.7);
+}
+@keyframes rightGlow {
+  from {
+    box-shadow: 0 0 0 2px var(--ok), 0 0 20px -8px var(--ok);
+  }
+  to {
+    box-shadow: 0 0 0 2px var(--ok), 0 0 44px -6px var(--ok);
+  }
+}
+
+/* the clock: its ring glows; under five seconds it shakes */
+.jqzz-countdown {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+.jqzz-countdown.urgent {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--warm) 70%, transparent));
+  animation: shake 0.5s var(--ease-in-out) infinite;
+}
+@keyframes shake {
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+
+/* answering fills a meter that shimmers */
+.jqzz-progress-meter > span {
+  background: linear-gradient(90deg, var(--accent), var(--ok), var(--accent));
+  background-size: 200% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* the end: the title stamps in, podium blocks rise, faces bounce */
+.jqzz-stage-final .jqzz-stage-title,
+.jqzz-phone-final .jqzz-stage-title {
+  animation: stamp 900ms var(--ease-pop) backwards;
+}
+.jqzz-podium-block {
+  transform-origin: 50% 100%;
+  animation: rise 900ms var(--ease-pop) backwards;
+}
+.place-3 .jqzz-podium-block { animation-delay: 150ms; }
+.place-2 .jqzz-podium-block { animation-delay: 350ms; }
+.place-1 .jqzz-podium-block { animation-delay: 600ms; }
+@keyframes rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+.jqzz-podium-spot.place-1 .jqzz-play-face {
+  animation: crown 2.4s var(--ease-in-out) 1.4s infinite;
+}
+@keyframes crown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.jqzz-confetti {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* ─── the front page: the mark floats, the orbit turns, things arrive ── */
+.jqzz-welcome-logo {
+  animation:
+    logoIn 1s var(--ease-pop) backwards,
+    logoFloat 7s var(--ease-in-out) 1s infinite;
+  filter:
+    drop-shadow(-1.5px 0 rgba(255, 92, 140, 0.45))
+    drop-shadow(1.5px 0 rgba(90, 170, 255, 0.45));
+}
+@keyframes logoIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7) rotate(-6deg);
+    filter: blur(12px);
+  }
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1.5deg); }
+}
+.jqzz-welcome-burst::before {
+  animation: burstBreathe 9s var(--ease-in-out) infinite alternate;
+}
+@keyframes burstBreathe {
+  from { transform: scale(0.94) rotate(-4deg); opacity: 0.45; }
+  to { transform: scale(1.06) rotate(4deg); opacity: 0.65; }
+}
+.jqzz-welcome-orbit {
+  animation: orbitTurn 40s linear infinite;
+}
+@keyframes orbitTurn {
+  to { transform: rotate(360deg); }
+}
+.jqzz-welcome-dots {
+  animation: dotsDrift 18s var(--ease-in-out) infinite alternate;
+}
+@keyframes dotsDrift {
+  to { transform: translate(18px, -12px); }
+}
+.jqzz-welcome-subtitle,
+.jqzz-welcome-actions,
+.jqzz-welcome-hint {
+  animation: snippetIn 700ms var(--ease) backwards;
+}
+.jqzz-welcome-subtitle { animation-delay: 350ms; }
+.jqzz-welcome-actions { animation-delay: 500ms; }
+.jqzz-welcome-hint { animation-delay: 650ms; }
+.jqzz-feature {
+  position: relative;
+  animation: snippetIn 700ms var(--ease) backwards;
+  transition: transform var(--dur-2) var(--ease), background var(--dur-2) var(--ease);
+}
+.jqzz-feature:nth-child(1) { animation-delay: 750ms; }
+.jqzz-feature:nth-child(2) { animation-delay: 850ms; }
+.jqzz-feature:nth-child(3) { animation-delay: 950ms; }
+.jqzz-feature:nth-child(4) { animation-delay: 1050ms; }
+.jqzz-feature::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--warm));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-3) var(--ease);
+}
+.jqzz-feature:hover {
+  transform: translateY(-4px);
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+}
+.jqzz-feature:hover::before {
+  transform: scaleX(1);
+}
+
+/* the folded "save to your stash" sits under the buttons, its own size */
+.jqzz-stage-final > .jqzz-play-btn,
+.jqzz-phone-final > .jqzz-play-btn {
+  align-self: center;
+}

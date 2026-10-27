@@ -112,6 +112,13 @@ public class StashController {
         return stash.resetTypes(userId, "full".equals(body.get("mode")));
     }
 
+    /** {name, questionType, answers, steps}: a type made from a question in the editor */
+    @PostMapping("/types")
+    public StashItem addType(@RequestHeader(value = "X-User-Id", required = false) String userId,
+                             @RequestBody Map<String, Object> body) {
+        return stash.addType(userId, body);
+    }
+
     /** {recordId, questionKey} or {itemId}, and a title: a question's shape as a new type */
     @PostMapping("/as-type")
     public StashItem asType(@RequestHeader(value = "X-User-Id", required = false) String userId,

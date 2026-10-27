@@ -12,6 +12,7 @@
 @import "./styles/welcome.css";
 @import "./styles/play.css";
 @import "./styles/stash.css";
+@import "./styles/motion.css";
 @import "./styles/mobile.css";
 
 @font-face {
@@ -61,6 +62,7 @@
   --accent-fill: #b9a6ff; /* primary button */
   --on-accent: #0b0912; /* 9.4:1 on the fill */
   --accent-soft: rgba(185, 166, 255, 0.13);
+  --link: #e4dbff; /* links, brighter than the accent so they read on the aura */
   --warm: #f2a989; /* time and timecodes: 8.4:1 */
   --danger: #ff9a9a;
   --ok: #9fe0b8;
@@ -177,6 +179,7 @@
     --accent-fill: #5236c9;
     --on-accent: #ffffff; /* 7.7:1 on the fill */
     --accent-soft: rgba(82, 54, 201, 0.1);
+    --link: #3a1fa8;
     --warm: #a0482a; /* 4.7:1 */
     --danger: #b3261e;
     --ok: #1f7a4a;

@@ -36,7 +36,7 @@ export const Answering: React.FC<Props> = (props) => {
   else body = <Written {...props} />;
   return (
     <div className="jqzz-answering">
-      <p className="jqzz-play-prompt">{q.text}</p>
+      <p className="jqzz-play-prompt jqzz-holo sheen">{q.text}</p>
       <QuestionImage src={q.imageUrl} ownerId={game.authorId} viewerId={props.me} />
       {body}
     </div>

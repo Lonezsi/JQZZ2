@@ -134,6 +134,12 @@ class StashFlowTest {
                 .isEqualTo(400);
         assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"full\"}").body(), "$"))
                 .hasSize(6);
+        // straight from the editor
+        String fromEditor = send("POST", "/stash/types", bob,
+                "{\"name\": \"quick pick\", \"questionType\": \"TIERLIST\", \"answers\": [], \"steps\": [{\"phase\": \"QUESTION\", \"time\": 20}]}").body();
+        assertThat(JsonPath.<String>read(fromEditor, "$.kind")).isEqualTo("TYPE");
+        assertThat(JsonPath.<String>read(fromEditor, "$.payload")).contains("TIERLIST");
+        assertThat(send("POST", "/stash/types", bob, "{\"name\": \"empty\", \"steps\": []}").statusCode()).isEqualTo(400);
 
         // private: only bob. semi-private: anyone with bob's id. public: by handle alone.
         String ref = "/stash/resolve?kind=QUIZ&ref=";

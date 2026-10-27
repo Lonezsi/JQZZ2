@@ -10,6 +10,7 @@ import { useQuiz } from "../../../../contexts/QuizContext";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
 import { changed, describe, settingsAt } from "../../../../utils/settings";
+import { AddTypeButton } from "./AddTypeButton";
 
 interface VisualModeProps {
   quiz: Quiz | undefined;
@@ -176,6 +177,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                       {c}
                     </span>
                   ))}
+                  <AddTypeButton question={q} actions={item.actions} />
                 </div>
                 <span className="jqzz-group-text">{q.text || "untitled question"}</span>
                 {/* the question's rhythm: its phases, widths by time */}

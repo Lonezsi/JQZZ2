@@ -12,6 +12,7 @@ import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, Qu
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
+import { Confetti } from "../common/Confetti";
 
 const STORE = (code: string) => `jqzz.mine.${code}`;
 
@@ -131,6 +132,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
 
         {game.status === "FINISHED" && (
           <div className="jqzz-phone-final">
+            {player && player.rank <= 3 && <Confetti pieces={90} />}
             <h1 className="jqzz-stage-title OEF jqzz-chroma">
               {player ? (player.rank === 1 ? "you won" : `#${player.rank}`) : "it's over"}
             </h1>
