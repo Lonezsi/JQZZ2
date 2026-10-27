@@ -143,7 +143,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteQuiz = useCallback(
     async (id: number) => {
       try {
-        await quizService.delete(id);
+        await quizService.delete(id, authorId);
       } catch (err) {
         alert(`couldn't delete it: ${errorMessage(err)}`);
         return;
@@ -151,7 +151,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
       setQuizzes((prev) => prev.filter((q) => q.id !== id));
       setActiveQuizId((current) => (current === id ? null : current));
     },
-    [setQuizzes],
+    [setQuizzes, authorId],
   );
 
   const appendActions = useCallback(

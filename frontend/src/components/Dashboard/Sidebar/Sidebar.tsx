@@ -5,6 +5,7 @@ import { Avatar } from "../../common/Avatar";
 import { Popover } from "../../common/Popover";
 import { PeopleList } from "./PeopleList";
 import { usePeople } from "../../../hooks/usePeople";
+import { useFriends } from "../../../hooks/useFriends";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
 import { Keys } from "../../common/Keys";
 import { ariaShortcut, modLabel } from "../../../utils/shortcuts";
@@ -37,6 +38,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onHomeClick,
 }) => {
   const { users, online } = usePeople();
+  const { friends, incoming } = useFriends();
+  const friendIds = new Set(friends.map((f) => f.id));
+  // friends online if there are any, in green; otherwise everyone else online, in grey
+  const othersOnline = online.filter((u) => u.id !== identity?.id);
+  const friendsOnline = othersOnline.filter((u) => friendIds.has(u.id));
+  const shown = friendsOnline.length > 0 ? friendsOnline : othersOnline;
   const { connected } = useWebSocket();
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -183,18 +190,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="jqzz-people-anchor">
           <button
-            className={`jqzz-people-btn${peopleOpen ? " open" : ""}`}
+            className={`jqzz-people-btn${peopleOpen ? " open" : ""}${shown.length === 0 ? " bare" : ""}${friendsOnline.length > 0 ? " friends" : ""}`}
             onClick={() => setPeopleOpen((o) => !o)}
             aria-expanded={peopleOpen}
-            aria-label={`${online.length} online. Show people`}
-            title="who's here"
+            aria-label={
+              friendsOnline.length > 0
+                ? `${friendsOnline.length} friends online. Show people`
+                : `${othersOnline.length} online. Show people`
+            }
+            title={friendsOnline.length > 0 ? "friends online" : "who's here"}
           >
-            <span className="jqzz-people-stack" aria-hidden="true">
-              {online.slice(0, 3).map((u) => (
-                <Avatar key={u.id} user={u} viewerId={identity?.id} className="jqzz-stack-avatar" />
-              ))}
-            </span>
-            <span className="jqzz-annot">{online.length}</span>
+            {shown.length > 0 && (
+              <span className="jqzz-people-stack" aria-hidden="true">
+                {shown.slice(0, 3).map((u) => (
+                  <Avatar key={u.id} user={u} viewerId={identity?.id} className="jqzz-stack-avatar" />
+                ))}
+              </span>
+            )}
+            <span className="jqzz-annot">{shown.length}</span>
+            {incoming.length > 0 && <span className="jqzz-people-ping" aria-label="friend requests" />}
           </button>
           <Popover
             open={peopleOpen}
@@ -210,9 +224,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <PeopleList
               users={users}
               viewerId={identity?.id}
+              friendIds={friendIds}
+              requests={incoming.length}
               onOpen={(id) => {
                 setPeopleOpen(false);
-                go(id === identity?.id ? "/me" : `/u/${encodeURIComponent(id)}`);
+                go(id === identity?.id ? "/me/you" : `/u/${encodeURIComponent(id)}`);
               }}
             />
           </Popover>

@@ -68,21 +68,34 @@ export const PlayerFace: React.FC<{
   />
 );
 
-/** "Q2 / 5 · single choice" */
-export const QuestionHead: React.FC<{ game: GameState }> = ({ game }) => (
-  <div className="jqzz-play-qhead">
-    <span className="jqzz-play-qnum OEF jqzz-chroma">Q{game.questionNumber ?? "?"}</span>
-    <span className="jqzz-annot">
-      of {game.questionCount} · {typeLabel(game.question?.type)}
-    </span>
-    {/* a settings block made it worth more, or nothing */}
-    {game.question?.weight != null && (
-      <span className="jqzz-type-pill setting">
-        {game.question.weight === 0 ? "no points" : `×${game.question.weight / 100}`}
-      </span>
-    )}
-  </div>
-);
+/** "Q2 / 5 · single choice", and a track of the questions: done, now, still to come */
+export const QuestionHead: React.FC<{ game: GameState }> = ({ game }) => {
+  const n = game.questionNumber ?? 0;
+  const count = Math.min(game.questionCount, 40);
+  return (
+    <div className="jqzz-play-qhead-wrap">
+      <div className="jqzz-play-qhead">
+        <span className="jqzz-play-qnum OEF jqzz-chroma">Q{game.questionNumber ?? "?"}</span>
+        <span className="jqzz-annot">
+          of {game.questionCount} · {typeLabel(game.question?.type)}
+        </span>
+        {/* a settings block made it worth more, or nothing */}
+        {game.question?.weight != null && (
+          <span className="jqzz-type-pill setting">
+            {game.question.weight === 0 ? "no points" : `×${game.question.weight / 100}`}
+          </span>
+        )}
+      </div>
+      {count > 1 && (
+        <span className="jqzz-qtrack" aria-hidden="true">
+          {Array.from({ length: count }, (_, i) => (
+            <span key={i} className={i < n - 1 ? "done" : i === n - 1 ? "now" : undefined} />
+          ))}
+        </span>
+      )}
+    </div>
+  );
+};
 
 export const Leaderboard: React.FC<{
   players: GamePlayer[];

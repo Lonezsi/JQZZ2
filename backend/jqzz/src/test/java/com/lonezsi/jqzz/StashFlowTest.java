@@ -179,6 +179,18 @@ class StashFlowTest {
         String bobSeenByAlice = send("GET", "/profile/" + bob, alice, null).body();
         assertThat(JsonPath.<List<Object>>read(bobSeenByAlice, "$.games")).hasSize(1);
 
+        // friends: asked, accepted, and seen on each other's profile
+        assertThat(JsonPath.<List<String>>read(send("POST", "/friends/" + carol, bob, null).body(), "$.outgoing[*].id"))
+                .containsExactly(carol);
+        assertThat(JsonPath.<String>read(send("GET", "/profile/" + bob, carol, null).body(), "$.friendship"))
+                .isEqualTo("incoming");
+        assertThat(JsonPath.<List<String>>read(send("POST", "/friends/" + bob, carol, null).body(), "$.friends[*].id"))
+                .containsExactly(bob);
+        assertThat(JsonPath.<List<String>>read(send("GET", "/profile/" + carol, alice, null).body(), "$.friends[*].id"))
+                .containsExactly(bob);
+        assertThat(JsonPath.<List<Object>>read(send("DELETE", "/friends/" + carol, bob, null).body(), "$.friends"))
+                .isEmpty();
+
         // practice: alone, started straight away, from the stash
         String practice = send("POST", "/play/practice", null,
                 "{\"userId\": \"%s\", \"stashId\": %d}".formatted(bob, quizItem)).body();

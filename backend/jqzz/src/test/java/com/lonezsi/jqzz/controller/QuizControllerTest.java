@@ -126,9 +126,24 @@ class QuizControllerTest {
 
     @Test
     void deleteQuiz_success() throws Exception {
+        Quiz quiz = new Quiz();
+        quiz.setAuthorId("abc");
+        when(quizService.findById(1L)).thenReturn(Optional.of(quiz));
         when(quizService.delete(1L)).thenReturn(true);
 
-        mockMvc.perform(delete("/quizzes/1"))
+        mockMvc.perform(delete("/quizzes/1").header("X-User-Id", "abc"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteQuiz_onlyByItsAuthor() throws Exception {
+        Quiz quiz = new Quiz();
+        quiz.setAuthorId("abc");
+        when(quizService.findById(1L)).thenReturn(Optional.of(quiz));
+
+        mockMvc.perform(delete("/quizzes/1").header("X-User-Id", "someone"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/quizzes/1"))
+                .andExpect(status().isForbidden());
     }
 }

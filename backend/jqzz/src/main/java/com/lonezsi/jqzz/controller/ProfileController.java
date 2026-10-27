@@ -34,12 +34,15 @@ public class ProfileController {
     private final UserRepository users;
     private final GameRecordRepository records;
     private final StashService stash;
+    private final FriendController friends;
     private final JsonMapper json;
 
-    public ProfileController(UserRepository users, GameRecordRepository records, StashService stash, JsonMapper json) {
+    public ProfileController(UserRepository users, GameRecordRepository records, StashService stash,
+            FriendController friends, JsonMapper json) {
         this.users = users;
         this.records = records;
         this.stash = stash;
+        this.friends = friends;
         this.json = json;
     }
 
@@ -69,6 +72,10 @@ public class ProfileController {
         m.put("stats", stats(theirs, userId));
         m.put("games", games);
         m.put("shelf", stash.publicOf(userId));
+        // their friends, and how you stand with them
+        m.put("friends", friends.listOf(userId).get("friends"));
+        m.put("friendship", friends.status(viewerId, userId));
+        m.put("joined", theirs.isEmpty() ? null : theirs.get(theirs.size() - 1).getFinishedAt());
         return m;
     }
 

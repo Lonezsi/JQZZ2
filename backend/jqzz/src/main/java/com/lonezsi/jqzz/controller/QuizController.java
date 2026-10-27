@@ -43,8 +43,16 @@ public class QuizController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /** Only whoever made a quiz can delete it; quizzes from before authors were kept are anyone's. */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id,
+                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        Quiz quiz = quizService.findById(id).orElse(null);
+        if (quiz == null) return ResponseEntity.notFound().build();
+        String author = quiz.getAuthorId();
+        if (author != null && !author.isBlank() && !author.equals(userId)) {
+            return ResponseEntity.status(403).body("Only its author can delete this quiz");
+        }
         return quizService.delete(id)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.notFound().build();

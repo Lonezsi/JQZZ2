@@ -120,6 +120,10 @@ export interface Profile {
   games: HistorySummary[];
   /** what they made public */
   shelf: StashItem[];
+  friends: import("../services/friendService").FriendPerson[];
+  friendship: import("../services/friendService").Friendship;
+  /** their first game */
+  joined: string | null;
 }
 
 export interface HistoryRecord extends HistorySummary {

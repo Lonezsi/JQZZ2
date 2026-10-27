@@ -96,7 +96,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {quiz && (
           <span className="jqzz-toolbar-meta">
             <span className="jqzz-annot jqzz-author">by {author}</span>
-            <DeleteQuizButton quizId={quiz.id} name={quiz.name} label />
+            <DeleteQuizButton quizId={quiz.id} name={quiz.name} authorId={quiz.authorId} label />
           </span>
         )}
       </div>

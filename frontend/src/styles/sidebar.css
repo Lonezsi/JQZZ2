@@ -634,3 +634,48 @@ button.jqzz-user-row:active {
   overflow-wrap: anywhere;
   line-height: 1.35;
 }
+
+/* the people button: a plain round number when there are no faces to show,
+   green when it's counting friends, a dot when someone asked to be one */
+.jqzz-people-btn {
+  position: relative;
+}
+.jqzz-people-btn.bare {
+  justify-content: center;
+  width: 34px;
+  padding: 0;
+}
+.jqzz-people-btn.friends .jqzz-annot {
+  color: var(--ok);
+}
+.jqzz-people-btn:not(.friends) .jqzz-annot {
+  color: var(--text-3);
+}
+.jqzz-people-ping {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--warm);
+  border: 2px solid var(--surface-solid);
+}
+.jqzz-people-pop .jqzz-section-label.friends {
+  color: var(--ok);
+}
+.jqzz-people-requests {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--warm) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warm) 10%, transparent);
+  color: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-align: left;
+  transition: background var(--dur-1) var(--ease);
+}
+.jqzz-people-requests:hover {
+  background: color-mix(in srgb, var(--warm) 18%, transparent);
+}

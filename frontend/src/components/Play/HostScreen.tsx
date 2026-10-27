@@ -300,6 +300,9 @@ const Progress: React.FC<{ label: string; done: string[]; game: GameState; total
   me,
 }) => (
   <div className="jqzz-progress">
+    <span className="jqzz-progress-meter" aria-hidden="true">
+      <span style={{ width: `${total ? (done.length / total) * 100 : 0}%` }} />
+    </span>
     <span className="jqzz-annot">
       {done.length}/{total} {label}
     </span>

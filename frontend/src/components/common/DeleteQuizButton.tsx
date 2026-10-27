@@ -1,22 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useQuiz } from "../../contexts/QuizContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { Glyph } from "./Glyph";
 
 /**
  * Deletes a quiz, asking once: the first press arms it ("delete?"), a second
  * within three seconds does it. Used in the quiz list and in the open quiz.
  */
-export const DeleteQuizButton: React.FC<{ quizId: number; name: string; className?: string; label?: boolean }> = ({
-  quizId,
-  name,
-  className = "",
-  label = false,
-}) => {
+export const DeleteQuizButton: React.FC<{
+  quizId: number;
+  name: string;
+  /** shown only to whoever made it: nobody else may delete it */
+  authorId: string;
+  className?: string;
+  label?: boolean;
+}> = ({ quizId, name, authorId, className = "", label = false }) => {
   const { deleteQuiz } = useQuiz();
+  const { user } = useAuth();
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  if (!user || (authorId && authorId !== user.id)) return null;
   return (
     <button
       type="button"

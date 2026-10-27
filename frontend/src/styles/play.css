@@ -1000,3 +1000,150 @@ button.jqzz-entry:hover:not(:disabled) {
     font-size: 34px;
   }
 }
+
+/* ─── In the game: the question as a lit card, tiles with weight ──── */
+.jqzz-play-qhead-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+/* one segment per question: done, now (glowing), still to come */
+.jqzz-qtrack {
+  display: flex;
+  gap: 4px;
+  width: min(320px, 60vw);
+}
+.jqzz-qtrack > span {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+  transition: background var(--dur-3) var(--ease);
+}
+.jqzz-qtrack > .done {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.jqzz-qtrack > .now {
+  background: var(--warm);
+  box-shadow: 0 0 10px -1px var(--warm);
+}
+
+.jqzz-stage-q {
+  flex: 1;
+  justify-content: center;
+}
+.jqzz-stage-prompt,
+.jqzz-play-prompt {
+  position: relative;
+  padding: 24px 28px;
+  border: 1px solid color-mix(in srgb, var(--phase-QUESTION) 35%, var(--line));
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(90% 140% at 50% 0%, color-mix(in srgb, var(--phase-QUESTION) 16%, transparent), transparent 70%),
+    color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  box-shadow:
+    0 24px 60px -30px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
+  animation: viewIn var(--dur-3) var(--ease) backwards;
+}
+.jqzz-stage-prompt.small {
+  padding: 14px 20px;
+}
+.jqzz-play-prompt {
+  padding: 18px 20px;
+  font-size: 21px;
+}
+.jqzz-answering {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.jqzz-stage-img,
+.jqzz-play-img {
+  box-shadow: 0 20px 50px -28px rgba(0, 0, 0, 0.9);
+}
+
+/* tiles: a lit edge, a heavier letter, a lift when you can press them */
+.jqzz-tile {
+  min-height: 80px;
+  padding: 14px 18px;
+  font-size: 18px;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent),
+    0 14px 30px -24px var(--tile);
+  animation: tileIn var(--dur-3) var(--ease-pop) backwards;
+}
+.jqzz-tile:nth-child(2) { animation-delay: 50ms; }
+.jqzz-tile:nth-child(3) { animation-delay: 100ms; }
+.jqzz-tile:nth-child(4) { animation-delay: 150ms; }
+.jqzz-tile:nth-child(5) { animation-delay: 200ms; }
+.jqzz-tile:nth-child(6) { animation-delay: 250ms; }
+@keyframes tileIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.jqzz-stage .jqzz-tile {
+  min-height: 96px;
+  font-size: clamp(18px, 2.2vw, 26px);
+}
+.jqzz-tile-letter {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+  box-shadow: 0 6px 16px -6px var(--tile);
+}
+.jqzz-stage .jqzz-tile-letter {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+@media (hover: hover) {
+  button.jqzz-tile:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--tile);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent),
+      0 18px 34px -20px var(--tile);
+  }
+}
+.jqzz-tile.picked {
+  border-color: var(--tile);
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--tile) 36%, transparent), transparent 75%),
+    var(--surface);
+}
+
+/* how many have answered: a filling bar, then the faces */
+.jqzz-progress-meter {
+  width: min(240px, 50vw);
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  overflow: hidden;
+}
+.jqzz-progress-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--ok));
+  transition: width var(--dur-3) var(--ease);
+}
+
+/* your rank and score on the phone: a pill, not loose numbers */
+.jqzz-play-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--sunken);
+  font-variant-numeric: tabular-nums;
+}
+.jqzz-play-me .jqzz-annot {
+  color: var(--warm);
+}

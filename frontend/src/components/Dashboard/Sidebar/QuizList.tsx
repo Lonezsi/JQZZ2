@@ -89,7 +89,7 @@ export const QuizList: React.FC<QuizListProps> = ({
               </span>
             </span>
           </button>
-          <DeleteQuizButton quizId={q.id} name={q.name} className="in-list" />
+          <DeleteQuizButton quizId={q.id} name={q.name} authorId={q.authorId} className="in-list" />
           </div>
         );
       })}

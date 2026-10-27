@@ -1,3 +1,4 @@
+/* only the aura's own blobs: the host's stage carries phase-* classes too */
 /* ─── Atmosphere ──────────────────────────────────────────────────
    Grainy light behind everything. The phase light is one pre-painted
    layer per phase; switching phases only crossfades opacity, which the
@@ -46,15 +47,16 @@
 .jqzz-aura .phase-ELABORATION { background: radial-gradient(closest-side, var(--phase-ELABORATION), transparent); }
 .jqzz-aura .phase-RESULT { background: radial-gradient(closest-side, var(--phase-RESULT), transparent); }
 
-.jqzz-app:not([data-phase]) .phase-IDLE,
-.jqzz-app[data-phase="IDLE"] .phase-IDLE,
-.jqzz-app[data-phase="TEXT"] .phase-IDLE,
-.jqzz-app[data-phase="DIVIDER"] .phase-IDLE,
-.jqzz-app[data-phase="WAITING"] .phase-WAITING,
-.jqzz-app[data-phase="QUESTION"] .phase-QUESTION,
-.jqzz-app[data-phase="ANSWER"] .phase-ANSWER,
-.jqzz-app[data-phase="ELABORATION"] .phase-ELABORATION,
-.jqzz-app[data-phase="RESULT"] .phase-RESULT {
+/* only the aura's own blobs: the host's stage carries phase-* classes too */
+.jqzz-app:not([data-phase]) .jqzz-aura .phase-IDLE,
+.jqzz-app[data-phase="IDLE"] .jqzz-aura .phase-IDLE,
+.jqzz-app[data-phase="TEXT"] .jqzz-aura .phase-IDLE,
+.jqzz-app[data-phase="DIVIDER"] .jqzz-aura .phase-IDLE,
+.jqzz-app[data-phase="WAITING"] .jqzz-aura .phase-WAITING,
+.jqzz-app[data-phase="QUESTION"] .jqzz-aura .phase-QUESTION,
+.jqzz-app[data-phase="ANSWER"] .jqzz-aura .phase-ANSWER,
+.jqzz-app[data-phase="ELABORATION"] .jqzz-aura .phase-ELABORATION,
+.jqzz-app[data-phase="RESULT"] .jqzz-aura .phase-RESULT {
   opacity: var(--aura-opacity);
 }
 
