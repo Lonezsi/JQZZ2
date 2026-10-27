@@ -7,6 +7,7 @@ import type { GameState } from "../../types/play";
 import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage } from "./PlayCommon";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
+import { SaveFromGame } from "../Stash/SaveFromGame";
 
 /** The big screen: what the room looks at while the host runs the game. */
 export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
@@ -101,6 +102,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
                 back to the editor
               </button>
             </div>
+            {game.recordId != null && <SaveFromGame recordId={game.recordId} me={me} folded />}
           </div>
         )}
       </main>

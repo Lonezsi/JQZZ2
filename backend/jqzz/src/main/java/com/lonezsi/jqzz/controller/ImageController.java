@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -93,6 +95,27 @@ public class ImageController {
             return ResponseEntity.badRequest().body("User ID required");
         }
         return ResponseEntity.ok(imageService.listAccessibleImages(currentUserId));
+    }
+
+    /** Yours: everything you uploaded, public included. */
+    @GetMapping("/mine")
+    public ResponseEntity<?> listMine(@RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+        if (currentUserId == null || currentUserId.isBlank()) {
+            return ResponseEntity.badRequest().body("User ID required");
+        }
+        return ResponseEntity.ok(imageService.listMine(currentUserId));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> changeVisibility(@PathVariable Long id,
+                                              @RequestHeader("X-User-Id") String currentUserId,
+                                              @RequestBody Map<String, String> body) {
+        try {
+            ImageVisibility vis = ImageVisibility.valueOf(String.valueOf(body.get("visibility")).toUpperCase());
+            return ResponseEntity.ok(imageService.changeVisibility(id, currentUserId, vis));
+        } catch (IllegalArgumentException | SecurityException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")

@@ -1,0 +1,464 @@
+/* Stash and history: shelves of the things you kept. Same material as the
+   play screens: surface rows over the aura, mono for ids and counts, the
+   accent only for what is selected or public. */
+
+.jqzz-shelf {
+  flex: 1;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: viewIn var(--dur-3) var(--ease) backwards;
+}
+
+/* ─── shared controls ─────────────────────────────────────────────── */
+.jqzz-play-btn.small {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: var(--fs-small);
+}
+.jqzz-play-btn.danger.armed {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.jqzz-linkish {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* the id: tap to copy */
+.jqzz-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--text);
+  transition:
+    border-color var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.jqzz-ref:hover {
+  border-color: var(--accent);
+}
+.jqzz-ref:active {
+  transform: scale(0.97);
+}
+.jqzz-ref code {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.jqzz-ref.copied {
+  border-color: var(--ok);
+}
+.jqzz-ref.copied .jqzz-annot {
+  color: var(--ok);
+}
+
+/* only me / shared / public */
+.jqzz-vis {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--sunken);
+}
+.jqzz-vis button {
+  min-height: 26px;
+  padding: 2px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+.jqzz-vis button:hover:not(:disabled) {
+  color: var(--text);
+}
+.jqzz-vis button[aria-checked="true"] {
+  background: var(--raised-hover);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.jqzz-vis[data-value="PUBLIC"] button[aria-checked="true"] {
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* ─── tabs and adding by id ───────────────────────────────────────── */
+.jqzz-shelf-tabs {
+  align-self: flex-start;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--sunken);
+}
+.jqzz-shelf-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+.jqzz-shelf-tab:hover {
+  color: var(--text);
+}
+.jqzz-shelf-tab[aria-current="page"] {
+  background: var(--raised-hover);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.jqzz-shelf-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.jqzz-shelf-add .jqzz-field-input {
+  flex: 1;
+  min-width: 200px;
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 4px 16px;
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+.jqzz-shelf-add .jqzz-play-note {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: left;
+}
+
+.jqzz-shelf-empty {
+  padding: 24px 0;
+  color: var(--text-3);
+  text-align: center;
+}
+.jqzz-shelf-empty a {
+  color: var(--accent);
+}
+.jqzz-shelf-head {
+  margin-top: 8px;
+}
+
+/* ─── rows ────────────────────────────────────────────────────────── */
+.jqzz-shelf-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jqzz-shelf-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.jqzz-shelf-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--sunken);
+}
+.jqzz-shelf-body {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jqzz-shelf-title {
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.jqzz-shelf-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.jqzz-shelf-answers span {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.jqzz-shelf-answers span.good {
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+  color: var(--ok);
+}
+.jqzz-shelf-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.jqzz-shelf-actions {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.jqzz-shelf-pick {
+  width: auto;
+  max-width: 220px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--fs-small);
+}
+.jqzz-shelf-rename .jqzz-field-input {
+  width: 220px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+.jqzz-shelf-rename .jqzz-field-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.jqzz-shelf-msg {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: right;
+}
+
+/* ─── images ──────────────────────────────────────────────────────── */
+.jqzz-shelf-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.jqzz-shelf-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.jqzz-shelf-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--sunken);
+}
+
+/* ─── history ─────────────────────────────────────────────────────── */
+a.jqzz-game-row {
+  flex-wrap: nowrap;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+a.jqzz-game-row:hover {
+  border-color: var(--line-strong);
+  background: var(--raised);
+}
+a.jqzz-game-row:active {
+  transform: scale(0.99);
+}
+.jqzz-game-place {
+  width: 56px;
+  flex-shrink: 0;
+  color: var(--text-2);
+  font-family: var(--font-data);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.jqzz-game-place.first {
+  color: var(--warm);
+}
+.jqzz-game-podium {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.jqzz-game-podium .me {
+  color: var(--accent);
+  font-weight: 600;
+}
+.jqzz-game-go {
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition:
+    transform var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+a.jqzz-game-row:hover .jqzz-game-go {
+  color: var(--text);
+  transform: translateX(4px);
+}
+.jqzz-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.jqzz-game .jqzz-board {
+  text-align: left;
+}
+
+/* ─── saving from a finished game ─────────────────────────────────── */
+.jqzz-keep {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: left;
+  animation: viewIn var(--dur-2) var(--ease) backwards;
+}
+.jqzz-keep-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.jqzz-keep-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.jqzz-keep-link:hover {
+  text-decoration: underline;
+}
+.jqzz-keep-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.jqzz-keep-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 4px;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-1) var(--ease);
+}
+.jqzz-keep-row:hover {
+  background: var(--raised);
+}
+.jqzz-keep-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .jqzz-shelf {
+    padding: 16px 12px 40px;
+  }
+  .jqzz-shelf-tabs {
+    align-self: stretch;
+  }
+  .jqzz-shelf-tab {
+    flex: 1;
+    padding: 4px 8px;
+  }
+  .jqzz-shelf-id {
+    flex-basis: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .jqzz-shelf-actions,
+  .jqzz-shelf-msg {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  /* pictures go beside their controls, one per row */
+  .jqzz-shelf-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .jqzz-shelf-card {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 8px 12px;
+    align-items: start;
+  }
+  .jqzz-shelf-card img {
+    grid-row: span 4;
+    aspect-ratio: 1;
+  }
+  .jqzz-shelf-card > :not(img) {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .jqzz-game-place {
+    width: 40px;
+    font-size: 15px;
+  }
+}

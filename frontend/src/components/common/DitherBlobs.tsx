@@ -38,8 +38,10 @@ export const DitherBlobs: React.FC = () => {
     if (!canvas) return;
 
     const draw = () => {
-      const w = Math.ceil(window.innerWidth / CELL);
-      const h = Math.ceil(window.innerHeight / CELL);
+      // a window with no size yet (a background tab, a hidden pane) still gets
+      // a pixel: createImageData throws on zero and would take the app with it
+      const w = Math.max(1, Math.ceil(window.innerWidth / CELL));
+      const h = Math.max(1, Math.ceil(window.innerHeight / CELL));
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");

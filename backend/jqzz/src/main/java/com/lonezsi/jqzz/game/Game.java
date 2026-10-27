@@ -124,6 +124,10 @@ public class Game {
     final String quizName;
     /** whose quiz it is: picture references like ":handle" are theirs */
     String authorId;
+    Long quizId;
+    /** set once the finished game has been written to history */
+    boolean recorded;
+    Long recordId;
     final List<Step> steps;
     final Random random;
     final Map<String, Player> players = new LinkedHashMap<>();
@@ -177,6 +181,8 @@ public class Game {
         }
         questions.clear();
         players.values().forEach(p -> { p.score = 0; p.gain = 0; });
+        recorded = false;
+        recordId = null;
         status = Status.PLAYING;
         if (steps.isEmpty()) {
             finish(now);
@@ -189,6 +195,8 @@ public class Game {
     public void restart(long now) {
         questions.clear();
         players.values().forEach(p -> { p.score = 0; p.gain = 0; });
+        recorded = false;
+        recordId = null;
         status = Status.LOBBY;
         index = -1;
         endsAt = 0;
@@ -616,6 +624,7 @@ public class Game {
         v.put("hostId", hostId);
         v.put("quizName", quizName);
         v.put("authorId", authorId);
+        v.put("recordId", recordId);
         v.put("status", status.name());
         v.put("version", version);
         v.put("now", now);

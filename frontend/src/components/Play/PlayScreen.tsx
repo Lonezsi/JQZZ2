@@ -10,6 +10,7 @@ import { Answering, Judging } from "./Answering";
 import type { MyAnswer } from "./Answering";
 import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage } from "./PlayCommon";
 import { Reveal } from "./Reveal";
+import { SaveFromGame } from "../Stash/SaveFromGame";
 
 const STORE = (code: string) => `jqzz.mine.${code}`;
 
@@ -136,7 +137,8 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
             </h1>
             {player && <p className="jqzz-play-note">{player.score} points</p>}
             <Podium players={game.players} viewerId={me} />
-            <button className="jqzz-play-btn" onClick={() => go("/")}>
+            {game.recordId != null && player && <SaveFromGame recordId={game.recordId} me={me} folded />}
+            <button className="jqzz-play-btn ghost" onClick={() => go("/")}>
               make your own quiz
             </button>
           </div>

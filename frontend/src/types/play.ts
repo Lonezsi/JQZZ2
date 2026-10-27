@@ -81,6 +81,8 @@ export interface GameState {
   quizName: string;
   /** whose quiz it is: picture references like ":handle" are theirs */
   authorId?: string;
+  /** once it's finished: the game's entry in everyone's history */
+  recordId?: number | null;
   status: GameStatus;
   version: number;
   /** server clock when this was sent */

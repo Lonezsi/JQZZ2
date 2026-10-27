@@ -15,6 +15,8 @@ import { usePresence } from "../../hooks/usePresence";
 import { isGuestName } from "../../utils/guestName";
 import { useSwipeDrawer } from "../../hooks/useSwipeDrawer";
 import { playService } from "../../services/playService";
+import { stashService } from "../../services/stashService";
+import { convertToBackendQuiz } from "../../utils/quizConverter";
 import { errorMessage } from "../../services/api";
 import { go } from "../../hooks/useHashRoute";
 import "../../index.css";
@@ -96,6 +98,18 @@ export const Dashboard: React.FC = () => {
       a.click();
     });
   }, [quiz]);
+
+  // the stash copies what the server has, so save the latest edits first
+  const handleStash = useCallback(() => {
+    if (!quiz || !user) return;
+    quizService
+      .update(quiz.id, convertToBackendQuiz(quiz))
+      .then(() => stashService.fromQuiz(user.id, quiz.id))
+      .then(([item]) => {
+        if (window.confirm(`saved to your stash as ${item.handle}. open the stash?`)) go("/stash");
+      })
+      .catch((err) => alert(`couldn't stash it: ${errorMessage(err)}`));
+  }, [quiz, user]);
 
   // Determine which action to edit in the right panel
   const selectedActionIdsArray = Array.from(selectedActionIds);
@@ -202,8 +216,17 @@ export const Dashboard: React.FC = () => {
       case "Join a game":
         go("/join");
         break;
+      case "Stash this quiz":
+        handleStash();
+        break;
+      case "Open stash":
+        go("/stash");
+        break;
+      case "Game history":
+        go("/history");
+        break;
     }
-  }, [newQuiz, handleImport, handleExport, handleStart, mode, setMode]);
+  }, [newQuiz, handleImport, handleExport, handleStart, handleStash, mode, setMode]);
 
   return (
     <div className="jqzz-app" data-phase={selectedAction?.phase ?? "IDLE"}>

@@ -18,7 +18,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+
 import com.lonezsi.jqzz.model.Action;
+import com.lonezsi.jqzz.model.GameRecord;
+import com.lonezsi.jqzz.model.PlayerResult;
+import com.lonezsi.jqzz.repository.GameRecordRepository;
+import tools.jackson.databind.json.JsonMapper;
 import com.lonezsi.jqzz.model.Answer;
 import com.lonezsi.jqzz.model.Question;
 import com.lonezsi.jqzz.model.Quiz;
@@ -51,6 +58,8 @@ public class GameEngine {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messaging;
     private final PresenceTracker presence;
+    private final GameRecordRepository records;
+    private final JsonMapper json;
 
     private final Map<String, Game> games = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> timers = new ConcurrentHashMap<>();
@@ -62,11 +71,14 @@ public class GameEngine {
     });
 
     public GameEngine(QuizRepository quizRepository, UserRepository userRepository,
-            SimpMessagingTemplate messaging, PresenceTracker presence) {
+            SimpMessagingTemplate messaging, PresenceTracker presence,
+            GameRecordRepository records, JsonMapper json) {
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
         this.messaging = messaging;
         this.presence = presence;
+        this.records = records;
+        this.json = json;
         clock.scheduleAtFixedRate(this::forgetOldGames, 10, 10, TimeUnit.MINUTES);
     }
 
@@ -89,6 +101,7 @@ public class GameEngine {
         String code = newCode();
         Game game = new Game(code, hostId, quiz.getName(), steps, new Random(random.nextLong()), now());
         game.authorId = quiz.getAuthorId();
+        game.quizId = quiz.getId();
         games.put(code, game);
         return view(game);
     }
@@ -175,6 +188,7 @@ public class GameEngine {
             }
             reschedule(game);
             publish(game);
+            record(game);
         } catch (RuntimeException e) {
             // one broken game must not stop the clock for the others
             System.err.println("game " + code + ": " + e);
@@ -222,7 +236,109 @@ public class GameEngine {
         }
         reschedule(game);
         messaging.convertAndSend("/topic/play/" + game.code(), (Object) view);
+        if (record(game)) {
+            synchronized (game) {
+                view = view(game);
+            }
+        }
         return view;
+    }
+
+    // ─── history ───────────────────────────────────────────────────────
+
+    /**
+     * A game that has just finished goes into everyone's history, once. The
+     * record holds its own copy of what was asked, so the quiz can change or
+     * go away afterwards. Returns whether it wrote one.
+     */
+    private boolean record(Game game) {
+        GameRecord record;
+        synchronized (game) {
+            if (game.status() != Game.Status.FINISHED || game.recorded) return false;
+            game.recorded = true;
+            if (game.players.isEmpty()) return false; // nobody played: nothing to remember
+            record = new GameRecord();
+            record.setCode(game.code());
+            record.setQuizId(game.quizId);
+            record.setQuizName(game.quizName);
+            record.setHostId(game.hostId());
+            record.setAuthorId(game.authorId);
+            record.setFinishedAt(LocalDateTime.now());
+            record.setContent(json.writeValueAsString(recordContent(game)));
+            List<Game.Player> sorted = new ArrayList<>(game.players.values());
+            sorted.sort((a, b) -> Integer.compare(b.score, a.score));
+            int rank = 0;
+            Integer last = null;
+            for (int i = 0; i < sorted.size(); i++) {
+                Game.Player p = sorted.get(i);
+                if (last == null || p.score != last) rank = i + 1;
+                last = p.score;
+                record.getPlayers().add(new PlayerResult(p.id, p.name, p.score, rank));
+            }
+        }
+        try {
+            GameRecord saved = records.save(record);
+            synchronized (game) {
+                game.recordId = saved.getId();
+                game.version++;
+            }
+            publish(game);
+            return true;
+        } catch (RuntimeException e) {
+            System.err.println("game " + game.code() + ": could not save its history: " + e);
+            return false;
+        }
+    }
+
+    /**
+     * What was played, as stash-ready JSON: {"name", "questions": [...], "steps":
+     * [{phase, time, preview, question}]}. Picture references relative to the
+     * author (":handle") are written out in full ("author:handle"), so they still
+     * point at the author's picture after being copied into someone else's stash.
+     */
+    Map<String, Object> recordContent(Game game) {
+        Map<Long, Map<String, Object>> questions = new LinkedHashMap<>();
+        List<Map<String, Object>> steps = new ArrayList<>();
+        for (Game.Step s : game.steps) {
+            Map<String, Object> step = new LinkedHashMap<>();
+            step.put("phase", s.phase().name());
+            step.put("time", s.seconds());
+            step.put("preview", s.phase().name().toLowerCase());
+            Game.QuestionSnap q = s.question();
+            step.put("question", q == null ? null : q.id());
+            steps.add(step);
+            if (q != null && !questions.containsKey(q.id())) {
+                Map<String, Object> qm = new LinkedHashMap<>();
+                qm.put("key", q.id());
+                qm.put("text", q.text());
+                qm.put("type", Game.type(q).name());
+                qm.put("imageUrl", absolute(q.imageUrl(), game.authorId));
+                qm.put("elaborationText", q.elaborationText());
+                qm.put("elaborationImageUrl", absolute(q.elaborationImageUrl(), game.authorId));
+                List<Map<String, Object>> answers = new ArrayList<>();
+                for (Game.AnswerSnap a : q.answers()) {
+                    Map<String, Object> am = new LinkedHashMap<>();
+                    am.put("text", a.text());
+                    am.put("value", a.value());
+                    am.put("imageUrl", absolute(a.imageUrl(), game.authorId));
+                    answers.add(am);
+                }
+                qm.put("answers", answers);
+                questions.put(q.id(), qm);
+            }
+        }
+        Map<String, Object> content = new LinkedHashMap<>();
+        content.put("name", game.quizName);
+        content.put("questions", new ArrayList<>(questions.values()));
+        content.put("steps", steps);
+        return content;
+    }
+
+    /** ":handle" means the author's picture; spell that out so it survives being copied. */
+    public static String absolute(String ref, String authorId) {
+        if (ref == null || ref.isBlank()) return ref;
+        if (ref.startsWith(":") && authorId != null) return authorId + ref;
+        return ref;
     }
 
     private void publish(Game game) {

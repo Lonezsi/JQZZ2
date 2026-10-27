@@ -48,6 +48,10 @@ public class Image {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /** who uploaded it, kept even when it is public (and so owned by nobody) */
+    @Column(name = "uploaded_by")
+    private String uploadedBy;
+
     // Constructors, getters, setters (unchanged)
     public Image() {}
 
@@ -81,4 +85,10 @@ public class Image {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getUploadedBy() { return uploadedBy; }
+    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
+
+    /** How to reach it: the handle when public, "owner:handle" otherwise (":handle" for the owner). */
+    public String getReference() { return ownerId == null ? handle : ownerId + ":" + handle; }
 }

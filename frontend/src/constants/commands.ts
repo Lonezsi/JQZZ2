@@ -8,4 +8,7 @@ export const COMMANDS: Command[] = [
   { icon: "~", label: "Switch visual / text", sub: "Mod `" },
   { icon: "▷", label: "Start", sub: "Mod ↵" },
   { icon: "⌁", label: "Join a game", sub: "" },
+  { icon: "◇", label: "Stash this quiz", sub: "" },
+  { icon: "▤", label: "Open stash", sub: "" },
+  { icon: "↺", label: "Game history", sub: "" },
 ];

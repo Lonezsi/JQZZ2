@@ -26,4 +26,12 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     // Check if a handle is already used by a specific user
     boolean existsByOwnerIdAndHandle(String ownerId, String handle);
+
+    // The images someone uploaded, public ones included
+    @Query("SELECT i FROM Image i WHERE i.uploadedBy = :userId OR i.ownerId = :userId ORDER BY i.createdAt DESC")
+    List<Image> findMine(@Param("userId") String userId);
+
+    boolean existsByIdAndUploadedBy(Long id, String uploadedBy);
+
+    boolean existsByIdAndOwnerId(Long id, String ownerId);
 }

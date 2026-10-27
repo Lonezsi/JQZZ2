@@ -24,6 +24,7 @@ public class ImageService {
      * Upload an image. Validates uniqueness of handle based on visibility.
      */
     public Image uploadImage(String handle, String ownerId, ImageVisibility visibility, MultipartFile file) throws IOException {
+        String uploader = ownerId;
         // Validate handle format (alphanumeric, no colons)
         if (!handle.matches("^[a-zA-Z0-9_]+$")) {
             throw new IllegalArgumentException("Handle must contain only letters, numbers, and underscores");
@@ -55,6 +56,7 @@ public class ImageService {
         }
 
         Image image = new Image(handle, ownerId, visibility, data, mimeType);
+        image.setUploadedBy(uploader);
         return imageRepository.save(image);
     }
 
@@ -118,6 +120,43 @@ public class ImageService {
 
     public List<Image> listAccessibleImages(String currentUserId) {
         return imageRepository.findAllAccessibleByUser(currentUserId);
+    }
+
+    /** Whether they uploaded it themselves (older images only know their owner). */
+    public boolean isUploadedBy(Long id, String userId) {
+        return imageRepository.existsByIdAndUploadedBy(id, userId) || imageRepository.existsByIdAndOwnerId(id, userId);
+    }
+
+    /** The images someone uploaded, public ones included. */
+    public List<Image> listMine(String userId) {
+        return imageRepository.findMine(userId);
+    }
+
+    /**
+     * Public, semi-private or private, with the same handle rules as uploading:
+     * a public handle must be free among public images, a private one among the
+     * owner's own. Its reference changes with it ("handle" or "owner:handle").
+     */
+    public Image changeVisibility(Long id, String currentUserId, ImageVisibility visibility) {
+        Image img = imageRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found"));
+        String owner = img.getUploadedBy() != null ? img.getUploadedBy() : img.getOwnerId();
+        if (currentUserId == null || !currentUserId.equals(owner)) {
+            throw new SecurityException("You can only change your own images");
+        }
+        if (visibility == ImageVisibility.PUBLIC) {
+            if (img.getOwnerId() != null && imageRepository.existsByHandleAndOwnerIdIsNull(img.getHandle())) {
+                throw new IllegalArgumentException("Public image handle already exists");
+            }
+            img.setOwnerId(null);
+        } else {
+            if (img.getOwnerId() == null && imageRepository.existsByOwnerIdAndHandle(owner, img.getHandle())) {
+                throw new IllegalArgumentException("You already have an image with that handle");
+            }
+            img.setOwnerId(owner);
+        }
+        img.setVisibility(visibility);
+        return imageRepository.save(img);
     }
 
     public void deleteImage(Long id, String currentUserId) {

@@ -87,6 +87,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
           Join a game
         </a>
+        <a className="jqzz-sid-action" href="#/stash">
+          <span className="jqzz-sid-action-icon" aria-hidden="true">
+            ▤
+          </span>
+          Stash
+        </a>
+        <a className="jqzz-sid-action" href="#/history">
+          <span className="jqzz-sid-action-icon" aria-hidden="true">
+            ↺
+          </span>
+          History
+        </a>
       </div>
 
       <div className="jqzz-sid-head">

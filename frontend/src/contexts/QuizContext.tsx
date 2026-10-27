@@ -49,6 +49,10 @@ interface QuizContextType {
   reorderActions: (dragId: number, dropId: number) => void;
   newQuiz: () => Promise<number | undefined>;
   renameQuiz: (id: number, name: string) => void;
+  /** a quiz the server just made, e.g. one opened from the stash */
+  addQuiz: (quiz: Quiz) => void;
+  /** steps from the stash, added to the end of a quiz */
+  appendActions: (quizId: number, actions: Action[]) => void;
   importScript: (name: string, script: string) => Promise<void>;
   dropSnippet: (snippetId: string) => void;
   handleParsed: (questions: Question[], actions: Action[]) => void;
@@ -126,6 +130,19 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   const renameQuiz = useCallback(
     (id: number, name: string) =>
       setQuizzes((prev) => prev.map((q) => (q.id === id ? { ...q, name } : q))),
+    [setQuizzes],
+  );
+
+  const addQuiz = useCallback(
+    (quiz: Quiz) => setQuizzes((prev) => [...prev.filter((q) => q.id !== quiz.id), quiz]),
+    [setQuizzes],
+  );
+
+  const appendActions = useCallback(
+    (quizId: number, actions: Action[]) =>
+      setQuizzes((prev) =>
+        prev.map((q) => (q.id === quizId ? { ...q, actions: [...q.actions, ...actions] } : q)),
+      ),
     [setQuizzes],
   );
 
@@ -306,6 +323,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     reorderActions,
     newQuiz,
     renameQuiz,
+    addQuiz,
+    appendActions,
     importScript,
     dropSnippet,
     handleParsed,
