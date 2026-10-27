@@ -26,6 +26,8 @@ export interface GameAnswer {
 
 export interface GameQuestion {
   id: number;
+  /** points it gives in percent, when not 100: 0 is unscored, 200 double */
+  weight?: number;
   text: string;
   imageUrl?: string | null;
   type: string;

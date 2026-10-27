@@ -47,8 +47,14 @@ public class Game {
 
     public record AnswerSnap(long id, String text, String imageUrl, int value) {}
 
+    /** weight: points it gives, in percent. 100 normally, 0 when not graded, 200 for double. */
     public record QuestionSnap(long id, String text, String imageUrl, QuestionType type,
-            String elaborationText, String elaborationImageUrl, List<AnswerSnap> answers) {}
+            String elaborationText, String elaborationImageUrl, List<AnswerSnap> answers, int weight) {
+        public QuestionSnap(long id, String text, String imageUrl, QuestionType type,
+                String elaborationText, String elaborationImageUrl, List<AnswerSnap> answers) {
+            this(id, text, imageUrl, type, elaborationText, elaborationImageUrl, answers, 100);
+        }
+    }
 
     public record Step(Phase phase, int seconds, QuestionSnap question) {}
 
@@ -507,6 +513,10 @@ public class Game {
             }
             default -> { /* written answers on a wall: nothing to score */ }
         }
+        if (q.weight() != 100) {
+            gains.replaceAll((user, points) -> points * q.weight() / 100);
+            gains.values().removeIf(points -> points == 0);
+        }
         players.values().forEach(p -> {
             p.gain = gains.getOrDefault(p.id, 0);
             p.score += p.gain;
@@ -686,6 +696,7 @@ public class Game {
         m.put("text", q.text());
         m.put("imageUrl", q.imageUrl());
         m.put("type", type(q).name());
+        if (q.weight() != 100) m.put("weight", q.weight());
         List<Map<String, Object>> answers = new ArrayList<>();
         for (AnswerSnap a : q.answers()) {
             Map<String, Object> am = new LinkedHashMap<>();
@@ -810,6 +821,54 @@ public class Game {
     }
 
     // ─── small helpers ─────────────────────────────────────────────────
+
+    /**
+     * What happened on a question, for the history: how many picked each
+     * answer (by position), the group's tiers, what was written and by whom,
+     * and who scored. Empty if the game never got to it.
+     */
+    Map<String, Object> results(QuestionSnap q) {
+        Map<String, Object> r = new LinkedHashMap<>();
+        QState st = questions.get(q.id());
+        if (st == null) return r;
+        QuestionType type = type(q);
+        switch (type) {
+            case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE -> {
+                List<Integer> counts = new ArrayList<>();
+                for (AnswerSnap a : q.answers()) {
+                    counts.add((int) st.picks.values().stream().filter(p -> p.contains(a.id())).count());
+                }
+                r.put("counts", counts);
+            }
+            case TIERLIST -> {
+                List<String> tiers = new ArrayList<>();
+                for (AnswerSnap a : q.answers()) tiers.add(st.consensus.get(a.id()));
+                r.put("tiers", tiers);
+            }
+            default -> { /* written: entries below */ }
+        }
+        if (isWritten(type)) {
+            List<Map<String, Object>> entries = new ArrayList<>();
+            for (Entry e : st.entries) {
+                Map<String, Object> em = new LinkedHashMap<>();
+                em.put("text", e.text);
+                em.put("by", nameOf(e.authorId));
+                em.put("votes", e.votes);
+                entries.add(em);
+            }
+            r.put("entries", entries);
+            if (st.bracket != null && st.bracket.champion != null) {
+                r.put("champion", Map.of("text", st.bracket.champion.text, "by", nameOf(st.bracket.champion.authorId)));
+            }
+        }
+        if (!st.gains.isEmpty()) r.put("gains", new LinkedHashMap<>(st.gains));
+        return r;
+    }
+
+    private String nameOf(String userId) {
+        Player p = players.get(userId);
+        return p == null ? "someone who left" : p.name;
+    }
 
     private QState state(QuestionSnap q) {
         return questions.computeIfAbsent(q.id(), k -> new QState());

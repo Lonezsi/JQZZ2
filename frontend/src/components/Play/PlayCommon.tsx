@@ -75,6 +75,12 @@ export const QuestionHead: React.FC<{ game: GameState }> = ({ game }) => (
     <span className="jqzz-annot">
       of {game.questionCount} · {typeLabel(game.question?.type)}
     </span>
+    {/* a settings block made it worth more, or nothing */}
+    {game.question?.weight != null && (
+      <span className="jqzz-type-pill setting">
+        {game.question.weight === 0 ? "no points" : `×${game.question.weight / 100}`}
+      </span>
+    )}
   </div>
 );
 

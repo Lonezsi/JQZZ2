@@ -13,6 +13,9 @@ export function buildRenderItems(quiz: Quiz | undefined): RenderItem[] {
     if (action.phase === "DIVIDER") {
       currentGroup = null;
       items.push({ kind: "divider", action });
+    } else if (action.phase === "SETTING") {
+      currentGroup = null;
+      items.push({ kind: "setting", action });
     } else if (action.phase === "TEXT") {
       currentGroup = null;
       items.push({ kind: "text", action });

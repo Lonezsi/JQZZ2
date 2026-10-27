@@ -1,5 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Action } from "../../../../types";
+import { resolveImage } from "../../../common/Avatar";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { useQuiz } from "../../../../contexts/QuizContext";
+import { describe, parseSettings } from "../../../../utils/settings";
 import { formatTimecode } from "../../../../utils/timecode";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
@@ -24,6 +28,29 @@ interface ActionCardProps {
   onMove?: (id: number, dir: -1 | 1) => void;
   isFirst?: boolean;
   isLast?: boolean;
+}
+
+/** The question's picture, out of focus behind its card. */
+function Backdrop({ src }: { src?: string }) {
+  const { user } = useAuth();
+  const { quiz } = useQuiz();
+  const [url, setUrl] = useState<string | null>(null);
+  const viewer = user?.id ?? "";
+  const owner = quiz?.authorId ?? viewer;
+  useEffect(() => {
+    let cancelled = false;
+    if (!src || !viewer) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUrl(null);
+      return;
+    }
+    resolveImage(src, owner, viewer).then((u) => !cancelled && setUrl(u));
+    return () => {
+      cancelled = true;
+    };
+  }, [src, owner, viewer]);
+  if (!url) return null;
+  return <img className="jqzz-card-backdrop" src={url} alt="" aria-hidden="true" />;
 }
 
 /** a phone, where the inspector is a sheet over the bottom of the screen */
@@ -134,7 +161,13 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   }, [isSelected]);
 
   const kind =
-    action.phase === "DIVIDER" ? "divider" : action.phase === "TEXT" ? "note" : "phase";
+    action.phase === "DIVIDER"
+      ? "divider"
+      : action.phase === "TEXT"
+        ? "note"
+        : action.phase === "SETTING"
+          ? "setting"
+          : "phase";
 
   const select = (e: React.MouseEvent | React.KeyboardEvent) =>
     onToggleSelect(action.id, e.ctrlKey || e.metaKey, e.shiftKey);
@@ -247,6 +280,34 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     );
   }
 
+  if (kind === "setting") {
+    const chips = describe(parseSettings(action.preview), true);
+    return (
+      <div className={rowClass} data-flip={flip} ref={rowRef}>
+        <span className="jqzz-tc" />
+        <span className="jqzz-node setting" aria-hidden="true" />
+        <div
+          className={`jqzz-setting-block${isSelected ? " selected" : ""}`}
+          aria-label={`Settings from here on: ${chips.join(", ") || "none"}`}
+          {...cardProps}
+        >
+          {handle}
+          <span className="jqzz-setting-glyph" aria-hidden="true">
+            <Glyph name="SETTING" size={14} />
+          </span>
+          <span className="jqzz-annot">from here</span>
+          <span className="jqzz-setting-chips">
+            {chips.length ? chips.map((c) => <span key={c}>{c}</span>) : <span>nothing set</span>}
+          </span>
+          <span className="jqzz-card-actions">
+            {moveBtns}
+            {deleteBtn}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (kind === "note") {
     return (
       <div className={rowClass} data-flip={flip} ref={rowRef}>
@@ -286,17 +347,21 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         {isSelected && <span className="jqzz-star" />}
       </span>
       <div
-        className={`jqzz-card phase-${action.phase}${isSelected ? " selected" : ""}`}
+        className={`jqzz-card phase-${action.phase}${isSelected ? " selected" : ""}${action.phase === "QUESTION" ? " tall" : ""}`}
         style={{ ...phaseColor, "--dur": `${pct}%` } as React.CSSProperties}
         aria-label={`${action.phase.toLowerCase()}, ${action.time} seconds, starts at ${formatTimecode(start)}${q?.text ? `: ${q.text}` : ""}`}
         {...cardProps}
       >
+        {action.phase === "QUESTION" && <Backdrop src={q?.imageUrl} />}
         {handle}
         <span className="jqzz-card-glyph" aria-hidden="true">
           <Glyph name={action.phase} size={16} />
         </span>
         <span className="jqzz-card-main">
           <span className="jqzz-card-phase">{action.phase.toLowerCase()}</span>
+          {action.phase === "QUESTION" && (
+            <span className="jqzz-card-prompt">{q?.text || "no prompt yet"}</span>
+          )}
           <PhasePreview action={action} />
         </span>
         <span className="jqzz-card-time">{action.time}s</span>

@@ -4,6 +4,7 @@ import { quizService } from "../services/quizService";
 import { SNIPPETS } from "../constants/snippets";
 import { generateId } from "../utils/idGenerator";
 import { errorMessage } from "../services/api";
+import { contentToActions, readContent } from "../utils/stashContent";
 
 export const useQuizMutations = (
   activeQuizId: number | null,
@@ -103,8 +104,36 @@ export const useQuizMutations = (
 
   const dropSnippet = useCallback(
     (snippetId: string) => {
+      if (!activeQuizId) return;
+      // "set:shuffle=on": a settings block
+      if (snippetId.startsWith("set:")) {
+        const block: Action = {
+          id: generateId(),
+          phase: "SETTING",
+          time: 0,
+          question: null,
+          preview: snippetId.slice(4),
+        };
+        setQuizzes((prev) =>
+          prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, block] } : quiz)),
+        );
+        return;
+      }
+      // "stash:{json}": a question or quiz from the stash, with all its steps
+      if (snippetId.startsWith("stash:")) {
+        let added: Action[] = [];
+        try {
+          added = contentToActions(readContent({ payload: snippetId.slice(6) }));
+        } catch {
+          return;
+        }
+        setQuizzes((prev) =>
+          prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, ...added] } : quiz)),
+        );
+        return;
+      }
       const snippet = SNIPPETS.find((s) => s.id === snippetId);
-      if (!snippet || !activeQuizId) return;
+      if (!snippet) return;
 
       setQuizzes((prev) =>
         prev.map((quiz) => {

@@ -64,6 +64,13 @@ public class StashController {
         return stash.fromReference(kind(body.get("kind")), String.valueOf(body.get("ref")), userId);
     }
 
+    /** ?kind=QUIZ&q=words: public items anyone can copy in */
+    @GetMapping("/public")
+    public List<StashItem> browse(@RequestParam("kind") String kind,
+                                  @RequestParam(value = "q", required = false) String q) {
+        return stash.browse(kind(kind), q);
+    }
+
     @GetMapping("/resolve")
     public ResponseEntity<StashItem> resolve(@RequestHeader(value = "X-User-Id", required = false) String userId,
                                              @RequestParam("kind") String kind,

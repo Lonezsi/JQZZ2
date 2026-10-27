@@ -8,10 +8,12 @@ public enum Phase {
     RESULT,
     // editor-only blocks, skipped when a game runs through the quiz
     TEXT,
-    DIVIDER;
+    DIVIDER,
+    /** switches quiz settings (shuffle, points, ...) for what follows, until the next one */
+    SETTING;
 
     public boolean isPlayable() {
-        return this != TEXT && this != DIVIDER;
+        return this != TEXT && this != DIVIDER && this != SETTING;
     }
 
     public static Phase fromString(String phase) {

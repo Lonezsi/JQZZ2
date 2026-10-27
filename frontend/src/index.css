@@ -63,6 +63,7 @@
   --phase-RESULT: #f08cb0;
   --phase-TEXT: #9a93b3;
   --phase-DIVIDER: #9a93b3;
+  --phase-SETTING: #86d9c4;
 
   --aura-a: #6b4cff;
   --aura-b: #f2a989;
@@ -175,6 +176,7 @@
     --phase-RESULT: #a3325e;
     --phase-TEXT: #5e5870;
     --phase-DIVIDER: #5e5870;
+    --phase-SETTING: #1d7564;
 
     --aura-a: #7b5cff;
     --aura-b: #f6a684;

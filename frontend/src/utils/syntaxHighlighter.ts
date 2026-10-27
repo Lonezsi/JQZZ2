@@ -8,6 +8,7 @@ export type HToken = {
     | "key"
     | "punc"
     | "div"
+    | "set"
     | "plain"
     | "ws";
   v: string;
@@ -17,6 +18,16 @@ export function tokenizeLine(line: string): HToken[] {
   const trimmed = line.trimStart();
   if (trimmed.startsWith("#")) return [{ t: "comment", v: line }];
   if (line.trim() === "---") return [{ t: "div", v: line }];
+  // a settings group: `shuffle, points=2 {` ... `}`
+  const group = line.match(/^(\s*)(.+?)(\s*\{)$/);
+  if (group && !/^\s*NewQuestion\b/.test(line)) {
+    return [
+      { t: "ws", v: group[1] },
+      { t: "set", v: group[2] },
+      { t: "set", v: group[3] },
+    ];
+  }
+  if (line.trim() === "}") return [{ t: "set", v: line }];
 
   const tokens: HToken[] = [];
   let rem = line;
@@ -57,6 +68,7 @@ export const TOKEN_COLOR: Record<HToken["t"], string> = {
   key: "var(--text-2)",
   punc: "var(--text-3)",
   div: "var(--text-3)",
+  set: "var(--phase-SETTING)",
   plain: "var(--text-2)",
   ws: "transparent",
 };

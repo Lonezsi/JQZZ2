@@ -39,6 +39,20 @@ export interface StashContent {
   name?: string;
   questions: StashedQuestion[];
   steps: { phase: Phase; time: number; preview: string | null; question: number | null }[];
+  /** history only: what happened on each question, by its key */
+  results?: Record<string, QuestionResult>;
+}
+
+export interface QuestionResult {
+  /** choice questions: how many picked each answer, by position */
+  counts?: number[];
+  /** tier lists: the group's tier for each answer, by position */
+  tiers?: (string | null)[];
+  /** written answers, with who wrote them once it was over */
+  entries?: { text: string; by: string; votes: number }[];
+  champion?: { text: string; by: string };
+  /** points each player got, by user id */
+  gains?: Record<string, number>;
 }
 
 /** An image you uploaded, as /images/mine lists it. */
@@ -76,6 +90,28 @@ export interface HistorySummary {
   /** your result, when you played rather than hosted */
   you: HistoryPlayer | null;
   podium: HistoryPlayer[];
+}
+
+export interface ProfileStats {
+  games: number;
+  hosted: number;
+  played: number;
+  wins: number;
+  podiums: number;
+  points: number;
+  avgRank: number | null;
+  /** best question types first, by points per question */
+  byType: { type: string; points: number; questions: number }[];
+}
+
+export interface Profile {
+  user: { id: string; name: string; handle: string; profilePictureUrl?: string | null };
+  self: boolean;
+  stats: ProfileStats;
+  /** all of them when it's you, otherwise the games you were both in */
+  games: HistorySummary[];
+  /** what they made public */
+  shelf: StashItem[];
 }
 
 export interface HistoryRecord extends HistorySummary {

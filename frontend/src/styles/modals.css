@@ -297,7 +297,7 @@
   font-family: var(--font-data);
   font-size: var(--fs-small);
   color: var(--accent);
-  filter: brightness(10) blur(3px);
+  filter: brightness(2.2) blur(1px);
   transition: filter 2s cubic-bezier(0.55, 0.085, 0.68, 0.53);
   cursor: default;
 }

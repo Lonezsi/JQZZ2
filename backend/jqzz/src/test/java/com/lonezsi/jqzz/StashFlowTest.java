@@ -64,7 +64,10 @@ class StashFlowTest {
                 "{\"quizId\": %d, \"userId\": \"%s\"}".formatted(quizId, alice)).body(), "$.code");
         assertThat(send("POST", "/play/" + code + "/join", null, "{\"userId\": \"%s\"}".formatted(bob)).statusCode())
                 .isEqualTo(200);
-        send("POST", "/play/" + code + "/start", null, "{\"userId\": \"%s\"}".formatted(alice));
+        String started = send("POST", "/play/" + code + "/start", null, "{\"userId\": \"%s\"}".formatted(alice)).body();
+        List<Number> nile = JsonPath.read(started, "$.question.answers[?(@.text == 'Nile')].id");
+        send("POST", "/play/" + code + "/submit", null,
+                "{\"userId\": \"%s\", \"picks\": [%d]}".formatted(bob, nile.get(0).longValue()));
         String ended = send("POST", "/play/" + code + "/end", null, "{\"userId\": \"%s\"}".formatted(alice)).body();
         assertThat(JsonPath.<String>read(ended, "$.status")).isEqualTo("FINISHED");
         long recordId = id(ended, "$.recordId");
@@ -81,6 +84,9 @@ class StashFlowTest {
         assertThat(JsonPath.<List<String>>read(record, "$.content.questions[*].text"))
                 .containsExactly("Longest river?", "Rank these rivers");
         long firstKey = id(record, "$.content.questions[0].key");
+        // what happened is kept too: bob picked the Nile
+        assertThat(JsonPath.<List<Integer>>read(record, "$.content.results." + firstKey + ".counts"))
+                .containsExactly(1, 0);
 
         // the whole quiz, and the picture it used
         assertThat(send("POST", "/stash/from-game", carol, "{\"recordId\": %d}".formatted(recordId)).statusCode())
@@ -138,6 +144,35 @@ class StashFlowTest {
         assertThat(JsonPath.<String>read(reloaded, "$.actions[0].question.imageUrl")).isEqualTo(alice + ":river");
         assertThat(JsonPath.<Object>read(reloaded, "$.actions[0].question.id"))
                 .isEqualTo(JsonPath.read(reloaded, "$.actions[1].question.id"));
+
+        // the stash copy leaves the night's results behind
+        assertThat(JsonPath.<String>read(send("GET", "/stash/" + quizItem, bob, null).body(), "$.payload"))
+                .doesNotContain("results");
+
+        // public items can be browsed and show on bob's profile
+        assertThat(JsonPath.<List<String>>read(send("GET", "/stash/public?kind=QUIZ&q=rivers", carol, null).body(),
+                "$[*].handle")).contains("rivers_of_the_world");
+        String bobSeenByCarol = send("GET", "/profile/" + bob, carol, null).body();
+        assertThat(JsonPath.<Boolean>read(bobSeenByCarol, "$.self")).isFalse();
+        assertThat(JsonPath.<List<Object>>read(bobSeenByCarol, "$.games")).isEmpty();
+        assertThat(JsonPath.<Integer>read(bobSeenByCarol, "$.stats.played")).isEqualTo(1);
+        assertThat(JsonPath.<List<String>>read(bobSeenByCarol, "$.shelf[*].handle")).contains("rivers_of_the_world");
+        String bobSeenByAlice = send("GET", "/profile/" + bob, alice, null).body();
+        assertThat(JsonPath.<List<Object>>read(bobSeenByAlice, "$.games")).hasSize(1);
+
+        // practice: alone, started straight away, from the stash
+        String practice = send("POST", "/play/practice", null,
+                "{\"userId\": \"%s\", \"stashId\": %d}".formatted(bob, quizItem)).body();
+        assertThat(JsonPath.<String>read(practice, "$.status")).isEqualTo("PLAYING");
+        assertThat(JsonPath.<List<String>>read(practice, "$.players[*].id")).containsExactly(bob);
+
+        // rematch: a new game of the same quiz
+        HttpResponse<String> rematch = send("POST", "/play/rematch", null,
+                "{\"userId\": \"%s\", \"recordId\": %d}".formatted(bob, recordId));
+        assertThat(rematch.statusCode()).isEqualTo(200);
+        assertThat(JsonPath.<String>read(rematch.body(), "$.code")).isNotEqualTo(code);
+        assertThat(send("POST", "/play/rematch", null,
+                "{\"userId\": \"%s\", \"recordId\": %d}".formatted(carol, recordId)).statusCode()).isEqualTo(403);
 
         assertThat(send("DELETE", "/stash/" + quizItem, bob, null).statusCode()).isEqualTo(204);
     }

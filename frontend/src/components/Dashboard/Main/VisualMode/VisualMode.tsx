@@ -9,6 +9,7 @@ import { useFlip } from "../../../../hooks/useFlip";
 import { useQuiz } from "../../../../contexts/QuizContext";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
+import { changed, describe, settingsAt } from "../../../../utils/settings";
 
 interface VisualModeProps {
   quiz: Quiz | undefined;
@@ -84,6 +85,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   }
 
   const starts = actionStartTimes(quiz.actions);
+  const settings = settingsAt(quiz.actions);
 
   // Number questions by first appearance, like text mode's Q1, Q2, ...
   const questionNumbers = new Map<number, number>();
@@ -142,6 +144,9 @@ export const VisualMode: React.FC<VisualModeProps> = ({
         const seconds = item.actions.reduce((sum, a) => sum + (a.time || 0), 0);
         const answers = q.answers?.length ?? 0;
         const max = maxPoints(q);
+        const inForce = settings.get(item.actions[0]?.id);
+        const chips = inForce ? describe(changed(inForce)) : [];
+        const weight = inForce ? (inForce.grade ? inForce.points : 0) : 1;
         return (
           <div
             key={`${q.id}-${idx}`}
@@ -166,6 +171,11 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                       has image
                     </span>
                   )}
+                  {chips.map((c) => (
+                    <span key={c} className="jqzz-type-pill setting" title="from a settings block above">
+                      {c}
+                    </span>
+                  ))}
                 </div>
                 <span className="jqzz-group-text">{q.text || "untitled question"}</span>
                 {/* the question's rhythm: its phases, widths by time */}
@@ -180,7 +190,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                 <span className="jqzz-annot">
                   {item.actions.length} {item.actions.length === 1 ? "phase" : "phases"} ·{" "}
                   {seconds}s · {answers} {answers === 1 ? "answer" : "answers"}
-                  {max !== null && ` · up to ${max} pts`}
+                  {max !== null && ` · up to ${Math.round(max * weight)} pts`}
                 </span>
               </div>
             </div>

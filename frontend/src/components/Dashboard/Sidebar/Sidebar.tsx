@@ -7,7 +7,8 @@ import { PeopleList } from "./PeopleList";
 import { usePeople } from "../../../hooks/usePeople";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
 import { Keys } from "../../common/Keys";
-import { ariaShortcut } from "../../../utils/shortcuts";
+import { ariaShortcut, modLabel } from "../../../utils/shortcuts";
+import { go } from "../../../hooks/useHashRoute";
 
 interface SidebarProps {
   /** phone only: the drawer is pulled out */
@@ -81,23 +82,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           Import .txt
           <Keys combo="Mod I" />
         </button>
-        <a className="jqzz-sid-action" href="#/join">
+        <a className="jqzz-sid-action" href="#/join" aria-keyshortcuts={ariaShortcut("Mod J")}>
           <span className="jqzz-sid-action-icon" aria-hidden="true">
             ⌁
           </span>
           Join a game
-        </a>
-        <a className="jqzz-sid-action" href="#/stash">
-          <span className="jqzz-sid-action-icon" aria-hidden="true">
-            ▤
-          </span>
-          Stash
-        </a>
-        <a className="jqzz-sid-action" href="#/history">
-          <span className="jqzz-sid-action-icon" aria-hidden="true">
-            ↺
-          </span>
-          History
+          <Keys combo="Mod J" />
         </a>
       </div>
 
@@ -133,11 +123,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
         onSelectQuiz={onSelectQuiz}
       />
 
+      {/* your own places: they live on your profile */}
+      {identity && (
+        <nav className="jqzz-sid-places" aria-label="Yours">
+          <a href="#/me/history" aria-keyshortcuts={ariaShortcut("Mod H")} title={`your games · ${modLabel("Mod H")}`}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8M2.5 2.5v2.4h2.4M8 5v3.2l2 1.4" />
+            </svg>
+            history
+          </a>
+          <a href="#/me/stash" aria-keyshortcuts={ariaShortcut("Mod B")} title={`what you saved · ${modLabel("Mod B")}`}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2.5 5.5h11v7.5h-11zM4 5.5 5.2 3h5.6L12 5.5M6.2 8.5h3.6" />
+            </svg>
+            stash
+          </a>
+        </nav>
+      )}
+
       <div className="jqzz-sid-account">
+        {/* you: your profile, where your history and stash live */}
         <button
           className="jqzz-identity"
-          onClick={onIdentityClick}
-          aria-label={identity ? `${identity.name}, @${identity.handle}. Edit identity` : "Make an identity"}
+          onClick={() => (identity ? go("/me") : onIdentityClick())}
+          aria-label={identity ? `${identity.name}, @${identity.handle}. Your profile, history and stash` : "Make an identity"}
+          title="your profile: history and stash"
         >
           <span className="jqzz-avatar-wrap">
             {identity ? (
@@ -185,7 +195,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="jqzz-pop-title OEF jqzz-chroma">people</span>
               <span className="jqzz-annot">{users.length} on this server</span>
             </div>
-            <PeopleList users={users} viewerId={identity?.id} />
+            <PeopleList
+              users={users}
+              viewerId={identity?.id}
+              onOpen={(id) => {
+                setPeopleOpen(false);
+                go(id === identity?.id ? "/me" : `/u/${encodeURIComponent(id)}`);
+              }}
+            />
           </Popover>
         </div>
       </div>

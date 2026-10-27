@@ -1,6 +1,8 @@
 import type { Question, Action, Answer } from "../types";
 import { FN_PHASE_MAP } from "../constants/phaseMaps";
 import { generateId } from "./idGenerator";
+import { DEFAULTS, formatSettings, parseSettings } from "./settings";
+import type { QuizSettings } from "./settings";
 
 export interface ParseResult {
   questions: Question[];
@@ -52,6 +54,13 @@ export function parseScript(
   const actions: Action[] = [];
   const errors: string[] = [];
   const qRefMap = new Map<string, Question>();
+  // open `settings {` groups: what each one changed, so `}` can put it back
+  const groups: Partial<QuizSettings>[] = [];
+  let current: QuizSettings = { ...DEFAULTS };
+  const setting = (s: Partial<QuizSettings>) => {
+    current = { ...current, ...s };
+    actions.push({ id: generateId(), phase: "SETTING", time: 0, question: null, preview: formatSettings(s) });
+  };
   let i = 0;
 
   while (i < lines.length) {
@@ -69,6 +78,24 @@ export function parseScript(
         question: null,
         preview: "---",
       });
+      continue;
+    }
+
+    const groupMatch = line.match(/^(.+?)\s*\{$/);
+    const opened = groupMatch ? parseSettings(groupMatch[1]) : {};
+    if (groupMatch && Object.keys(opened).length > 0) {
+      const before: Partial<QuizSettings> = {};
+      (Object.keys(opened) as (keyof QuizSettings)[]).forEach((k) => {
+        (before as Record<string, unknown>)[k] = current[k];
+      });
+      groups.push(before);
+      setting(opened);
+      continue;
+    }
+    if (line === "}") {
+      const before = groups.pop();
+      if (before) setting(before);
+      else errors.push(`Line ${lineNo}: "}" closes a group that was never opened`);
       continue;
     }
 

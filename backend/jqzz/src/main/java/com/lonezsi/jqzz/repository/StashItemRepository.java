@@ -21,4 +21,8 @@ public interface StashItemRepository extends JpaRepository<StashItem, Long> {
     boolean existsByKindAndOwnerIdAndHandle(StashKind kind, String ownerId, String handle);
 
     boolean existsBySavedByAndKindAndImageId(String savedBy, StashKind kind, Long imageId);
+
+    List<StashItem> findTop200ByKindAndOwnerIdIsNullOrderByCreatedAtDesc(StashKind kind);
+
+    List<StashItem> findBySavedByAndOwnerIdIsNullOrderByCreatedAtDesc(String savedBy);
 }

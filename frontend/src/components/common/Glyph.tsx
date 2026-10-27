@@ -51,6 +51,14 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M8 5.5 10.5 8 8 10.5 5.5 8z" />
     </>
   ),
+  // two sliders: settings that hold until changed
+  SETTING: (
+    <>
+      <path d="M2.5 5h11M2.5 11h11" />
+      <circle cx="5.5" cy="5" r="1.6" fill="var(--glyph-fill, transparent)" />
+      <circle cx="10.5" cy="11" r="1.6" fill="var(--glyph-fill, transparent)" />
+    </>
+  ),
   // question types
   PREWRITTEN_SINGLE: (
     <>

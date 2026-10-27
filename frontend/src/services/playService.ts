@@ -7,6 +7,11 @@ const post = (path: string, body: object) => api.post<GameState>(path, body).the
 
 export const playService = {
   host: (quizId: number, userId: string) => post("/play/host", { quizId, userId }),
+  /** play it alone: hosted, joined and started in one go */
+  practice: (userId: string, from: { quizId?: number; stashId?: number }) =>
+    post("/play/practice", { userId, ...from }),
+  /** the same quiz as a finished game, everyone from it invited */
+  rematch: (userId: string, recordId: number) => post("/play/rematch", { userId, recordId }),
   state: (code: string) => api.get<GameState>(`/play/${code}`).then((r) => r.data),
   join: (code: string, userId: string) => post(`/play/${code}/join`, { userId }),
   leave: (code: string, userId: string) => post(`/play/${code}/leave`, { userId }),

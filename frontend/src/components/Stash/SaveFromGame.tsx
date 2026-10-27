@@ -66,7 +66,7 @@ export const SaveFromGame: React.FC<{
     <section className="jqzz-keep" aria-label="Save to your stash" ref={panel}>
       <div className="jqzz-keep-head">
         <span className="jqzz-annot">save to your stash</span>
-        <a className="jqzz-annot jqzz-keep-link" href="#/stash">
+        <a className="jqzz-annot jqzz-keep-link" href="#/me/stash">
           open stash →
         </a>
       </div>

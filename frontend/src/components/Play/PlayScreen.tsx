@@ -11,6 +11,7 @@ import type { MyAnswer } from "./Answering";
 import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage } from "./PlayCommon";
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
+import { BackButton } from "../common/BackButton";
 
 const STORE = (code: string) => `jqzz.mine.${code}`;
 
@@ -84,9 +85,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
   return (
     <PlayFrame phase={game.phase}>
       <header className="jqzz-play-bar compact">
-        <button className="jqzz-play-btn ghost" onClick={() => go("/")} title="leave this screen">
-          ←
-        </button>
+        <BackButton title="leave this screen" />
         <span className="jqzz-play-title">{game.quizName}</span>
         {player && game.status !== "LOBBY" && (
           <span className="jqzz-play-me">

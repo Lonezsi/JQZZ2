@@ -2,7 +2,11 @@ package com.lonezsi.jqzz.game;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,10 +27,11 @@ import java.util.LinkedHashMap;
 
 import com.lonezsi.jqzz.model.Action;
 import com.lonezsi.jqzz.model.GameRecord;
-import com.lonezsi.jqzz.model.PlayerResult;
 import com.lonezsi.jqzz.repository.GameRecordRepository;
 import tools.jackson.databind.json.JsonMapper;
 import com.lonezsi.jqzz.model.Answer;
+import com.lonezsi.jqzz.model.Phase;
+import com.lonezsi.jqzz.model.PlayerResult;
 import com.lonezsi.jqzz.model.Question;
 import com.lonezsi.jqzz.model.Quiz;
 import com.lonezsi.jqzz.model.User;
@@ -94,16 +99,70 @@ public class GameEngine {
         if (quizId == null || hostId == null || hostId.isBlank()) throw bad("quizId and userId are required");
         if (!userRepository.existsById(hostId)) throw notFound("No such user");
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> notFound("No such quiz"));
-        List<Game.Step> steps = snapshot(quiz);
+        Game game = hostQuiz(quiz, hostId);
+        synchronized (game) {
+            return view(game);
+        }
+    }
+
+    /** A game of any quiz, saved or not (a stashed one for practice). */
+    private Game hostQuiz(Quiz quiz, String hostId) {
+        Random rng = new Random(random.nextLong());
+        List<Game.Step> steps = snapshot(quiz, rng);
         if (steps.stream().noneMatch(s -> s.question() != null)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This quiz has no questions to play yet");
         }
         String code = newCode();
-        Game game = new Game(code, hostId, quiz.getName(), steps, new Random(random.nextLong()), now());
+        Game game = new Game(code, hostId, quiz.getName(), steps, rng, now());
         game.authorId = quiz.getAuthorId();
         game.quizId = quiz.getId();
         games.put(code, game);
-        return view(game);
+        return game;
+    }
+
+    /**
+     * The same quiz again, for everyone from a finished game: hosts it and
+     * sends each of them an invite on /topic/invite/{userId}.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> rematch(Long recordId, String userId) {
+        GameRecord r = records.findById(recordId == null ? -1 : recordId).orElseThrow(() -> notFound("No such game"));
+        if (userId == null || !r.involves(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You weren't in that game");
+        }
+        if (r.getQuizId() == null || !quizRepository.existsById(r.getQuizId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "That quiz is gone. Save it to your stash from this game and open it again.");
+        }
+        Map<String, Object> view = host(r.getQuizId(), userId);
+        String code = (String) view.get("code");
+        String from = userRepository.findById(userId).map(User::getName).orElse("someone");
+        Set<String> invited = new LinkedHashSet<>();
+        invited.add(r.getHostId());
+        r.getPlayers().forEach(p -> invited.add(p.userId()));
+        invited.remove(userId);
+        for (String id : invited) {
+            messaging.convertAndSend("/topic/invite/" + id,
+                    (Object) Map.of("code", code, "from", from, "quizName", String.valueOf(r.getQuizName())));
+        }
+        return view;
+    }
+
+    /** A quiz played alone: you host it, you play it, it starts straight away. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> practice(Quiz quiz, String userId) {
+        User user = userRepository.findById(userId == null ? "" : userId).orElseThrow(() -> notFound("No such user"));
+        Game game = hostQuiz(quiz, userId);
+        return change(game, g -> {
+            g.addPlayer(user.getId(), user.getName(), user.getProfilePictureUrl(), now());
+            g.start(now());
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> practice(Long quizId, String userId) {
+        if (quizId == null) throw bad("quizId is required");
+        return practice(quizRepository.findById(quizId).orElseThrow(() -> notFound("No such quiz")), userId);
     }
 
     public Map<String, Object> join(String code, String userId) {
@@ -298,6 +357,7 @@ public class GameEngine {
      */
     Map<String, Object> recordContent(Game game) {
         Map<Long, Map<String, Object>> questions = new LinkedHashMap<>();
+        Map<String, Object> results = new LinkedHashMap<>();
         List<Map<String, Object>> steps = new ArrayList<>();
         for (Game.Step s : game.steps) {
             Map<String, Object> step = new LinkedHashMap<>();
@@ -325,12 +385,15 @@ public class GameEngine {
                 }
                 qm.put("answers", answers);
                 questions.put(q.id(), qm);
+                results.put(String.valueOf(q.id()), game.results(q));
             }
         }
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("name", game.quizName);
         content.put("questions", new ArrayList<>(questions.values()));
         content.put("steps", steps);
+        // what happened, by question key; left out when it goes to a stash
+        content.put("results", results);
         return content;
     }
 
@@ -374,23 +437,102 @@ public class GameEngine {
     }
 
     /** The playable steps of a quiz, frozen, so editing it mid-game changes nothing. */
-    static List<Game.Step> snapshot(Quiz quiz) {
-        List<Game.Step> steps = new ArrayList<>();
+    /**
+     * The quiz as the steps a game runs through. SETTING blocks switch settings
+     * for everything after them until the next one changes them: questions
+     * under "shuffle" swap places among themselves (each keeping its own steps
+     * together), "mix" shuffles a question's answers, "grade=off" makes it
+     * worth nothing and "points=2" double.
+     */
+    static List<Game.Step> snapshot(Quiz quiz, Random random) {
+        Settings settings = new Settings();
+        List<List<Game.Step>> blocks = new ArrayList<>();
+        List<Boolean> shuffled = new ArrayList<>();
+        Map<Long, Game.QuestionSnap> snaps = new HashMap<>();
+        long[] spare = {-1}; // ids for a quiz that was never saved
+        Long last = null;
+        boolean fresh = true;
         for (Action a : quiz.getActions()) {
+            if (a.getPhase() == Phase.SETTING) {
+                settings.apply(a.getPreview());
+                fresh = true;
+                continue;
+            }
             if (a.getPhase() == null || !a.getPhase().isPlayable()) continue;
             Question q = a.getQuestion();
             Game.QuestionSnap qs = null;
             if (q != null) {
-                List<Game.AnswerSnap> answers = new ArrayList<>();
-                for (Answer ans : q.getAnswers()) {
-                    answers.add(new Game.AnswerSnap(ans.getId(), ans.getText(), ans.getImageUrl(), ans.getValue()));
-                }
-                qs = new Game.QuestionSnap(q.getId(), q.getText(), q.getImageUrl(), q.getType(),
-                        q.getElaborationText(), q.getElaborationImageUrl(), answers);
+                if (q.getId() == null) q.setId(spare[0]--);
+                qs = snaps.computeIfAbsent(q.getId(), id -> snap(q, settings, random, spare));
             }
-            steps.add(new Game.Step(a.getPhase(), Math.max(1, a.getTime()), qs));
+            Long key = qs == null ? null : qs.id();
+            if (fresh || key == null || !key.equals(last)) {
+                blocks.add(new ArrayList<>());
+                shuffled.add(settings.shuffle);
+            }
+            blocks.get(blocks.size() - 1).add(new Game.Step(a.getPhase(), Math.max(1, a.getTime()), qs));
+            last = key;
+            fresh = false;
         }
+        for (int i = 0; i < blocks.size(); ) {
+            if (!shuffled.get(i)) { i++; continue; }
+            int j = i;
+            while (j < blocks.size() && shuffled.get(j)) j++;
+            Collections.shuffle(blocks.subList(i, j), random);
+            i = j;
+        }
+        List<Game.Step> steps = new ArrayList<>();
+        blocks.forEach(steps::addAll);
         return steps;
+    }
+
+    private static Game.QuestionSnap snap(Question q, Settings settings, Random random, long[] spare) {
+        List<Game.AnswerSnap> answers = new ArrayList<>();
+        for (Answer ans : q.getAnswers()) {
+            long id = ans.getId() != null ? ans.getId() : spare[0]--;
+            answers.add(new Game.AnswerSnap(id, ans.getText(), ans.getImageUrl(), ans.getValue()));
+        }
+        if (settings.mix) Collections.shuffle(answers, random);
+        return new Game.QuestionSnap(q.getId(), q.getText(), q.getImageUrl(), q.getType(),
+                q.getElaborationText(), q.getElaborationImageUrl(), answers, settings.weight());
+    }
+
+    /** What a SETTING block can switch, e.g. "shuffle=on, points=2". */
+    static final class Settings {
+        boolean shuffle;
+        boolean mix;
+        boolean grade = true;
+        int points = 100;
+
+        void apply(String text) {
+            if (text == null) return;
+            for (String part : text.split("[,;]")) {
+                String[] kv = part.trim().split("\\s*=\\s*", 2);
+                String key = kv[0].trim().toLowerCase();
+                String value = kv.length > 1 ? kv[1].trim().toLowerCase() : "on";
+                boolean on = !List.of("off", "false", "no", "0").contains(value);
+                switch (key) {
+                    case "shuffle" -> shuffle = on;
+                    case "mix" -> mix = on;
+                    case "grade" -> grade = on;
+                    case "points" -> points = percent(value);
+                    default -> { /* unknown: ignored, so older servers survive newer quizzes */ }
+                }
+            }
+        }
+
+        int weight() {
+            return grade ? points : 0;
+        }
+
+        private static int percent(String value) {
+            try {
+                double x = Double.parseDouble(value.replaceFirst("^[x×]", ""));
+                return (int) Math.max(0, Math.min(1000, Math.round(x * 100)));
+            } catch (NumberFormatException e) {
+                return 100;
+            }
+        }
     }
 
     long now() {

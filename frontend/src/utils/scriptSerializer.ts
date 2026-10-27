@@ -1,5 +1,7 @@
 import type { Quiz, Action, Question } from "../types";
 import { PHASE_FN_MAP } from "../constants/phaseMaps";
+import { DEFAULTS, parseSettings } from "./settings";
+import type { QuizSettings } from "./settings";
 
 export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
 # Author: you
@@ -23,6 +25,14 @@ export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
 # ShowResult(Q1, time: 10)
 #
 # Use --- to insert a visual divider.
+# Settings group what's inside them, until the closing brace:
+#
+# shuffle {            questions inside swap places
+# mix {                answers come in a random order
+# grade=off {          played, but nobody scores
+# points=2 {           double points
+# }                    back to how it was before the group
+#
 # Any other line becomes a text note block.
 # ─────────────────────────────────────────────────────`;
 
@@ -77,22 +87,49 @@ export function quizToScript(quiz: Quiz | undefined): string {
     lines.push("");
   });
 
-  // Write actions
+  // Write actions. A setting that undoes the group above it closes it with
+  // "}"; any other opens a group. Inside a group, lines are indented.
+  const groups: Partial<QuizSettings>[] = [];
+  let current: QuizSettings = { ...DEFAULTS };
+  const pad = () => "  ".repeat(groups.length);
+  const sameAs = (a: Partial<QuizSettings>, b: Partial<QuizSettings>) => {
+    const ka = Object.keys(a);
+    return ka.length === Object.keys(b).length && ka.every((k) => a[k as keyof QuizSettings] === b[k as keyof QuizSettings]);
+  };
   for (const a of quiz.actions) {
+    if (a.phase === "SETTING") {
+      const s = parseSettings(a.preview);
+      if (groups.length > 0 && sameAs(s, groups[groups.length - 1])) {
+        groups.pop();
+        lines.push(`${pad()}}`);
+      } else {
+        const before: Partial<QuizSettings> = {};
+        (Object.keys(s) as (keyof QuizSettings)[]).forEach((k) => {
+          (before as Record<string, unknown>)[k] = current[k];
+        });
+        const head = (Object.keys(s) as (keyof QuizSettings)[])
+          .map((k) => (k === "points" ? `points=${s.points}` : s[k] ? k : `${k}=off`))
+          .join(", ");
+        lines.push(`${pad()}${head} {`);
+        groups.push(before);
+      }
+      current = { ...current, ...s };
+      continue;
+    }
     if (a.phase === "DIVIDER") {
       lines.push("---");
       lines.push("");
       continue;
     }
     if (a.phase === "TEXT") {
-      lines.push(a.preview);
+      lines.push(`${pad()}${a.preview}`);
       continue;
     }
     const fn = PHASE_FN_MAP[a.phase];
     const qId = a.question?.id;
     if (fn && qId) {
       const qi = qIndexMap.get(qId);
-      if (qi) lines.push(`${fn}(Q${qi}, time: ${a.time})`);
+      if (qi) lines.push(`${pad()}${fn}(Q${qi}, time: ${a.time})`);
     }
   }
 

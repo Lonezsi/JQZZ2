@@ -8,6 +8,7 @@ import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, Qu
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
+import { BackButton } from "../common/BackButton";
 
 /** The big screen: what the room looks at while the host runs the game. */
 export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
@@ -49,9 +50,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
   return (
     <PlayFrame phase={game.phase}>
       <header className="jqzz-play-bar">
-        <button className="jqzz-play-btn ghost" onClick={() => go("/")} title="back to the editor">
-          ← jqzz
-        </button>
+        <BackButton label="jqzz" />
         <span className="jqzz-play-title">{game.quizName}</span>
         <span className="jqzz-play-code" title="the join code">
           <span className="jqzz-annot">join</span> {game.code}

@@ -4,6 +4,7 @@ import type {
   HistoryRecord,
   HistorySummary,
   LibraryImage,
+  Profile,
   StashItem,
   StashKind,
   StashList,
@@ -32,6 +33,10 @@ export const stashService = {
   ) => api.patch<StashItem>(`/stash/${id}`, patch, as(userId)).then((r) => r.data),
   remove: (userId: string, id: number) => api.delete(`/stash/${id}`, as(userId)),
 
+  /** public items anyone can copy in */
+  browse: (kind: StashKind, q: string) =>
+    api.get<StashItem[]>("/stash/public", { params: { kind, q } }).then((r) => r.data),
+
   /** a stashed quiz as a new quiz of yours */
   open: (userId: string, id: number) =>
     api.post<Quiz>(`/stash/${id}/open`, null, as(userId)).then((r) => r.data),
@@ -39,6 +44,15 @@ export const stashService = {
   imageVisibility: (userId: string, id: number, visibility: ImageVisibility) =>
     api.patch<LibraryImage>(`/images/${id}`, { visibility }, as(userId)).then((r) => r.data),
 };
+
+export const profileService = {
+  get: (viewerId: string, userId: string) =>
+    api.get<Profile>(`/profile/${encodeURIComponent(userId)}`, as(viewerId)).then((r) => r.data),
+};
+
+/** a link that copies an item into whoever opens it */
+export const shareLink = (kind: StashKind, reference: string) =>
+  `${window.location.origin}${window.location.pathname}#/stash/add/${kind.toLowerCase()}/${encodeURIComponent(reference)}`;
 
 export const historyService = {
   list: (userId: string) => api.get<HistorySummary[]>("/history", as(userId)).then((r) => r.data),

@@ -4,6 +4,8 @@ import { generateId } from "../../../utils/idGenerator";
 import { ImagePicker } from "../../Modals/ImagePicker";
 import { Glyph } from "../../common/Glyph";
 import { QUESTION_TYPE_LABEL } from "../../../utils/questionInfo";
+import { SETTING_LABEL, formatSettings, parseSettings } from "../../../utils/settings";
+import type { QuizSettings } from "../../../utils/settings";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -36,6 +38,62 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
       <p className="jqzz-panel-hint">
         just a line that splits the quiz into sections. it's skipped when the quiz runs.
       </p>
+    );
+  }
+
+  if (action.phase === "SETTING") {
+    const s = parseSettings(action.preview);
+    const set = (patch: Partial<QuizSettings>) => {
+      const next = { ...s, ...patch };
+      (Object.keys(patch) as (keyof QuizSettings)[]).forEach((k) => {
+        if (patch[k] === undefined) delete next[k];
+      });
+      onActionUpdate(action.id, { preview: formatSettings(next) });
+    };
+    const flags: ("shuffle" | "mix" | "grade")[] = ["shuffle", "mix", "grade"];
+    return (
+      <>
+        <div className="jqzz-section-label">settings from here on</div>
+        {flags.map((k) => (
+          <div key={k} className="jqzz-field-group">
+            <label className="jqzz-field-label" htmlFor={`jqzz-set-${k}`}>
+              {SETTING_LABEL[k]}
+            </label>
+            <select
+              id={`jqzz-set-${k}`}
+              className="jqzz-field-select"
+              value={s[k] === undefined ? "" : s[k] ? "on" : "off"}
+              onChange={(e) => set({ [k]: e.target.value === "" ? undefined : e.target.value === "on" })}
+            >
+              <option value="">keep as it was</option>
+              <option value="on">on</option>
+              <option value="off">off</option>
+            </select>
+          </div>
+        ))}
+        <div className="jqzz-field-group">
+          <label className="jqzz-field-label" htmlFor="jqzz-set-points">
+            {SETTING_LABEL.points}
+          </label>
+          <select
+            id="jqzz-set-points"
+            className="jqzz-field-select"
+            value={s.points === undefined ? "" : String(s.points)}
+            onChange={(e) => set({ points: e.target.value === "" ? undefined : Number(e.target.value) })}
+          >
+            <option value="">keep as it was</option>
+            {[0.5, 1, 2, 3].map((n) => (
+              <option key={n} value={n}>
+                ×{n}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="jqzz-panel-hint">
+          these hold for every question after this block, until another block changes them. in text
+          mode it's a group: <code>shuffle {"{"}</code> … <code>{"}"}</code>
+        </p>
+      </>
     );
   }
 

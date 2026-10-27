@@ -59,7 +59,7 @@ public class HistoryController {
         return m;
     }
 
-    private static Map<String, Object> summary(GameRecord r, String userId) {
+    static Map<String, Object> summary(GameRecord r, String userId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", r.getId());
         m.put("code", r.getCode());

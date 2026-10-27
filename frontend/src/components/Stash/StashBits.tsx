@@ -15,7 +15,14 @@ export const VisibilitySwitch: React.FC<{
   onChange: (v: ImageVisibility) => void;
   busy?: boolean;
 }> = ({ value, onChange, busy }) => (
-  <div className="jqzz-vis" role="radiogroup" aria-label="Who can reach it" data-value={value}>
+  <div
+    className="jqzz-glide jqzz-vis"
+    role="radiogroup"
+    aria-label="Who can reach it"
+    data-value={value}
+    style={{ "--n": VISIBILITY.length, "--at": VISIBILITY.findIndex((v) => v.value === value) } as React.CSSProperties}
+  >
+    <span className="jqzz-glide-thumb" aria-hidden="true" />
     {VISIBILITY.map((v) => (
       <button
         key={v.value}

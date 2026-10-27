@@ -71,75 +71,23 @@
   color: var(--ok);
 }
 
-/* only me / shared / public */
+/* only me / shared / public: a gliding control, see .jqzz-glide below */
 .jqzz-vis {
-  display: inline-flex;
+  align-self: auto;
   padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--sunken);
 }
-.jqzz-vis button {
+.jqzz-vis > button {
   min-height: 26px;
   padding: 2px 12px;
-  border: none;
-  border-radius: 999px;
-  background: none;
-  color: var(--text-3);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  transition:
-    background var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease);
 }
-.jqzz-vis button:hover:not(:disabled) {
-  color: var(--text);
-}
-.jqzz-vis button[aria-checked="true"] {
-  background: var(--raised-hover);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-.jqzz-vis[data-value="PUBLIC"] button[aria-checked="true"] {
-  color: var(--accent);
+.jqzz-vis[data-value="PUBLIC"] .jqzz-glide-thumb {
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+.jqzz-vis[data-value="PUBLIC"] > [aria-checked="true"] {
+  color: var(--accent);
 }
 
 /* ─── tabs and adding by id ───────────────────────────────────────── */
-.jqzz-shelf-tabs {
-  align-self: flex-start;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--sunken);
-}
-.jqzz-shelf-tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 4px 16px;
-  border-radius: 999px;
-  color: var(--text-3);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  text-decoration: none;
-  transition:
-    background var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease);
-}
-.jqzz-shelf-tab:hover {
-  color: var(--text);
-}
-.jqzz-shelf-tab[aria-current="page"] {
-  background: var(--raised-hover);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-
 .jqzz-shelf-add {
   display: flex;
   flex-wrap: wrap;
@@ -421,12 +369,13 @@ a.jqzz-game-row:hover .jqzz-game-go {
   .jqzz-shelf {
     padding: 16px 12px 40px;
   }
-  .jqzz-shelf-tabs {
+  .jqzz-shelf-tabs,
+  .jqzz-space-tabs {
     align-self: stretch;
   }
-  .jqzz-shelf-tab {
-    flex: 1;
-    padding: 4px 8px;
+  .jqzz-glide > button,
+  .jqzz-glide > a {
+    padding: 4px 6px;
   }
   .jqzz-shelf-id {
     flex-basis: 100%;
@@ -460,5 +409,403 @@ a.jqzz-game-row:hover .jqzz-game-go {
   .jqzz-game-place {
     width: 40px;
     font-size: 15px;
+  }
+}
+
+/* ─── Gliding segmented control ───────────────────────────────────────
+   equal segments and one thumb that slides to the chosen one. Set --n
+   (how many) and --at (which) on the control. */
+.jqzz-glide {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--sunken);
+}
+.jqzz-glide-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--n));
+  border-radius: 999px;
+  background: var(--raised-hover);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--space, var(--line-strong)) 60%, var(--line-strong)),
+    0 4px 14px -6px rgba(0, 0, 0, 0.5);
+  transform: translateX(calc(var(--at) * 100%));
+  transition: transform var(--dur-3) var(--ease);
+}
+.jqzz-glide > button,
+.jqzz-glide > a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 4px 14px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color var(--dur-2) var(--ease);
+}
+.jqzz-glide > :hover:not(:disabled) {
+  color: var(--text);
+}
+.jqzz-glide > [aria-selected="true"],
+.jqzz-glide > [aria-checked="true"],
+.jqzz-glide > [aria-current="page"] {
+  color: var(--text);
+}
+.jqzz-glide > :disabled {
+  cursor: default;
+}
+
+/* ─── Spaces: your profile holds two places that should not feel alike.
+   History is cool and ordered (the blue of answers, a dated rail);
+   the stash is warm and loose (the peach of explanations, shelves). */
+.jqzz-space {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+.jqzz-space-history {
+  --space: var(--phase-ANSWER);
+}
+.jqzz-space-stash {
+  --space: var(--warm);
+}
+.jqzz-space .jqzz-play-bar {
+  border-bottom-color: color-mix(in srgb, var(--space) 30%, var(--line));
+}
+.jqzz-space-tabs {
+  align-self: flex-start;
+}
+.jqzz-space-stash .jqzz-shelf-row {
+  border-left: 2px solid color-mix(in srgb, var(--space) 55%, transparent);
+}
+.jqzz-space-stash .jqzz-shelf-card {
+  border-top: 2px solid color-mix(in srgb, var(--space) 55%, transparent);
+}
+.jqzz-shelf-body-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.jqzz-shelf-linknote {
+  margin: 0;
+  text-align: left;
+}
+.jqzz-shuffle {
+  padding: 8px 12px;
+  border: 1px dashed color-mix(in srgb, var(--space) 45%, var(--line));
+  border-radius: var(--radius-md);
+}
+.jqzz-shuffle .jqzz-shuffle-n {
+  flex: 0 0 64px;
+  min-width: 0;
+  text-align: center;
+}
+
+/* ─── The back button: a drawn arrow, centred ─────────────────────── */
+.jqzz-back {
+  width: 38px;
+  padding: 0;
+}
+.jqzz-back.labelled {
+  width: auto;
+  padding: 6px 14px 6px 10px;
+}
+.jqzz-back svg {
+  flex-shrink: 0;
+  transition: transform var(--dur-1) var(--ease);
+}
+.jqzz-back:hover svg {
+  transform: translateX(-2px);
+}
+
+/* ─── Profile header ──────────────────────────────────────────────── */
+.jqzz-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 20px;
+  align-items: center;
+  padding: 8px 0;
+}
+.jqzz-hero-face {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--space) 18%, transparent);
+}
+.jqzz-hero-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.jqzz-hero-name {
+  font-size: clamp(34px, 6vw, 52px);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+.jqzz-hero-id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.jqzz-stats {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jqzz-stat-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.jqzz-stat-row > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 4px;
+}
+.jqzz-stat-row > div + div {
+  border-left: 1px solid var(--line);
+}
+.jqzz-stat-row dd {
+  font-family: var(--font-data);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.jqzz-best {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── History: a dated rail ───────────────────────────────────────── */
+.jqzz-timeline-games {
+  list-style: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+}
+.jqzz-timeline-games::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: linear-gradient(var(--space), color-mix(in srgb, var(--space) 10%, transparent));
+}
+.jqzz-timeline-games > li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.jqzz-timeline-games > li::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid var(--space);
+}
+.jqzz-timeline-games .jqzz-game-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.jqzz-board-name {
+  color: inherit;
+  text-decoration: none;
+}
+a.jqzz-board-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── What everyone answered ──────────────────────────────────────── */
+.jqzz-answers {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.jqzz-answers > ol {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jqzz-answer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.jqzz-answer-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.jqzz-bars,
+.jqzz-tier-recap,
+.jqzz-entries-recap {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jqzz-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(60px, 2fr) 24px;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-small);
+}
+.jqzz-bars-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.jqzz-bars-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--sunken);
+  overflow: hidden;
+}
+.jqzz-bars-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--text-3);
+  transition: width var(--dur-3) var(--ease);
+}
+.jqzz-bars li.right .jqzz-bars-track > span {
+  background: var(--ok);
+}
+.jqzz-bars li.right .jqzz-bars-text {
+  color: var(--ok);
+}
+.jqzz-tier-recap {
+  flex-flow: row wrap;
+  gap: 4px 12px;
+}
+.jqzz-tier-recap li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+}
+.jqzz-tier-recap b {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--sunken);
+  font-family: var(--font-data);
+}
+.jqzz-entries-recap li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.jqzz-entry-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.jqzz-champion {
+  margin: 0;
+  color: var(--warm);
+}
+
+/* ─── Rematch invites ─────────────────────────────────────────────── */
+.jqzz-invites {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+}
+.jqzz-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--surface-solid);
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+}
+.jqzz-invite .jqzz-play-row {
+  justify-content: flex-start;
+}
+
+@media (max-width: 640px) {
+  .jqzz-hero {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
+  .jqzz-hero-who {
+    align-items: center;
+  }
+  .jqzz-hero-id {
+    justify-content: center;
+  }
+  .jqzz-stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .jqzz-stat-row > div:nth-child(4) {
+    border-left: none;
+  }
+  .jqzz-stat-row > div:nth-child(n + 4) {
+    border-top: 1px solid var(--line);
   }
 }

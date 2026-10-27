@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lonezsi.jqzz.service.StashService;
+
 /**
  * Playing a quiz. Everything answers with the game's whole state, and the same
  * state goes out on /topic/play/{code} to everyone watching it.
@@ -22,15 +24,19 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /play/{code}/submit        {userId, picks|text|tiers}
  * POST /play/{code}/vote          {userId, choice, match | guesses}
  * POST /play/{code}/leave         {userId}
+ * POST /play/rematch              {recordId, userId}     that game's quiz again, everyone invited
+ * POST /play/practice             {userId, quizId | stashId}  alone, started at once
  */
 @RestController
 @RequestMapping("/play")
 public class PlayController {
 
     private final GameEngine engine;
+    private final StashService stash;
 
-    public PlayController(GameEngine engine) {
+    public PlayController(GameEngine engine, StashService stash) {
         this.engine = engine;
+        this.stash = stash;
     }
 
     @PostMapping("/host")
@@ -41,6 +47,20 @@ public class PlayController {
     @GetMapping("/{code}")
     public Map<String, Object> state(@PathVariable String code) {
         return engine.state(code);
+    }
+
+    /** {recordId, userId}: the same quiz again, everyone from that game invited */
+    @PostMapping("/rematch")
+    public Map<String, Object> rematch(@RequestBody PlayRequest r) {
+        return engine.rematch(r.recordId, r.userId);
+    }
+
+    /** {userId, quizId | stashId}: play it alone, straight away */
+    @PostMapping("/practice")
+    public Map<String, Object> practice(@RequestBody PlayRequest r) {
+        return r.stashId != null
+                ? engine.practice(stash.practiceQuiz(r.stashId, r.userId), r.userId)
+                : engine.practice(r.quizId, r.userId);
     }
 
     @PostMapping("/{code}/join")
@@ -101,6 +121,8 @@ public class PlayController {
     /** One shape for every request; each endpoint reads what it needs. */
     public static class PlayRequest {
         public Long quizId;
+        public Long recordId;
+        public Long stashId;
         public String userId;
         public String playerId;
         public List<Long> picks;

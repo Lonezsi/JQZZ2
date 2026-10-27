@@ -5,7 +5,9 @@ export type Phase =
   | "ELABORATION"
   | "RESULT"
   | "TEXT"
-  | "DIVIDER";
+  | "DIVIDER"
+  /** switches quiz settings for what follows; preview holds "shuffle=on, points=2" */
+  | "SETTING";
 
 export type ImageVisibility = "PUBLIC" | "PRIVATE" | "SEMI_PRIVATE";
 
@@ -79,6 +81,7 @@ export interface Command {
 export type RenderItem =
   | { kind: "group"; question: Question; actions: Action[] }
   | { kind: "divider"; action: Action }
+  | { kind: "setting"; action: Action }
   | { kind: "text"; action: Action };
 
 // API request/response types

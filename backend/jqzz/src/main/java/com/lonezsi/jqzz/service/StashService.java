@@ -78,7 +78,8 @@ public class StashService {
         GameRecord record = records.findById(recordId == null ? -1 : recordId)
                 .orElseThrow(() -> notFound("No such game"));
         if (!record.involves(userId)) throw forbidden("You weren't in that game");
-        Map<String, Object> content = read(record.getContent());
+        Map<String, Object> content = new LinkedHashMap<>(read(record.getContent()));
+        content.remove("results"); // what happened that night stays in the history
         String source = record.getQuizName();
         if (questionKey == null) {
             return store(StashKind.QUIZ, nameOf(content, "quiz"), source, content, userId);
@@ -152,6 +153,36 @@ public class StashService {
     }
 
     // ─── finding and using ─────────────────────────────────────────────
+
+    /** Public items of a kind, newest first, whose title or name has the words in it. */
+    @Transactional(readOnly = true)
+    public List<StashItem> browse(StashKind kind, String query) {
+        String q = query == null ? "" : query.trim().toLowerCase();
+        return stash.findTop200ByKindAndOwnerIdIsNullOrderByCreatedAtDesc(kind).stream()
+                .filter(i -> q.isEmpty()
+                        || (i.getTitle() != null && i.getTitle().toLowerCase().contains(q))
+                        || i.getHandle().toLowerCase().contains(q))
+                .limit(60)
+                .toList();
+    }
+
+    /** What someone made public: the shelf on their profile. */
+    @Transactional(readOnly = true)
+    public List<StashItem> publicOf(String userId) {
+        return stash.findBySavedByAndOwnerIdIsNullOrderByCreatedAtDesc(userId);
+    }
+
+    /** A stashed quiz or question as a quiz that is never saved, to practice on. */
+    @Transactional(readOnly = true)
+    public Quiz practiceQuiz(Long id, String userId) {
+        StashItem item = get(id, userId);
+        if (item.getKind() == StashKind.IMAGE) throw bad("A picture can't be played");
+        Map<String, Object> content = read(item.getPayload());
+        Quiz quiz = new Quiz();
+        quiz.setName(nameOf(content, item.getTitle()));
+        quiz.setActions(actionsOf(content));
+        return quiz;
+    }
 
     /**
      * The image rules, for stash items: "handle" is public, ":handle" is your own,

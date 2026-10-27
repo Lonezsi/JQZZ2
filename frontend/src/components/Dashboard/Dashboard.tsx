@@ -106,7 +106,7 @@ export const Dashboard: React.FC = () => {
       .update(quiz.id, convertToBackendQuiz(quiz))
       .then(() => stashService.fromQuiz(user.id, quiz.id))
       .then(([item]) => {
-        if (window.confirm(`saved to your stash as ${item.handle}. open the stash?`)) go("/stash");
+        if (window.confirm(`saved to your stash as ${item.handle}. open the stash?`)) go("/me/stash");
       })
       .catch((err) => alert(`couldn't stash it: ${errorMessage(err)}`));
   }, [quiz, user]);
@@ -219,14 +219,22 @@ export const Dashboard: React.FC = () => {
       case "Stash this quiz":
         handleStash();
         break;
+      case "Practice this quiz":
+        if (quiz && user) {
+          playService
+            .practice(user.id, { quizId: quiz.id })
+            .then((game) => go(`/play/${game.code}`))
+            .catch((err) => alert(`couldn't start it: ${errorMessage(err)}`));
+        }
+        break;
       case "Open stash":
-        go("/stash");
+        go("/me/stash");
         break;
       case "Game history":
-        go("/history");
+        go("/me/history");
         break;
     }
-  }, [newQuiz, handleImport, handleExport, handleStart, handleStash, mode, setMode]);
+  }, [newQuiz, handleImport, handleExport, handleStart, handleStash, mode, setMode, quiz, user]);
 
   return (
     <div className="jqzz-app" data-phase={selectedAction?.phase ?? "IDLE"}>
