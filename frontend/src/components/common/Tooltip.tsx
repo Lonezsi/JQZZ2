@@ -7,7 +7,8 @@ import { createPortal } from "react-dom";
  * with a title, its text moves to data-tip, so the browser's grey box never
  * shows, and this bubble shows it instead. If the title was the element's
  * only name (an icon button), it becomes its aria-label so nothing is lost
- * for screen readers.
+ * for screen readers. A phone has no hover, so there a long press shows it,
+ * and the tap that ends the press doesn't count as a tap.
  */
 export const Tooltip: React.FC = () => {
   const [tip, setTip] = useState<{ text: string; x: number; y: number; below: boolean } | null>(null);
@@ -65,7 +66,40 @@ export const Tooltip: React.FC = () => {
       setTip(null);
     };
 
-    const over = (e: PointerEvent) => enter(e, 380);
+    const over = (e: PointerEvent) => e.pointerType === "mouse" && enter(e, 380);
+
+    // long press on a touch screen
+    let press: number | undefined;
+    let pressed = false;
+    let from = { x: 0, y: 0 };
+    const cancelPress = () => window.clearTimeout(press);
+    const down = (e: PointerEvent) => {
+      leave();
+      pressed = false;
+      cancelPress();
+      if (e.pointerType === "mouse") return;
+      const el = target(e.target);
+      if (!el) return;
+      from = { x: e.clientX, y: e.clientY };
+      press = window.setTimeout(() => {
+        pressed = true;
+        current.current = el;
+        show(el);
+        navigator.vibrate?.(8);
+      }, 450);
+    };
+    const drift = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) > 10) cancelPress();
+    };
+    const swallow = (e: Event) => {
+      if (!pressed) return;
+      pressed = false;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const noMenu = (e: Event) => {
+      if (pressed || current.current) e.preventDefault();
+    };
     const focus = (e: FocusEvent) => {
       // keyboard focus only: a click focuses too, and shouldn't pop a bubble
       if ((e.target as Element)?.matches?.(":focus-visible")) enter(e, 120);
@@ -73,7 +107,12 @@ export const Tooltip: React.FC = () => {
     window.addEventListener("pointerover", over);
     window.addEventListener("focusin", focus);
     window.addEventListener("focusout", leave);
-    window.addEventListener("pointerdown", leave);
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", drift);
+    window.addEventListener("pointerup", cancelPress);
+    window.addEventListener("pointercancel", cancelPress);
+    window.addEventListener("click", swallow, true);
+    window.addEventListener("contextmenu", noMenu);
     window.addEventListener("scroll", leave, true);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && leave();
     window.addEventListener("keydown", esc);
@@ -81,7 +120,13 @@ export const Tooltip: React.FC = () => {
       window.removeEventListener("pointerover", over);
       window.removeEventListener("focusin", focus);
       window.removeEventListener("focusout", leave);
-      window.removeEventListener("pointerdown", leave);
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", drift);
+      window.removeEventListener("pointerup", cancelPress);
+      window.removeEventListener("pointercancel", cancelPress);
+      window.removeEventListener("click", swallow, true);
+      window.removeEventListener("contextmenu", noMenu);
+      cancelPress();
       window.removeEventListener("scroll", leave, true);
       window.removeEventListener("keydown", esc);
       window.clearTimeout(timer.current);

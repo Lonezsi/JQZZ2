@@ -810,12 +810,6 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 /* ─── glass, split into colour ────────────────────────────────────────
    like light through a cheap lens: a red fringe on one side of every edge,
    blue on the other, and the text on the glass just slightly doubled */
-.jqzz-play-bar::before {
-  box-shadow:
-    0 1px 0 rgba(255, 70, 140, 0.3),
-    0 2.5px 0 rgba(70, 170, 255, 0.2),
-    0 1px 8px rgba(185, 166, 255, 0.14);
-}
 .jqzz-sidebar,
 .jqzz-play-bar {
   text-shadow:
@@ -1051,4 +1045,19 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-people-pop,
 .jqzz-sidebar input {
   text-shadow: none;
+}
+
+/* phones: pressing a button doesn't select its text or pop the system menu;
+   a long press shows our tooltip instead (Tooltip.tsx) */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  [role="option"],
+  [data-tip],
+  [title],
+  .jqzz-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
 }

@@ -16,15 +16,18 @@ export interface QuizSettings {
   grade: boolean;
   /** points multiplier: 2 is double */
   points: number;
+  /** someone new can join while these questions play; whoever was in can always come back */
+  latejoin: boolean;
 }
 
-export const DEFAULTS: QuizSettings = { shuffle: false, mix: false, grade: true, points: 1 };
+export const DEFAULTS: QuizSettings = { shuffle: false, mix: false, grade: true, points: 1, latejoin: true };
 
 export const SETTING_LABEL: Record<keyof QuizSettings, string> = {
   shuffle: "shuffle questions",
   mix: "mix answers",
   grade: "counts for points",
   points: "points ×",
+  latejoin: "new players can join",
 };
 
 const OFF = ["off", "false", "no", "0"];
@@ -37,7 +40,7 @@ export function parseSettings(text: string | undefined): Partial<QuizSettings> {
     if (!rawKey) continue;
     const value = rawValue ?? "on";
     const on = !OFF.includes(value);
-    if (rawKey === "shuffle" || rawKey === "mix" || rawKey === "grade") out[rawKey] = on;
+    if (rawKey === "shuffle" || rawKey === "mix" || rawKey === "grade" || rawKey === "latejoin") out[rawKey] = on;
     if (rawKey === "points") {
       const n = Number(value.replace(/^[x×]/, ""));
       out.points = Number.isFinite(n) ? Math.max(0, Math.min(10, n)) : 1;
@@ -60,6 +63,7 @@ export function describe(s: Partial<QuizSettings>, all = false): string[] {
   if (s.mix !== undefined && (all || s.mix)) chips.push(s.mix ? "answers mixed" : "answers in order");
   if (s.grade !== undefined && (all || !s.grade)) chips.push(s.grade ? "graded" : "no points");
   if (s.points !== undefined && (all || s.points !== 1)) chips.push(`×${s.points}`);
+  if (s.latejoin !== undefined && (all || !s.latejoin)) chips.push(s.latejoin ? "open to newcomers" : "doors closed");
   return chips;
 }
 
@@ -89,5 +93,6 @@ export const SETTING_PRESETS: { label: string; text: string; note: string }[] = 
   { label: "mix answers", text: "mix=on", note: "answers in a random order" },
   { label: "no points", text: "grade=off", note: "played, but nobody scores" },
   { label: "double points", text: "points=2", note: "everything scores ×2" },
-  { label: "back to normal", text: "shuffle=off, mix=off, grade=on, points=1", note: "ends every setting above" },
+  { label: "close the doors", text: "latejoin=off", note: "from here, nobody new can join" },
+  { label: "back to normal", text: "shuffle=off, mix=off, grade=on, points=1, latejoin=on", note: "ends every setting above" },
 ];

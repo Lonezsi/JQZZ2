@@ -56,7 +56,12 @@ public class Game {
         }
     }
 
-    public record Step(Phase phase, int seconds, QuestionSnap question) {}
+    /** open: someone new can still join while this step plays (the "latejoin" setting) */
+    public record Step(Phase phase, int seconds, QuestionSnap question, boolean open) {
+        public Step(Phase phase, int seconds, QuestionSnap question) {
+            this(phase, seconds, question, true);
+        }
+    }
 
     static final class Player {
         final String id;
@@ -135,6 +140,8 @@ public class Game {
     boolean recorded;
     /** taken out by the host: they can't join this game again */
     final Set<String> kicked = new LinkedHashSet<>();
+    /** everyone who was ever in: they can always come back, even once the doors close */
+    final Set<String> joinedOnce = new LinkedHashSet<>();
     /** when the host's screen went away (0: it's here) */
     long hostAwaySince;
     /** paused because the host's screen went away, not by the host */
@@ -177,7 +184,11 @@ public class Game {
             existing.picture = picture;
         } else {
             if (players.size() >= MAX_PLAYERS) throw new IllegalStateException("This game is full");
+            if (!joinedOnce.contains(id) && !open()) {
+                throw new IllegalStateException("This game has started and isn't taking new players");
+            }
             players.put(id, new Player(id, name, picture));
+            joinedOnce.add(id);
         }
         changed(now);
     }
@@ -612,6 +623,12 @@ public class Game {
     }
 
     // ─── reading it ────────────────────────────────────────────────────
+
+    /** can someone new join now? in the lobby always; after that, as the quiz says */
+    boolean open() {
+        Step s = current();
+        return status == Status.LOBBY || s == null || s.open();
+    }
 
     Step current() {
         return index >= 0 && index < steps.size() ? steps.get(index) : null;

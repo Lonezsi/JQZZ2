@@ -30,6 +30,7 @@ export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
 # shuffle {            questions inside swap places
 # mix {                answers come in a random order
 # grade=off {          played, but nobody scores
+# latejoin=off {       nobody new can join from here
 # points=2 {           double points
 # }                    back to how it was before the group
 #

@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,10 +39,12 @@ class ComingAndGoingTest {
     private PresenceTracker presence;
     private GameEngine engine;
     private boolean hostWatching;
+    private Quiz quiz;
+    private Question q;
 
     @BeforeEach
     void setUp() {
-        Question q = new Question();
+        q = new Question();
         q.setId(1L);
         q.setText("Q");
         q.setType(QuestionType.PREWRITTEN_SINGLE);
@@ -50,10 +53,10 @@ class ComingAndGoingTest {
         a.setText("a");
         a.setValue(100);
         q.setAnswers(List.of(a));
-        Quiz quiz = new Quiz();
+        quiz = new Quiz();
         quiz.setId(7L);
         quiz.setName("quiz");
-        quiz.setActions(List.of(new Action(q, Phase.QUESTION, 600)));
+        quiz.setActions(new ArrayList<>(List.of(new Action(q, Phase.QUESTION, 600))));
 
         QuizRepository quizzes = mock(QuizRepository.class);
         when(quizzes.findById(7L)).thenReturn(Optional.of(quiz));
@@ -147,5 +150,22 @@ class ComingAndGoingTest {
         assertThat(engine.mine("stranger")).isEmpty();
         engine.end(code, "host");
         assertThat(engine.mine("p1")).isEmpty();
+    }
+
+    @Test
+    void anyoneCanJoinMidGameUnlessTheQuizClosesTheDoors() {
+        String open = startedGame();
+        engine.join(open, "late");
+        assertThat(engine.game(open).players).containsKeys("p1", "late");
+
+        Action doors = new Action(null, Phase.SETTING, 0);
+        doors.setPreview("latejoin=off");
+        quiz.getActions().add(0, doors);
+        String closed = startedGame();
+        assertThatThrownBy(() -> engine.join(closed, "late")).hasMessageContaining("isn't taking new players");
+        // but whoever was in can always come back
+        engine.leave(closed, "p1");
+        engine.join(closed, "p1");
+        assertThat(engine.game(closed).players).containsOnlyKeys("p1");
     }
 }

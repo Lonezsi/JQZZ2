@@ -562,7 +562,7 @@ public class GameEngine {
                 blocks.add(new ArrayList<>());
                 shuffled.add(settings.shuffle);
             }
-            blocks.get(blocks.size() - 1).add(new Game.Step(a.getPhase(), Math.max(1, a.getTime()), qs));
+            blocks.get(blocks.size() - 1).add(new Game.Step(a.getPhase(), Math.max(1, a.getTime()), qs, settings.lateJoin));
             last = key;
             fresh = false;
         }
@@ -595,6 +595,7 @@ public class GameEngine {
         boolean mix;
         boolean grade = true;
         int points = 100;
+        boolean lateJoin = true;
 
         void apply(String text) {
             if (text == null) return;
@@ -608,6 +609,7 @@ public class GameEngine {
                     case "mix" -> mix = on;
                     case "grade" -> grade = on;
                     case "points" -> points = percent(value);
+                    case "latejoin" -> lateJoin = on;
                     default -> { /* unknown: ignored, so older servers survive newer quizzes */ }
                 }
             }
