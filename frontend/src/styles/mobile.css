@@ -56,6 +56,27 @@
     font-size: 16px !important;
   }
 
+  /* No live blur on a phone. Every blurred panel re-blurs whatever moves
+     behind it, and here the drawer and the sheet sit over a scrolling list.
+     They get solid surfaces instead, which read better on a small screen anyway. */
+  .jqzz-sidebar,
+  .jqzz-holo.is-glass,
+  .jqzz-editor-wrap,
+  .jqzz-ai-bar,
+  .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .jqzz-holo.is-glass {
+    background:
+      radial-gradient(70% 45% at 0% 0%, color-mix(in srgb, var(--warm) 14%, transparent), transparent 70%),
+      var(--surface-solid);
+  }
+  .jqzz-editor-wrap,
+  .jqzz-ai-bar {
+    background: var(--surface-solid);
+  }
+
   /* Sidebar: a drawer from the left, over the page */
   .jqzz-sidebar {
     position: fixed;

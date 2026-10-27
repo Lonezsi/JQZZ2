@@ -72,6 +72,12 @@ public class PresenceTracker {
         setOnline(userId, false);
     }
 
+    /** Whether this user has at least one tab connected right now. */
+    public synchronized boolean isOnline(String userId) {
+        Set<String> sessions = sessionsByUser.get(userId);
+        return sessions != null && !sessions.isEmpty();
+    }
+
     private void setOnline(String userId, boolean online) {
         userRepository.findById(userId).ifPresent(user -> {
             if (user.isOnline() == online) return;

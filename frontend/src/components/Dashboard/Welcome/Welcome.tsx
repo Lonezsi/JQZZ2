@@ -24,9 +24,9 @@ const FEATURES: { tag: string; title: string; body: string }[] = [
     body: "No accounts. No bullshit. No motherfucking please give us 5 pages of data to click a button. God I hate corporate enshittification",
   },
   {
-    tag: "not built yet",
-    title: "AI-Slopify",
-    body: "You can type a prompt and it'll generate something. Probably garbage. But maybe garbage you can fix.",
+    tag: "play",
+    title: "Run it live",
+    body: "Hit Start, put the big screen up, everyone joins on their phone with the code. Votes, guesses, tier lists, knockout battles.",
   },
 ];
 
@@ -70,6 +70,9 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
               Import .txt
             </button>
           )}
+          <a className="jqzz-toolbar-btn" href="#/join">
+            Join a game
+          </a>
         </div>
         <p className="jqzz-annot jqzz-welcome-hint">
           {quizzes.length > 0 ? "or open one on the left. " : ""}ctrl k for everything else.

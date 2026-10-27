@@ -56,7 +56,15 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onImport,
 }) => {
   const { dropSnippet, setMode, reorderActions } = useQuiz();
-  const timelineRef = useFlip<HTMLDivElement>();
+  // the order of the rows, which is all the FLIP animation needs to watch
+  const flipSignature = `${quiz?.id}:${renderItems
+    .map((item) =>
+      item.kind === "group"
+        ? `g${item.question.id}(${item.actions.map((a) => a.id).join(".")})`
+        : item.action.id,
+    )
+    .join("|")}`;
+  const timelineRef = useFlip<HTMLDivElement>(flipSignature);
 
   if (!quiz) {
     return <Welcome onCreate={onNewQuiz} onImport={onImport} />;

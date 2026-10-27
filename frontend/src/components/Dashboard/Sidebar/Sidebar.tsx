@@ -81,6 +81,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           Import .txt
           <Keys combo="Mod I" />
         </button>
+        <a className="jqzz-sid-action" href="#/join">
+          <span className="jqzz-sid-action-icon" aria-hidden="true">
+            ⌁
+          </span>
+          Join a game
+        </a>
       </div>
 
       <div className="jqzz-sid-head">

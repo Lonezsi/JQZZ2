@@ -110,12 +110,18 @@
 }
 
 /* ─── Imperfections ───────────────────────────────────────────────
-   Light leaks, dust and film scratches over the whole app, like a
-   scanned print. Never takes a click. */
+   Light leaks, dust and film scratches, like a scanned print. Never
+   takes a click.
+
+   Behind the panels, not over them. Over the whole app they were a
+   full-screen blended layer the browser had to mix back in on every
+   frame anything underneath moved, which is every frame of a scroll.
+   Behind, they are part of a background that never changes, painted
+   once. The panels are translucent enough to let them through. */
 .jqzz-imperfections {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 0;
   pointer-events: none;
 }
 .jqzz-imperfections > span {
@@ -130,7 +136,7 @@
     linear-gradient(115deg, transparent 58%, rgba(255, 214, 196, 0.1) 63%, transparent 68%);
   mix-blend-mode: var(--leak-blend);
   opacity: var(--imperfection-opacity);
-  animation: leakDrift 38s var(--ease-in-out) infinite alternate;
+  /* still: a drifting leak repainted a blended full-screen layer forever */
 }
 /* the huge grain: a coarse noise tile scaled up, over everything */
 .jqzz-imperfections .grain-huge {
@@ -156,11 +162,6 @@
   .jqzz-imperfections .scratches {
     filter: invert(1);
     mix-blend-mode: multiply;
-  }
-}
-@keyframes leakDrift {
-  to {
-    transform: translate3d(2.5%, 1.5%, 0) scale(1.04);
   }
 }
 
@@ -204,8 +205,13 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   animation: holoTurn 14s linear infinite;
+  /* the rim turns while you're on it; a turning rim repaints every frame */
+  animation-play-state: paused;
   pointer-events: none;
   z-index: 3;
+}
+.jqzz-holo:hover::before {
+  animation-play-state: running;
 }
 .jqzz-holo::after {
   /* the sheen */

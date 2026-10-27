@@ -9,7 +9,8 @@ const resolved = new Map<string, Promise<string | null>>();
 /** a generated picture's seed, stored as "gen:<seed>" instead of an image */
 const GEN = "gen:";
 
-function resolveImage(ref: string, ownerId: string, viewerId: string) {
+// eslint-disable-next-line react-refresh/only-export-components
+export function resolveImage(ref: string, ownerId: string, viewerId: string) {
   if (/^(https?:|data:)/.test(ref)) return Promise.resolve(ref);
   // ":handle" is relative to the picture's owner, not to whoever is looking
   const absolute = ref.startsWith(":") ? `${ownerId}${ref}` : ref;

@@ -14,6 +14,9 @@ import { Atmosphere, Imperfections } from "../common/Atmosphere";
 import { usePresence } from "../../hooks/usePresence";
 import { isGuestName } from "../../utils/guestName";
 import { useSwipeDrawer } from "../../hooks/useSwipeDrawer";
+import { playService } from "../../services/playService";
+import { errorMessage } from "../../services/api";
+import { go } from "../../hooks/useHashRoute";
 import "../../index.css";
 
 export const Dashboard: React.FC = () => {
@@ -107,12 +110,17 @@ export const Dashboard: React.FC = () => {
       newQuiz();
       return;
     }
-    if (quiz.actions.length === 0) {
-      alert("this quiz is empty. add some questions first.");
+    if (!quiz.actions.some((a) => a.question)) {
+      alert("this quiz has no questions yet. add one first.");
       return;
     }
-    alert("running a quiz isn't built yet. the backend can do it, the play screens don't exist yet.");
-  }, [quiz, newQuiz]);
+    if (!user) return;
+    // host a game of it: the big screen opens, people join with its code
+    playService
+      .host(quiz.id, user.id)
+      .then((game) => go(`/host/${game.code}`))
+      .catch((err) => alert(`couldn't start it: ${errorMessage(err)}`));
+  }, [quiz, newQuiz, user]);
 
   useKeyboardShortcuts({
     onPalette: () => setPaletteOpen(true),
@@ -190,6 +198,9 @@ export const Dashboard: React.FC = () => {
         break;
       case "Start":
         handleStart();
+        break;
+      case "Join a game":
+        go("/join");
         break;
     }
   }, [newQuiz, handleImport, handleExport, handleStart, mode, setMode]);

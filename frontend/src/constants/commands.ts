@@ -7,4 +7,5 @@ export const COMMANDS: Command[] = [
   { icon: "↓", label: "Export this quiz", sub: "Mod E" },
   { icon: "~", label: "Switch visual / text", sub: "Mod `" },
   { icon: "▷", label: "Start", sub: "Mod ↵" },
+  { icon: "⌁", label: "Join a game", sub: "" },
 ];

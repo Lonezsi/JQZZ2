@@ -81,9 +81,20 @@ export const DitherBlobs: React.FC = () => {
 
     draw();
     let t = 0;
+    let drawnW = window.innerWidth;
+    let drawnH = window.innerHeight;
     const onResize = () => {
+      // a phone's address bar sliding in and out is a resize too, on every
+      // scroll; the blobs only need redrawing when the window really changed
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (w === drawnW && Math.abs(h - drawnH) < 160) return;
       window.clearTimeout(t);
-      t = window.setTimeout(draw, 150);
+      t = window.setTimeout(() => {
+        drawnW = window.innerWidth;
+        drawnH = window.innerHeight;
+        draw();
+      }, 150);
     };
     const scheme = window.matchMedia("(prefers-color-scheme: light)");
     window.addEventListener("resize", onResize);

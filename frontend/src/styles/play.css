@@ -1,0 +1,1002 @@
+/* Playing: the host's big screen, the players' phones, and joining.
+   Same material as the editor: ink, glass panels, the aura's colours,
+   blackletter for the big moments, mono labels for the data. */
+
+.jqzz-play {
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.jqzz-play-frame {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── bar ─────────────────────────────────────────────────────────── */
+.jqzz-play-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-solid) 90%, transparent);
+}
+.jqzz-play-bar.compact {
+  padding: 8px 12px;
+}
+.jqzz-play-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jqzz-play-code {
+  font-family: var(--font-data);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: 15px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+.jqzz-play-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.jqzz-play-me {
+  font-family: var(--font-data);
+  font-weight: 700;
+}
+
+/* ─── buttons ─────────────────────────────────────────────────────── */
+.jqzz-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
+}
+.jqzz-play-btn:hover:not(:disabled) {
+  background: var(--raised-hover);
+}
+.jqzz-play-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.jqzz-play-btn.primary {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.jqzz-play-btn.primary:hover:not(:disabled) {
+  background: var(--accent-fill);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-fill) 22%, transparent), 0 0 26px -4px var(--accent-fill);
+}
+.jqzz-play-btn.ghost {
+  border-color: transparent;
+  background: none;
+}
+.jqzz-play-btn.danger {
+  color: var(--danger);
+}
+.jqzz-play-btn.big {
+  min-height: 52px;
+  padding: 10px 30px;
+  font-size: 16px;
+}
+.jqzz-play-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+/* links styled as buttons elsewhere in the app */
+a.jqzz-sid-action,
+a.jqzz-toolbar-btn {
+  text-decoration: none;
+}
+
+/* ─── text ────────────────────────────────────────────────────────── */
+.jqzz-play-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 20px;
+  text-align: center;
+}
+.jqzz-play-prompt {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+.jqzz-play-prompt.small {
+  font-size: 15px;
+  color: var(--text-2);
+}
+.jqzz-play-note {
+  color: var(--text-2);
+  text-align: center;
+}
+.jqzz-play-note.bad {
+  color: var(--danger);
+}
+.jqzz-play-img,
+.jqzz-stage-img {
+  display: block;
+  max-width: 100%;
+  max-height: 34vh;
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  object-fit: contain;
+}
+.jqzz-stage-img {
+  max-height: 40vh;
+}
+
+/* ─── stage (the host's screen) ───────────────────────────────────── */
+.jqzz-stage {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  animation: viewIn var(--dur-3) var(--ease) backwards;
+}
+.jqzz-stage-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.jqzz-stage-title {
+  font-size: clamp(40px, 7vw, 76px);
+  line-height: 1;
+  text-align: center;
+  margin: 8px 0 24px;
+}
+.jqzz-stage-prompt {
+  font-size: clamp(26px, 4vw, 44px);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  margin: 8px 0 28px;
+  text-wrap: balance;
+}
+.jqzz-stage-prompt.small {
+  font-size: clamp(18px, 2.4vw, 24px);
+  color: var(--text-2);
+  margin-bottom: 20px;
+}
+.jqzz-stage-q,
+.jqzz-stage-result,
+.jqzz-stage-final {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.jqzz-stage-wait {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+.jqzz-stage-wait .jqzz-play-qnum {
+  font-size: clamp(90px, 16vw, 180px);
+}
+.jqzz-stage-elab {
+  font-size: clamp(18px, 2.6vw, 28px);
+  line-height: 1.5;
+  text-align: center;
+  max-width: 60ch;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.jqzz-stage-round {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.jqzz-play-qhead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.jqzz-play-qnum {
+  font-size: 44px;
+  line-height: 0.9;
+}
+
+/* ─── countdown ───────────────────────────────────────────────────── */
+.jqzz-countdown {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.jqzz-countdown svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.jqzz-countdown .track {
+  fill: color-mix(in srgb, var(--surface-solid) 70%, transparent);
+  stroke: var(--line);
+  stroke-width: 4;
+}
+.jqzz-countdown .fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear, stroke var(--dur-2) var(--ease);
+}
+.jqzz-countdown.urgent .fill {
+  stroke: var(--warm);
+}
+/* the number is sized from the ring (Countdown sets font-size from its size) */
+.jqzz-countdown-n {
+  position: relative;
+  font-family: var(--font-data);
+  font-weight: 700;
+}
+.jqzz-countdown.urgent .jqzz-countdown-n {
+  color: var(--warm);
+  animation: pulse 0.5s var(--ease-in-out) infinite alternate;
+}
+
+/* ─── faces ───────────────────────────────────────────────────────── */
+.jqzz-play-face {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+.jqzz-play-face.big {
+  width: 64px;
+  height: 64px;
+}
+.jqzz-play-face.huge {
+  width: 112px;
+  height: 112px;
+  box-shadow: 0 0 40px -8px var(--phase-QUESTION);
+}
+
+/* ─── lobby ───────────────────────────────────────────────────────── */
+.jqzz-lobby {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.jqzz-lobby-code {
+  display: flex;
+  gap: 0.12em;
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: clamp(56px, 12vw, 132px);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.jqzz-lobby-code span {
+  padding: 0.08em 0.16em;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.14em;
+  background: color-mix(in srgb, var(--surface-solid) 80%, transparent);
+  box-shadow: 0 0 40px -18px var(--phase-QUESTION);
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+  animation-delay: calc(var(--i) * 60ms);
+}
+.jqzz-lobby-link {
+  border: none;
+  background: none;
+  color: var(--text-2);
+  font-family: var(--font-data);
+  font-size: 13px;
+  word-break: break-all;
+}
+.jqzz-lobby-link:hover {
+  color: var(--text);
+}
+.jqzz-lobby-people {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 900px;
+  min-height: 80px;
+  align-content: flex-start;
+  margin: 10px 0;
+}
+.jqzz-lobby-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px 5px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  font-weight: 600;
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+}
+.jqzz-lobby-player:hover {
+  border-color: var(--danger);
+}
+.jqzz-lobby-player.away {
+  opacity: 0.5;
+}
+
+/* ─── answer tiles ────────────────────────────────────────────────── */
+.jqzz-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+.jqzz-tile {
+  --tile: var(--accent);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--tile) 45%, transparent);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--tile) 22%, transparent), transparent 70%),
+    var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-size: 17px;
+  font-weight: 600;
+  transition:
+    transform var(--dur-1) var(--ease),
+    box-shadow var(--dur-2) var(--ease),
+    opacity var(--dur-2) var(--ease);
+}
+button.jqzz-tile:active {
+  transform: scale(0.98);
+}
+.jqzz-tile.picked {
+  box-shadow:
+    0 0 0 2px var(--tile),
+    0 0 28px -6px var(--tile);
+}
+.jqzz-tile-letter {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--tile);
+  color: var(--bg);
+  font-family: var(--font-data);
+  font-weight: 700;
+}
+.jqzz-tile-text {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.jqzz-tile-count {
+  position: relative;
+  font-family: var(--font-data);
+  font-weight: 700;
+}
+.jqzz-tile-count small {
+  font-weight: 500;
+  color: var(--text-2);
+}
+.jqzz-tile-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--share, 0) * 100%);
+  background: color-mix(in srgb, var(--tile) 16%, transparent);
+  transform-origin: left;
+  animation: barIn 700ms var(--ease) backwards;
+}
+@keyframes barIn {
+  from {
+    transform: scaleX(0);
+  }
+}
+.jqzz-tiles.revealed .jqzz-tile.wrong {
+  opacity: 0.5;
+}
+.jqzz-tiles.revealed .jqzz-tile.right {
+  box-shadow: 0 0 0 2px var(--ok), 0 0 30px -8px var(--ok);
+}
+.jqzz-tiles.revealed .jqzz-tile.right .jqzz-tile-letter {
+  background: var(--ok);
+}
+
+/* ─── tier lists ──────────────────────────────────────────────────── */
+.tier-S { --tier: #f08cb0; }
+.tier-A { --tier: #f2a989; }
+.tier-B { --tier: #e8d48a; }
+.tier-C { --tier: #9fe0b8; }
+.tier-D { --tier: #7fb2ff; }
+.jqzz-tier-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.jqzz-tier-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.jqzz-tier-item-text {
+  flex: 1 1 140px;
+  font-weight: 600;
+}
+.jqzz-tier-picks {
+  display: flex;
+  gap: 6px;
+}
+.jqzz-tier-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--tier) 50%, transparent);
+  border-radius: 10px;
+  background: none;
+  color: var(--tier);
+  font-family: var(--font-data);
+  font-weight: 700;
+}
+.jqzz-tier-btn.on {
+  background: var(--tier);
+  color: var(--bg);
+}
+.jqzz-tierlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jqzz-tier-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.jqzz-tier-label {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  flex-shrink: 0;
+  background: var(--tier);
+  color: var(--bg);
+  font-size: 34px;
+}
+.jqzz-tier-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 8px 8px 0;
+}
+.jqzz-tier-items.preview {
+  justify-content: center;
+  padding: 0;
+}
+.jqzz-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  font-weight: 600;
+}
+.jqzz-chip.picked,
+.jqzz-chip.agreed {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* ─── written answers ─────────────────────────────────────────────── */
+.jqzz-written,
+.jqzz-written-sent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.jqzz-written-sent {
+  align-items: center;
+  text-align: center;
+}
+.jqzz-written-sent p {
+  font-size: 18px;
+}
+.jqzz-play-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+  color: var(--text);
+  font-size: 16px;
+  resize: vertical;
+  outline: none;
+}
+.jqzz-play-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.jqzz-written-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.jqzz-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.jqzz-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+button.jqzz-entry:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.jqzz-entry.picked {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 26px -8px var(--accent);
+}
+.jqzz-entry.winner {
+  border-color: var(--warm);
+  box-shadow: 0 0 0 1px var(--warm), 0 0 32px -8px var(--warm);
+}
+.jqzz-entry-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+.jqzz-judging {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.jqzz-guess {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.jqzz-guess-text {
+  font-size: 16px;
+  font-weight: 600;
+}
+.jqzz-guess-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ─── knockout ────────────────────────────────────────────────────── */
+.jqzz-battle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.jqzz-battle.own {
+  opacity: 0.6;
+}
+.jqzz-battle .jqzz-annot {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+.jqzz-bracket {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+.jqzz-match-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.jqzz-match {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.jqzz-match.bye {
+  opacity: 0.6;
+}
+.jqzz-match-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  font-weight: 600;
+}
+.jqzz-match-side + .jqzz-match-side {
+  border-top: 1px dashed var(--line-strong);
+}
+.jqzz-match-side.won {
+  background: color-mix(in srgb, var(--warm) 14%, transparent);
+}
+.jqzz-match-side.lost {
+  opacity: 0.5;
+}
+.jqzz-champion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 26px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--warm);
+  box-shadow: 0 0 50px -14px var(--warm);
+  text-align: center;
+}
+.jqzz-champion-text {
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 700;
+}
+.jqzz-bracket-history {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.jqzz-bracket-history summary {
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* ─── progress ────────────────────────────────────────────────────── */
+.jqzz-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.jqzz-progress-faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.jqzz-progress-faces .jqzz-play-face {
+  width: 28px;
+  height: 28px;
+  margin-left: -6px;
+  border: 2px solid var(--surface-solid);
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+}
+
+/* ─── leaderboard and podium ──────────────────────────────────────── */
+.jqzz-board {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.jqzz-board-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+.jqzz-board-row.me {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.jqzz-board-row.away {
+  opacity: 0.6;
+}
+.jqzz-board-rank {
+  width: 24px;
+  text-align: right;
+  font-family: var(--font-data);
+  font-weight: 700;
+  color: var(--text-2);
+}
+.jqzz-board-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jqzz-board-gain {
+  font-family: var(--font-data);
+  font-weight: 700;
+  color: var(--ok);
+}
+.jqzz-board-score {
+  font-family: var(--font-data);
+  font-weight: 700;
+  min-width: 52px;
+  text-align: right;
+}
+.jqzz-board-gap {
+  text-align: center;
+  color: var(--text-3);
+}
+.jqzz-podium-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.jqzz-podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px;
+}
+.jqzz-podium-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(180px, 30vw);
+  animation: viewIn 700ms var(--ease) backwards;
+}
+.jqzz-podium-spot.place-1 {
+  animation-delay: 500ms;
+}
+.jqzz-podium-spot.place-2 {
+  animation-delay: 250ms;
+}
+.jqzz-podium-name {
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.jqzz-podium-score {
+  font-family: var(--font-data);
+  color: var(--text-2);
+}
+.jqzz-podium-block {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 70px;
+  border: 1px solid var(--line-strong);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(var(--raised-hover), var(--surface));
+  font-size: 40px;
+}
+.place-1 .jqzz-podium-block {
+  height: 120px;
+  border-color: var(--warm);
+  box-shadow: 0 0 50px -18px var(--warm);
+}
+.place-2 .jqzz-podium-block {
+  height: 90px;
+}
+
+/* ─── overlays ────────────────────────────────────────────────────── */
+.jqzz-paused {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  font-size: clamp(60px, 14vw, 140px);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  pointer-events: none;
+  animation: fadeIn var(--dur-2) var(--ease);
+}
+.jqzz-play-error {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 30;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ─── phone ───────────────────────────────────────────────────────── */
+.jqzz-phone {
+  flex: 1;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 16px 14px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: viewIn var(--dur-3) var(--ease) backwards;
+}
+.jqzz-answering {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.jqzz-phone .jqzz-tiles {
+  grid-template-columns: 1fr;
+}
+.jqzz-phone .jqzz-tile {
+  min-height: 64px;
+}
+.jqzz-phone-lobby,
+.jqzz-phone-wait,
+.jqzz-phone-final {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+.jqzz-phone-wait .jqzz-stage-top {
+  width: 100%;
+}
+.jqzz-phone-rank {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 600;
+}
+.jqzz-phone-rank .jqzz-play-qnum {
+  font-size: 72px;
+}
+.jqzz-outcome {
+  align-self: center;
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-weight: 700;
+  font-size: 18px;
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+}
+.jqzz-outcome.good {
+  border-color: var(--ok);
+  color: var(--ok);
+  box-shadow: 0 0 30px -10px var(--ok);
+  font-family: var(--font-data);
+  font-size: 26px;
+}
+.jqzz-outcome.bad {
+  color: var(--text-2);
+}
+
+/* ─── joining ─────────────────────────────────────────────────────── */
+.jqzz-join form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.jqzz-join-input {
+  width: min(320px, 80vw);
+  padding: 12px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--sunken);
+  color: var(--text);
+  text-align: center;
+  font-family: var(--font-data);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  outline: none;
+}
+.jqzz-join-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-soft);
+}
+
+@media (max-width: 760px) {
+  .jqzz-stage {
+    padding: 18px 14px 40px;
+  }
+  .jqzz-tiles {
+    grid-template-columns: 1fr;
+  }
+  .jqzz-play-controls .jqzz-annot {
+    display: none;
+  }
+  .jqzz-play-qnum {
+    font-size: 34px;
+  }
+}
