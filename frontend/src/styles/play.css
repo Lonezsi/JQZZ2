@@ -1147,3 +1147,27 @@ button.jqzz-entry:hover:not(:disabled) {
 .jqzz-play-me .jqzz-annot {
   color: var(--warm);
 }
+
+/* ─── Questions speak in the title voice ──────────────────────────
+   Great Warrior is one regular weight with a lot of contrast: no faux
+   bold, a touch more size and air so it reads from across the room. */
+.jqzz-stage-prompt,
+.jqzz-play-prompt,
+.jqzz-group-text,
+.jqzz-card-prompt,
+.jqzz-answer-q {
+  font-family: var(--font-title);
+  font-weight: normal;
+  letter-spacing: 0.01em;
+}
+.jqzz-stage-prompt {
+  font-size: clamp(30px, 4.6vw, 52px);
+  line-height: 1.12;
+}
+.jqzz-play-prompt {
+  font-size: 25px;
+  line-height: 1.15;
+}
+.jqzz-group-text {
+  font-size: 21px;
+}

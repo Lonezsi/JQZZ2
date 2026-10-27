@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Great Warrior is free for personal use only: the site serves it, the public
+# repo must not hand it out. Get it from https://www.dafont.com/great-warrior.font
+# (or buy the full version) and put it in public/ to build with it.
+public/GreatWarrior.ttf
