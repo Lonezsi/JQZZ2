@@ -806,3 +806,249 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-sidebar .jqzz-search:focus-within {
   border-color: var(--accent);
 }
+
+/* ─── glass, split into colour ────────────────────────────────────────
+   like light through a cheap lens: a red fringe on one side of every edge,
+   blue on the other, and the text on the glass just slightly doubled */
+.jqzz-play-bar::before {
+  box-shadow:
+    0 1px 0 rgba(255, 70, 140, 0.3),
+    0 2.5px 0 rgba(70, 170, 255, 0.2),
+    0 1px 8px rgba(185, 166, 255, 0.14);
+}
+.jqzz-sidebar,
+.jqzz-play-bar {
+  text-shadow:
+    -0.6px 0 rgba(255, 70, 140, 0.28),
+    0.6px 0 rgba(70, 170, 255, 0.28);
+}
+.jqzz-sidebar .jqzz-sid-action:not(.primary)::after,
+.jqzz-sidebar .jqzz-search::after,
+.jqzz-sidebar .jqzz-people-btn::after,
+.jqzz-play-bar .jqzz-play-btn:not(.ghost):not(.primary)::after,
+.jqzz-play-bar .jqzz-play-code::after {
+  filter: drop-shadow(-1px 0 0 rgba(255, 70, 140, 0.35)) drop-shadow(1px 0 0 rgba(70, 170, 255, 0.35));
+}
+
+/* ─── our dropdown ────────────────────────────────────────────────── */
+.jqzz-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    box-shadow var(--dur-2) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+  background: color-mix(in srgb, var(--raised) 60%, var(--sunken));
+}
+.jqzz-select.open,
+.jqzz-select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+.jqzz-select.empty .jqzz-select-value {
+  color: var(--text-3);
+}
+.jqzz-select > svg:first-child {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.jqzz-select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.jqzz-select-caret {
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition: transform var(--dur-2) var(--ease), color var(--dur-1) var(--ease);
+}
+.jqzz-select.open .jqzz-select-caret {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+.jqzz-select.jqzz-shelf-pick {
+  width: auto;
+  max-width: 220px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: var(--fs-small);
+}
+.jqzz-type-steps .jqzz-select {
+  min-height: 28px;
+  padding: 3px 8px;
+}
+
+.jqzz-select-panel {
+  position: fixed;
+  z-index: 120;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%),
+    color-mix(in srgb, var(--surface-solid) 96%, transparent);
+  box-shadow:
+    0 22px 50px -18px rgba(0, 0, 0, 0.8),
+    0 0 40px -20px var(--accent);
+  transform-origin: 50% 0;
+  animation: panelIn var(--dur-2) var(--ease) backwards;
+}
+.jqzz-select-panel.up {
+  transform-origin: 50% 100%;
+}
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+.jqzz-select-panel.up {
+  animation-name: panelInUp;
+}
+@keyframes panelInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+/* each item slides in after the one before it */
+.jqzz-select-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: var(--fs-body);
+  cursor: pointer;
+  animation: itemIn 420ms var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 38ms + 40ms);
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    padding var(--dur-2) var(--ease);
+}
+@keyframes itemIn {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+.jqzz-select-item > svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition: color var(--dur-1) var(--ease);
+}
+.jqzz-select-item.active {
+  background: var(--raised-hover);
+  color: var(--text);
+  padding-left: 14px;
+}
+.jqzz-select-item.active > svg,
+.jqzz-select-item.chosen > svg {
+  color: var(--accent);
+}
+.jqzz-select-item.chosen {
+  color: var(--text);
+}
+.jqzz-select-item[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+.jqzz-select-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.jqzz-select-check {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+/* ─── our tooltip ─────────────────────────────────────────────────── */
+.jqzz-tooltip {
+  position: fixed;
+  z-index: 200;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 60%),
+    color-mix(in srgb, var(--surface-solid) 97%, transparent);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
+  transform: translate(-50%, -100%);
+  animation: tipIn 170ms var(--ease) backwards;
+}
+.jqzz-tooltip.below {
+  transform: translate(-50%, 0);
+  animation-name: tipInBelow;
+}
+.jqzz-tooltip::after {
+  content: "";
+  position: absolute;
+  left: calc(50% + var(--arrow, 0px) - 5px);
+  bottom: -6px;
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface-solid);
+  transform: rotate(45deg);
+}
+.jqzz-tooltip.below::after {
+  top: -6px;
+  bottom: auto;
+  transform: rotate(225deg);
+}
+@keyframes tipIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 4px));
+  }
+}
+@keyframes tipInBelow {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+}
+
+/* what floats out of the glass is not glass */
+.jqzz-people-pop,
+.jqzz-sidebar input {
+  text-shadow: none;
+}

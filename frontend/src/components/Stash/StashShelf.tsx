@@ -14,6 +14,7 @@ import type { TypeShape } from "../../types/stash";
 import type { Phase } from "../../types";
 import { Glide } from "../common/Glide";
 import { Glyph } from "../common/Glyph";
+import { Select } from "../common/Select";
 import { setTypesCache } from "../../hooks/useTypes";
 import { QUESTION_TYPE_LABEL } from "../../utils/questionInfo";
 import { QuestionImage } from "../Play/PlayCommon";
@@ -453,21 +454,14 @@ const StashRow: React.FC<{
         )}
         {item.kind === "QUESTION" &&
           (mine.length > 0 ? (
-            <select
-              className="jqzz-field-select jqzz-shelf-pick"
+            <Select
+              className="jqzz-shelf-pick"
               value=""
+              placeholder="add to a quiz…"
               aria-label="Add this question to one of your quizzes"
-              onChange={(e) => addTo(Number(e.target.value))}
-            >
-              <option value="" disabled>
-                add to a quiz…
-              </option>
-              {mine.map((q) => (
-                <option key={q.id} value={q.id}>
-                  {q.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => addTo(Number(v))}
+              options={mine.map((q) => ({ value: String(q.id), label: q.name, icon: "QUIZ" }))}
+            />
           ) : (
             <span className="jqzz-annot">make a quiz to add it to</span>
           ))}
@@ -749,17 +743,12 @@ const TypeCard: React.FC<{
       <div className="jqzz-type-fields">
         <label className="jqzz-annot">
           question
-          <select
-            className="jqzz-field-select"
+          <Select
             value={draft.questionType}
-            onChange={(e) => set({ questionType: e.target.value })}
-          >
-            {Object.entries(QUESTION_TYPE_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            aria-label="Question type"
+            onChange={(v) => set({ questionType: v })}
+            options={Object.entries(QUESTION_TYPE_LABEL).map(([value, label]) => ({ value, label, icon: value }))}
+          />
         </label>
         {!written && (
           <label className="jqzz-annot">
@@ -779,18 +768,12 @@ const TypeCard: React.FC<{
         {draft.steps.map((s, i) => (
           <li key={i} style={{ "--node": `var(--phase-${s.phase})` } as React.CSSProperties}>
             <Glyph name={s.phase} size={13} />
-            <select
-              className="jqzz-field-select"
+            <Select
               value={s.phase}
-              onChange={(e) => setStep(i, { phase: e.target.value as Phase })}
+              onChange={(v) => setStep(i, { phase: v as Phase })}
               aria-label={`Step ${i + 1}`}
-            >
-              {PHASES.map((p) => (
-                <option key={p} value={p}>
-                  {p.toLowerCase()}
-                </option>
-              ))}
-            </select>
+              options={PHASES.map((p) => ({ value: p, label: p.toLowerCase(), icon: p }))}
+            />
             <input
               className="jqzz-field-input"
               type="number"

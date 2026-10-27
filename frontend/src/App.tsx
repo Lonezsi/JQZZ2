@@ -6,6 +6,7 @@ import { HistoryPage } from "./components/Stash/HistoryPage";
 import { ProfilePage } from "./components/Stash/ProfilePage";
 import { Invites } from "./components/common/Invites";
 import { ReturnToGame } from "./components/common/ReturnToGame";
+import { Tooltip } from "./components/common/Tooltip";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { useNavShortcuts } from "./hooks/useNavShortcuts";
 
@@ -28,6 +29,7 @@ function App() {
       {page(where, a, b, c)}
       <Invites />
       <ReturnToGame />
+      <Tooltip />
     </>
   );
 }

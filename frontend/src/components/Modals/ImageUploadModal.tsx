@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Select } from "../common/Select";
 import { createPortal } from "react-dom";
 import { api, errorMessage } from "../../services/api";
 import type { ImageVisibility } from "../../types";
@@ -101,16 +102,16 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
         <label className="jqzz-field-label" htmlFor="jqzz-img-vis">
           who can use it
         </label>
-        <select
+        <Select
           id="jqzz-img-vis"
-          className="jqzz-field-select jqzz-modal-input"
           value={visibility}
-          onChange={(e) => setVisibility(e.target.value as ImageVisibility)}
-        >
-          <option value="PRIVATE">only me</option>
-          <option value="SEMI_PRIVATE">others too, it stays mine</option>
-          <option value="PUBLIC">everyone, public name</option>
-        </select>
+          onChange={(v) => setVisibility(v as ImageVisibility)}
+          options={[
+            { value: "PRIVATE", label: "only me", icon: "PRIVATE" },
+            { value: "SEMI_PRIVATE", label: "others too, it stays mine", icon: "SEMI_PRIVATE" },
+            { value: "PUBLIC", label: "everyone, public name", icon: "PUBLIC" },
+          ]}
+        />
 
         {error && (
           <p className="jqzz-modal-error" role="alert">

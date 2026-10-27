@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import type { Action, Question, Answer, Phase } from "../../../types";
 import { generateId } from "../../../utils/idGenerator";
 import { ImagePicker } from "../../Modals/ImagePicker";
-import { Glyph } from "../../common/Glyph";
 import { QUESTION_TYPE_LABEL } from "../../../utils/questionInfo";
+import { Select } from "../../common/Select";
 import { SETTING_LABEL, formatSettings, parseSettings } from "../../../utils/settings";
 import type { QuizSettings } from "../../../utils/settings";
 
@@ -59,35 +59,31 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
             <label className="jqzz-field-label" htmlFor={`jqzz-set-${k}`}>
               {SETTING_LABEL[k]}
             </label>
-            <select
+            <Select
               id={`jqzz-set-${k}`}
-              className="jqzz-field-select"
               value={s[k] === undefined ? "" : s[k] ? "on" : "off"}
-              onChange={(e) => set({ [k]: e.target.value === "" ? undefined : e.target.value === "on" })}
-            >
-              <option value="">keep as it was</option>
-              <option value="on">on</option>
-              <option value="off">off</option>
-            </select>
+              onChange={(v) => set({ [k]: v === "" ? undefined : v === "on" })}
+              options={[
+                { value: "", label: "keep as it was", icon: "RESET" },
+                { value: "on", label: "on", icon: "CHECK" },
+                { value: "off", label: "off", icon: "CLOSE" },
+              ]}
+            />
           </div>
         ))}
         <div className="jqzz-field-group">
           <label className="jqzz-field-label" htmlFor="jqzz-set-points">
             {SETTING_LABEL.points}
           </label>
-          <select
+          <Select
             id="jqzz-set-points"
-            className="jqzz-field-select"
             value={s.points === undefined ? "" : String(s.points)}
-            onChange={(e) => set({ points: e.target.value === "" ? undefined : Number(e.target.value) })}
-          >
-            <option value="">keep as it was</option>
-            {[0.5, 1, 2, 3].map((n) => (
-              <option key={n} value={n}>
-                ×{n}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => set({ points: v === "" ? undefined : Number(v) })}
+            options={[
+              { value: "", label: "keep as it was", icon: "RESET" },
+              ...[0.5, 1, 2, 3].map((n) => ({ value: String(n), label: `×${n}`, text: String(n), icon: "STAR" })),
+            ]}
+          />
         </div>
         <p className="jqzz-panel-hint">
           these hold for every question after this block, until another block changes them. in text
@@ -145,18 +141,12 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
           <label className="jqzz-field-label" htmlFor="jqzz-phase">
             type
           </label>
-          <select
+          <Select
             id="jqzz-phase"
-            className="jqzz-field-select"
             value={action.phase}
-            onChange={(e) => onActionUpdate(action.id, { phase: e.target.value as Phase })}
-          >
-            {PHASES.map((p) => (
-              <option key={p} value={p}>
-                {p.toLowerCase()}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => onActionUpdate(action.id, { phase: v as Phase })}
+            options={PHASES.map((p) => ({ value: p, label: p.toLowerCase(), icon: p }))}
+          />
         </div>
         <div className="jqzz-field-group">
           <label className="jqzz-field-label" htmlFor="jqzz-time">
@@ -180,21 +170,12 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
             <label className="jqzz-field-label" htmlFor="jqzz-qtype">
               type
             </label>
-            <div className="jqzz-select-glyph">
-              <Glyph name={question.type || "PREWRITTEN_SINGLE"} size={14} />
-              <select
-                id="jqzz-qtype"
-                className="jqzz-field-select"
-                value={question.type || "PREWRITTEN_SINGLE"}
-                onChange={(e) => onQuestionUpdate(question.id, { type: e.target.value })}
-              >
-                {Object.entries(QUESTION_TYPE_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              id="jqzz-qtype"
+              value={question.type || "PREWRITTEN_SINGLE"}
+              onChange={(v) => onQuestionUpdate(question.id, { type: v })}
+              options={Object.entries(QUESTION_TYPE_LABEL).map(([value, label]) => ({ value, label, icon: value }))}
+            />
           </div>
           <div className="jqzz-field-group">
             <label className="jqzz-field-label" htmlFor="jqzz-prompt">
