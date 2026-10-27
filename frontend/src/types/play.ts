@@ -103,6 +103,18 @@ export interface GameState {
   reveal?: GameReveal;
   interaction: Interaction;
   players: GamePlayer[];
+  /** the host has the game's screen open */
+  hostHere?: boolean;
+  /** paused by the game itself because the host's screen went away */
+  pausedForHost?: boolean;
+}
+
+/** a game you're in that hasn't finished, as /play/mine lists it */
+export interface MyGame {
+  code: string;
+  quizName: string;
+  status: GameStatus;
+  role: "host" | "player";
 }
 
 export const TIERS = ["S", "A", "B", "C", "D"] as const;

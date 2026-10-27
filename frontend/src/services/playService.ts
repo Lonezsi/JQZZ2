@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { GameState } from "../types/play";
+import type { GameState, MyGame } from "../types/play";
 
 /* Hosting and playing. Every call answers with the game's whole state. */
 
@@ -13,6 +13,8 @@ export const playService = {
   /** the same quiz as a finished game, everyone from it invited */
   rematch: (userId: string, recordId: number) => post("/play/rematch", { userId, recordId }),
   state: (code: string) => api.get<GameState>(`/play/${code}`).then((r) => r.data),
+  /** games you host or play that haven't finished */
+  mine: (userId: string) => api.get<MyGame[]>("/play/mine", { params: { userId } }).then((r) => r.data),
   join: (code: string, userId: string) => post(`/play/${code}/join`, { userId }),
   leave: (code: string, userId: string) => post(`/play/${code}/leave`, { userId }),
 

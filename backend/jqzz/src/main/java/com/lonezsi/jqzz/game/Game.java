@@ -133,6 +133,12 @@ public class Game {
     Long quizId;
     /** set once the finished game has been written to history */
     boolean recorded;
+    /** taken out by the host: they can't join this game again */
+    final Set<String> kicked = new LinkedHashSet<>();
+    /** when the host's screen went away (0: it's here) */
+    long hostAwaySince;
+    /** paused because the host's screen went away, not by the host */
+    boolean pausedForHost;
     Long recordId;
     final List<Step> steps;
     final Random random;
@@ -164,6 +170,7 @@ public class Game {
     // ─── people ────────────────────────────────────────────────────────
 
     public void addPlayer(String id, String name, String picture, long now) {
+        if (kicked.contains(id)) throw new IllegalStateException("The host took you out of this game");
         Player existing = players.get(id);
         if (existing != null) {
             existing.name = name;
@@ -177,6 +184,12 @@ public class Game {
 
     public void removePlayer(String id, long now) {
         if (players.remove(id) != null) changed(now);
+    }
+
+    /** Out, and can't come back to this game. */
+    public void kick(String id, long now) {
+        kicked.add(id);
+        removePlayer(id, now);
     }
 
     // ─── flow ──────────────────────────────────────────────────────────
@@ -219,6 +232,7 @@ public class Game {
 
     public void resume(long now) {
         if (status != Status.PAUSED) throw new IllegalStateException("Not paused");
+        pausedForHost = false;
         long away = now - pausedAt;
         endsAt += away;
         Bracket b = currentBracket();
@@ -679,6 +693,9 @@ public class Game {
             v.put("acted", List.copyOf(acted));
         }
         v.put("players", playersView(online));
+        // the host's screen: here, or gone and (while playing) holding the game
+        v.put("hostHere", online.test(hostId));
+        v.put("pausedForHost", pausedForHost);
         return v;
     }
 

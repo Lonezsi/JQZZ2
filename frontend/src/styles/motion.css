@@ -503,44 +503,105 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   align-self: center;
 }
 
-/* ─── frosted glass: the sidebar, the editor's top bar, the game's bar ──
-   see-through enough that the aura and the dither glow behind them,
-   blurred and brightened so text stays crisp on top. A light top edge
-   and a faint sheen make them read as panes rather than tinted boxes. */
+/* ─── frosted glass: the sidebar and the game's top bar ─────────────
+   A dark tint so text stays crisp, a light blur so the aura's colours
+   still read through, a thin white frost that's strongest at the top
+   edge, and grain on its own faint layer (never blended into the pane). */
 .jqzz-sidebar,
-.jqzz-toolbar,
 .jqzz-play-bar {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 38%, transparent 70%),
-    color-mix(in srgb, var(--surface-solid) 40%, transparent);
-  -webkit-backdrop-filter: blur(30px) saturate(1.7) brightness(1.06);
-  backdrop-filter: blur(30px) saturate(1.7) brightness(1.06);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02) 22%, rgba(255, 255, 255, 0.012)),
+    color-mix(in srgb, var(--surface-solid) 58%, transparent);
+  -webkit-backdrop-filter: blur(3px) saturate(1.35);
+  backdrop-filter: blur(3px) saturate(1.35);
 }
+.jqzz-sidebar::after,
+.jqzz-play-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: 180px;
+  opacity: 0.06;
+  mix-blend-mode: soft-light;
+}
+.jqzz-sidebar > *,
+.jqzz-play-bar > * {
+  position: relative;
+  z-index: 1;
+}
+/* edges like the cut edge of a pane: bright where light catches it,
+   a faint split into colour, nearly gone in between */
 .jqzz-sidebar {
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset -1px 0 0 rgba(255, 255, 255, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    24px 0 60px -40px rgba(0, 0, 0, 0.7);
-}
-.jqzz-toolbar {
-  z-index: 3;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 18px 40px -32px rgba(0, 0, 0, 0.8);
-}
-.jqzz-toolbar::after {
-  display: none;
+  border-right: none;
+  box-shadow: 20px 0 50px -40px rgba(0, 0, 0, 0.75);
 }
 .jqzz-play-bar {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 18px 40px -32px rgba(0, 0, 0, 0.8);
+  border-bottom: none;
+  box-shadow: 0 16px 40px -32px rgba(0, 0, 0, 0.8);
 }
-.jqzz-space .jqzz-play-bar {
-  border-bottom-color: color-mix(in srgb, var(--space) 30%, rgba(255, 255, 255, 0.1));
+.jqzz-sidebar::before,
+.jqzz-play-bar::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+.jqzz-sidebar::before {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42),
+    rgba(185, 166, 255, 0.18) 14%,
+    rgba(255, 255, 255, 0.04) 34%,
+    rgba(242, 169, 137, 0.22) 55%,
+    rgba(255, 255, 255, 0.05) 72%,
+    rgba(127, 178, 255, 0.28) 90%,
+    rgba(255, 255, 255, 0.12)
+  );
+  box-shadow: -1px 0 6px rgba(185, 166, 255, 0.12);
+}
+.jqzz-play-bar::before {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(185, 166, 255, 0.34) 18%,
+    rgba(255, 255, 255, 0.5) 32%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(242, 169, 137, 0.3) 70%,
+    rgba(127, 178, 255, 0.36) 86%,
+    rgba(255, 255, 255, 0.06)
+  );
+  box-shadow: 0 1px 6px rgba(185, 166, 255, 0.12);
+}
+/* the lines inside the sidebar: the same light, sideways */
+.jqzz-sid-head,
+.jqzz-sid-places,
+.jqzz-sid-account {
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.26) 18%,
+      rgba(185, 166, 255, 0.16) 45%,
+      rgba(242, 169, 137, 0.14) 70%,
+      transparent
+    )
+    1;
+}
+.jqzz-sid-places + .jqzz-sid-account {
+  border-top-color: transparent;
+  border-image: none;
+  border-top: none;
 }
 
 /* ─── the game's embers: scattered, uneven sizes, two layers at two speeds ── */
@@ -594,30 +655,29 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   to { transform: translate3d(0, -50%, 0); }
 }
 
-/* ─── the front page: the background drifts and leans toward the pointer ──
-   each layer at its own depth, so it reads as space rather than a slide */
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .warm,
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .shadow,
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .phase,
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-dither,
+/* ─── the background drifts and leans toward the pointer, everywhere ──
+   each light at its own depth, so it reads as space rather than a slide.
+   The dither stays where it is: it's the paper, the lights move over it. */
+.jqzz-aura > .warm,
+.jqzz-aura > .shadow,
+.jqzz-aura > .phase,
 .jqzz-welcome-burst {
   transition: translate 1.4s var(--ease);
 }
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .phase {
+.jqzz-aura > .phase {
+  will-change: opacity, transform;
   translate: calc(var(--mx, 0) * 70px) calc(var(--my, 0) * 50px);
   animation: auraDriftA 26s var(--ease-in-out) infinite alternate;
 }
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .warm {
+.jqzz-aura > .warm {
+  will-change: transform;
   translate: calc(var(--mx, 0) * -90px) calc(var(--my, 0) * -60px);
   animation: auraDriftB 31s var(--ease-in-out) infinite alternate;
 }
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-aura > .shadow {
+.jqzz-aura > .shadow {
+  will-change: transform;
   translate: calc(var(--mx, 0) * 40px) calc(var(--my, 0) * -30px);
   animation: auraDriftC 37s var(--ease-in-out) infinite alternate;
-}
-.jqzz-app:has(.jqzz-welcome-root) .jqzz-dither {
-  translate: calc(var(--mx, 0) * -18px) calc(var(--my, 0) * -14px);
-  scale: 1.05;
 }
 .jqzz-welcome-burst {
   translate: calc(var(--mx, 0) * 24px) calc(var(--my, 0) * 18px);
@@ -633,4 +693,116 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 @keyframes auraDriftC {
   from { transform: translate(0, -2%) scale(0.96); }
   to { transform: translate(6%, 4%) scale(1.08); }
+}
+
+/* ─── coming and going ────────────────────────────────────────────── */
+/* on a phone: the host's screen is gone, and what the game does about it */
+.jqzz-host-away {
+  margin: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--warm) 40%, transparent);
+  background: color-mix(in srgb, var(--warm) 12%, var(--surface-solid));
+  color: var(--text);
+  font-size: var(--fs-small);
+  text-align: center;
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+}
+/* the way back to a game you stepped out of */
+.jqzz-return {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 55;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(440px, calc(100vw - 32px));
+}
+.jqzz-return-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
+  box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.8), 0 0 30px -14px var(--accent);
+  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+}
+.jqzz-return-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 0 var(--ok);
+  animation: liveDot 1.8s var(--ease-in-out) infinite;
+}
+@keyframes liveDot {
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.jqzz-return-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.jqzz-return-text b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ─── controls on the glass: edges of light, not grey lines ───────────
+   The border goes transparent and a 1px ring is drawn on ::after with the
+   same refraction gradient as the glass edges: bright where it catches
+   the light (top left), a split into colour, dim at the bottom. */
+.jqzz-sidebar .jqzz-sid-action:not(.primary),
+.jqzz-sidebar .jqzz-search,
+.jqzz-sidebar .jqzz-people-btn,
+.jqzz-play-bar .jqzz-play-btn:not(.ghost):not(.primary),
+.jqzz-play-bar .jqzz-play-code {
+  position: relative;
+  border-color: transparent;
+}
+.jqzz-sidebar .jqzz-sid-action:not(.primary)::after,
+.jqzz-sidebar .jqzz-search::after,
+.jqzz-sidebar .jqzz-people-btn::after,
+.jqzz-play-bar .jqzz-play-btn:not(.ghost):not(.primary)::after,
+.jqzz-play-bar .jqzz-play-code::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.42),
+    rgba(185, 166, 255, 0.26) 30%,
+    rgba(255, 255, 255, 0.06) 55%,
+    rgba(242, 169, 137, 0.2) 78%,
+    rgba(127, 178, 255, 0.3)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.8;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.jqzz-sidebar .jqzz-sid-action:not(.primary):hover::after,
+.jqzz-sidebar .jqzz-search:focus-within::after,
+.jqzz-sidebar .jqzz-people-btn:hover::after,
+.jqzz-sidebar .jqzz-people-btn.open::after,
+.jqzz-play-bar .jqzz-play-btn:not(.ghost):not(.primary):hover::after,
+.jqzz-play-bar .jqzz-play-code:hover::after {
+  opacity: 1;
+}
+/* the search box shows focus with its own accent ring, over the gradient */
+.jqzz-sidebar .jqzz-search:focus-within {
+  border-color: var(--accent);
 }

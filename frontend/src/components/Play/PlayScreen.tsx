@@ -13,6 +13,7 @@ import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
+import { errorMessage } from "../../services/api";
 
 const STORE = (code: string) => `jqzz.mine.${code}`;
 
@@ -48,16 +49,43 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
     [code],
   );
 
-  // in the game? if not, join it once
+  // in the game? if not, join it, but only until the game says no (the host
+  // took you out, or it's full): then stop asking and say why
   const joining = useRef(false);
+  const [refused, setRefused] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const inGame = !!game?.players.some((p) => p.id === me);
   useEffect(() => {
-    if (!game || !me || inGame || joining.current || game.status === "FINISHED") return;
+    if (!game || !me || inGame || joining.current || refused || leaving || game.status === "FINISHED") return;
     joining.current = true;
-    act(() => playService.join(code, me)).finally(() => {
-      joining.current = false;
-    });
-  }, [game, me, inGame, act, code]);
+    playService
+      .join(code, me)
+      .catch((err) => setRefused(errorMessage(err)))
+      .finally(() => {
+        joining.current = false;
+      });
+  }, [game, me, inGame, code, refused, leaving]);
+
+  const leave = () => {
+    setLeaving(true);
+    playService
+      .leave(code, me)
+      .catch(() => {})
+      .finally(() => go("/"));
+  };
+
+  if (refused && game && !inGame) {
+    return (
+      <PlayFrame>
+        <div className="jqzz-play-center">
+          <p className="jqzz-play-prompt small">{refused}</p>
+          <button className="jqzz-play-btn" onClick={() => go("/join")}>
+            join another game
+          </button>
+        </div>
+      </PlayFrame>
+    );
+  }
 
   if (!game) {
     return (
@@ -86,14 +114,24 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
   return (
     <PlayFrame phase={game.phase}>
       <header className="jqzz-play-bar compact">
-        <BackButton title="leave this screen" />
+        <BackButton title="step out: you stay in the game and can come back" />
         <span className="jqzz-play-title">{game.quizName}</span>
         {player && game.status !== "LOBBY" && (
           <span className="jqzz-play-me">
             <span className="jqzz-annot">#{player.rank}</span> {player.score}
           </span>
         )}
+        {player && game.status !== "FINISHED" && <LeaveButton onLeave={leave} busy={leaving} />}
       </header>
+      {game.hostHere === false && game.status !== "FINISHED" && (
+        <p className="jqzz-host-away" role="status">
+          {game.pausedForHost
+            ? "the host's screen dropped out. the game waits for it and carries on when it's back."
+            : game.status === "LOBBY"
+              ? "the host isn't on the game screen right now. it starts when they're back."
+              : "the host's screen dropped out. if it's not back in a few seconds, the game pauses for it."}
+        </p>
+      )}
 
       <main className="jqzz-phone" key={`${game.status}-${game.index}-${game.interaction}`}>
         {game.status === "LOBBY" && (
@@ -275,4 +313,24 @@ const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }
     text = "no points this time";
   }
   return <div className={`jqzz-outcome ${tone}`}>{text}</div>;
+};
+
+/** Leaving for good takes your score with it, so it asks once. */
+const LeaveButton: React.FC<{ onLeave: () => void; busy: boolean }> = ({ onLeave, busy }) => {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 3500);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`jqzz-play-btn small ghost danger${armed ? " armed" : ""}`}
+      disabled={busy}
+      title="leave the game for good: your score goes with you"
+      onClick={() => (armed ? onLeave() : setArmed(true))}
+    >
+      {busy ? "leaving…" : armed ? "leave? score goes" : "leave"}
+    </button>
+  );
 };

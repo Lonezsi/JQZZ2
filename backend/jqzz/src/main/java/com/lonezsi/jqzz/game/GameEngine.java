@@ -58,6 +58,10 @@ public class GameEngine {
     private static final int CODE_LENGTH = 5;
     private static final long FORGET_FINISHED_MS = TimeUnit.HOURS.toMillis(1);
     private static final long FORGET_IDLE_MS = TimeUnit.HOURS.toMillis(6);
+    /** the host's screen can blink (a reload, a flaky wifi) this long before the game waits for it */
+    static final long HOST_GRACE_MS = TimeUnit.SECONDS.toMillis(20);
+    /** a game paused for a host who never comes back ends after this, so players see their scores */
+    static final long HOST_GIVE_UP_MS = TimeUnit.MINUTES.toMillis(10);
 
     private final QuizRepository quizRepository;
     private final UserRepository userRepository;
@@ -85,6 +89,7 @@ public class GameEngine {
         this.records = records;
         this.json = json;
         clock.scheduleAtFixedRate(this::forgetOldGames, 10, 10, TimeUnit.MINUTES);
+        presence.onWatchChange(this::watchChanged);
     }
 
     @PreDestroy
@@ -209,19 +214,105 @@ public class GameEngine {
     }
 
     public Map<String, Object> kick(String code, String userId, String playerId) {
-        return hostChange(code, userId, g -> g.removePlayer(playerId, now()));
+        return hostChange(code, userId, g -> g.kick(playerId, now()));
+    }
+
+    // ─── coming and going ──────────────────────────────────────────────
+
+    /**
+     * Someone opened or closed a game's screen. Everyone sees who's away; if
+     * it was the host, the game may need to wait for them, or stop waiting.
+     */
+    private void watchChanged(String code, String userId) {
+        Game game = games.get(code);
+        if (game == null) return;
+        if (userId.equals(game.hostId())) hostCheck(code);
+        else publish(game);
+    }
+
+    /**
+     * The host's screen is the show. If it drops out mid-game, the game keeps
+     * going for HOST_GRACE_MS (a reload, a wifi blink), then pauses until it
+     * comes back, and resumes by itself when it does. If it never does, the
+     * game ends after HOST_GIVE_UP_MS so players still get their scores.
+     */
+    void hostCheck(String code) {
+        Game game = games.get(code);
+        if (game == null) return;
+        boolean here = presence.isWatching(game.hostId(), code);
+        long now = now();
+        long next = -1;
+        boolean touched = false;
+        synchronized (game) {
+            if (here) {
+                game.hostAwaySince = 0;
+                if (game.status() == Game.Status.PAUSED && game.pausedForHost) {
+                    game.resume(now);
+                    touched = true;
+                }
+            } else {
+                if (game.hostAwaySince == 0) game.hostAwaySince = now;
+                long away = now - game.hostAwaySince;
+                if (game.status() == Game.Status.PLAYING) {
+                    if (away >= HOST_GRACE_MS) {
+                        game.pause(now);
+                        game.pausedForHost = true;
+                        touched = true;
+                        next = HOST_GIVE_UP_MS;
+                    } else {
+                        next = HOST_GRACE_MS - away;
+                    }
+                } else if (game.status() == Game.Status.PAUSED && game.pausedForHost) {
+                    if (away >= HOST_GRACE_MS + HOST_GIVE_UP_MS) {
+                        game.end(now);
+                        touched = true;
+                    } else {
+                        next = HOST_GRACE_MS + HOST_GIVE_UP_MS - away;
+                    }
+                }
+            }
+            game.version++;
+        }
+        if (next >= 0) clock.schedule(() -> hostCheck(code), next + 50, TimeUnit.MILLISECONDS);
+        if (touched) reschedule(game);
+        publish(game);
+        if (touched) record(game);
+    }
+
+    /** Games you're hosting or playing that haven't finished: the way back to them. */
+    public List<Map<String, Object>> mine(String userId) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (userId == null || userId.isBlank()) return out;
+        for (Game game : games.values()) {
+            synchronized (game) {
+                boolean hosting = userId.equals(game.hostId());
+                boolean playing = game.players.containsKey(userId);
+                if ((!hosting && !playing) || game.status() == Game.Status.FINISHED) continue;
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("code", game.code());
+                m.put("quizName", game.quizName);
+                m.put("status", game.status().name());
+                m.put("role", hosting ? "host" : "player");
+                m.put("touchedAt", game.touchedAt());
+                out.add(m);
+            }
+        }
+        out.sort((a, b) -> Long.compare((long) b.get("touchedAt"), (long) a.get("touchedAt")));
+        return out;
     }
 
     // ─── what players send ─────────────────────────────────────────────
 
     public Map<String, Object> submit(String code, String userId, List<Long> picks, String text,
             Map<Long, String> tiers) {
-        return change(find(code), g -> g.submit(userId, picks, text, tiers, now(), online()));
+        Game game = find(code);
+        return change(game, g -> g.submit(userId, picks, text, tiers, now(), online(game)));
     }
 
     public Map<String, Object> vote(String code, String userId, String choice, Integer match,
             Map<String, String> guesses) {
-        return change(find(code), g -> g.vote(userId, choice, match, guesses, now(), online()));
+        Game game = find(code);
+        return change(game, g -> g.vote(userId, choice, match, guesses, now(), online(game)));
     }
 
     // ─── the clock ─────────────────────────────────────────────────────
@@ -413,11 +504,12 @@ public class GameEngine {
     }
 
     private Map<String, Object> view(Game game) {
-        return game.view(now(), online());
+        return game.view(now(), online(game));
     }
 
-    private Predicate<String> online() {
-        return presence::isOnline;
+    /** At this game: a tab on its screen. Online elsewhere in the app doesn't count. */
+    private Predicate<String> online(Game game) {
+        return id -> presence.isWatching(id, game.code());
     }
 
     private Game find(String code) {
@@ -537,6 +629,11 @@ public class GameEngine {
 
     long now() {
         return System.currentTimeMillis();
+    }
+
+    /** for tests in this package */
+    Game game(String code) {
+        return games.get(code);
     }
 
     private static ResponseStatusException notFound(String message) {

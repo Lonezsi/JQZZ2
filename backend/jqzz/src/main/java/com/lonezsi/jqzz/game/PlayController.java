@@ -39,6 +39,12 @@ public class PlayController {
         this.stash = stash;
     }
 
+    /** ?userId: games you host or play that haven't finished */
+    @GetMapping("/mine")
+    public List<Map<String, Object>> mine(@org.springframework.web.bind.annotation.RequestParam("userId") String userId) {
+        return engine.mine(userId);
+    }
+
     @PostMapping("/host")
     public Map<String, Object> host(@RequestBody PlayRequest r) {
         return engine.host(r.quizId, r.userId);
