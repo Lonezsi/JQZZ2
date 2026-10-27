@@ -136,7 +136,7 @@
   align-items: center;
   gap: 8px;
   min-height: 34px;
-  padding: 4px 7px 4px 13px;
+  padding: 4px 11px 4px 13px; /* a rounder end needs more room before the last keycap */
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--sunken);
