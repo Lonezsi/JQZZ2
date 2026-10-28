@@ -449,3 +449,17 @@
 .jqzz-touch-dragging {
   opacity: 0.4;
 }
+
+/* commands on a phone is the star alone, always: the fold-out label and
+   its padding (motion.css) would push the star off centre */
+@media (max-width: 760px) {
+  :root .jqzz-cmdk .jqzz-cmdk-more {
+    display: none;
+  }
+  :root .jqzz-cmdk,
+  :root .jqzz-cmdk.folded,
+  :root .jqzz-cmdk.folded:hover,
+  :root .jqzz-cmdk.folded:focus-visible {
+    padding: 0;
+  }
+}
