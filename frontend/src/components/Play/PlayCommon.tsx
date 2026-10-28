@@ -4,6 +4,7 @@ import { Avatar, resolveImage } from "../common/Avatar";
 import { Atmosphere } from "../common/Atmosphere";
 import { useSecondsLeft } from "../../hooks/useGame";
 import { typeLabel } from "../../utils/questionInfo";
+import { useAuth } from "../../contexts/AuthContext";
 
 
 /** The background and frame every play screen sits in. */
@@ -181,4 +182,15 @@ export const QuestionImage: React.FC<{
   }, [src, ownerId, viewerId]);
   if (!url) return null;
   return <img className={className} src={url} alt="" />;
+};
+
+/** An option's own picture, in its tile or chip, if it has one. */
+export const AnswerPicture: React.FC<{ src?: string | null; game: GameState; className?: string }> = ({
+  src,
+  game,
+  className = "jqzz-tile-img",
+}) => {
+  const { user } = useAuth();
+  if (!src) return null;
+  return <QuestionImage src={src} ownerId={game.authorId} viewerId={user?.id ?? ""} className={className} />;
 };

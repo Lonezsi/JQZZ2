@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { GameEntry, GameState } from "../../types/play";
 import { TIERS } from "../../types/play";
-import { QuestionImage } from "./PlayCommon";
+import { AnswerPicture, QuestionImage } from "./PlayCommon";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 
 /** What this player sent for a question, remembered on their own device. */
@@ -70,6 +70,7 @@ const Choice: React.FC<Props> = ({ game, mine, submit, remember }) => {
             onClick={() => tap(a.id)}
             aria-pressed={picked.includes(a.id)}
           >
+            <AnswerPicture src={a.imageUrl} game={game} />
             <span className="jqzz-tile-letter">{tileLetter(i)}</span>
             <span className="jqzz-tile-text">{a.text || "…"}</span>
           </button>
@@ -106,6 +107,7 @@ const Tiers: React.FC<Props> = ({ game, mine, submit, remember }) => {
     <div className="jqzz-tier-input">
       {q.answers.map((a) => (
         <div key={a.id} className="jqzz-tier-item">
+          <AnswerPicture src={a.imageUrl} game={game} className="jqzz-tier-item-img" />
           <span className="jqzz-tier-item-text">{a.text || "…"}</span>
           <div className="jqzz-tier-picks" role="group" aria-label={`Tier for ${a.text}`}>
             {TIERS.map((t) => (

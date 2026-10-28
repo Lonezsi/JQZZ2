@@ -4,7 +4,7 @@ import { useGame } from "../../hooks/useGame";
 import { go, joinUrl } from "../../hooks/useHashRoute";
 import { playService } from "../../services/playService";
 import type { GameState } from "../../types/play";
-import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage } from "./PlayCommon";
+import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage, AnswerPicture } from "./PlayCommon";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
@@ -235,6 +235,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
             <div className="jqzz-tiles">
               {q.answers.map((a, i) => (
                 <div key={a.id} className="jqzz-tile" style={{ "--tile": tileColour(i) } as React.CSSProperties}>
+                  <AnswerPicture src={a.imageUrl} game={game} />
                   <span className="jqzz-tile-letter">{tileLetter(i)}</span>
                   <span className="jqzz-tile-text">{a.text || "…"}</span>
                 </div>
@@ -245,6 +246,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
             <div className="jqzz-tier-items preview">
               {q.answers.map((a) => (
                 <span key={a.id} className="jqzz-chip">
+                  <AnswerPicture src={a.imageUrl} game={game} className="jqzz-chip-img" />
                   {a.text}
                 </span>
               ))}

@@ -1689,3 +1689,154 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     animation: none;
   }
 }
+
+/* ─── answers with their own pictures ──────────────────────────────── */
+/* in a game: the picture fills the top of the tile, letter and text under it */
+.jqzz-tile:has(> .jqzz-tile-img) {
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+.jqzz-tile-img {
+  position: relative;
+  order: -1;
+  flex: 1 0 100%;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 34vh;
+  object-fit: cover;
+  border-radius: calc(var(--radius-md) - 6px);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tile) 40%, transparent);
+}
+.jqzz-tile.wrong .jqzz-tile-img {
+  filter: grayscale(0.7) brightness(0.7);
+}
+.jqzz-tier-item-img,
+.jqzz-chip-img {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.jqzz-chip-img {
+  width: 22px;
+  height: 22px;
+  margin: -2px 6px -2px -4px;
+  vertical-align: middle;
+  border-radius: 6px;
+}
+.jqzz-tier-item:has(> .jqzz-tier-item-img) {
+  gap: 10px;
+}
+
+/* in the editor: a thumbnail in the answer's chip */
+.jqzz-ans-chip-img {
+  width: 16px;
+  height: 16px;
+  margin: -2px 5px -2px -3px;
+  vertical-align: middle;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* the inspector's answer rows: a picture slot at the start */
+.jqzz-answer-pic {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--sunken);
+  color: var(--text-3);
+  cursor: default;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    transform var(--dur-2) var(--ease-pop, var(--ease));
+}
+.jqzz-answer-pic.filled {
+  border-style: solid;
+  cursor: pointer;
+}
+.jqzz-answer-pic.over {
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.1);
+}
+.jqzz-answer-pic-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.jqzz-answer-pic-off {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(5, 3, 10, 0.6);
+  color: var(--text);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.jqzz-answer-pic.filled:hover .jqzz-answer-pic-off,
+.jqzz-answer-pic.filled:focus-visible .jqzz-answer-pic-off {
+  opacity: 1;
+}
+
+/* ─── a narrow editor (a wide sidebar, the stash, the inspector) ─────
+   The timeline measures itself, not the window: when it's squeezed, the
+   hover buttons float over the card instead of holding their room, and
+   the icons shrink, so the step text keeps its space. */
+.jqzz-timeline {
+  container: timeline / inline-size;
+}
+@container timeline (max-width: 520px) {
+  .jqzz-group-num {
+    font-size: 17px;
+    padding-right: 4px;
+  }
+  .jqzz-card,
+  .jqzz-text-block,
+  .jqzz-divider-block {
+    gap: 8px;
+    padding-right: 10px;
+  }
+  .jqzz-card-glyph {
+    width: 28px;
+    height: 28px;
+  }
+  .jqzz-card-time {
+    min-width: 0;
+  }
+  .jqzz-card-actions {
+    /* beats the card's "every child sits in the flow" rule, only while narrow */
+    position: absolute !important;
+    top: 6px;
+    right: 6px;
+    z-index: 3;
+    margin: 0;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--surface-solid);
+    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+  .jqzz-card:hover .jqzz-card-actions,
+  .jqzz-card:focus-within .jqzz-card-actions,
+  .jqzz-card.selected .jqzz-card-actions,
+  .jqzz-text-block:hover .jqzz-card-actions,
+  .jqzz-divider-block:hover .jqzz-card-actions {
+    pointer-events: auto;
+  }
+  .jqzz-group-text {
+    font-size: 15px;
+  }
+}

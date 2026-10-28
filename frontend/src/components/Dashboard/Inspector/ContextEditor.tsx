@@ -6,6 +6,11 @@ import { QUESTION_TYPE_LABEL } from "../../../utils/questionInfo";
 import { Select } from "../../common/Select";
 import { SETTING_LABEL, formatSettings, parseSettings } from "../../../utils/settings";
 import type { QuizSettings } from "../../../utils/settings";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useQuiz } from "../../../contexts/QuizContext";
+import { DRAG_IMAGE_KEY, dragging } from "../../../utils/dragKeys";
+import { QuestionImage } from "../../Play/PlayCommon";
+import { Glyph } from "../../common/Glyph";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -15,6 +20,52 @@ interface ContextEditorProps {
 }
 
 const PHASES = ["WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"] as const;
+
+/** An answer's picture: drop one from the stash on it; a click takes it off again. */
+const AnswerPictureSlot: React.FC<{ src?: string; index: number; onChange: (ref: string) => void }> = ({
+  src,
+  index,
+  onChange,
+}) => {
+  const { user } = useAuth();
+  const { quiz } = useQuiz();
+  const [over, setOver] = useState(false);
+  const viewer = user?.id ?? "";
+  return (
+    <button
+      type="button"
+      className={`jqzz-answer-pic${src ? " filled" : ""}${over ? " over" : ""}`}
+      aria-label={src ? `Remove the picture from answer ${index + 1}` : `Answer ${index + 1} has no picture`}
+      title={src ? "take the picture off" : "drag a picture from your stash here"}
+      onClick={() => src && onChange("")}
+      onDragOver={(e) => {
+        if (!dragging(e, DRAG_IMAGE_KEY)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        const ref = e.dataTransfer.getData(DRAG_IMAGE_KEY);
+        setOver(false);
+        if (!ref) return;
+        e.preventDefault();
+        onChange(ref);
+      }}
+    >
+      {src ? (
+        <>
+          <QuestionImage src={src} ownerId={quiz?.authorId ?? viewer} viewerId={viewer} className="jqzz-answer-pic-img" />
+          <span className="jqzz-answer-pic-off" aria-hidden="true">
+            ✕
+          </span>
+        </>
+      ) : (
+        <Glyph name="IMAGE" size={12} />
+      )}
+    </button>
+  );
+};
 
 export const ContextEditor: React.FC<ContextEditorProps> = ({
   action,
@@ -216,12 +267,14 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
               </div>
               {answers.length > 0 && (
                 <div className="jqzz-answer-head" aria-hidden="true">
+                  <span />
                   <span>answer</span>
                   <span>points</span>
                 </div>
               )}
               {answers.map((a, i) => (
                 <div key={a.id} className="jqzz-answer-row">
+                  <AnswerPictureSlot src={a.imageUrl} index={i} onChange={(ref) => updateAnswer(i, "imageUrl", ref)} />
                   <input
                     className="jqzz-answer-text"
                     value={a.text}

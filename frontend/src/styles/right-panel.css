@@ -181,7 +181,7 @@
 /* Answers */
 .jqzz-answer-head {
   display: grid;
-  grid-template-columns: 1fr 58px 26px;
+  grid-template-columns: 30px 1fr 58px 26px;
   gap: 6px;
   margin-bottom: 4px;
   font-size: var(--fs-small);
@@ -189,7 +189,7 @@
 }
 .jqzz-answer-row {
   display: grid;
-  grid-template-columns: 1fr 58px 26px;
+  grid-template-columns: 30px 1fr 58px 26px;
   gap: 6px;
   align-items: center;
   margin-bottom: 6px;

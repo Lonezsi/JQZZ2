@@ -97,6 +97,14 @@ function ImageSlots({ slots, onPlace }: { slots: ImageSlot[]; onPlace: (slot: st
   );
 }
 
+/** An option's picture, small, in its chip. */
+function ChipPicture({ src }: { src: string }) {
+  const { user } = useAuth();
+  const { quiz } = useQuiz();
+  const viewer = user?.id ?? "";
+  return <QuestionImage src={src} ownerId={quiz?.authorId ?? viewer} viewerId={viewer} className="jqzz-ans-chip-img" />;
+}
+
 /** a phone, where the inspector is a sheet over the bottom of the screen */
 const PHONE = "(max-width: 760px)";
 
@@ -147,6 +155,7 @@ function PhasePreview({ action }: { action: Action }) {
         <span className="jqzz-prev">
           {answers.slice(0, 4).map((a) => (
             <span key={a.id} className={`jqzz-ans-chip${(a.value || 0) > 0 ? " scores" : ""}`}>
+              {a.imageUrl && <ChipPicture src={a.imageUrl} />}
               {a.text || "…"}
               <b>{a.value}</b>
             </span>

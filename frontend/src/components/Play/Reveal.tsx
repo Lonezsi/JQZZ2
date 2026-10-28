@@ -3,6 +3,7 @@ import type { GameBracket, GameMatch, GameState } from "../../types/play";
 import { TIERS } from "../../types/play";
 import type { MyAnswer } from "./Answering";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
+import { AnswerPicture } from "./PlayCommon";
 
 /** What happened on the current question, for whichever type it is. */
 export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mine }) => {
@@ -35,6 +36,7 @@ const ChoiceReveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mi
             style={{ "--tile": tileColour(i), "--share": n / most } as React.CSSProperties}
           >
             <span className="jqzz-tile-bar" aria-hidden="true" />
+            <AnswerPicture src={a.imageUrl} game={game} />
             <span className="jqzz-tile-letter">{right ? "✓" : tileLetter(i)}</span>
             <span className="jqzz-tile-text">{a.text || "…"}</span>
             <span className="jqzz-tile-count">
