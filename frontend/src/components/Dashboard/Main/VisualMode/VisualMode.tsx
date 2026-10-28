@@ -61,7 +61,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onNewQuiz,
   onImport,
 }) => {
-  const { dropSnippet, setMode, reorderActions, moveActions } = useQuiz();
+  const { dropSnippet, setMode, reorderActions, moveActions, deleteActions } = useQuiz();
 
   // A quiz opens in pieces: the first few items straight away, the rest a
   // batch at a time while the browser is idle, with placeholders where the
@@ -347,6 +347,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                     >
                       ↓
                     </button>
+                    <DeleteQuestionButton
+                      n={n ?? 0}
+                      onDelete={() => deleteActions(item.actions.map((a) => a.id))}
+                    />
                   </span>
                 </div>
                 <span className="jqzz-group-text">{q.text || "untitled question"}</span>
@@ -423,3 +427,33 @@ const LoadingSkeleton: React.FC<{ count: number }> = ({ count }) => (
     ))}
   </>
 );
+
+/**
+ * Deletes a whole question, every step of it. That's more than a step's own
+ * delete takes, so it asks once: the first click arms it, a second within a
+ * few seconds deletes.
+ */
+const DeleteQuestionButton: React.FC<{ n: number; onDelete: () => void }> = ({ n, onDelete }) => {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 3000);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`jqzz-group-del${armed ? " armed" : ""}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (armed) onDelete();
+        else setArmed(true);
+      }}
+      onBlur={() => setArmed(false)}
+      aria-label={armed ? `Really delete question ${n}` : `Delete question ${n}`}
+      title={armed ? "click again to delete the whole question" : "delete this question"}
+    >
+      <span aria-hidden="true">✕</span>
+      <span className="jqzz-group-del-text">delete?</span>
+    </button>
+  );
+};

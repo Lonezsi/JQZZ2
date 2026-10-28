@@ -1976,3 +1976,60 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   flex: 1 1 auto;
   justify-content: center;
 }
+
+/* ─── deleting a whole question ─────────────────────────────────────── */
+.jqzz-group-del {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  min-width: 22px;
+  justify-content: center;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.45;
+  transition:
+    opacity var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.jqzz-group-head:hover .jqzz-group-del,
+.jqzz-group-del:focus-visible {
+  opacity: 1;
+}
+.jqzz-group-del:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+/* armed: it asks before it takes the whole question */
+.jqzz-group-del-text {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 600;
+  transition:
+    max-width 260ms var(--ease),
+    margin 260ms var(--ease);
+}
+.jqzz-group-del.armed {
+  opacity: 1;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.jqzz-group-del.armed .jqzz-group-del-text {
+  max-width: 60px;
+  margin-left: 5px;
+}
+/* no hover on a phone: always there */
+@media (hover: none) {
+  .jqzz-group-del {
+    opacity: 0.8;
+  }
+}

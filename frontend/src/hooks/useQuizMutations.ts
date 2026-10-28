@@ -83,6 +83,15 @@ export const useQuizMutations = (
     [updateQuiz],
   );
 
+  /** several steps at once: a whole question */
+  const deleteActions = useCallback(
+    (ids: number[]) => {
+      const gone = new Set(ids);
+      updateQuiz((quiz) => ({ ...quiz, actions: quiz.actions.filter((a) => !gone.has(a.id)) }));
+    },
+    [updateQuiz],
+  );
+
   const duplicateAction = useCallback(
     (id: number) => {
       updateQuiz((quiz) => {
@@ -188,6 +197,7 @@ export const useQuizMutations = (
     duplicateAction,
     reorderActions,
     moveActions,
+    deleteActions,
     newQuiz,
     dropSnippet,
     handleParsed,
