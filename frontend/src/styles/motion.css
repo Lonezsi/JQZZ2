@@ -1965,3 +1965,14 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     transition: none;
   }
 }
+
+/* no quiz open: "no quiz open" is short, so it stays on the one row with
+   commands instead of wrapping onto its own like a long quiz name does */
+.jqzz-toolbar.empty {
+  flex-wrap: nowrap;
+}
+.jqzz-toolbar.empty .jqzz-toolbar-title {
+  order: 0;
+  flex: 1 1 auto;
+  justify-content: center;
+}

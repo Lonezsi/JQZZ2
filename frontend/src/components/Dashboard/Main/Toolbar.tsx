@@ -59,7 +59,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     !!quiz && quiz.actions.some((a) => a.phase !== "TEXT" && a.phase !== "DIVIDER");
 
   return (
-    <div className="jqzz-toolbar">
+    <div className={`jqzz-toolbar${quiz ? "" : " empty"}`}>
       {/* only shown on a phone, where the sidebar is a drawer */}
       {onMenu && (
         <button className="jqzz-menu-btn" onClick={onMenu} aria-label="Quizzes and account">
