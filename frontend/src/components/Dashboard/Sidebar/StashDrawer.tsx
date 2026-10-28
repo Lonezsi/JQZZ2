@@ -25,23 +25,38 @@ interface Picture {
   imageId: number;
 }
 
-/**
- * The line between your quizzes and your stash. The arrow sits on it, cutting
- * it: up pulls the stash open under the quizzes, down puts it away. Anywhere
- * else on the line, drag to share the room between the two.
- */
-export const StashEdge: React.FC<{
-  open: boolean;
-  onToggle: () => void;
-  onResize: (clientY: number) => void;
-  onResizeEnd: () => void;
-}> = ({ open, onToggle, onResize, onResizeEnd }) => {
+/** The arrow on the line above "stash": up opens the stash over that line, down puts it away. */
+export const StashArrow = React.forwardRef<HTMLButtonElement, { open: boolean; onToggle: () => void }>(
+  ({ open, onToggle }, ref) => (
+    <button
+      ref={ref}
+      className={`jqzz-stash-arrow${open ? " open" : ""}`}
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-label={open ? "Put the stash away" : "Open your stash here"}
+      title={open ? "put the stash away" : "your stash, under your quizzes"}
+    >
+      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+        <path d="m3.5 10 4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  ),
+);
+StashArrow.displayName = "StashArrow";
+
+/** Between your quizzes and the open stash: drag it to share the room between them. */
+export const StashSplit: React.FC<{ onResize: (clientY: number) => void; onResizeEnd: () => void }> = ({
+  onResize,
+  onResizeEnd,
+}) => {
   const [dragging, setDragging] = useState(false);
   return (
     <div
-      className={`jqzz-stash-edge${open ? " open" : ""}${dragging ? " dragging" : ""}`}
+      className={`jqzz-stash-split${dragging ? " dragging" : ""}`}
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Drag to resize your quizzes and your stash"
       onPointerDown={(e) => {
-        if (!open || (e.target as Element).closest("button")) return;
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
         setDragging(true);
@@ -53,19 +68,7 @@ export const StashEdge: React.FC<{
         onResizeEnd();
       }}
       onPointerCancel={() => setDragging(false)}
-    >
-      <button
-        className="jqzz-stash-arrow"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-label={open ? "Put the stash away" : "Open your stash here"}
-        title={open ? "put the stash away" : "your stash, under your quizzes"}
-      >
-        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-          <path d="m3.5 10 4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-    </div>
+    />
   );
 };
 

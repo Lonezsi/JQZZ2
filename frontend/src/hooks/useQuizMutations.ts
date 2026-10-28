@@ -1,10 +1,37 @@
 import { useCallback } from "react";
 import type { Quiz, Action, Question } from "../types";
 import { quizService } from "../services/quizService";
-import { SNIPPETS } from "../constants/snippets";
 import { generateId } from "../utils/idGenerator";
 import { errorMessage } from "../services/api";
-import { contentToActions, readContent, readType, typeToActions } from "../utils/stashContent";
+import { snippetActions } from "../utils/snippetActions";
+import { DEFAULTS, formatSettings, settingsAt } from "../utils/settings";
+import type { QuizSettings } from "../utils/settings";
+
+const same = (a: QuizSettings, b: QuizSettings) =>
+  (Object.keys(DEFAULTS) as (keyof QuizSettings)[]).every((k) => a[k] === b[k]);
+const block = (s: QuizSettings): Action => ({
+  id: generateId(),
+  phase: "SETTING",
+  time: 0,
+  question: null,
+  preview: formatSettings(s),
+});
+
+/**
+ * Steps carrying their own settings blocks (a whole quiz) keep to themselves
+ * when pasted in among other questions: they start from the defaults they
+ * were made with, and whatever was in force there comes back after them.
+ */
+function selfContained(added: Action[], actions: Action[], at: number): Action[] {
+  if (!added.some((a) => a.phase === "SETTING") || !added.some((a) => a.question)) return added;
+  const before = at > 0 ? (settingsAt(actions).get(actions[at - 1].id) ?? DEFAULTS) : DEFAULTS;
+  const after = settingsAt(added).get(added[added.length - 1].id) ?? DEFAULTS;
+  const out = [...added];
+  if (!same(before, DEFAULTS)) out.unshift(block(DEFAULTS));
+  const leaving = same(before, DEFAULTS) ? after : (settingsAt(out).get(out[out.length - 1].id) ?? DEFAULTS);
+  if (at < actions.length && !same(leaving, before)) out.push(block(before));
+  return out;
+}
 
 export const useQuizMutations = (
   activeQuizId: number | null,
@@ -102,77 +129,17 @@ export const useQuizMutations = (
     }
   }, [setQuizzes, authorId]);
 
+  /** A snippet's steps into the open quiz: at an action index, or at the end. */
   const dropSnippet = useCallback(
-    (snippetId: string) => {
+    (snippetId: string, at?: number) => {
       if (!activeQuizId) return;
-      // "set:shuffle=on": a settings block
-      if (snippetId.startsWith("set:")) {
-        const block: Action = {
-          id: generateId(),
-          phase: "SETTING",
-          time: 0,
-          question: null,
-          preview: snippetId.slice(4),
-        };
-        setQuizzes((prev) =>
-          prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, block] } : quiz)),
-        );
-        return;
-      }
-      // "type:{json}": a new question of a stashed type
-      if (snippetId.startsWith("type:")) {
-        let added: Action[] = [];
-        try {
-          added = typeToActions(readType({ payload: snippetId.slice(5), title: null }));
-        } catch {
-          return;
-        }
-        setQuizzes((prev) =>
-          prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, ...added] } : quiz)),
-        );
-        return;
-      }
-      // "stash:{json}": a question or quiz from the stash, with all its steps
-      if (snippetId.startsWith("stash:")) {
-        let added: Action[] = [];
-        try {
-          added = contentToActions(readContent({ payload: snippetId.slice(6) }));
-        } catch {
-          return;
-        }
-        setQuizzes((prev) =>
-          prev.map((quiz) => (quiz.id === activeQuizId ? { ...quiz, actions: [...quiz.actions, ...added] } : quiz)),
-        );
-        return;
-      }
-      const snippet = SNIPPETS.find((s) => s.id === snippetId);
-      if (!snippet) return;
-
+      const added = snippetActions(snippetId);
+      if (added.length === 0) return;
       setQuizzes((prev) =>
         prev.map((quiz) => {
           if (quiz.id !== activeQuizId) return quiz;
-
-          const newQuestion: Question = {
-            id: generateId(),
-            text: "New Question",
-            imageUrl: "",
-            type: "PREWRITTEN_SINGLE",
-            elaborationText: "",
-            answers: [],
-          };
-
-          const newActions: Action[] = snippet.steps.map((s) => ({
-            id: generateId(),
-            phase: s.phase,
-            time: s.time,
-            question: newQuestion,
-            preview: s.preview,
-          }));
-
-          return {
-            ...quiz,
-            actions: [...quiz.actions, ...newActions],
-          };
+          const i = at == null ? quiz.actions.length : Math.max(0, Math.min(at, quiz.actions.length));
+          return { ...quiz, actions: [...quiz.actions.slice(0, i), ...selfContained(added, quiz.actions, i), ...quiz.actions.slice(i)] };
         }),
       );
     },

@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { User, Quiz } from "../../../types";
 import { QuizList } from "./QuizList";
 import { Avatar } from "../../common/Avatar";
 import { Popover } from "../../common/Popover";
 import { PeopleList } from "./PeopleList";
-import { StashDrawer, StashEdge } from "./StashDrawer";
+import { StashArrow, StashDrawer, StashSplit } from "./StashDrawer";
 import { SIDEBAR_MAX, SIDEBAR_MIN, useSidebarLayout } from "../../../hooks/useSidebarLayout";
 import { usePeople } from "../../../hooks/usePeople";
 import { useFriends } from "../../../hooks/useFriends";
@@ -64,6 +64,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setShare(Math.max(0.18, Math.min(0.82, (box.bottom - clientY) / box.height)));
   };
   const widthDrag = useRef(false);
+
+  // the arrow cuts the line it sits on: where, measured, since it follows the stash link
+  const placesRef = useRef<HTMLElement>(null);
+  const arrowRef = useRef<HTMLButtonElement>(null);
+  const [cut, setCut] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const nav = placesRef.current;
+    const arrow = arrowRef.current;
+    if (!nav || !arrow) return;
+    const measure = () => {
+      const n = nav.getBoundingClientRect();
+      const a = arrow.getBoundingClientRect();
+      setCut(Math.round(a.left + a.width / 2 - n.left));
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(nav);
+    return () => watch.disconnect();
+  }, [canStash]);
   const { connected } = useWebSocket();
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -173,10 +192,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onSelectQuiz={onSelectQuiz}
           onCreate={makeNamed}
         />
-        {canStash && (
-          <StashEdge
-            open={stashOpen}
-            onToggle={() => setLayout({ stashOpen: !stashOpen })}
+        {stashOpen && (
+          <StashSplit
             onResize={resizeSplit}
             onResizeEnd={() => {
               setResizing(false);
@@ -189,19 +206,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* your own places: they live on your profile */}
       {identity && (
-        <nav className="jqzz-sid-places" aria-label="Yours">
+        <nav
+          ref={placesRef}
+          className={`jqzz-sid-places${canStash ? " with-arrow" : ""}`}
+          aria-label="Yours"
+          style={canStash && cut != null ? ({ "--cut": `${cut}px` } as React.CSSProperties) : undefined}
+        >
           <a href="#/me/history" aria-keyshortcuts={ariaShortcut("Mod H")} title={`your games · ${modLabel("Mod H")}`}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8M2.5 2.5v2.4h2.4M8 5v3.2l2 1.4" />
             </svg>
             history
           </a>
-          <a href="#/me/stash" aria-keyshortcuts={ariaShortcut("Mod B")} title={`what you saved · ${modLabel("Mod B")}`}>
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M2.5 5.5h11v7.5h-11zM4 5.5 5.2 3h5.6L12 5.5M6.2 8.5h3.6" />
-            </svg>
-            stash
-          </a>
+          <span className="jqzz-sid-stash">
+            {canStash && (
+              <StashArrow ref={arrowRef} open={stashOpen} onToggle={() => setLayout({ stashOpen: !stashOpen })} />
+            )}
+            <a href="#/me/stash" aria-keyshortcuts={ariaShortcut("Mod B")} title={`what you saved · ${modLabel("Mod B")}`}>
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M2.5 5.5h11v7.5h-11zM4 5.5 5.2 3h5.6L12 5.5M6.2 8.5h3.6" />
+              </svg>
+              stash
+            </a>
+          </span>
         </nav>
       )}
 

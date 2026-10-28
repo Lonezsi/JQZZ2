@@ -56,7 +56,7 @@ interface QuizContextType {
   /** steps from the stash, added to the end of a quiz */
   appendActions: (quizId: number, actions: Action[]) => void;
   importScript: (name: string, script: string) => Promise<void>;
-  dropSnippet: (snippetId: string) => void;
+  dropSnippet: (snippetId: string, at?: number) => void;
   handleParsed: (questions: Question[], actions: Action[]) => void;
 }
 

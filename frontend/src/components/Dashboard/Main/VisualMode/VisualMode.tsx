@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Action, Quiz, RenderItem } from "../../../../types";
 import { ActionCard } from "./ActionCard";
 import { EmptyState } from "./EmptyState";
@@ -11,6 +11,10 @@ import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
 import { changed, describe, settingsAt } from "../../../../utils/settings";
 import { AddTypeButton } from "./AddTypeButton";
+import { DropSkeleton } from "./DropSkeleton";
+import { DRAG_SNIPPET_KEY, dragging } from "../../../../utils/dragKeys";
+import { snippetActions } from "../../../../utils/snippetActions";
+import { readContent } from "../../../../utils/stashContent";
 
 interface VisualModeProps {
   quiz: Quiz | undefined;
@@ -67,6 +71,47 @@ export const VisualMode: React.FC<VisualModeProps> = ({
     )
     .join("|")}`;
   const timelineRef = useFlip<HTMLDivElement>(flipSignature);
+
+  // Something being dragged in from the tray or the stash: what it will become
+  // (read once, when the drag starts, since a drag hides its data until the
+  // drop) and the gap between the timeline's items where it would land.
+  const [incoming, setIncoming] = useState<{ actions: Action[]; name?: string } | null>(null);
+  const [slot, setSlot] = useState<number | null>(null);
+  const slotRef = useRef<number | null>(null);
+  useEffect(() => {
+    const start = (e: DragEvent) => {
+      const id = e.dataTransfer?.getData(DRAG_SNIPPET_KEY);
+      if (!id) return;
+      const actions = snippetActions(id);
+      const name = id.startsWith("stash:") ? readContent({ payload: id.slice(6) }).name : undefined;
+      setIncoming(actions.length ? { actions, name } : null);
+    };
+    const end = () => {
+      setIncoming(null);
+      setSlot(null);
+      slotRef.current = null;
+    };
+    window.addEventListener("dragstart", start);
+    window.addEventListener("dragend", end);
+    window.addEventListener("drop", end);
+    return () => {
+      window.removeEventListener("dragstart", start);
+      window.removeEventListener("dragend", end);
+      window.removeEventListener("drop", end);
+    };
+  }, []);
+
+  /** which gap the pointer is nearest: 0 is before the first item, items.length after the last */
+  const gapAt = (clientY: number) => {
+    const rows = [...(timelineRef.current?.children ?? [])].filter(
+      (el) => !el.classList.contains("jqzz-drop-skeleton") && !el.classList.contains("kind-add"),
+    );
+    for (let i = 0; i < rows.length; i++) {
+      const box = rows[i].getBoundingClientRect();
+      if (clientY < box.top + box.height / 2) return i;
+    }
+    return rows.length;
+  };
 
   if (!quiz) {
     return <Welcome onCreate={onNewQuiz} onImport={onImport} />;
@@ -132,13 +177,48 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   return (
     <div
       ref={timelineRef}
-      className="jqzz-timeline"
+      className={`jqzz-timeline${incoming && slot != null ? " taking" : ""}`}
       role="listbox"
       aria-multiselectable="true"
       aria-label="Quiz timeline"
+      onDragOver={(e) => {
+        if (!incoming || !dragging(e, DRAG_SNIPPET_KEY)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "copy";
+        const at = gapAt(e.clientY);
+        if (at !== slotRef.current) {
+          slotRef.current = at;
+          setSlot(at);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        slotRef.current = null;
+        setSlot(null);
+      }}
+      onDrop={(e) => {
+        const id = e.dataTransfer.getData(DRAG_SNIPPET_KEY);
+        if (!id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        // between two items: in front of the first step of the one after the gap
+        const at = slotRef.current ?? renderItems.length;
+        const next = renderItems[at];
+        const first = next ? (next.kind === "group" ? next.actions[0] : next.action) : null;
+        const index = first ? quiz.actions.findIndex((a) => a.id === first.id) : quiz.actions.length;
+        dropSnippet(id, index < 0 ? undefined : index);
+        setIncoming(null);
+        setSlot(null);
+        slotRef.current = null;
+      }}
     >
       {renderItems.map((item, idx) => {
-        if (item.kind !== "group") return card(item.action);
+        const skeleton =
+          incoming && slot === idx ? <DropSkeleton key="incoming" actions={incoming.actions} name={incoming.name} /> : null;
+        if (item.kind !== "group") {
+          return skeleton ? [skeleton, card(item.action)] : card(item.action);
+        }
 
         const q = item.question;
         const n = questionNumbers.get(q.id);
@@ -148,7 +228,8 @@ export const VisualMode: React.FC<VisualModeProps> = ({
         const inForce = settings.get(item.actions[0]?.id);
         const chips = inForce ? describe(changed(inForce)) : [];
         const weight = inForce ? (inForce.grade ? inForce.points : 0) : 1;
-        return (
+        return [
+          skeleton,
           <div
             key={`${q.id}-${idx}`}
             className="jqzz-group"
@@ -197,9 +278,12 @@ export const VisualMode: React.FC<VisualModeProps> = ({
               </div>
             </div>
             {item.actions.map(card)}
-          </div>
-        );
+          </div>,
+        ];
       })}
+      {incoming && slot === renderItems.length && (
+        <DropSkeleton actions={incoming.actions} name={incoming.name} />
+      )}
       <div className="jqzz-row kind-add" data-flip="add">
         <span className="jqzz-tc" />
         <span className="jqzz-node end" aria-hidden="true" />

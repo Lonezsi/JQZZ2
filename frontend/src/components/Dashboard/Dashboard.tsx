@@ -48,8 +48,8 @@ export const Dashboard: React.FC = () => {
   } = useQuiz();
 
   const dropSnippet = useCallback(
-    (snippetId: string) => {
-      dropSnippetMutation(snippetId);
+    (snippetId: string, at?: number) => {
+      dropSnippetMutation(snippetId, at);
     },
     [dropSnippetMutation],
   );
