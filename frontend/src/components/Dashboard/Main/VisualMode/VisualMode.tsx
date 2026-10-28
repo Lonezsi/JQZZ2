@@ -12,7 +12,7 @@ import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
 import { changed, describe, settingsAt } from "../../../../utils/settings";
 import { AddTypeButton } from "./AddTypeButton";
 import { DropSkeleton } from "./DropSkeleton";
-import { DRAG_SNIPPET_KEY, dragging } from "../../../../utils/dragKeys";
+import { DRAG_GROUP_KEY, DRAG_SNIPPET_KEY, dragging } from "../../../../utils/dragKeys";
 import { snippetActions } from "../../../../utils/snippetActions";
 import { readContent } from "../../../../utils/stashContent";
 
@@ -61,7 +61,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onNewQuiz,
   onImport,
 }) => {
-  const { dropSnippet, setMode, reorderActions } = useQuiz();
+  const { dropSnippet, setMode, reorderActions, moveActions } = useQuiz();
   // the order of the rows, which is all the FLIP animation needs to watch
   const flipSignature = `${quiz?.id}:${renderItems
     .map((item) =>
@@ -75,11 +75,23 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   // Something being dragged in from the tray or the stash: what it will become
   // (read once, when the drag starts, since a drag hides its data until the
   // drop) and the gap between the timeline's items where it would land.
-  const [incoming, setIncoming] = useState<{ actions: Action[]; name?: string } | null>(null);
+  // A whole question being moved works the same way, carrying its step ids.
+  const [incoming, setIncoming] = useState<{ actions: Action[]; name?: string; moving?: Set<number> } | null>(null);
   const [slot, setSlot] = useState<number | null>(null);
   const slotRef = useRef<number | null>(null);
+  const quizRef = useRef(quiz);
+  useEffect(() => {
+    quizRef.current = quiz;
+  });
   useEffect(() => {
     const start = (e: DragEvent) => {
+      const group = e.dataTransfer?.getData(DRAG_GROUP_KEY);
+      if (group) {
+        const ids = new Set<number>(JSON.parse(group));
+        const actions = quizRef.current?.actions.filter((a) => ids.has(a.id)) ?? [];
+        setIncoming(actions.length ? { actions, moving: ids } : null);
+        return;
+      }
       const id = e.dataTransfer?.getData(DRAG_SNIPPET_KEY);
       if (!id) return;
       const actions = snippetActions(id);
@@ -152,6 +164,25 @@ export const VisualMode: React.FC<VisualModeProps> = ({
     reorderActions(id, order[j].id);
   };
 
+  /** the gaps just before and after the question being moved change nothing */
+  const movingAt = incoming?.moving
+    ? renderItems.findIndex((it) => it.kind === "group" && incoming.moving!.has(it.actions[0].id))
+    : -1;
+  const besideItself = (gap: number) => movingAt >= 0 && (gap === movingAt || gap === movingAt + 1);
+
+  /** one question up or down past its neighbour: the touch stand-in for dragging it */
+  const moveGroup = (idx: number, dir: -1 | 1) => {
+    const item = renderItems[idx];
+    if (item?.kind !== "group") return;
+    const ids = item.actions.map((a) => a.id);
+    if (dir === -1) {
+      const before = firstAction(renderItems[idx - 1]);
+      if (before) moveActions(ids, before.id);
+    } else if (renderItems[idx + 1]) {
+      moveActions(ids, firstAction(renderItems[idx + 2])?.id ?? null);
+    }
+  };
+
   const card = (a: Action) => (
     <ActionCard
       key={a.id}
@@ -182,10 +213,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
       aria-multiselectable="true"
       aria-label="Quiz timeline"
       onDragOver={(e) => {
-        if (!incoming || !dragging(e, DRAG_SNIPPET_KEY)) return;
+        if (!incoming || !(dragging(e, DRAG_SNIPPET_KEY) || dragging(e, DRAG_GROUP_KEY))) return;
         e.preventDefault();
         e.stopPropagation();
-        e.dataTransfer.dropEffect = "copy";
+        e.dataTransfer.dropEffect = incoming.moving ? "move" : "copy";
         const at = gapAt(e.clientY);
         if (at !== slotRef.current) {
           slotRef.current = at;
@@ -199,15 +230,19 @@ export const VisualMode: React.FC<VisualModeProps> = ({
       }}
       onDrop={(e) => {
         const id = e.dataTransfer.getData(DRAG_SNIPPET_KEY);
-        if (!id) return;
+        const group = e.dataTransfer.getData(DRAG_GROUP_KEY);
+        if (!id && !group) return;
         e.preventDefault();
         e.stopPropagation();
         // between two items: in front of the first step of the one after the gap
         const at = slotRef.current ?? renderItems.length;
-        const next = renderItems[at];
-        const first = next ? (next.kind === "group" ? next.actions[0] : next.action) : null;
-        const index = first ? quiz.actions.findIndex((a) => a.id === first.id) : quiz.actions.length;
-        dropSnippet(id, index < 0 ? undefined : index);
+        const first = firstAction(renderItems[at]);
+        if (group) {
+          moveActions(JSON.parse(group), first?.id ?? null);
+        } else {
+          const index = first ? quiz.actions.findIndex((a) => a.id === first.id) : quiz.actions.length;
+          dropSnippet(id, index < 0 ? undefined : index);
+        }
         setIncoming(null);
         setSlot(null);
         slotRef.current = null;
@@ -215,7 +250,9 @@ export const VisualMode: React.FC<VisualModeProps> = ({
     >
       {renderItems.map((item, idx) => {
         const skeleton =
-          incoming && slot === idx ? <DropSkeleton key="incoming" actions={incoming.actions} name={incoming.name} /> : null;
+          incoming && slot === idx && !besideItself(idx) ? (
+            <DropSkeleton key="incoming" actions={incoming.actions} name={incoming.name} />
+          ) : null;
         if (item.kind !== "group") {
           return skeleton ? [skeleton, card(item.action)] : card(item.action);
         }
@@ -232,11 +269,20 @@ export const VisualMode: React.FC<VisualModeProps> = ({
           skeleton,
           <div
             key={`${q.id}-${idx}`}
-            className="jqzz-group"
+            className={`jqzz-group${movingAt === idx ? " moving" : ""}`}
             role="group"
             aria-label={`Question ${n}: ${q.text}`}
           >
-            <div className="jqzz-group-head" data-flip={`g-${q.id}-${item.actions[0]?.id}`}>
+            <div
+              className="jqzz-group-head"
+              data-flip={`g-${q.id}-${item.actions[0]?.id}`}
+              draggable
+              title="drag to move the whole question"
+              onDragStart={(e) => {
+                e.dataTransfer.setData(DRAG_GROUP_KEY, JSON.stringify(item.actions.map((a) => a.id)));
+                e.dataTransfer.effectAllowed = "move";
+              }}
+            >
               <span className="jqzz-group-num">
                 <span className="q OEF">Q</span>
                 {n}
@@ -259,6 +305,29 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                     </span>
                   ))}
                   <AddTypeButton question={q} actions={item.actions} />
+                  <span className="jqzz-group-move">
+                    <span className="jqzz-group-grip" aria-hidden="true">
+                      ⠿
+                    </span>
+                    <button
+                      className="jqzz-card-action-btn jqzz-touch-only"
+                      disabled={idx === 0}
+                      onClick={() => moveGroup(idx, -1)}
+                      aria-label={`Move question ${n} up`}
+                      title="move the question up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className="jqzz-card-action-btn jqzz-touch-only"
+                      disabled={idx === renderItems.length - 1}
+                      onClick={() => moveGroup(idx, 1)}
+                      aria-label={`Move question ${n} down`}
+                      title="move the question down"
+                    >
+                      ↓
+                    </button>
+                  </span>
                 </div>
                 <span className="jqzz-group-text">{q.text || "untitled question"}</span>
                 {/* the question's rhythm: its phases, widths by time */}
@@ -281,7 +350,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
           </div>,
         ];
       })}
-      {incoming && slot === renderItems.length && (
+      {incoming && slot === renderItems.length && !besideItself(renderItems.length) && (
         <DropSkeleton actions={incoming.actions} name={incoming.name} />
       )}
       <div className="jqzz-row kind-add" data-flip="add">
@@ -298,3 +367,9 @@ export const VisualMode: React.FC<VisualModeProps> = ({
     </div>
   );
 };
+
+/** an item's first step: where something put in front of it goes */
+function firstAction(item: RenderItem | undefined): Action | null {
+  if (!item) return null;
+  return item.kind === "group" ? item.actions[0] : item.action;
+}

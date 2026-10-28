@@ -47,6 +47,8 @@ interface QuizContextType {
   deleteAction: (id: number) => void;
   duplicateAction: (id: number) => void;
   reorderActions: (dragId: number, dropId: number) => void;
+  /** a whole question's steps moved together, in front of another step (null: to the end) */
+  moveActions: (ids: number[], beforeId: number | null) => void;
   newQuiz: () => Promise<number | undefined>;
   renameQuiz: (id: number, name: string) => void;
   /** gone for good, from the server and the list */
@@ -98,6 +100,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     deleteAction,
     duplicateAction,
     reorderActions,
+    moveActions,
     newQuiz: createQuiz,
     dropSnippet,
     handleParsed,
@@ -337,6 +340,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     deleteAction,
     duplicateAction,
     reorderActions,
+    moveActions,
     newQuiz,
     renameQuiz,
     addQuiz,

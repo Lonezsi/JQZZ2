@@ -114,6 +114,23 @@ export const useQuizMutations = (
     [updateQuiz],
   );
 
+  /** A run of steps (a whole question) moved together, in front of another step or to the end. */
+  const moveActions = useCallback(
+    (ids: number[], beforeId: number | null) => {
+      const moving = new Set(ids);
+      if (beforeId != null && moving.has(beforeId)) return;
+      updateQuiz((quiz) => {
+        const block = quiz.actions.filter((a) => moving.has(a.id));
+        const rest = quiz.actions.filter((a) => !moving.has(a.id));
+        if (block.length === 0) return quiz;
+        const at = beforeId == null ? rest.length : rest.findIndex((a) => a.id === beforeId);
+        if (at < 0) return quiz;
+        return { ...quiz, actions: [...rest.slice(0, at), ...block, ...rest.slice(at)] };
+      });
+    },
+    [updateQuiz],
+  );
+
   const newQuiz = useCallback(async () => {
     try {
       const response = await quizService.create({
@@ -170,6 +187,7 @@ export const useQuizMutations = (
     deleteAction,
     duplicateAction,
     reorderActions,
+    moveActions,
     newQuiz,
     dropSnippet,
     handleParsed,

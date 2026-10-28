@@ -1840,3 +1840,39 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     font-size: 15px;
   }
 }
+
+/* ─── moving a whole question ──────────────────────────────────────── */
+.jqzz-group-head[draggable="true"] {
+  cursor: grab;
+}
+.jqzz-group-head[draggable="true"]:active {
+  cursor: grabbing;
+}
+.jqzz-group-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.jqzz-group-grip {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 22px;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.45;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.jqzz-group-head:hover .jqzz-group-grip {
+  opacity: 1;
+}
+.jqzz-group.moving {
+  opacity: 0.35;
+  transition: opacity var(--dur-2) var(--ease);
+}
+@media (hover: none), (max-width: 760px) {
+  .jqzz-group-grip {
+    display: none;
+  }
+}
