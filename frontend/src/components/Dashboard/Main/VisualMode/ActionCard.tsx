@@ -7,6 +7,10 @@ import { describe, parseSettings } from "../../../../utils/settings";
 import { formatTimecode } from "../../../../utils/timecode";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
+import { DRAG_IMAGE_KEY, dragging } from "../../../../utils/dragKeys";
+import { imageSlots, placeImage } from "../../../../utils/imageSlots";
+import type { ImageSlot } from "../../../../utils/imageSlots";
+import { QuestionImage } from "../../../Play/PlayCommon";
 
 interface ActionCardProps {
   action: Action;
@@ -51,6 +55,46 @@ function Backdrop({ src }: { src?: string }) {
   }, [src, owner, viewer]);
   if (!url) return null;
   return <img className="jqzz-card-backdrop" src={url} alt="" aria-hidden="true" />;
+}
+
+/**
+ * While a picture is dragged over a step: its slots, each named, showing the
+ * picture already in it. Dropped on a slot, the picture goes there.
+ */
+function ImageSlots({ slots, onPlace }: { slots: ImageSlot[]; onPlace: (slot: string, ref: string) => void }) {
+  const { user } = useAuth();
+  const { quiz } = useQuiz();
+  const [over, setOver] = useState<string | null>(null);
+  const viewer = user?.id ?? "";
+  return (
+    <div className="jqzz-img-slots" style={{ "--n": Math.min(slots.length, 5) } as React.CSSProperties}>
+      {slots.map((slot, i) => (
+        <div
+          key={slot.key}
+          className={`jqzz-img-slot${over === slot.key ? " over" : ""}${slot.src ? " filled" : ""}`}
+          style={{ "--i": i } as React.CSSProperties}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "copy";
+            setOver(slot.key);
+          }}
+          onDragLeave={() => setOver((o) => (o === slot.key ? null : o))}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const ref = e.dataTransfer.getData(DRAG_IMAGE_KEY);
+            if (ref) onPlace(slot.key, ref);
+          }}
+        >
+          {slot.src && (
+            <QuestionImage src={slot.src} ownerId={quiz?.authorId ?? viewer} viewerId={viewer} className="jqzz-img-slot-pic" />
+          )}
+          <span className="jqzz-img-slot-name">{slot.label}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** a phone, where the inspector is a sheet over the bottom of the screen */
@@ -160,6 +204,21 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     return () => cancelAnimationFrame(raf);
   }, [isSelected]);
 
+  const { updateQuestion } = useQuiz();
+  const [imageOver, setImageOver] = useState(false);
+  const slots = imageSlots(action);
+  // however the drag ends, the slots fold away
+  useEffect(() => {
+    if (!imageOver) return;
+    const done = () => setImageOver(false);
+    window.addEventListener("dragend", done);
+    window.addEventListener("drop", done);
+    return () => {
+      window.removeEventListener("dragend", done);
+      window.removeEventListener("drop", done);
+    };
+  }, [imageOver]);
+
   const kind =
     action.phase === "DIVIDER"
       ? "divider"
@@ -187,9 +246,38 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         select(e);
       }
     },
-    onDragOver: (e: React.DragEvent<HTMLDivElement>) => onActionDragOver(e, action.id),
-    onDrop: (e: React.DragEvent<HTMLDivElement>) => onActionDrop(e, action.id),
+    onDragOver: (e: React.DragEvent<HTMLDivElement>) => {
+      if (dragging(e, DRAG_IMAGE_KEY)) {
+        // a picture: open this step's slots, if it has any
+        if (slots.length === 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (!imageOver) setImageOver(true);
+        return;
+      }
+      onActionDragOver(e, action.id);
+    },
+    onDragLeave: (e: React.DragEvent<HTMLDivElement>) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setImageOver(false);
+    },
+    onDrop: (e: React.DragEvent<HTMLDivElement>) => {
+      if (dragging(e, DRAG_IMAGE_KEY)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setImageOver(false);
+        // dropped on the card itself: fine when there's only one place it can go
+        const ref = e.dataTransfer.getData(DRAG_IMAGE_KEY);
+        if (ref && slots.length === 1) place(slots[0].key, ref);
+        return;
+      }
+      onActionDrop(e, action.id);
+    },
   } as const;
+
+  function place(slot: string, ref: string) {
+    setImageOver(false);
+    if (action.question) updateQuestion(action.question.id, placeImage(action.question, slot, ref));
+  }
 
   const handle = (
     <div
@@ -347,7 +435,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         {isSelected && <span className="jqzz-star" />}
       </span>
       <div
-        className={`jqzz-card phase-${action.phase}${isSelected ? " selected" : ""}${action.phase === "QUESTION" ? " tall" : ""}`}
+        className={`jqzz-card phase-${action.phase}${isSelected ? " selected" : ""}${action.phase === "QUESTION" ? " tall" : ""}${imageOver ? " image-over" : ""}`}
         style={{ ...phaseColor, "--dur": `${pct}%` } as React.CSSProperties}
         aria-label={`${action.phase.toLowerCase()}, ${action.time} seconds, starts at ${formatTimecode(start)}${q?.text ? `: ${q.text}` : ""}`}
         {...cardProps}
@@ -381,6 +469,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           {deleteBtn}
         </span>
         <span className="jqzz-card-bar" aria-hidden="true" />
+        {imageOver && <ImageSlots slots={slots} onPlace={place} />}
       </div>
     </div>
   );

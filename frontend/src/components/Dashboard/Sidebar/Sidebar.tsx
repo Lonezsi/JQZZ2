@@ -4,7 +4,8 @@ import { QuizList } from "./QuizList";
 import { Avatar } from "../../common/Avatar";
 import { Popover } from "../../common/Popover";
 import { PeopleList } from "./PeopleList";
-import { StashDrawer } from "./StashDrawer";
+import { StashDrawer, StashEdge } from "./StashDrawer";
+import { SIDEBAR_MAX, SIDEBAR_MIN, useSidebarLayout } from "../../../hooks/useSidebarLayout";
 import { usePeople } from "../../../hooks/usePeople";
 import { useFriends } from "../../../hooks/useFriends";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
@@ -46,7 +47,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const friendsOnline = othersOnline.filter((u) => friendIds.has(u.id));
   const shown = friendsOnline.length > 0 ? friendsOnline : othersOnline;
   const activeQuiz = quizzes.find((q) => q.id === activeQuizId);
-  const canStash = !!identity && activeQuiz?.authorId === identity.id;
+  const canStash = !!identity && !!activeQuiz;
+  const [layout, setLayout] = useSidebarLayout();
+  const stashOpen = canStash && layout.stashOpen;
+  const asideRef = useRef<HTMLElement>(null);
+  const splitRef = useRef<HTMLDivElement>(null);
+  // while dragging an edge, the size follows the pointer without the easing
+  const [resizing, setResizing] = useState(false);
+  const [share, setShare] = useState(layout.stashShare);
+  const [width, setWidth] = useState(layout.width);
+
+  const resizeSplit = (clientY: number) => {
+    const box = splitRef.current?.getBoundingClientRect();
+    if (!box) return;
+    setResizing(true);
+    setShare(Math.max(0.18, Math.min(0.82, (box.bottom - clientY) / box.height)));
+  };
+  const widthDrag = useRef(false);
   const { connected } = useWebSocket();
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -73,7 +90,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   return (
-    <aside className={`jqzz-sidebar${open ? " open" : ""}`} aria-label="Sidebar">
+    <aside
+      ref={asideRef}
+      className={`jqzz-sidebar${open ? " open" : ""}${resizing ? " resizing" : ""}`}
+      aria-label="Sidebar"
+      style={width ? ({ "--sid-w": `${width}px` } as React.CSSProperties) : undefined}
+    >
       <button className="jqzz-logo" onClick={onHomeClick} title="home">
         <span className="jqzz-logo-mark" aria-hidden="true" />
         <span className="jqzz-logo-word OEF">Jqzz</span>
@@ -139,13 +161,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!query && <Keys combo="/" />}
       </label>
 
-      <QuizList
-        quizzes={quizzes}
-        query={query}
-        activeQuizId={activeQuizId}
-        onSelectQuiz={onSelectQuiz}
-        onCreate={makeNamed}
-      />
+      <div
+        ref={splitRef}
+        className={`jqzz-sid-split${stashOpen ? " with-stash" : ""}`}
+        style={{ "--stash-share": share } as React.CSSProperties}
+      >
+        <QuizList
+          quizzes={quizzes}
+          query={query}
+          activeQuizId={activeQuizId}
+          onSelectQuiz={onSelectQuiz}
+          onCreate={makeNamed}
+        />
+        {canStash && (
+          <StashEdge
+            open={stashOpen}
+            onToggle={() => setLayout({ stashOpen: !stashOpen })}
+            onResize={resizeSplit}
+            onResizeEnd={() => {
+              setResizing(false);
+              setLayout({ stashShare: share });
+            }}
+          />
+        )}
+        {stashOpen && <StashDrawer me={identity!.id} quizId={activeQuiz!.id} />}
+      </div>
 
       {/* your own places: they live on your profile */}
       {identity && (
@@ -237,7 +277,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Popover>
         </div>
       </div>
-      {canStash && <StashDrawer me={identity!.id} quizId={activeQuiz!.id} />}
+      {/* the right edge: drag to make the sidebar wider or narrower, double-click for the usual width */}
+      <div
+        className="jqzz-sid-resize"
+        aria-hidden="true"
+        title="drag to resize"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.currentTarget.setPointerCapture(e.pointerId);
+          widthDrag.current = true;
+          setResizing(true);
+        }}
+        onPointerMove={(e) => {
+          if (!widthDrag.current || !asideRef.current) return;
+          const left = asideRef.current.getBoundingClientRect().left;
+          setWidth(Math.round(Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, e.clientX - left))));
+        }}
+        onPointerUp={() => {
+          if (!widthDrag.current) return;
+          widthDrag.current = false;
+          setResizing(false);
+          setLayout({ width });
+        }}
+        onPointerCancel={() => {
+          widthDrag.current = false;
+          setResizing(false);
+        }}
+        onDoubleClick={() => {
+          setWidth(null);
+          setLayout({ width: null });
+        }}
+      />
     </aside>
   );
 };

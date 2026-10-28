@@ -1,8 +1,7 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
 
-const DRAG_SNIPPET_KEY = "jqzz-snippet";
-const DRAG_ACTION_KEY = "jqzz-action";
+import { DRAG_ACTION_KEY, DRAG_IMAGE_KEY, DRAG_SNIPPET_KEY, dragging } from "../utils/dragKeys";
 
 export const useDragAndDrop = (
   dropSnippet: (snippetId: string) => void,
@@ -22,6 +21,8 @@ export const useDragAndDrop = (
     setDropOver(false);
   };
   const onDropZoneDragOver = (e: DragEvent<HTMLElement>) => {
+    // a picture only lands on a step's slot, never in the open
+    if (dragging(e, DRAG_IMAGE_KEY)) return;
     e.preventDefault();
     setDropOver(true);
   };
@@ -46,7 +47,7 @@ export const useDragAndDrop = (
   };
   const onActionDragOver = (e: DragEvent<HTMLDivElement>, id: number) => {
     e.preventDefault();
-    if (e.dataTransfer.types.includes(DRAG_ACTION_KEY)) setDragOverActionId(id);
+    if (dragging(e, DRAG_ACTION_KEY)) setDragOverActionId(id);
   };
   const onActionDrop = (e: DragEvent<HTMLDivElement>, dropId: number) => {
     e.preventDefault();

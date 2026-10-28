@@ -809,7 +809,7 @@
   -webkit-mask: linear-gradient(90deg, #000 30%, transparent 95%);
   mask: linear-gradient(90deg, #000 30%, transparent 95%);
 }
-.jqzz-card > :not(.jqzz-card-backdrop):not(.jqzz-card-bar) {
+.jqzz-card > :not(.jqzz-card-backdrop):not(.jqzz-card-bar):not(.jqzz-img-slots) {
   position: relative;
   z-index: 1;
 }

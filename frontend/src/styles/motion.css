@@ -1062,75 +1062,168 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   }
 }
 
-/* ─── the stash drawer: pulled out of the sidebar's edge, docked there ── */
-.jqzz-sidebar > .jqzz-stash-dock {
+/* ─── the stash, under your quizzes ───────────────────────────────
+   The room under the search splits between the two; the line between
+   them carries the arrow, which cuts it: - ^ - */
+.jqzz-sidebar {
+  width: var(--sid-w, 236px);
+  min-width: var(--sid-w, 236px);
+}
+@media (max-width: 1180px) {
+  .jqzz-sidebar {
+    width: var(--sid-w, 212px);
+    min-width: var(--sid-w, 212px);
+  }
+}
+.jqzz-sid-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.jqzz-sid-split > .jqzz-quiz-list {
+  flex: 1 1 0;
+}
+.jqzz-stash-drawer {
+  flex: 0 0 calc(var(--stash-share, 0.5) * 100%);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: stashUp 420ms var(--ease) backwards;
+}
+@keyframes stashUp {
+  from {
+    flex-basis: 0;
+    opacity: 0;
+  }
+}
+.jqzz-sidebar.resizing,
+.jqzz-sidebar.resizing * {
+  transition: none !important;
+  user-select: none;
+}
+.jqzz-sidebar.resizing {
+  cursor: ns-resize;
+}
+
+/* the line, broken where the arrow sits */
+.jqzz-stash-edge {
+  position: relative;
+  flex-shrink: 0;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+.jqzz-stash-edge::before,
+.jqzz-stash-edge::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  height: 1px;
+  pointer-events: none;
+}
+.jqzz-stash-edge::before {
+  left: 0;
+  right: calc(50% + 19px);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26) 40%, rgba(185, 166, 255, 0.3));
+}
+.jqzz-stash-edge::after {
+  left: calc(50% + 19px);
+  right: 0;
+  background: linear-gradient(90deg, rgba(242, 169, 137, 0.3), rgba(255, 255, 255, 0.2) 60%, transparent);
+}
+.jqzz-stash-edge.open {
+  cursor: ns-resize;
+}
+.jqzz-stash-edge.open:hover::before,
+.jqzz-stash-edge.open:hover::after,
+.jqzz-stash-edge.dragging::before,
+.jqzz-stash-edge.dragging::after {
+  height: 2px;
+  margin-top: -0.5px;
+  filter: brightness(1.6);
+}
+.jqzz-stash-arrow {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-stash-arrow:hover {
+  color: var(--text);
+  background: var(--sunken);
+}
+.jqzz-stash-arrow svg {
+  transition: transform 420ms var(--ease-pop, var(--ease));
+}
+.jqzz-stash-arrow:hover svg {
+  transform: translateY(-2px);
+}
+.jqzz-stash-edge.open .jqzz-stash-arrow svg {
+  transform: rotate(180deg);
+}
+.jqzz-stash-edge.open .jqzz-stash-arrow:hover svg {
+  transform: rotate(180deg) translateY(-2px);
+}
+
+/* the sidebar's right edge: grab it to resize */
+.jqzz-sidebar > .jqzz-sid-resize {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 100%;
-  width: 0;
-  z-index: 3;
-  --drawer: 272px;
+  right: -4px;
+  width: 8px;
+  z-index: 6;
+  cursor: ew-resize;
 }
-.jqzz-stash-drawer {
-  position: absolute;
-  top: 12px;
-  bottom: 12px;
-  left: 0;
-  width: var(--drawer);
-  display: flex;
-  flex-direction: column;
-  padding-top: 4px;
-  border-radius: 0 16px 16px 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 24%, rgba(255, 255, 255, 0.01)),
-    color-mix(in srgb, var(--surface-solid) 97%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.35);
-  backdrop-filter: blur(14px) saturate(1.35);
-  box-shadow: 28px 0 60px -26px rgba(0, 0, 0, 0.9);
-  /* it comes out of the edge: clipped to nothing at the sidebar, opening rightward */
-  clip-path: inset(0 100% 0 0 round 0 16px 16px 0);
-  transition: clip-path 460ms var(--ease-pop, var(--ease));
-}
-.jqzz-stash-dock.open .jqzz-stash-drawer {
-  clip-path: inset(0 0 0 0 round 0 16px 16px 0);
-}
-/* its outer edge catches the light like the sidebar's */
-.jqzz-stash-drawer::before {
+.jqzz-sid-resize::after {
   content: "";
   position: absolute;
-  top: 10px;
-  bottom: 10px;
-  right: 0;
-  width: 1px;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(255, 255, 255, 0.4) 12%,
-    rgba(185, 166, 255, 0.2) 40%,
-    rgba(242, 169, 137, 0.22) 66%,
-    rgba(127, 178, 255, 0.26) 88%,
-    transparent
-  );
-}
-.jqzz-stash-drawer > * {
-  transform: translateX(-18px);
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: var(--accent);
   opacity: 0;
-  transition:
-    transform 380ms var(--ease),
-    opacity 240ms var(--ease);
+  transition: opacity var(--dur-1) var(--ease);
 }
-.jqzz-stash-dock.open .jqzz-stash-drawer > * {
-  transform: none;
-  opacity: 1;
-  transition-delay: 120ms;
+.jqzz-sid-resize:hover::after,
+.jqzz-sidebar.resizing .jqzz-sid-resize::after {
+  opacity: 0.5;
 }
+@media (max-width: 760px) {
+  .jqzz-sidebar > .jqzz-sid-resize {
+    display: none;
+  }
+  /* a phone's drawer keeps its own width */
+  .jqzz-sidebar {
+    width: min(300px, 84vw);
+    min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-stash-drawer,
+  .jqzz-stash-drawer-list > li {
+    animation: none !important;
+  }
+}
+
 .jqzz-stash-drawer-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 12px 16px 8px;
+  padding: 4px 14px 6px 16px;
 }
 .jqzz-stash-drawer-head a {
   text-decoration: none;
@@ -1139,22 +1232,25 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   color: var(--text);
 }
 .jqzz-stash-drawer-title {
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
 }
 .jqzz-stash-kinds {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   margin: 0 12px 8px;
+  min-width: 0;
 }
 .jqzz-stash-kinds button {
-  flex: 1;
+  flex: 0 1 auto;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   min-height: 28px;
-  padding: 0 6px;
+  min-width: 0;
+  padding: 0 5px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: none;
@@ -1169,6 +1265,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   color: var(--text);
 }
 .jqzz-stash-kinds button.on {
+  flex: 1 0 auto;
   color: var(--text);
   background: var(--sunken);
   border-color: var(--line);
@@ -1200,7 +1297,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   color: var(--text-3);
   line-height: 1.5;
 }
-.jqzz-stash-dock.open .jqzz-stash-drawer-list > li {
+.jqzz-stash-drawer-list > li {
   animation: stashRowIn 420ms var(--ease) backwards;
   animation-delay: calc(160ms + var(--i, 0) * 35ms);
 }
@@ -1265,69 +1362,139 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   transform: scale(1.18);
 }
 
-/* the arrow it comes out of: a small glass lip on the sidebar's edge that
-   rides along the drawer's edge while it's out */
-.jqzz-stash-tab {
+/* ─── pictures dragged onto a step: its slots open over the card ─────── */
+.jqzz-card.image-over {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+}
+.jqzz-img-slots {
   position: absolute;
-  top: calc(50% - 28px);
-  left: 0;
-  width: 18px;
-  height: 56px;
-  display: grid;
-  place-items: center;
+  inset: 5px;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
   padding: 0;
-  border: none;
-  border-radius: 0 10px 10px 0;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08)),
-    color-mix(in srgb, var(--surface-solid) 70%, transparent);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-  box-shadow:
-    inset -1px 0 0 rgba(255, 255, 255, 0.16),
-    10px 0 24px -14px rgba(0, 0, 0, 0.8);
-  color: var(--text-3);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: slotsIn 200ms var(--ease) backwards;
+}
+@keyframes slotsIn {
+  from {
+    opacity: 0;
+  }
+}
+.jqzz-img-slot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 8px;
+  background: var(--sunken);
+  animation: slotIn 320ms var(--ease-pop, var(--ease)) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
   transition:
-    left 460ms var(--ease-pop, var(--ease)),
-    color var(--dur-1) var(--ease),
-    width var(--dur-1) var(--ease);
+    border-color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    transform var(--dur-2) var(--ease-pop, var(--ease));
 }
-.jqzz-stash-tab:hover {
+@keyframes slotIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+.jqzz-img-slot.filled {
+  border-style: solid;
+}
+.jqzz-img-slot.over {
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.03);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.jqzz-img-slot-pic {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0.75;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.jqzz-img-slot.over .jqzz-img-slot-pic {
+  opacity: 0.35;
+}
+.jqzz-img-slot-name {
+  position: relative;
+  width: 100%;
+  padding: 3px 7px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  background: linear-gradient(transparent, rgba(5, 3, 10, 0.75));
   color: var(--text);
-  width: 22px;
+  font-size: 11px;
+  font-weight: 600;
 }
-.jqzz-stash-tab svg {
-  transition: transform 460ms var(--ease-pop, var(--ease));
+
+/* pictures in the stash drawer: a grid of thumbnails to drag */
+.jqzz-stash-drawer-list.jqzz-stash-drawer-pics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-content: start;
+  gap: 6px;
 }
-.jqzz-stash-dock.open .jqzz-stash-tab {
-  left: var(--drawer);
+.jqzz-stash-drawer-pics > li.jqzz-annot {
+  grid-column: 1 / -1;
 }
-.jqzz-stash-dock.open .jqzz-stash-tab svg {
-  transform: rotate(180deg);
+.jqzz-stash-pic {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sunken);
+  cursor: grab;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    transform var(--dur-2) var(--ease-pop, var(--ease));
 }
-/* docked: the sidebar makes room for it, so the editor slides over rather than hiding under it */
-@media (min-width: 761px) {
-  .jqzz-sidebar {
-    transition: margin-right 460ms var(--ease);
-  }
-  .jqzz-sidebar:has(> .jqzz-stash-dock.open) {
-    margin-right: 272px;
-  }
+.jqzz-stash-pic:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
-@media (max-width: 760px) {
-  .jqzz-sidebar > .jqzz-stash-dock {
-    display: none;
-  }
+.jqzz-stash-pic:active {
+  cursor: grabbing;
 }
-@media (prefers-reduced-motion: reduce) {
-  .jqzz-stash-drawer,
-  .jqzz-stash-drawer > *,
-  .jqzz-stash-tab,
-  .jqzz-stash-tab svg,
-  .jqzz-sidebar {
-    transition: none;
-  }
-  .jqzz-stash-dock.open .jqzz-stash-drawer-list > li {
-    animation: none;
-  }
+.jqzz-stash-pic img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.jqzz-stash-pic-name {
+  position: relative;
+  width: 100%;
+  padding: 3px 7px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: linear-gradient(transparent, rgba(5, 3, 10, 0.78));
+  font-size: 11px;
+  font-weight: 600;
+}
+.jqzz-stash-drawer-row[draggable="true"] {
+  cursor: grab;
+}
+.jqzz-stash-drawer-row[draggable="true"]:active {
+  cursor: grabbing;
 }
