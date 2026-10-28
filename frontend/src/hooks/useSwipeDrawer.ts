@@ -3,9 +3,10 @@ import { useEffect, useRef } from "react";
 /** the same width the phone layout in mobile.css switches at */
 const PHONE = "(max-width: 760px)";
 
-/** a touch that starts in one of these is doing something else */
+/** a touch that starts in one of these is doing something else: typing, or
+    picking something up to drag (the stash's rows and pictures, a step's handle) */
 const IGNORE =
-  "input, textarea, select, .jqzz-editor-wrap, .jqzz-inspector, .jqzz-palette-overlay, .jqzz-modal-overlay, .jqzz-popover";
+  "input, textarea, select, [draggable='true'], .jqzz-stash-drawer, .jqzz-editor-wrap, .jqzz-inspector, .jqzz-palette-overlay, .jqzz-modal-overlay, .jqzz-popover";
 
 /** px the finger has to travel before the gesture picks an axis */
 const SLOP = 10;
@@ -115,12 +116,21 @@ export function useSwipeDrawer(open: boolean, setOpen: (open: boolean) => void) 
       setOpenRef.current(shouldOpen);
     };
 
+    // a real drag took over: whatever the finger started here is no longer a swipe
+    const onDrag = () => {
+      if (!start) return;
+      start = null;
+      release();
+    };
+
     document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("dragstart", onDrag);
     document.addEventListener("touchmove", onMove, { passive: true });
     document.addEventListener("touchend", onEnd);
     document.addEventListener("touchcancel", onEnd);
     return () => {
       document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("dragstart", onDrag);
       document.removeEventListener("touchmove", onMove);
       document.removeEventListener("touchend", onEnd);
       document.removeEventListener("touchcancel", onEnd);
