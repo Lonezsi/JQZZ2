@@ -78,6 +78,8 @@ export const Tooltip: React.FC = () => {
       pressed = false;
       cancelPress();
       if (e.pointerType === "mouse") return;
+      // holding something draggable picks it up (useTouchDrag), not a tooltip
+      if ((e.target as Element | null)?.closest?.("[draggable='true']")) return;
       const el = target(e.target);
       if (!el) return;
       from = { x: e.clientX, y: e.clientY };

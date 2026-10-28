@@ -7,6 +7,7 @@ import { ProfilePage } from "./components/Stash/ProfilePage";
 import { Invites } from "./components/common/Invites";
 import { ReturnToGame } from "./components/common/ReturnToGame";
 import { Tooltip } from "./components/common/Tooltip";
+import { useTouchDrag } from "./hooks/useTouchDrag";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { useNavShortcuts } from "./hooks/useNavShortcuts";
 
@@ -23,6 +24,7 @@ import { useNavShortcuts } from "./hooks/useNavShortcuts";
 function App() {
   const route = useHashRoute();
   useNavShortcuts();
+  useTouchDrag();
   const [, where, a, b, c] = route.split("/");
   return (
     <>

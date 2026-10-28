@@ -656,43 +656,13 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 
 /* ─── the background drifts and leans toward the pointer, everywhere ──
-   each light at its own depth, so it reads as space rather than a slide.
-   The dither stays where it is: it's the paper, the lights move over it. */
+   Moved by Atmosphere.tsx (one small loop writing transforms), not CSS
+   animations: see there why. The dither stays where it is: it's the paper,
+   the lights move over it. */
 .jqzz-aura > .warm,
 .jqzz-aura > .shadow,
-.jqzz-aura > .phase,
-.jqzz-welcome-burst {
-  transition: translate 1.4s var(--ease);
-}
 .jqzz-aura > .phase {
-  will-change: opacity, transform;
-  translate: calc(var(--mx, 0) * 70px) calc(var(--my, 0) * 50px);
-  animation: auraDriftA 26s var(--ease-in-out) infinite alternate;
-}
-.jqzz-aura > .warm {
-  will-change: transform;
-  translate: calc(var(--mx, 0) * -90px) calc(var(--my, 0) * -60px);
-  animation: auraDriftB 31s var(--ease-in-out) infinite alternate;
-}
-.jqzz-aura > .shadow {
-  will-change: transform;
-  translate: calc(var(--mx, 0) * 40px) calc(var(--my, 0) * -30px);
-  animation: auraDriftC 37s var(--ease-in-out) infinite alternate;
-}
-.jqzz-welcome-burst {
-  translate: calc(var(--mx, 0) * 24px) calc(var(--my, 0) * 18px);
-}
-@keyframes auraDriftA {
-  from { transform: translate(-4%, 2%) scale(1); }
-  to { transform: translate(5%, -3%) scale(1.12); }
-}
-@keyframes auraDriftB {
-  from { transform: translate(3%, 0) scale(1.05); }
-  to { transform: translate(-6%, -5%) scale(0.95); }
-}
-@keyframes auraDriftC {
-  from { transform: translate(0, -2%) scale(0.96); }
-  to { transform: translate(6%, 4%) scale(1.08); }
+  will-change: transform, opacity;
 }
 
 /* ─── coming and going ────────────────────────────────────────────── */

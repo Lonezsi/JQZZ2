@@ -102,6 +102,15 @@
   opacity: var(--lens-b-opacity);
 }
 
+/* the same textures drawn into a canvas with their filter already applied
+   (Atmosphere.tsx): blended the same, never filtered again */
+.jqzz-aura canvas.tex {
+  width: 100%;
+  height: 100%;
+  background: none;
+  filter: none;
+}
+
 .jqzz-aura::after {
   content: "";
   position: absolute;
