@@ -399,3 +399,17 @@
     display: none;
   }
 }
+
+/* dragging something out of the drawer (the stash): it slides away so the
+   quiz is there to drop on, but stays in the page so the drag carries on */
+@media (max-width: 760px) {
+  :root.jqzz-drag-away .jqzz-sidebar {
+    visibility: visible;
+    transform: translateX(-104%);
+    pointer-events: none;
+  }
+  :root.jqzz-drag-away .jqzz-nav-scrim {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

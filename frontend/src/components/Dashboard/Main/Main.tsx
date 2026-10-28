@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
+import { useDragAutoScroll } from "../../../hooks/useDragAutoScroll";
 import { Toolbar } from "./Toolbar";
 import { VisualMode } from "./VisualMode/VisualMode";
 import { TextMode } from "./TextMode/TextMode";
@@ -91,6 +92,7 @@ export const Main: React.FC<MainProps> = ({
      straight onto the element, so scrolling never re-renders anything. */
   const mainRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  useDragAutoScroll(bodyRef);
   const markEdges = useCallback(() => {
     const body = bodyRef.current;
     const main = mainRef.current;

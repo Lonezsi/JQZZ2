@@ -26,6 +26,8 @@ interface SidebarProps {
   onNewQuiz: () => void;
   onImport: () => void;
   onHomeClick: () => void;
+  /** phone only: put the drawer away */
+  onClose?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -38,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewQuiz,
   onImport,
   onHomeClick,
+  onClose,
 }) => {
   const { users, online } = usePeople();
   const { friends, incoming } = useFriends();
@@ -111,6 +114,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       ref={asideRef}
+      onDragStart={() => {
+        // on a phone the drawer covers the quiz: it slides away for the drag, and stays away
+        if (!open) return;
+        const root = document.documentElement;
+        root.classList.add("jqzz-drag-away");
+        const done = () => {
+          root.classList.remove("jqzz-drag-away");
+          onClose?.();
+          window.removeEventListener("dragend", done);
+          window.removeEventListener("drop", done);
+        };
+        window.addEventListener("dragend", done);
+        window.addEventListener("drop", done);
+      }}
       className={`jqzz-sidebar${open ? " open" : ""}${resizing ? " resizing" : ""}`}
       aria-label="Sidebar"
       style={width ? ({ "--sid-w": `${width}px` } as React.CSSProperties) : undefined}

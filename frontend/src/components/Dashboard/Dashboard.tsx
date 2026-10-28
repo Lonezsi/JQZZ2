@@ -288,6 +288,7 @@ export const Dashboard: React.FC = () => {
             setActiveQuizId(null);
             setNavOpen(false);
           }}
+          onClose={() => setNavOpen(false)}
         />
 
         <Main
