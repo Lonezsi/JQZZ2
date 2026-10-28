@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type PresenceState = "open" | "closed";
 
@@ -8,13 +8,17 @@ export type PresenceState = "open" | "closed";
  * run both ways: style `[data-state="closed"]` as the hidden look.
  */
 export function usePresence(show: boolean, exitMs = 240) {
-  const [mounted, setMounted] = useState(show);
+  // mounted the moment it's shown (not a render later), kept while it animates out
+  const [leaving, setLeaving] = useState(false);
   const [state, setState] = useState<PresenceState>(show ? "open" : "closed");
+  const mounted = show || leaving;
+  const wasShown = useRef(show);
 
   useEffect(() => {
     if (show) {
+      wasShown.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMounted(true);
+      setLeaving(false);
       let inner = 0;
       const outer = requestAnimationFrame(() => {
         inner = requestAnimationFrame(() => setState("open"));
@@ -25,7 +29,10 @@ export function usePresence(show: boolean, exitMs = 240) {
       };
     }
     setState("closed");
-    const t = window.setTimeout(() => setMounted(false), exitMs);
+    if (!wasShown.current) return;
+    wasShown.current = false;
+    setLeaving(true);
+    const t = window.setTimeout(() => setLeaving(false), exitMs);
     return () => window.clearTimeout(t);
   }, [show, exitMs]);
 

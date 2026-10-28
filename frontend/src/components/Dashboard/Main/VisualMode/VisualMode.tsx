@@ -62,8 +62,25 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onImport,
 }) => {
   const { dropSnippet, setMode, reorderActions, moveActions } = useQuiz();
+
+  // A quiz opens in pieces: the first few items straight away, the rest a
+  // batch at a time while the browser is idle, with placeholders where the
+  // rest will be. Drawing every card of a long quiz in one go is what made
+  // opening one stall.
+  const [shown, setShown] = useState(FIRST_BATCH);
+  const [shownFor, setShownFor] = useState(quiz?.id);
+  if (quiz?.id !== shownFor) {
+    setShownFor(quiz?.id);
+    setShown(FIRST_BATCH);
+  }
+  const total = renderItems.length;
+  useEffect(() => {
+    if (shown >= total) return;
+    return whenIdle(() => setShown((n) => n + BATCH));
+  }, [shown, total]);
+  const visibleItems = shown >= total ? renderItems : renderItems.slice(0, shown);
   // the order of the rows, which is all the FLIP animation needs to watch
-  const flipSignature = `${quiz?.id}:${renderItems
+  const flipSignature = `${quiz?.id}:${visibleItems
     .map((item) =>
       item.kind === "group"
         ? `g${item.question.id}(${item.actions.map((a) => a.id).join(".")})`
@@ -116,7 +133,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   /** which gap the pointer is nearest: 0 is before the first item, items.length after the last */
   const gapAt = (clientY: number) => {
     const rows = [...(timelineRef.current?.children ?? [])].filter(
-      (el) => !el.classList.contains("jqzz-drop-skeleton") && !el.classList.contains("kind-add"),
+      (el) =>
+        !el.classList.contains("jqzz-drop-skeleton") &&
+        !el.classList.contains("jqzz-load-skeleton") &&
+        !el.classList.contains("kind-add"),
     );
     for (let i = 0; i < rows.length; i++) {
       const box = rows[i].getBoundingClientRect();
@@ -248,7 +268,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
         slotRef.current = null;
       }}
     >
-      {renderItems.map((item, idx) => {
+      {visibleItems.map((item, idx) => {
         const skeleton =
           incoming && slot === idx && !besideItself(idx) ? (
             <DropSkeleton key="incoming" actions={incoming.actions} name={incoming.name} />
@@ -350,6 +370,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
           </div>,
         ];
       })}
+      {shown < total && <LoadingSkeleton count={Math.min(3, total - shown)} />}
       {incoming && slot === renderItems.length && !besideItself(renderItems.length) && (
         <DropSkeleton actions={incoming.actions} name={incoming.name} />
       )}
@@ -373,3 +394,32 @@ function firstAction(item: RenderItem | undefined): Action | null {
   if (!item) return null;
   return item.kind === "group" ? item.actions[0] : item.action;
 }
+
+/** items drawn when a quiz opens, then each batch after */
+const FIRST_BATCH = 6;
+const BATCH = 6;
+
+/** run when the browser has a moment; returns a cancel */
+function whenIdle(cb: () => void): () => void {
+  if (typeof window.requestIdleCallback === "function") {
+    const h = window.requestIdleCallback(cb, { timeout: 80 });
+    return () => window.cancelIdleCallback(h);
+  }
+  const t = window.setTimeout(cb, 16);
+  return () => window.clearTimeout(t);
+}
+
+/** where the rest of a quiz will be, while it's still being drawn */
+const LoadingSkeleton: React.FC<{ count: number }> = ({ count }) => (
+  <>
+    {Array.from({ length: count }, (_, i) => (
+      <div key={i} className="jqzz-load-skeleton" aria-hidden="true" style={{ "--i": i } as React.CSSProperties}>
+        <span className="jqzz-load-bar short" />
+        <span className="jqzz-load-bar title" />
+        <span className="jqzz-load-bar" />
+        <span className="jqzz-load-card" />
+        <span className="jqzz-load-card" />
+      </div>
+    ))}
+  </>
+);

@@ -29,6 +29,32 @@ function random(seed: number) {
   };
 }
 
+/**
+ * Grain, made once and shared by every face. Each face used to run its own
+ * SVG noise filter, which is slow to draw, and a list of people drew one per
+ * person every time it opened.
+ */
+let noise: string | null = null;
+function grain(): string {
+  if (noise) return noise;
+  const size = 96;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return (noise = "");
+  const img = ctx.createImageData(size, size);
+  const r = random(0x9e3779b9);
+  for (let i = 0; i < img.data.length; i += 4) {
+    // two octaves, like the fractal noise it replaces
+    const v = (r() * 0.6 + r() * 0.4) * 255;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return (noise = canvas.toDataURL());
+}
+
 /** a four-point star like the app's own --star, centred on 0,0, radius 1 */
 const STAR = "M0-1C.05-.4.4-.05 1 0 .4.05.05.4 0 1-.05.4-.4.05-1 0-.4-.05-.05-.4 0-1Z";
 
@@ -45,7 +71,7 @@ interface GenAvatarProps {
  * a blackletter initial with the chromatic split, and grain over all of it.
  * Drawn as SVG from the seed, so nothing is stored but the seed.
  */
-export const GenAvatar: React.FC<GenAvatarProps> = ({ seed, name }) => {
+export const GenAvatar: React.FC<GenAvatarProps> = React.memo(function GenAvatar({ seed, name }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const r = random(hash(seed));
   const pick = <T,>(from: T[]) => from[Math.floor(r() * from.length)];
@@ -61,7 +87,6 @@ export const GenAvatar: React.FC<GenAvatarProps> = ({ seed, name }) => {
   const blob = { x: 10 + r() * 44, y: 10 + r() * 44, r: 14 + r() * 12 };
   const orbit = { rx: 22 + r() * 9, ry: 6 + r() * 8, tilt: -45 + r() * 90, dy: -4 + r() * 10 };
   const spark = { x: pick([12, 50]), y: pick([12, 50]), s: 3.5 + r() * 3, c: pick(PALETTE) };
-  const grainSeed = Math.floor(r() * 1000);
 
   const letter = (name?.match(/[a-z0-9]/i)?.[0] ?? "J").toUpperCase();
   const id = (part: string) => `ga${uid}${part}`;
@@ -87,10 +112,6 @@ export const GenAvatar: React.FC<GenAvatarProps> = ({ seed, name }) => {
         <mask id={id("m")}>
           <circle cx={blob.x} cy={blob.y} r={blob.r} fill={`url(#${id("f")})`} />
         </mask>
-        <filter id={id("n")} x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="2" seed={grainSeed} />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
       </defs>
 
       {/* ink, then the aura */}
@@ -140,13 +161,14 @@ export const GenAvatar: React.FC<GenAvatarProps> = ({ seed, name }) => {
       />
 
       {/* grain over everything */}
-      <rect
+      <image
+        href={grain()}
         width="64"
         height="64"
-        filter={`url(#${id("n")})`}
+        preserveAspectRatio="none"
         opacity="0.45"
         style={{ mixBlendMode: "overlay" }}
       />
     </svg>
   );
-};
+});

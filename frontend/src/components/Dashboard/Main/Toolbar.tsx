@@ -66,15 +66,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <span aria-hidden="true" />
         </button>
       )}
-      <div className="jqzz-seg" role="group" aria-label="Editor mode" data-mode={mode}>
-        <span className="jqzz-seg-thumb" aria-hidden="true" />
-        <button aria-pressed={mode === "visual"} onClick={() => setMode("visual")}>
-          Visual
-        </button>
-        <button aria-pressed={mode === "text"} onClick={() => setMode("text")}>
-          Text
-        </button>
-      </div>
+      {/* visual or text only means something with a quiz open */}
+      {quiz && (
+        <div className="jqzz-seg" role="group" aria-label="Editor mode" data-mode={mode}>
+          <span className="jqzz-seg-thumb" aria-hidden="true" />
+          <button aria-pressed={mode === "visual"} onClick={() => setMode("visual")}>
+            Visual
+          </button>
+          <button aria-pressed={mode === "text"} onClick={() => setMode("text")}>
+            Text
+          </button>
+        </div>
+      )}
 
       <div className="jqzz-toolbar-title">
         {quiz ? (
@@ -110,14 +113,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {notice?.text ?? ""}
       </span>
 
+      {/* with a quiz open it folds down to its star, next to Start, and opens out on hover */}
       <button
-        className="jqzz-cmdk"
+        className={`jqzz-cmdk${quiz ? " folded" : ""}`}
         onClick={onOpenPalette}
+        aria-label="Commands"
         aria-keyshortcuts={ariaShortcut("Mod K")}
       >
         <span className="jqzz-star" aria-hidden="true" />
-        <span className="jqzz-cmdk-label">commands</span>
-        <Keys combo="Mod K" />
+        <span className="jqzz-cmdk-more">
+          <span className="jqzz-cmdk-inner">
+            <span className="jqzz-cmdk-label">commands</span>
+            <Keys combo="Mod K" />
+          </span>
+        </span>
       </button>
       {canStart && (
         <button
