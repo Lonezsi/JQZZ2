@@ -4,6 +4,7 @@ import { QuizList } from "./QuizList";
 import { Avatar } from "../../common/Avatar";
 import { Popover } from "../../common/Popover";
 import { PeopleList } from "./PeopleList";
+import { StashDrawer } from "./StashDrawer";
 import { usePeople } from "../../../hooks/usePeople";
 import { useFriends } from "../../../hooks/useFriends";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
@@ -44,6 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const othersOnline = online.filter((u) => u.id !== identity?.id);
   const friendsOnline = othersOnline.filter((u) => friendIds.has(u.id));
   const shown = friendsOnline.length > 0 ? friendsOnline : othersOnline;
+  const activeQuiz = quizzes.find((q) => q.id === activeQuizId);
+  const canStash = !!identity && activeQuiz?.authorId === identity.id;
   const { connected } = useWebSocket();
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -234,6 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Popover>
         </div>
       </div>
+      {canStash && <StashDrawer me={identity!.id} quizId={activeQuiz!.id} />}
     </aside>
   );
 };

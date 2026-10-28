@@ -1061,3 +1061,273 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     -webkit-touch-callout: none;
   }
 }
+
+/* ─── the stash drawer: pulled out of the sidebar's edge, docked there ── */
+.jqzz-sidebar > .jqzz-stash-dock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 0;
+  z-index: 3;
+  --drawer: 272px;
+}
+.jqzz-stash-drawer {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 0;
+  width: var(--drawer);
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+  border-radius: 0 16px 16px 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 24%, rgba(255, 255, 255, 0.01)),
+    color-mix(in srgb, var(--surface-solid) 97%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  backdrop-filter: blur(14px) saturate(1.35);
+  box-shadow: 28px 0 60px -26px rgba(0, 0, 0, 0.9);
+  /* it comes out of the edge: clipped to nothing at the sidebar, opening rightward */
+  clip-path: inset(0 100% 0 0 round 0 16px 16px 0);
+  transition: clip-path 460ms var(--ease-pop, var(--ease));
+}
+.jqzz-stash-dock.open .jqzz-stash-drawer {
+  clip-path: inset(0 0 0 0 round 0 16px 16px 0);
+}
+/* its outer edge catches the light like the sidebar's */
+.jqzz-stash-drawer::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  right: 0;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.4) 12%,
+    rgba(185, 166, 255, 0.2) 40%,
+    rgba(242, 169, 137, 0.22) 66%,
+    rgba(127, 178, 255, 0.26) 88%,
+    transparent
+  );
+}
+.jqzz-stash-drawer > * {
+  transform: translateX(-18px);
+  opacity: 0;
+  transition:
+    transform 380ms var(--ease),
+    opacity 240ms var(--ease);
+}
+.jqzz-stash-dock.open .jqzz-stash-drawer > * {
+  transform: none;
+  opacity: 1;
+  transition-delay: 120ms;
+}
+.jqzz-stash-drawer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+}
+.jqzz-stash-drawer-head a {
+  text-decoration: none;
+}
+.jqzz-stash-drawer-head a:hover {
+  color: var(--text);
+}
+.jqzz-stash-drawer-title {
+  font-size: 26px;
+  line-height: 1;
+}
+.jqzz-stash-kinds {
+  display: flex;
+  gap: 4px;
+  margin: 0 12px 8px;
+}
+.jqzz-stash-kinds button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.jqzz-stash-kinds button:hover {
+  color: var(--text);
+}
+.jqzz-stash-kinds button.on {
+  color: var(--text);
+  background: var(--sunken);
+  border-color: var(--line);
+}
+.jqzz-stash-kinds .jqzz-sid-count {
+  margin-left: 0;
+  font-family: var(--font-data);
+  font-size: 10px;
+}
+.jqzz-stash-drawer-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 2px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.jqzz-stash-drawer-list > li.jqzz-annot {
+  padding: 10px 8px;
+}
+.jqzz-stash-drawer-list > li.jqzz-stash-drawer-empty {
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  line-height: 1.5;
+}
+.jqzz-stash-dock.open .jqzz-stash-drawer-list > li {
+  animation: stashRowIn 420ms var(--ease) backwards;
+  animation-delay: calc(160ms + var(--i, 0) * 35ms);
+}
+@keyframes stashRowIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+.jqzz-stash-drawer-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  transition:
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.jqzz-stash-drawer-row:hover {
+  background: var(--sunken);
+  border-color: var(--line);
+}
+.jqzz-stash-drawer-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.jqzz-stash-drawer-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.jqzz-stash-drawer-add {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text-3);
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    transform var(--dur-2) var(--ease-pop, var(--ease));
+}
+.jqzz-stash-drawer-row:hover .jqzz-stash-drawer-add {
+  color: var(--text);
+  background: var(--raised-hover);
+}
+.jqzz-stash-drawer-row.added .jqzz-stash-drawer-add {
+  color: var(--accent);
+  transform: scale(1.18);
+}
+
+/* the arrow it comes out of: a small glass lip on the sidebar's edge that
+   rides along the drawer's edge while it's out */
+.jqzz-stash-tab {
+  position: absolute;
+  top: calc(50% - 28px);
+  left: 0;
+  width: 18px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 0 10px 10px 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08)),
+    color-mix(in srgb, var(--surface-solid) 70%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.16),
+    10px 0 24px -14px rgba(0, 0, 0, 0.8);
+  color: var(--text-3);
+  transition:
+    left 460ms var(--ease-pop, var(--ease)),
+    color var(--dur-1) var(--ease),
+    width var(--dur-1) var(--ease);
+}
+.jqzz-stash-tab:hover {
+  color: var(--text);
+  width: 22px;
+}
+.jqzz-stash-tab svg {
+  transition: transform 460ms var(--ease-pop, var(--ease));
+}
+.jqzz-stash-dock.open .jqzz-stash-tab {
+  left: var(--drawer);
+}
+.jqzz-stash-dock.open .jqzz-stash-tab svg {
+  transform: rotate(180deg);
+}
+/* docked: the sidebar makes room for it, so the editor slides over rather than hiding under it */
+@media (min-width: 761px) {
+  .jqzz-sidebar {
+    transition: margin-right 460ms var(--ease);
+  }
+  .jqzz-sidebar:has(> .jqzz-stash-dock.open) {
+    margin-right: 272px;
+  }
+}
+@media (max-width: 760px) {
+  .jqzz-sidebar > .jqzz-stash-dock {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-stash-drawer,
+  .jqzz-stash-drawer > *,
+  .jqzz-stash-tab,
+  .jqzz-stash-tab svg,
+  .jqzz-sidebar {
+    transition: none;
+  }
+  .jqzz-stash-dock.open .jqzz-stash-drawer-list > li {
+    animation: none;
+  }
+}

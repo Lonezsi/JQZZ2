@@ -814,55 +814,173 @@ button.jqzz-entry:hover:not(:disabled) {
 .jqzz-podium-wrap {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 28px;
+  width: 100%;
 }
+/* Three glass pillars rising out of a lit floor. Everything below the floor
+   line is cut off, so no glow or shadow hangs under them. */
 .jqzz-podium {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
+  padding: 0 28px;
+  clip-path: inset(-400px -400px 0 -400px);
+}
+/* the floor: one line of light, bright under the winner */
+.jqzz-podium::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 50%, transparent) 20%,
+    rgba(255, 255, 255, 0.7) 50%,
+    color-mix(in srgb, var(--warm) 55%, transparent) 78%,
+    transparent
+  );
+}
+/* light pooling up from the floor, behind the pillars, never below it */
+.jqzz-podium::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 75%;
+  pointer-events: none;
+  background: radial-gradient(
+    55% 100% at 50% 100%,
+    color-mix(in srgb, var(--warm) 20%, transparent),
+    color-mix(in srgb, var(--accent) 7%, transparent) 55%,
+    transparent 80%
+  );
 }
 .jqzz-podium-spot {
+  --tint: var(--phase-ANSWER);
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  width: min(180px, 30vw);
+  width: min(172px, 28vw);
   animation: viewIn 700ms var(--ease) backwards;
 }
 .jqzz-podium-spot.place-1 {
+  --tint: var(--warm);
+  width: min(196px, 32vw);
   animation-delay: 500ms;
 }
 .jqzz-podium-spot.place-2 {
+  --tint: var(--accent);
   animation-delay: 250ms;
 }
+.jqzz-podium-spot .jqzz-play-face {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--tint) 70%, transparent),
+    0 10px 30px -12px color-mix(in srgb, var(--tint) 80%, transparent);
+}
+.jqzz-podium-spot.place-1 .jqzz-play-face {
+  width: 78px;
+  height: 78px;
+}
 .jqzz-podium-name {
+  max-width: 100%;
   font-weight: 700;
   text-align: center;
+  line-height: 1.25;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .jqzz-podium-score {
+  margin-bottom: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--tint) 35%, transparent);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  color: var(--text);
   font-family: var(--font-data);
-  color: var(--text-2);
+  font-size: var(--fs-small);
 }
+/* the pillar: a lit top face, glass sides, fading into the floor */
 .jqzz-podium-block {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   width: 100%;
-  height: 70px;
-  border: 1px solid var(--line-strong);
-  border-bottom: none;
-  border-radius: 14px 14px 0 0;
-  background: linear-gradient(var(--raised-hover), var(--surface));
-  font-size: 40px;
+  height: 84px;
+  padding-top: 12px;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint) 24%, var(--surface-solid)),
+    color-mix(in srgb, var(--tint) 7%, var(--surface-solid)) 45%,
+    color-mix(in srgb, var(--surface-solid) 60%, transparent)
+  );
+  box-shadow:
+    inset 1px 0 0 color-mix(in srgb, var(--tint) 22%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--tint) 22%, transparent);
+  color: color-mix(in srgb, var(--tint) 55%, var(--text));
+  font-size: 44px;
+  line-height: 1;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--tint) 60%, transparent);
+}
+/* the top edge catches the light */
+.jqzz-podium-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+}
+/* and a sheen down the front, brightest at the top */
+.jqzz-podium-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--tint) 26%, transparent), transparent 70%);
 }
 .place-1 .jqzz-podium-block {
-  height: 120px;
-  border-color: var(--warm);
-  box-shadow: 0 0 50px -18px var(--warm);
+  height: 148px;
+  font-size: 60px;
 }
 .place-2 .jqzz-podium-block {
-  height: 90px;
+  height: 112px;
+}
+@media (max-width: 520px) {
+  .jqzz-podium {
+    gap: 6px;
+    padding: 0 6px;
+  }
+  .jqzz-podium-block {
+    height: 64px;
+    font-size: 34px;
+  }
+  .place-1 .jqzz-podium-block {
+    height: 112px;
+    font-size: 46px;
+  }
+  .place-2 .jqzz-podium-block {
+    height: 86px;
+  }
+  .jqzz-podium-spot.place-1 .jqzz-play-face {
+    width: 64px;
+    height: 64px;
+  }
 }
 
 /* ─── overlays ────────────────────────────────────────────────────── */
