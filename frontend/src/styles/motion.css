@@ -2779,3 +2779,10 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 body:has(.jqzz-return) .jqzz-doodle-tools {
   bottom: calc(86px + env(safe-area-inset-bottom, 0px));
 }
+/* and the page itself keeps room under its end, so nothing stays stuck behind them */
+body:has(.jqzz-return) .jqzz-play-frame {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+}
