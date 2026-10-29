@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.lonezsi.jqzz.model.Notification;
@@ -96,8 +98,22 @@ public class NotificationService {
         tell(userId);
     }
 
+    /**
+     * Say so once it's saved: told inside the transaction, the app would fetch
+     * the list before the change is in it and show nothing new.
+     */
     private void tell(String userId) {
-        messaging.convertAndSend("/topic/notify/" + userId, (Object) Map.of("changed", true));
+        Runnable send = () -> messaging.convertAndSend("/topic/notify/" + userId, (Object) Map.of("changed", true));
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    send.run();
+                }
+            });
+        } else {
+            send.run();
+        }
     }
 
     /** who it's from, as the app shows people; null once they've deleted themselves */
