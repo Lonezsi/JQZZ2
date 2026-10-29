@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.GameRecordRepository;
 import com.lonezsi.jqzz.repository.QuizRepository;
 import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.NotificationService;
 import com.lonezsi.jqzz.service.PresenceTracker;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -167,5 +169,16 @@ class ComingAndGoingTest {
         engine.leave(closed, "p1");
         engine.join(closed, "p1");
         assertThat(engine.game(closed).players).containsOnlyKeys("p1");
+    }
+
+    @Test
+    void theHostCanInviteAnyoneOnlyTheHost() {
+        NotificationService notes = mock(NotificationService.class);
+        engine.setNotifications(notes);
+        String code = startedGame();
+        engine.invite(code, "host", "away");
+        verify(notes).notify(eq("away"), eq("INVITE"), eq("host"), any());
+        assertThatThrownBy(() -> engine.invite(code, "p1", "away")).hasMessageContaining("Only the host");
+        assertThatThrownBy(() -> engine.invite(code, "host", "p1")).hasMessageContaining("already in");
     }
 }

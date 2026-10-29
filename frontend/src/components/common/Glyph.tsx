@@ -147,6 +147,12 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="m4 4 8 8M12 4l-8 8" />
     </>
   ),
+  BELL: (
+    <>
+      <path d="M4 11V7.2a4 4 0 0 1 8 0V11l1.2 1.3H2.8z" />
+      <path d="M6.6 13.6a1.5 1.5 0 0 0 2.8 0" />
+    </>
+  ),
   TROPHY: (
     <>
       <path d="M5 2.5h6v3.5a3 3 0 0 1-6 0z" />

@@ -10,6 +10,7 @@ import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
+import { InvitePeople } from "./InvitePeople";
 
 /** The big screen: what the room looks at while the host runs the game. */
 export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
@@ -148,6 +149,7 @@ const HostLobby: React.FC<{
       >
         {url.replace(/^https?:\/\//, "")} <span className="jqzz-annot">{copied ? "copied" : "copy"}</span>
       </button>
+      <InvitePeople game={game} me={me} />
 
       <div className="jqzz-lobby-people">
         {game.players.length === 0 && <p className="jqzz-play-note">waiting for people to join…</p>}

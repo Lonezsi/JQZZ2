@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.lonezsi.jqzz.model.Friendship;
+import com.lonezsi.jqzz.model.Notification;
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.FriendshipRepository;
 import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.NotificationService;
 
 /**
  * Friends. Asking someone who already asked you makes you friends; removing
@@ -34,11 +36,14 @@ public class FriendController {
     private final FriendshipRepository friendships;
     private final UserRepository users;
     private final SimpMessagingTemplate messaging;
+    private final NotificationService notifications;
 
-    public FriendController(FriendshipRepository friendships, UserRepository users, SimpMessagingTemplate messaging) {
+    public FriendController(FriendshipRepository friendships, UserRepository users, SimpMessagingTemplate messaging,
+            NotificationService notifications) {
         this.friendships = friendships;
         this.users = users;
         this.messaging = messaging;
+        this.notifications = notifications;
     }
 
     /** {friends, incoming, outgoing}: people, with whether they're online */
@@ -76,9 +81,13 @@ public class FriendController {
         Friendship f = friendships.between(userId, otherId).orElse(null);
         if (f == null) {
             friendships.save(new Friendship(userId, otherId, userId));
+            notifications.notify(otherId, Notification.FRIEND_REQUEST, userId, null);
         } else if (!f.isAccepted() && !f.getRequestedBy().equals(userId)) {
             f.setAccepted(true);
             friendships.save(f);
+            // their request is answered, and they hear that it was a yes
+            notifications.settle(userId, Notification.FRIEND_REQUEST, otherId);
+            notifications.notify(otherId, Notification.FRIEND_ACCEPTED, userId, null);
         }
         tell(userId, otherId);
         return listOf(userId);
@@ -91,6 +100,9 @@ public class FriendController {
                                       @PathVariable String otherId) {
         require(userId);
         friendships.between(userId, otherId).ifPresent(friendships::delete);
+        // a request taken back or turned down needs no answer any more, on either side
+        notifications.settle(userId, Notification.FRIEND_REQUEST, otherId);
+        notifications.settle(otherId, Notification.FRIEND_REQUEST, userId);
         tell(userId, otherId);
         return listOf(userId);
     }

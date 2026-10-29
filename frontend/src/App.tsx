@@ -4,7 +4,7 @@ import { PlayScreen } from "./components/Play/PlayScreen";
 import { JoinScreen } from "./components/Play/JoinScreen";
 import { HistoryPage } from "./components/Stash/HistoryPage";
 import { ProfilePage } from "./components/Stash/ProfilePage";
-import { Invites } from "./components/common/Invites";
+import { Notifications } from "./components/common/Notifications";
 import { ReturnToGame } from "./components/common/ReturnToGame";
 import { Tooltip } from "./components/common/Tooltip";
 import { useTouchDrag } from "./hooks/useTouchDrag";
@@ -15,7 +15,7 @@ import { useNavShortcuts } from "./hooks/useNavShortcuts";
    #/host/CODE         the big screen for a game you host
    #/play/CODE         your phone in a game
    #/join[/CODE]       typing in a code, or arriving with one
-   #/me[/TAB[/SUB]]    your profile: history, or the stash and its shelves
+   #/me[/TAB[/SUB]]    your profile: history, the stash and its shelves, notifications
    #/u/ID[/TAB]        someone else's profile
    #/history/ID        one finished game
    #/stash/add/KIND/REF  a share link: copies the item into your stash
@@ -29,7 +29,7 @@ function App() {
   return (
     <>
       {page(where, a, b, c)}
-      <Invites />
+      <Notifications />
       <ReturnToGame />
       <Tooltip />
     </>

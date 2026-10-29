@@ -16,6 +16,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ import com.lonezsi.jqzz.model.Quiz;
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.QuizRepository;
 import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.NotificationService;
 import com.lonezsi.jqzz.service.PresenceTracker;
 
 import jakarta.annotation.PreDestroy;
@@ -92,6 +94,14 @@ public class GameEngine {
         presence.onWatchChange(this::watchChanged);
     }
 
+    /** invites go out as notifications; optional, so a test can build an engine without one */
+    private NotificationService notifications;
+
+    @Autowired(required = false)
+    void setNotifications(NotificationService notifications) {
+        this.notifications = notifications;
+    }
+
     @PreDestroy
     void stop() {
         clock.shutdownNow();
@@ -141,16 +151,44 @@ public class GameEngine {
         }
         Map<String, Object> view = host(r.getQuizId(), userId);
         String code = (String) view.get("code");
-        String from = userRepository.findById(userId).map(User::getName).orElse("someone");
         Set<String> invited = new LinkedHashSet<>();
         invited.add(r.getHostId());
         r.getPlayers().forEach(p -> invited.add(p.userId()));
         invited.remove(userId);
-        for (String id : invited) {
-            messaging.convertAndSend("/topic/invite/" + id,
-                    (Object) Map.of("code", code, "from", from, "quizName", String.valueOf(r.getQuizName())));
-        }
+        for (String id : invited) sendInvite(id, userId, code, String.valueOf(r.getQuizName()), true);
         return view;
+    }
+
+    /**
+     * The host asks someone to their game, online or not: it reaches them as
+     * a notification, now or whenever they next open the app.
+     */
+    public Map<String, Object> invite(String code, String hostId, String toId) {
+        Game game = find(code);
+        if (hostId == null || !hostId.equals(game.hostId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the host can do that");
+        }
+        if (toId == null || toId.equals(hostId)) throw bad("Invite someone else");
+        if (!userRepository.existsById(toId)) throw notFound("No such person");
+        String quizName;
+        synchronized (game) {
+            if (game.status() == Game.Status.FINISHED) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "This game is over");
+            }
+            if (game.players.containsKey(toId)) throw new ResponseStatusException(HttpStatus.CONFLICT, "They're already in");
+            quizName = game.quizName;
+        }
+        sendInvite(toId, hostId, game.code(), quizName, false);
+        return Map.of("invited", toId);
+    }
+
+    private void sendInvite(String toId, String fromId, String code, String quizName, boolean rematch) {
+        if (notifications == null) return;
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("code", code);
+        payload.put("quizName", quizName);
+        if (rematch) payload.put("rematch", true);
+        notifications.notify(toId, com.lonezsi.jqzz.model.Notification.INVITE, fromId, payload);
     }
 
     /** A quiz played alone: you host it, you play it, it starts straight away. */

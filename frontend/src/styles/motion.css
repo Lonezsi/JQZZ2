@@ -2033,3 +2033,408 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     opacity: 0.8;
   }
 }
+
+/* ─── notifications: the corner stack ─────────────────────────────── */
+.jqzz-inbox {
+  position: fixed;
+  top: calc(66px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  z-index: 58;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: min(330px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.jqzz-inbox > * {
+  pointer-events: auto;
+}
+/* the bell: a small glass pill heading the stack */
+.jqzz-inbox-bell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 6px;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 10px 30px -14px rgba(0, 0, 0, 0.9);
+  animation: bellIn 420ms var(--ease-pop, var(--ease)) backwards;
+  transition:
+    transform 340ms var(--ease),
+    opacity 280ms var(--ease);
+}
+@keyframes bellIn {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+/* nothing left: it swipes off to the right and is gone */
+.jqzz-inbox-bell.leaving {
+  transform: translateX(160%);
+  opacity: 0;
+}
+.jqzz-inbox-bell-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.jqzz-inbox-bell-btn svg {
+  color: var(--accent);
+  transform-origin: 50% 10%;
+  animation: bellRing 900ms var(--ease) 300ms;
+}
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(16deg); }
+  30% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(3deg); }
+}
+.jqzz-inbox-count {
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 700;
+}
+.jqzz-inbox-all,
+.jqzz-inbox-clear {
+  display: inline-grid;
+  place-items: center;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-3);
+  font-size: 12px;
+  text-decoration: none;
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-inbox-all:hover,
+.jqzz-inbox-clear:hover {
+  color: var(--text);
+  background: var(--sunken);
+}
+.jqzz-inbox-clear {
+  padding: 0;
+}
+
+/* each card's slot opens to its own height as it slides in, and closes as
+   it slides out, so the ones under it glide instead of jumping */
+.jqzz-inbox-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+  width: 100%;
+  animation: slotOpen 380ms var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+  transition: grid-template-rows 340ms var(--ease);
+}
+@keyframes slotOpen {
+  from {
+    grid-template-rows: 0fr;
+  }
+}
+.jqzz-inbox-clip {
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 8px;
+}
+.jqzz-inbox-slot > .jqzz-inbox-clip > .jqzz-alert {
+  animation: noteIn 420ms var(--ease-pop, var(--ease)) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 60ms);
+  transition:
+    transform 340ms var(--ease),
+    opacity 260ms var(--ease);
+}
+@keyframes noteIn {
+  from {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+}
+.jqzz-inbox-slot.leaving {
+  grid-template-rows: 0fr;
+}
+.jqzz-inbox-slot.leaving > .jqzz-inbox-clip > .jqzz-alert {
+  opacity: 0;
+  transform: translateX(110%);
+}
+.jqzz-inbox-more {
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--text-3);
+  font-size: 12px;
+  text-decoration: none;
+  background: color-mix(in srgb, var(--surface-solid) 80%, transparent);
+}
+.jqzz-inbox-more:hover {
+  color: var(--text);
+}
+
+/* one notification */
+.jqzz-alert {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 30px 10px 10px;
+  border-radius: 14px;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface-solid) 94%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 14px 34px -18px rgba(0, 0, 0, 0.9);
+  color: var(--text);
+}
+.jqzz-alert.kind-INVITE {
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--warm) 16%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface-solid) 94%, transparent);
+}
+.jqzz-alert-face {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-3);
+  text-decoration: none;
+}
+.jqzz-alert-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.jqzz-alert-kind {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-solid);
+  box-shadow: 0 0 0 1px var(--line-strong);
+  color: var(--accent);
+}
+.jqzz-alert.kind-INVITE .jqzz-alert-kind {
+  color: var(--warm);
+}
+.jqzz-alert-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.jqzz-alert-text {
+  font-size: var(--fs-small);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.jqzz-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+.jqzz-alert-x {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-3);
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-alert-x:hover {
+  color: var(--text);
+  background: var(--sunken);
+}
+.jqzz-alert.read {
+  opacity: 0.6;
+}
+
+/* on your profile: all of them, read too */
+.jqzz-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+}
+.jqzz-alert-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.jqzz-alert-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jqzz-alert-list li {
+  animation: noteListIn 360ms var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+@keyframes noteListIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ─── the host asks people in, from the lobby ─────────────────────── */
+.jqzz-invite-people {
+  width: min(460px, 100%);
+  margin: 4px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.jqzz-invite-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.jqzz-invite-search {
+  width: 150px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--text);
+  font-size: var(--fs-small);
+}
+.jqzz-invite-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.jqzz-invite-groups {
+  max-height: min(300px, 34vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-solid) 70%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.jqzz-invite-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-3);
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.jqzz-invite-group.is-friends .jqzz-invite-label {
+  color: var(--ok);
+}
+.jqzz-invite-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.jqzz-invite-group li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 2px;
+  border-radius: 10px;
+  animation: noteListIn 320ms var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+.jqzz-invite-group li:hover {
+  background: var(--sunken);
+}
+.jqzz-invite-face {
+  position: relative;
+  flex-shrink: 0;
+}
+.jqzz-invite-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.jqzz-invite-face.online::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 2px var(--surface-solid);
+}
+.jqzz-invite-group.is-offline .jqzz-invite-avatar {
+  filter: grayscale(0.6);
+  opacity: 0.75;
+}
+.jqzz-invite-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.jqzz-invite-error {
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 400;
+  white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-inbox-bell,
+  .jqzz-inbox-slot,
+  .jqzz-inbox-slot > .jqzz-inbox-clip > .jqzz-alert,
+  .jqzz-alert-list li,
+  .jqzz-invite-group li,
+  .jqzz-inbox-bell-btn svg {
+    animation: none;
+    transition: none;
+  }
+}

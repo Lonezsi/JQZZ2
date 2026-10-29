@@ -26,6 +26,9 @@ export const playService = {
   restart: (code: string, userId: string) => post(`/play/${code}/restart`, { userId }),
   kick: (code: string, userId: string, playerId: string) =>
     post(`/play/${code}/kick`, { userId, playerId }),
+  /** host only: playerId gets a notification, online or not */
+  invite: (code: string, userId: string, playerId: string) =>
+    api.post<{ invited: string }>(`/play/${code}/invite`, { userId, playerId }).then((r) => r.data),
 
   submit: (
     code: string,

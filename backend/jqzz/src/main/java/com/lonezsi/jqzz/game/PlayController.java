@@ -21,6 +21,7 @@ import com.lonezsi.jqzz.service.StashService;
  * GET  /play/{code}                                      where it is
  * POST /play/{code}/start|pause|resume|skip|end|restart  {userId}  host only
  * POST /play/{code}/kick          {userId, playerId}     host only
+ * POST /play/{code}/invite        {userId, playerId}     host only: playerId gets a notification
  * POST /play/{code}/submit        {userId, picks|text|tiers}
  * POST /play/{code}/vote          {userId, choice, match | guesses}
  * POST /play/{code}/leave         {userId}
@@ -107,6 +108,11 @@ public class PlayController {
     @PostMapping("/{code}/restart")
     public Map<String, Object> restart(@PathVariable String code, @RequestBody PlayRequest r) {
         return engine.restart(code, r.userId);
+    }
+
+    @PostMapping("/{code}/invite")
+    public Map<String, Object> invite(@PathVariable String code, @RequestBody PlayRequest r) {
+        return engine.invite(code, r.userId, r.playerId);
     }
 
     @PostMapping("/{code}/kick")
