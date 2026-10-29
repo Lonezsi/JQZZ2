@@ -1,154 +1,248 @@
-import React, { useEffect, useRef, useState } from "react";
-import { playService } from "../../services/playService";
-import { Glyph } from "../common/Glyph";
+import React, { useEffect, useRef } from "react";
+import { useWebSocket } from "../../contexts/WebSocketContext";
+import { onThemeChange } from "../../utils/theme";
 
-/** pen colours, from the palette so they read in both themes */
-const INKS = ["--accent", "--warm", "--ok", "--phase-ANSWER", "--phase-RESULT", "--text"];
+/** how long a trail takes to fade away */
+const TRAIL_MS = 1400;
+/** how often a stroke's new points go out */
+const SEND_MS = 50;
+/** a finger has to rest this long before it draws instead of scrolling */
+const HOLD_MS = 180;
+/** everyone gets their own colour, from the palette so it reads in both themes */
+const INKS = ["--accent", "--warm", "--ok", "--phase-ANSWER", "--phase-RESULT", "--phase-SETTING"];
+
+/** not the background: dragging on these does what they do */
+const NOT_BACKGROUND =
+  "button, a, input, textarea, select, label, [role=button], [role=switch], [contenteditable], [draggable=true], .jqzz-tile, .jqzz-tier-item, .jqzz-chip, .jqzz-board-row, img";
+
+function inkOf(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return INKS[Math.abs(h) % INKS.length];
+}
+
+interface Point {
+  x: number;
+  y: number;
+  t: number;
+}
 
 /**
- * Something to do while you wait: draw on the screen's background. Once
- * you're done with the step a pen shows up; with it on you draw over
- * everything, and when you put it down the drawing stays behind the game.
- * The host sees who's drawing. A new question takes the pen away again.
+ * Trails on the background of a game's screen. Once a player is done with the
+ * step they can drag on any empty part of it and a fading trail follows; the
+ * trail shows on everyone's screen at the game, the host's too. Nothing is
+ * kept: every trail is gone a moment after it's drawn.
+ *
+ * `canDraw`: this screen's own player may draw now. Everyone sees everyone else's.
+ * `onTrail`: someone's trail came in (the host shows who's drawing).
  */
-export const Doodle: React.FC<{ code: string; me: string; allowed: boolean }> = ({ code, me, allowed }) => {
+export const Doodle: React.FC<{
+  code: string;
+  me: string;
+  canDraw: boolean;
+  onTrail?: (from: string) => void;
+}> = ({ code, me, canDraw, onTrail }) => {
+  const { client, subscribe, connected } = useWebSocket();
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [on, setOn] = useState(false);
-  const [ink, setInk] = useState(INKS[0]);
-  const [blank, setBlank] = useState(true);
-  const drawing = on && allowed;
-
-  // the host sees who's drawing; tell it when that changes, and when we go
-  const told = useRef(false);
+  const strokes = useRef(new Map<string, { ink: string; points: Point[] }>());
+  const frame = useRef(0);
+  const colours = useRef(new Map<string, string>());
+  const onTrailRef = useRef(onTrail);
   useEffect(() => {
-    if (drawing === told.current) return;
-    told.current = drawing;
-    playService.drawing(code, me, drawing).catch(() => {});
-  }, [drawing, code, me]);
-  useEffect(
-    () => () => {
-      if (told.current) playService.drawing(code, me, false).catch(() => {});
-    },
-    [code, me],
-  );
+    onTrailRef.current = onTrail;
+  });
 
-  // a new question: the pen goes down, the drawing stays
+  // ─── drawing what's there, fading as it goes ──────────────────────────
+  const paint = useRef<() => void>(() => {});
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!allowed) setOn(false);
-  }, [allowed]);
-
-  // sized to the screen in device pixels; a resize keeps what's drawn
-  useEffect(() => {
-    const c = canvas.current;
-    if (!c) return;
+    const c = canvas.current!;
+    const ctx = c.getContext("2d")!;
+    const colour = (v: string) => {
+      let got = colours.current.get(v);
+      if (!got) {
+        got = getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#b9a6ff";
+        colours.current.set(v, got);
+      }
+      return got;
+    };
     const fit = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.round(window.innerWidth * dpr);
-      const h = Math.round(window.innerHeight * dpr);
-      if (c.width === w && c.height === h) return;
-      const keep = document.createElement("canvas");
-      keep.width = c.width;
-      keep.height = c.height;
-      if (c.width && c.height) keep.getContext("2d")!.drawImage(c, 0, 0);
-      c.width = w;
-      c.height = h;
-      c.getContext("2d")!.drawImage(keep, 0, 0);
+      c.width = Math.round(window.innerWidth * dpr);
+      c.height = Math.round(window.innerHeight * dpr);
+    };
+    const draw = () => {
+      frame.current = 0;
+      const now = performance.now();
+      const w = c.width;
+      const h = c.height;
+      const base = Math.max(3, Math.min(w, h) * 0.012);
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineCap = "round";
+      let live = false;
+      for (const [key, s] of strokes.current) {
+        const pts = s.points.filter((p) => now - p.t < TRAIL_MS);
+        s.points = pts;
+        if (pts.length === 0) {
+          strokes.current.delete(key);
+          continue;
+        }
+        live = true;
+        ctx.strokeStyle = colour(s.ink);
+        ctx.fillStyle = ctx.strokeStyle;
+        if (pts.length === 1) {
+          const life = 1 - (now - pts[0].t) / TRAIL_MS;
+          ctx.globalAlpha = life;
+          ctx.beginPath();
+          ctx.arc(pts[0].x * w, pts[0].y * h, (base * life) / 2, 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
+        // segment by segment: older ones thinner and fainter, so it reads as a trail
+        for (let i = 1; i < pts.length; i++) {
+          const life = 1 - (now - pts[i].t) / TRAIL_MS;
+          ctx.globalAlpha = Math.max(0, life);
+          ctx.lineWidth = base * (0.25 + 0.75 * life);
+          ctx.beginPath();
+          ctx.moveTo(pts[i - 1].x * w, pts[i - 1].y * h);
+          ctx.lineTo(pts[i].x * w, pts[i].y * h);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+      if (live) frame.current = requestAnimationFrame(draw);
+    };
+    paint.current = () => {
+      if (!frame.current) frame.current = requestAnimationFrame(draw);
     };
     fit();
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    const offTheme = onThemeChange(() => colours.current.clear());
+    return () => {
+      window.removeEventListener("resize", fit);
+      offTheme();
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+    };
   }, []);
 
-  const last = useRef<{ x: number; y: number; mx: number; my: number } | null>(null);
-  const at = (e: React.PointerEvent) => {
-    const dpr = canvas.current!.width / window.innerWidth;
-    return { x: e.clientX * dpr, y: e.clientY * dpr, dpr };
-  };
-  const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawing) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const { x, y, dpr } = at(e);
-    const ctx = e.currentTarget.getContext("2d")!;
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(ink).trim() || "#fff";
-    ctx.beginPath();
-    ctx.arc(x, y, 2.5 * dpr, 0, Math.PI * 2);
-    ctx.fill();
-    last.current = { x, y, mx: x, my: y };
-    setBlank(false);
-  };
-  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const p = last.current;
-    if (!p || !drawing) return;
-    const { x, y, dpr } = at(e);
-    const ctx = e.currentTarget.getContext("2d")!;
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue(ink).trim() || "#fff";
-    ctx.lineWidth = 5 * dpr;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    // through the midpoints, so fast strokes curve instead of zigzagging
-    const mx = (p.x + x) / 2;
-    const my = (p.y + y) / 2;
-    ctx.beginPath();
-    ctx.moveTo(p.mx, p.my);
-    ctx.quadraticCurveTo(p.x, p.y, mx, my);
-    ctx.stroke();
-    last.current = { x, y, mx, my };
-  };
-  const up = () => {
-    last.current = null;
-  };
-  const clear = () => {
-    const c = canvas.current;
-    if (!c) return;
-    c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
-    setBlank(true);
-  };
+  // ─── everyone else's trails ───────────────────────────────────────────
+  useEffect(() => {
+    const sub = subscribe(`/topic/play/${code}/doodle`, (msg) => {
+      const m = JSON.parse(msg.body) as { from: string; stroke: string; points: [number, number][] };
+      if (m.from === me || !m.points?.length) return;
+      const key = `${m.from}:${m.stroke}`;
+      const s = strokes.current.get(key) ?? { ink: inkOf(m.from), points: [] };
+      // a batch covers the last SEND_MS: spread it out so it fades smoothly
+      const now = performance.now();
+      const n = m.points.length;
+      m.points.forEach(([x, y], i) => s.points.push({ x, y, t: now - SEND_MS + ((i + 1) * SEND_MS) / n }));
+      strokes.current.set(key, s);
+      paint.current();
+      onTrailRef.current?.(m.from);
+    });
+    return () => sub?.unsubscribe();
+  }, [code, me, subscribe, connected]);
 
-  return (
-    <>
-      {drawing && <div className="jqzz-doodle-scrim" aria-hidden="true" />}
-      <canvas
-        ref={canvas}
-        className={`jqzz-doodle${drawing ? " drawing" : ""}`}
-        aria-hidden="true"
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerCancel={up}
-      />
-      {allowed && (
-        <div className={`jqzz-doodle-tools${drawing ? " open" : ""}`}>
-          {drawing && (
-            <>
-              <div className="jqzz-doodle-inks" role="radiogroup" aria-label="Pen colour">
-                {INKS.map((v) => (
-                  <button
-                    key={v}
-                    className={`jqzz-doodle-ink${ink === v ? " on" : ""}`}
-                    style={{ "--ink": `var(${v})` } as React.CSSProperties}
-                    role="radio"
-                    aria-checked={ink === v}
-                    aria-label={v.replace(/^--(phase-)?/, "").toLowerCase()}
-                    onClick={() => setInk(v)}
-                  />
-                ))}
-              </div>
-              <button className="jqzz-play-btn small ghost" onClick={clear} disabled={blank}>
-                clear
-              </button>
-            </>
-          )}
-          <button
-            className={`jqzz-play-btn small${drawing ? " primary" : ""}`}
-            onClick={() => setOn((v) => !v)}
-            aria-pressed={drawing}
-            title={drawing ? "put the pen down: the drawing stays behind" : "draw on the background while you wait"}
-          >
-            <Glyph name="PEN" size={13} /> {drawing ? "done" : "draw"}
-          </button>
-        </div>
-      )}
-    </>
-  );
+  // ─── your own: drag on the background ────────────────────────────────
+  useEffect(() => {
+    if (!canDraw) return;
+    let active: { id: number; key: string; stroke: string } | null = null;
+    let outbox: [number, number][] = [];
+    let held: { id: number; x: number; y: number; timer: number } | null = null;
+    let n = 0;
+
+    const flush = () => {
+      if (!active || outbox.length === 0 || !client?.connected) {
+        outbox = [];
+        return;
+      }
+      client.publish({
+        destination: `/app/play/${code}/doodle`,
+        body: JSON.stringify({ stroke: active.stroke, points: outbox }),
+      });
+      // the next batch starts where this one ended, so the line has no gaps
+      outbox = outbox.slice(-1);
+    };
+    const sender = window.setInterval(flush, SEND_MS);
+
+    const add = (clientX: number, clientY: number) => {
+      if (!active) return;
+      const x = clientX / window.innerWidth;
+      const y = clientY / window.innerHeight;
+      const s = strokes.current.get(active.key)!;
+      s.points.push({ x, y, t: performance.now() });
+      outbox.push([Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000]);
+      paint.current();
+    };
+    const begin = (id: number, x: number, y: number) => {
+      const stroke = `${Date.now().toString(36)}${n++}`;
+      active = { id, key: `${me}:${stroke}`, stroke };
+      strokes.current.set(active.key, { ink: inkOf(me), points: [] });
+      outbox = [];
+      add(x, y);
+    };
+    const end = (e: PointerEvent) => {
+      if (held && held.id === e.pointerId) {
+        window.clearTimeout(held.timer);
+        held = null;
+      }
+      if (active && active.id === e.pointerId) {
+        flush();
+        active = null;
+        outbox = [];
+      }
+    };
+
+    const down = (e: PointerEvent) => {
+      if (active || e.button !== 0 || !e.isPrimary) return;
+      const target = e.target as Element | null;
+      if (!target?.closest(".jqzz-play") || target.closest(NOT_BACKGROUND)) return;
+      if (e.pointerType === "mouse" || e.pointerType === "pen") {
+        e.preventDefault(); // no text selection while dragging
+        begin(e.pointerId, e.clientX, e.clientY);
+        return;
+      }
+      // a finger: rest a moment to draw, or swipe away to scroll as usual
+      const id = e.pointerId;
+      held = {
+        id,
+        x: e.clientX,
+        y: e.clientY,
+        timer: window.setTimeout(() => {
+          if (!held || held.id !== id) return;
+          const { x, y } = held;
+          held = null;
+          begin(id, x, y);
+        }, HOLD_MS),
+      };
+    };
+    const move = (e: PointerEvent) => {
+      if (held && held.id === e.pointerId && Math.hypot(e.clientX - held.x, e.clientY - held.y) > 10) {
+        window.clearTimeout(held.timer);
+        held = null;
+      }
+      if (active && active.id === e.pointerId) add(e.clientX, e.clientY);
+    };
+    // while a finger draws, the page must not scroll under it
+    const touchmove = (e: TouchEvent) => {
+      if (active) e.preventDefault();
+    };
+
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    window.addEventListener("touchmove", touchmove, { passive: false });
+    return () => {
+      window.clearInterval(sender);
+      if (held) window.clearTimeout(held.timer);
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      window.removeEventListener("touchmove", touchmove);
+    };
+  }, [canDraw, client, code, me]);
+
+  return <canvas ref={canvas} className="jqzz-doodle" aria-hidden="true" />;
 };

@@ -25,6 +25,22 @@ public class User {
 
     private boolean online;
 
+    /** the Google account this one is tied to ("sub"); null for a guest account */
+    @JsonIgnore
+    @Column(unique = true)
+    private String googleSub;
+
+    /** has been told, once, that a guest account lives in one browser */
+    @JsonIgnore
+    private Boolean guestNoticed;
+
+    public String getGoogleSub(){return googleSub;}
+    public void setGoogleSub(String googleSub){this.googleSub=googleSub;}
+    /** tied to Google: it can be signed into anywhere, not only where it was made */
+    public boolean isGoogleLinked(){return googleSub != null;}
+    public Boolean getGuestNoticed(){return guestNoticed;}
+    public void setGuestNoticed(Boolean guestNoticed){this.guestNoticed=guestNoticed;}
+
     /** has been given the default question types in their stash, once */
     @JsonIgnore
     private Boolean typesSeeded;

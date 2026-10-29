@@ -8,7 +8,7 @@ import { IdentityModal } from "../Modals/IdentityModal";
 import { usePresence } from "../../hooks/usePresence";
 import { Answering, Judging } from "./Answering";
 import type { MyAnswer } from "./Answering";
-import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage } from "./PlayCommon";
+import { ConfirmButton, Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage } from "./PlayCommon";
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
@@ -197,7 +197,12 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
         )}
       </main>
 
-      {player && running && <Doodle code={code} me={me} allowed={done} />}
+      {running && <Doodle code={code} me={me} canDraw={done} />}
+      {player && game.status !== "FINISHED" && (
+        <div className="jqzz-quit-dock">
+          <LeaveButton onLeave={leave} busy={leaving} quit />
+        </div>
+      )}
       {game.status === "PAUSED" && <div className="jqzz-paused OEF">paused</div>}
       {error && (
         <button className="jqzz-play-error" onClick={() => setError(null)}>
@@ -256,6 +261,7 @@ const PhoneStep: React.FC<{
             {nudged ? (waiting > 1 ? `nudged · ${waiting} waiting` : "host nudged") : "hurry the host"}
           </button>
         )}
+        {answered && <span className="jqzz-annot jqzz-doodle-hint">drag on any empty spot to doodle</span>}
       </div>
     </div>
   );
@@ -349,21 +355,13 @@ const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }
 };
 
 /** Leaving for good takes your score with it, so it asks once. */
-const LeaveButton: React.FC<{ onLeave: () => void; busy: boolean }> = ({ onLeave, busy }) => {
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), 3500);
-    return () => window.clearTimeout(t);
-  }, [armed]);
-  return (
-    <button
-      className={`jqzz-play-btn small ghost danger${armed ? " armed" : ""}`}
-      disabled={busy}
-      title="leave the game for good: your score goes with you"
-      onClick={() => (armed ? onLeave() : setArmed(true))}
-    >
-      {busy ? "leaving…" : armed ? "leave? score goes" : "leave"}
-    </button>
-  );
-};
+const LeaveButton: React.FC<{ onLeave: () => void; busy: boolean; quit?: boolean }> = ({ onLeave, busy, quit }) => (
+  <ConfirmButton
+    label={quit ? "quit game" : "leave"}
+    armedLabel={quit ? "quit? your score goes" : "leave? score goes"}
+    busyLabel="leaving…"
+    busy={busy}
+    title="leave the game for good: your score goes with you"
+    onConfirm={onLeave}
+  />
+);

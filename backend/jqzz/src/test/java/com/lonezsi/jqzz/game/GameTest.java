@@ -61,7 +61,7 @@ class GameTest {
     }
 
     @Test
-    void hurryEmptiesEveryStepAndDrawingStaysUntilTheyStop() {
+    void hurryEmptiesEveryStepAndOnlyPlayersCanHurry() {
         Game g = game(round(question(1, QuestionType.PREWRITTEN_SINGLE, answer(10, 0), answer(11, 500))), "ann", "bob");
         assertThatThrownBy(() -> g.hurry("ann", 0)).isInstanceOf(IllegalStateException.class);
         g.start(0);
@@ -69,21 +69,17 @@ class GameTest {
 
         g.hurry("ann", 2);
         g.hurry("ann", 2);
-        g.drawing("bob", true, 2);
         assertThatThrownBy(() -> g.hurry("eve", 2)).isInstanceOf(IllegalStateException.class);
         Map<String, Object> asking = g.view(3, EVERYONE_ONLINE);
         assertThat(asking.get("hurry")).isEqualTo(List.of("ann"));
-        assertThat(asking.get("drawing")).isEqualTo(List.of("bob"));
 
         g.skip(4); // into ANSWER
         Map<String, Object> next = g.view(5, EVERYONE_ONLINE);
         assertThat(next.get("hurry")).isEqualTo(List.of());
-        assertThat(next.get("drawing")).isEqualTo(List.of("bob"));
 
-        g.drawing("bob", false, 6);
-        g.drawing("ann", true, 6);
+        g.hurry("ann", 6);
         g.removePlayer("ann", 7);
-        assertThat(g.view(8, EVERYONE_ONLINE).get("drawing")).isEqualTo(List.of());
+        assertThat(g.view(8, EVERYONE_ONLINE).get("hurry")).isEqualTo(List.of());
     }
 
     @Test

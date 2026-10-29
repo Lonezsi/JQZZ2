@@ -2562,84 +2562,33 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   to { transform: rotate(6deg) translateY(-1px); }
 }
 
-/* drawing on the background: behind the game, until the pen is up */
+/* trails on the background: behind everything, soft, gone in a moment */
 .jqzz-doodle {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100dvh;
   z-index: -1;
-  opacity: 0.6;
+  opacity: 0.5;
   pointer-events: none;
-  transition: opacity var(--dur-2) var(--ease);
 }
-.jqzz-doodle.drawing {
-  z-index: 30;
-  opacity: 1;
-  pointer-events: auto;
-  touch-action: none;
-  cursor: crosshair;
+.jqzz-doodle-hint {
+  opacity: 0.7;
+  animation: fadeIn 600ms var(--ease) 900ms backwards;
 }
-.jqzz-doodle-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 29;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
-  animation: fadeIn var(--dur-2) var(--ease);
-}
-.jqzz-doodle-tools {
+
+/* quit, within reach at the bottom while a game is on */
+.jqzz-quit-dock {
   position: fixed;
   left: 14px;
   bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-  z-index: 31;
-  max-width: calc(100vw - 28px);
-  flex-wrap: wrap;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px;
-  border-radius: 999px;
-  animation: toolsIn 380ms var(--ease-pop) backwards;
+  z-index: 15;
 }
-.jqzz-doodle-tools.open {
-  background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
-  box-shadow:
-    inset 0 0 0 1px var(--line-strong),
-    0 14px 34px -18px rgba(0, 0, 0, 0.9);
+.jqzz-quit-dock .jqzz-play-btn {
+  background: color-mix(in srgb, var(--surface-solid) 85%, transparent);
 }
-.jqzz-doodle-tools .jqzz-play-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-@keyframes toolsIn {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-}
-.jqzz-doodle-inks {
-  display: flex;
-  gap: 6px;
-  padding-left: 4px;
-}
-.jqzz-doodle-ink {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  transition: transform var(--dur-1) var(--ease-pop);
-}
-.jqzz-doodle-ink.on {
-  transform: scale(1.18);
-  box-shadow:
-    0 0 0 2px var(--surface-solid),
-    0 0 0 3.5px var(--ink);
-}
-/* the phone keeps room at the bottom for the pen */
+
+/* the phone keeps room at the bottom for the quit button */
 .jqzz-phone {
   padding-bottom: 76px;
 }
@@ -2730,7 +2679,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   .jqzz-wait-row,
   .jqzz-wait-face,
   .jqzz-wait-row.drawing .jqzz-wait-face .jqzz-play-face,
-  .jqzz-doodle-tools,
+  .jqzz-doodle-hint,
   .jqzz-phone-top.answered .jqzz-timer-slot {
     animation: none;
     transition: none;
@@ -2775,8 +2724,8 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     animation: none;
   }
 }
-/* a way back to another game sits at the bottom too: the pen goes above it */
-body:has(.jqzz-return) .jqzz-doodle-tools {
+/* a way back to another game sits at the bottom too: quit goes above it */
+body:has(.jqzz-return) .jqzz-quit-dock {
   bottom: calc(86px + env(safe-area-inset-bottom, 0px));
 }
 /* and the page itself keeps room under its end, so nothing stays stuck behind them */
@@ -2785,4 +2734,180 @@ body:has(.jqzz-return) .jqzz-play-frame {
 }
 body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Google, on the identity card */
+.jqzz-google {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 2px 0 10px;
+  font-size: var(--fs-small);
+}
+.jqzz-google.linked {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ok);
+}
+.jqzz-google-or {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-3);
+  font-size: var(--fs-annot);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.jqzz-google-or::before,
+.jqzz-google-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* the quiz log down the canvas's edge sits on the brightest part of the aura:
+   in the dark theme it's white, so it reads instead of smudging */
+:root:not([data-theme="light"]) .jqzz-note-vert {
+  color: var(--text);
+}
+
+
+/* ─── cleaner fonts: the setting swaps the lettering for the plain sans ─── */
+:root[data-fonts="clean"] {
+  --font-display: "Albert Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-title: "Albert Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+:root[data-fonts="clean"] .OEF,
+:root[data-fonts="clean"] .jqzz-modal h3,
+:root[data-fonts="clean"] .jqzz-empty-title {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+:root[data-fonts="clean"] .jqzz-stage-prompt,
+:root[data-fonts="clean"] .jqzz-play-prompt,
+:root[data-fonts="clean"] .jqzz-group-text,
+:root[data-fonts="clean"] .jqzz-card-prompt,
+:root[data-fonts="clean"] .jqzz-answer-q {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* the identity card's own row: icons, and the words slide out when you point */
+.jqzz-modal-row.secondary {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.jqzz-slide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding-inline: 9px;
+}
+.jqzz-slide-btn svg {
+  flex-shrink: 0;
+}
+.jqzz-slide-btn-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    max-width 320ms var(--ease),
+    opacity 220ms var(--ease),
+    margin-left 320ms var(--ease);
+}
+.jqzz-slide-btn:hover .jqzz-slide-btn-label,
+.jqzz-slide-btn:focus-visible .jqzz-slide-btn-label {
+  max-width: 140px;
+  margin-left: 7px;
+  opacity: 1;
+}
+
+/* your id: hidden like a password until you ask */
+.jqzz-secret {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.jqzz-secret code {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-family: var(--font-data);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.jqzz-secret code.hidden {
+  color: var(--text-3);
+  letter-spacing: 0.25em;
+}
+.jqzz-secret-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.jqzz-modal-inline .jqzz-secret-toggle {
+  flex-shrink: 0;
+}
+
+/* Google, in our own pill */
+.jqzz-google-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text);
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.jqzz-google-btn:hover:not(:disabled) {
+  background: var(--raised-hover);
+  border-color: var(--accent);
+}
+.jqzz-google-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.jqzz-google-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.jqzz-google-btn svg {
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-slide-btn-label {
+    transition: none;
+  }
+}
+
+/* the generated avatars' initial follows the lettering setting too */
+.jqzz-genav-letter {
+  font-family: var(--font-display);
+}
+:root[data-fonts="clean"] .jqzz-genav-letter {
+  font-weight: 700;
 }

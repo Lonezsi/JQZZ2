@@ -109,8 +109,6 @@ export interface GameState {
   pausedForHost?: boolean;
   /** players done with this step who nudged the host to move on */
   hurry?: string[];
-  /** players drawing on their screen's background */
-  drawing?: string[];
 }
 
 /** a game you're in that hasn't finished, as /play/mine lists it */

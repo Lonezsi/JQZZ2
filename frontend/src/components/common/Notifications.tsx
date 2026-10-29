@@ -172,6 +172,28 @@ export const NotificationCard: React.FC<{ n: AppNotification; onRead: () => void
         <b>{who}</b> said yes: you're friends now
       </>
     );
+  } else if (n.kind === "GUEST_ACCOUNT") {
+    text = user?.googleLinked ? (
+      <>your account is tied to Google now. it's safe.</>
+    ) : (
+      <>
+        you're on a <b>guest account</b>: it only lives in this browser. tie it to Google so your games and
+        quizzes don't get lost.
+      </>
+    );
+    if (!user?.googleLinked) {
+      actions = (
+        <button
+          className="jqzz-play-btn small primary"
+          onClick={() => {
+            if (!n.read) onRead();
+            go("/me/you");
+          }}
+        >
+          keep it
+        </button>
+      );
+    }
   } else if (n.kind === "INVITE") {
     const quiz = n.payload.quizName || "a quiz";
     text = n.payload.rematch ? (
@@ -213,7 +235,7 @@ export const NotificationCard: React.FC<{ n: AppNotification; onRead: () => void
           <Glyph name="BELL" size={14} />
         )}
         <span className="jqzz-alert-kind" aria-hidden="true">
-          <Glyph name={n.kind === "INVITE" ? "QUIZ" : "FRIENDS"} size={10} />
+          <Glyph name={n.kind === "INVITE" ? "QUIZ" : n.kind === "GUEST_ACCOUNT" ? "YOU" : "FRIENDS"} size={10} />
         </span>
       </a>
       <div className="jqzz-alert-body">

@@ -24,6 +24,8 @@ public class Notification {
 
     public static final String FRIEND_REQUEST = "FRIEND_REQUEST";
     public static final String FRIEND_ACCEPTED = "FRIEND_ACCEPTED";
+    /** your first finished game on an account only this browser can get back into */
+    public static final String GUEST_ACCOUNT = "GUEST_ACCOUNT";
     public static final String INVITE = "INVITE";
 
     @Id

@@ -7,6 +7,37 @@ import { typeLabel } from "../../utils/questionInfo";
 import { useAuth } from "../../contexts/AuthContext";
 
 
+/**
+ * Something that can't be taken back: the first press arms it and says what
+ * will happen, the second does it. It disarms itself after a few seconds.
+ */
+export const ConfirmButton: React.FC<{
+  label: React.ReactNode;
+  armedLabel: React.ReactNode;
+  busyLabel?: React.ReactNode;
+  busy?: boolean;
+  title?: string;
+  className?: string;
+  onConfirm: () => void;
+}> = ({ label, armedLabel, busyLabel, busy = false, title, className = "", onConfirm }) => {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 3500);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`jqzz-play-btn small ghost danger${armed ? " armed" : ""} ${className}`}
+      disabled={busy}
+      title={title}
+      onClick={() => (armed ? onConfirm() : setArmed(true))}
+    >
+      {busy ? (busyLabel ?? label) : armed ? armedLabel : label}
+    </button>
+  );
+};
+
 /** The background and frame every play screen sits in. */
 export const PlayFrame: React.FC<{ phase?: string; children: React.ReactNode }> = ({
   phase,

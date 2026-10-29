@@ -149,7 +149,13 @@ public class PresenceTracker {
         String prefix = "/topic/play/";
         if (destination == null || !destination.startsWith(prefix)) return null;
         String code = destination.substring(prefix.length()).trim().toUpperCase();
-        return code.isEmpty() ? null : code;
+        // /topic/play/{code} only: a game's side channels (its doodles) aren't watching it
+        return code.isEmpty() || code.contains("/") ? null : code;
+    }
+
+    /** Who a connection belongs to, from its CONNECT; null if it never said. */
+    public synchronized String userOf(String sessionId) {
+        return sessionId == null ? null : userBySession.get(sessionId);
     }
 
     /** Whether this user has at least one tab connected right now. */

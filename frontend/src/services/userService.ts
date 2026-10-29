@@ -20,4 +20,9 @@ export const userService = {
   delete: (id: string) => api.delete(`/users/${id}`),
   getAll: () => api.get<User[]>("/users"),
   getOne: (id: string) => api.get<User>(`/users/${id}`),
+  /** the account tied to that Google sign-in, or a new one made from it */
+  googleLogin: (credential: string) => api.post<User>("/users/google/login", { credential }),
+  /** tie this account to the Google account that just signed in */
+  googleLink: (id: string, credential: string) => api.post<User>(`/users/${id}/google`, { credential }),
+  googleUnlink: (id: string) => api.delete<User>(`/users/${id}/google`),
 };

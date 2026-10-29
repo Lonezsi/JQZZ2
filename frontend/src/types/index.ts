@@ -57,6 +57,8 @@ export interface User {
   email?: string;
   profilePictureUrl?: string;
   online: boolean;
+  /** tied to a Google account: it can be signed into anywhere, not just this browser */
+  googleLinked?: boolean;
 }
 
 export interface SnippetStep {

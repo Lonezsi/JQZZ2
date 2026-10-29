@@ -18,6 +18,9 @@ import { GameList } from "./HistoryPage";
 import { StashShelf } from "./StashShelf";
 import { NotificationList } from "./NotificationList";
 import { SettingsPanel } from "./SettingsPanel";
+import { GoogleAccount } from "../common/GoogleAccount";
+import { SecretId } from "../common/SecretId";
+import { useGoogleEnabled } from "../common/GoogleButton";
 import { RefChip } from "./StashBits";
 import { Glide } from "../common/Glide";
 
@@ -305,6 +308,7 @@ const Stats: React.FC<{ profile: Profile }> = ({ profile }) => {
 /** You, as others see you: details, friends, and the people asking to be. */
 const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends }> = ({ profile, me, friends }) => {
   const { user } = useAuth();
+  const googleOn = useGoogleEnabled();
   const [busy, setBusy] = useState<string | null>(null);
   const answer = (otherId: string, accept: boolean) => {
     setBusy(otherId);
@@ -344,10 +348,21 @@ const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends }> = (
               your id
             </dt>
             <dd>
-              <RefChip reference={profile.user.id} me="" label="copy" />
+              <SecretId id={profile.user.id} />
               <span className="jqzz-annot">type it on another device to be you there</span>
             </dd>
           </div>
+          {googleOn && (
+            <div>
+              <dt>
+                <Glyph name="PUBLIC" size={14} />
+                google
+              </dt>
+              <dd>
+                <GoogleAccount />
+              </dd>
+            </div>
+          )}
         </dl>
       </section>
 

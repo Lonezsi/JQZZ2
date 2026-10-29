@@ -358,9 +358,13 @@ public class GameEngine {
         return change(find(code), g -> g.hurry(userId, now()));
     }
 
-    /** drawing on the background, or not any more: the host sees who is */
-    public Map<String, Object> drawing(String code, String userId, boolean on) {
-        return change(find(code), g -> g.drawing(userId, on, now()));
+    /** in this game as a player, right now */
+    public boolean isPlayer(String code, String userId) {
+        Game game = code == null ? null : games.get(code.trim().toUpperCase());
+        if (game == null || userId == null) return false;
+        synchronized (game) {
+            return game.players.containsKey(userId);
+        }
     }
 
     // ─── the clock ─────────────────────────────────────────────────────
@@ -481,6 +485,7 @@ public class GameEngine {
                 game.version++;
             }
             publish(game);
+            guestNotice(game);
             return true;
         } catch (RuntimeException e) {
             System.err.println("game " + game.code() + ": could not save its history: " + e);
@@ -558,6 +563,30 @@ public class GameEngine {
     /** At this game: a tab on its screen. Online elsewhere in the app doesn't count. */
     private Predicate<String> online(Game game) {
         return id -> presence.isWatching(id, game.code());
+    }
+
+    /**
+     * Someone's first finished game on an account that only this browser knows
+     * the way into: tell them once, while they still have something to keep.
+     */
+    private void guestNotice(Game game) {
+        if (notifications == null) return;
+        java.util.Set<String> people = new java.util.LinkedHashSet<>();
+        synchronized (game) {
+            people.add(game.hostId());
+            people.addAll(game.players.keySet());
+        }
+        for (String id : people) {
+            try {
+                User u = userRepository.findById(id).orElse(null);
+                if (u == null || u.isGoogleLinked() || Boolean.TRUE.equals(u.getGuestNoticed())) continue;
+                u.setGuestNoticed(true);
+                userRepository.save(u);
+                notifications.notify(id, com.lonezsi.jqzz.model.Notification.GUEST_ACCOUNT, null, Map.of());
+            } catch (RuntimeException e) {
+                System.err.println("game " + game.code() + ": no guest notice for " + id + ": " + e);
+            }
+        }
     }
 
     private Game find(String code) {

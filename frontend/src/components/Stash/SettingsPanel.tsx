@@ -1,11 +1,13 @@
 import React from "react";
-import { useTheme } from "../../utils/theme";
+import { useFonts, useTheme } from "../../utils/theme";
 import { Glyph } from "../common/Glyph";
 
 /** How the app looks on this device. */
 export const SettingsPanel: React.FC = () => {
   const { choice, theme, set } = useTheme();
   const dark = theme === "dark";
+  const fonts = useFonts();
+  const clean = fonts.fonts === "clean";
   return (
     <section className="jqzz-settings" aria-label="Settings">
       <div className="jqzz-setting">
@@ -35,6 +37,26 @@ export const SettingsPanel: React.FC = () => {
           follow my device again
         </button>
       )}
+      <div className="jqzz-setting">
+        <span className="jqzz-setting-icon" aria-hidden="true">
+          <Glyph name="TEXT" size={16} />
+        </span>
+        <span className="jqzz-setting-text">
+          <span className="jqzz-setting-name" id="setting-fonts">
+            cleaner fonts
+          </span>
+          <span className="jqzz-annot">plain titles and questions instead of the fancy lettering</span>
+        </span>
+        <button
+          className={`jqzz-switch${clean ? " on" : ""}`}
+          role="switch"
+          aria-checked={clean}
+          aria-labelledby="setting-fonts"
+          onClick={() => fonts.set(clean ? "classic" : "clean")}
+        >
+          <span className="jqzz-switch-knob" />
+        </button>
+      </div>
     </section>
   );
 };

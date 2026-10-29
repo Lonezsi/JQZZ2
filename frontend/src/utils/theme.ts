@@ -66,10 +66,53 @@ export function watchTheme() {
   });
   // picked in another tab: this one follows
   window.addEventListener("storage", (e) => {
+    if (e.key === FONTS_KEY || e.key === null) applyFonts(fontsChoice());
     if (e.key !== KEY && e.key !== null) return;
     apply();
     window.dispatchEvent(new Event(`${EVENT}-choice`));
   });
+}
+
+/*
+ * Cleaner fonts: the blackletter titles and the brush questions swapped for
+ * the plain sans the rest of the app uses. Kept on this device, like the theme.
+ */
+export type Fonts = "classic" | "clean";
+const FONTS_KEY = "jqzz.fonts";
+const FONTS_EVENT = "jqzz-fonts";
+
+export function fontsChoice(): Fonts {
+  try {
+    return localStorage.getItem(FONTS_KEY) === "clean" ? "clean" : "classic";
+  } catch {
+    return "classic";
+  }
+}
+
+function applyFonts(fonts: Fonts) {
+  if (fonts === "clean") document.documentElement.dataset.fonts = "clean";
+  else delete document.documentElement.dataset.fonts;
+  window.dispatchEvent(new Event(FONTS_EVENT));
+}
+
+export function setFonts(fonts: Fonts) {
+  try {
+    if (fonts === "clean") localStorage.setItem(FONTS_KEY, "clean");
+    else localStorage.removeItem(FONTS_KEY);
+  } catch {
+    /* storage blocked: it holds for this visit only */
+  }
+  applyFonts(fonts);
+}
+
+export function useFonts() {
+  const [fonts, setState] = useState<Fonts>(fontsChoice);
+  useEffect(() => {
+    const sync = () => setState(fontsChoice());
+    window.addEventListener(FONTS_EVENT, sync);
+    return () => window.removeEventListener(FONTS_EVENT, sync);
+  }, []);
+  return { fonts, set: setFonts };
 }
 
 /** Calls back whenever the theme in use changes, for things drawn from its colours. */

@@ -136,9 +136,7 @@ export const GenAvatar: React.FC<GenAvatarProps> = React.memo(function GenAvatar
       />
 
       {/* the initial, with the same chromatic split as the titles */}
-      <g
-        fontFamily='"Old English Five", "UnifrakturMaguntia", serif'
-        fontSize="40"
+      <g className="jqzz-genav-letter" fontSize="40"
         textAnchor="middle"
         dominantBaseline="central"
       >

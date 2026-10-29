@@ -53,7 +53,9 @@ export const Tooltip: React.FC = () => {
     };
 
     const enter = (e: Event, delay: number) => {
-      const el = target(e.target);
+      // data-touch-tip: the button says it itself on hover; only a long press needs the bubble
+      const found = target(e.target);
+      const el = found?.hasAttribute("data-touch-tip") ? null : found;
       if (el === current.current) return;
       current.current = el;
       window.clearTimeout(timer.current);

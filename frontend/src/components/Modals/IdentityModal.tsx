@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import axios from "axios";
 import type { User } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
@@ -9,6 +9,10 @@ import { Avatar } from "../common/Avatar";
 import { ImagePicker } from "./ImagePicker";
 import type { PresenceState } from "../../hooks/usePresence";
 import { SettingsPanel } from "../Stash/SettingsPanel";
+import { GoogleButton, useGoogleEnabled } from "../common/GoogleButton";
+import { GoogleAccount } from "../common/GoogleAccount";
+import { SecretId } from "../common/SecretId";
+import { Glyph } from "../common/Glyph";
 
 interface IdentityModalProps {
   state?: PresenceState;
@@ -36,6 +40,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginId, setLoginId] = useState("");
+  const [peek, setPeek] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // the card has two faces, you and settings: switching slides the content
@@ -98,6 +103,31 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
       setLoading(false);
     }
   };
+
+  // Google, when logging in or starting fresh: signs into whatever account
+  // that Google account has (tying a guest account is GoogleAccount's job)
+  const googleOn = useGoogleEnabled();
+  const withGoogle = async (credential: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await userService.googleLogin(credential);
+      onSave(await login(res.data.id));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+  // tying to Google may hand over a real name and email: show them, so Save
+  // doesn't put the old ones back
+  const linked = !!current?.googleLinked;
+  useEffect(() => {
+    if (!linked || !current) return;
+    setName(current.name);
+    setEmail(current.email ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked]);
 
   const handleLogin = async () => {
     if (!loginId.trim()) return;
@@ -205,21 +235,48 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
             </div>
           </div>
         ) : (
-          <div className={`jqzz-modal-pane ${turned.current ? "from-left" : "still"}`} key="you">
+          <div
+            className={`jqzz-modal-pane ${turned.current ? "from-left" : "still"}`}
+            key="you"
+          >
             {showLogin ? (
               <>
                 <label className="jqzz-field-label" htmlFor="jqzz-login-id">
                   user id
                 </label>
-                <input
-                  id="jqzz-login-id"
-                  className="jqzz-modal-input"
-                  placeholder="the 10 letter id from your other browser"
-                  value={loginId}
-                  autoFocus
-                  onChange={(e) => setLoginId(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                />
+                <div className="jqzz-modal-inline">
+                  <input
+                    id="jqzz-login-id"
+                    className="jqzz-modal-input mono"
+                    type={peek ? "text" : "password"}
+                    autoComplete="off"
+                    placeholder="your id from another browser"
+                    value={loginId}
+                    autoFocus
+                    onChange={(e) => setLoginId(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                  <button
+                    type="button"
+                    className="jqzz-dice jqzz-secret-toggle"
+                    onClick={() => setPeek((v) => !v)}
+                    aria-pressed={peek}
+                    aria-label={peek ? "Hide the id" : "Show the id"}
+                    title={peek ? "hide it" : "show it"}
+                  >
+                    <Glyph name={peek ? "EYE_OFF" : "EYE"} size={15} />
+                  </button>
+                </div>
+                {googleOn && (
+                  <div className="jqzz-google">
+                    <span className="jqzz-google-or">or</span>
+                    <GoogleButton
+                      label="log in with Google"
+                      disabled={loading}
+                      onCredential={withGoogle}
+                    />
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -307,19 +364,19 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                         </button>
                       )}
                     </div>
-                    <label className="jqzz-field-label" htmlFor="jqzz-id">
+                    <div className="jqzz-field-label">
                       your id{" "}
                       <span className="jqzz-optional">
                         log in with it somewhere else
                       </span>
-                    </label>
-                    <input
-                      id="jqzz-id"
-                      className="jqzz-modal-input mono"
-                      readOnly
-                      value={current.id}
-                      onFocus={(e) => e.target.select()}
-                    />
+                    </div>
+                    <SecretId id={current.id} />
+                    {googleOn && (
+                      <>
+                        <div className="jqzz-field-label">google</div>
+                        <GoogleAccount />
+                      </>
+                    )}
                   </>
                 )}
               </>
@@ -387,35 +444,51 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
             {current && !showLogin && (
               <div className="jqzz-modal-row secondary">
                 <button
-                  className="jqzz-modal-btn ghost"
+                  className="jqzz-modal-btn ghost jqzz-slide-btn"
+                  data-touch-tip
+                  aria-label="Settings"
+                  title="settings"
                   onClick={() => turn("settings")}
                   disabled={loading}
                 >
-                  Settings
+                  <Glyph name="SETTINGS" size={15} />
+                  <span className="jqzz-slide-btn-label">Settings</span>
                 </button>
                 <button
-                  className="jqzz-modal-btn ghost"
+                  className="jqzz-modal-btn ghost jqzz-slide-btn"
+                  data-touch-tip
+                  aria-label="Log out"
+                  title="log out"
                   onClick={handleLogout}
                   disabled={loading}
                 >
-                  Log out
+                  <Glyph name="LOGOUT" size={15} />
+                  <span className="jqzz-slide-btn-label">Log out</span>
                 </button>
                 <button
-                  className="jqzz-modal-btn ghost"
+                  className="jqzz-modal-btn ghost jqzz-slide-btn"
+                  data-touch-tip
+                  aria-label="Switch user"
+                  title="switch user"
                   onClick={() => {
                     setError(null);
                     setShowLogin(true);
                   }}
                   disabled={loading}
                 >
-                  Switch user
+                  <Glyph name="SWITCH" size={15} />
+                  <span className="jqzz-slide-btn-label">Switch user</span>
                 </button>
                 <button
-                  className="jqzz-modal-btn ghost danger"
+                  className="jqzz-modal-btn ghost danger jqzz-slide-btn"
+                  data-touch-tip
+                  aria-label="Delete account"
+                  title="delete account"
                   onClick={handleDeleteAccount}
                   disabled={loading}
                 >
-                  Delete account
+                  <Glyph name="TRASH" size={15} />
+                  <span className="jqzz-slide-btn-label">Delete account</span>
                 </button>
               </div>
             )}

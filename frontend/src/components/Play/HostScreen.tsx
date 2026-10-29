@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../hooks/useGame";
 import { go, joinUrl } from "../../hooks/useHashRoute";
 import { playService } from "../../services/playService";
 import type { GameState } from "../../types/play";
-import { Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage, AnswerPicture } from "./PlayCommon";
+import { ConfirmButton, Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage, AnswerPicture } from "./PlayCommon";
+import { Doodle } from "./Doodle";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
 import { SaveFromGame } from "../Stash/SaveFromGame";
@@ -18,6 +19,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
   const { user } = useAuth();
   const { game, error, setError, act, serverNow } = useGame(code);
   const me = user?.id ?? "";
+  const { drawers, saw } = useDrawers();
 
   if (!game) {
     return (
@@ -115,7 +117,18 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
         )}
       </main>
 
-      {live && <WhileTheyWait game={game} me={me} onSkip={() => run(playService.skip)} />}
+      {live && <Doodle code={code} me={me} canDraw={false} onTrail={saw} />}
+      {live && <WhileTheyWait game={game} me={me} drawers={drawers} onSkip={() => run(playService.skip)} />}
+      {live && (
+        <div className="jqzz-quit-dock">
+          <ConfirmButton
+            label="end game"
+            armedLabel="end it for everyone?"
+            title="end the game now: scores so far stand"
+            onConfirm={() => run(playService.end)}
+          />
+        </div>
+      )}
       {game.status === "PAUSED" && <div className="jqzz-paused OEF">paused</div>}
       {error && (
         <button className="jqzz-play-error" onClick={() => setError(null)}>
@@ -309,12 +322,16 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
  * In the corner of the host's screen: who's done and wants the next one, and
  * who's passing the time drawing.
  */
-const WhileTheyWait: React.FC<{ game: GameState; me: string; onSkip: () => void }> = ({ game, me, onSkip }) => {
-  const people = (ids: string[] | undefined, onScreen: boolean) =>
-    (ids ?? []).map((id) => game.players.find((p) => p.id === id && (p.online || !onScreen))).filter((p) => !!p);
-  const hurry = people(game.hurry, false);
-  // a tab closed mid-drawing never says it stopped: only count people still here
-  const drawing = people(game.drawing, true);
+const WhileTheyWait: React.FC<{ game: GameState; me: string; drawers: string[]; onSkip: () => void }> = ({
+  game,
+  me,
+  drawers,
+  onSkip,
+}) => {
+  const people = (ids: string[] | undefined) =>
+    (ids ?? []).map((id) => game.players.find((p) => p.id === id)).filter((p) => !!p);
+  const hurry = people(game.hurry);
+  const drawing = people(drawers);
   if (!hurry.length && !drawing.length) return null;
   const faces = (list: typeof hurry) => (
     <span className="jqzz-wait-faces">
@@ -350,6 +367,35 @@ const WhileTheyWait: React.FC<{ game: GameState; me: string; onSkip: () => void 
     </aside>
   );
 };
+
+/** how long after their last trail someone still counts as drawing */
+const DRAWING_MS = 2500;
+
+/** Who's drawing: whoever's trail came in within the last moment. */
+function useDrawers() {
+  const last = useRef(new Map<string, number>());
+  const [drawers, setDrawers] = useState<string[]>([]);
+  const saw = useCallback((from: string) => {
+    const known = last.current.has(from);
+    last.current.set(from, Date.now());
+    if (!known) setDrawers([...last.current.keys()]);
+  }, []);
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      for (const [id, at] of last.current) {
+        if (now - at > DRAWING_MS) {
+          last.current.delete(id);
+          changed = true;
+        }
+      }
+      if (changed) setDrawers([...last.current.keys()]);
+    }, 500);
+    return () => window.clearInterval(t);
+  }, []);
+  return { drawers, saw };
+}
 
 const Progress: React.FC<{ label: string; done: string[]; game: GameState; total: number; me: string }> = ({
   label,
