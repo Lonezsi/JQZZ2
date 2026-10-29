@@ -353,6 +353,16 @@ public class GameEngine {
         return change(game, g -> g.vote(userId, choice, match, guesses, now(), online(game)));
     }
 
+    /** done here: tell the host to get on with it */
+    public Map<String, Object> hurry(String code, String userId) {
+        return change(find(code), g -> g.hurry(userId, now()));
+    }
+
+    /** drawing on the background, or not any more: the host sees who is */
+    public Map<String, Object> drawing(String code, String userId, boolean on) {
+        return change(find(code), g -> g.drawing(userId, on, now()));
+    }
+
     // ─── the clock ─────────────────────────────────────────────────────
 
     private void reschedule(Game game) {

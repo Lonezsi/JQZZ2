@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { onThemeChange } from "../../utils/theme";
 
 // 8x8 Bayer matrix, normalised to 0..1: ordered dithering, like print halftone
 const BAYER = [
@@ -98,13 +99,12 @@ export const DitherBlobs: React.FC = () => {
         draw();
       }, 150);
     };
-    const scheme = window.matchMedia("(prefers-color-scheme: light)");
     window.addEventListener("resize", onResize);
-    scheme.addEventListener("change", draw);
+    const offTheme = onThemeChange(draw);
     return () => {
       window.clearTimeout(t);
       window.removeEventListener("resize", onResize);
-      scheme.removeEventListener("change", draw);
+      offTheme();
     };
   }, []);
 

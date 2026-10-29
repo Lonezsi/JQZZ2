@@ -25,6 +25,8 @@ import com.lonezsi.jqzz.service.StashService;
  * POST /play/{code}/submit        {userId, picks|text|tiers}
  * POST /play/{code}/vote          {userId, choice, match | guesses}
  * POST /play/{code}/leave         {userId}
+ * POST /play/{code}/hurry         {userId}               done: nudge the host to move on
+ * POST /play/{code}/drawing       {userId, on}           drawing on the background, or stopped
  * POST /play/rematch              {recordId, userId}     that game's quiz again, everyone invited
  * POST /play/practice             {userId, quizId | stashId}  alone, started at once
  */
@@ -130,6 +132,16 @@ public class PlayController {
         return engine.vote(code, r.userId, r.choice, r.match, r.guesses);
     }
 
+    @PostMapping("/{code}/hurry")
+    public Map<String, Object> hurry(@PathVariable String code, @RequestBody PlayRequest r) {
+        return engine.hurry(code, r.userId);
+    }
+
+    @PostMapping("/{code}/drawing")
+    public Map<String, Object> drawing(@PathVariable String code, @RequestBody PlayRequest r) {
+        return engine.drawing(code, r.userId, Boolean.TRUE.equals(r.on));
+    }
+
     /** One shape for every request; each endpoint reads what it needs. */
     public static class PlayRequest {
         public Long quizId;
@@ -143,5 +155,6 @@ public class PlayController {
         public String choice;
         public Integer match;
         public Map<String, String> guesses;
+        public Boolean on;
     }
 }

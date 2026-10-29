@@ -17,10 +17,11 @@ import { IdentityModal } from "../Modals/IdentityModal";
 import { GameList } from "./HistoryPage";
 import { StashShelf } from "./StashShelf";
 import { NotificationList } from "./NotificationList";
+import { SettingsPanel } from "./SettingsPanel";
 import { RefChip } from "./StashBits";
 import { Glide } from "../common/Glide";
 
-type Tab = "history" | "stash" | "you" | "shelf" | "friends" | "notifications";
+type Tab = "history" | "stash" | "you" | "shelf" | "friends" | "notifications" | "settings";
 
 /**
  * Someone's page, laid out like a profile: a cover, their face over its
@@ -39,7 +40,7 @@ export const ProfilePage: React.FC<{
   const me = user?.id ?? "";
   const id = userId || me;
   const self = id === me;
-  const tabs: Tab[] = self ? ["history", "stash", "notifications", "you"] : ["history", "shelf", "friends"];
+  const tabs: Tab[] = self ? ["history", "stash", "notifications", "you", "settings"] : ["history", "shelf", "friends"];
   const tab: Tab = tabs.includes(fromRoute as Tab) ? (fromRoute as Tab) : "history";
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export const ProfilePage: React.FC<{
   useEffect(load, [load, friends.friends.length, friends.incoming.length, friends.outgoing.length]);
 
   const base = self ? "#/me" : `#/u/${encodeURIComponent(id)}`;
-  const space = tab === "history" ? "history" : tab === "you" || tab === "friends" || tab === "notifications" ? "you" : "stash";
+  const space = tab === "history" ? "history" : tab === "you" || tab === "friends" || tab === "notifications" || tab === "settings" ? "you" : "stash";
   const face = profile && { ...profile.user, profilePictureUrl: profile.user.profilePictureUrl ?? undefined };
 
   return (
@@ -130,7 +131,9 @@ export const ProfilePage: React.FC<{
                       ? "FRIENDS"
                       : t === "notifications"
                         ? "BELL"
-                        : "STASH",
+                        : t === "settings"
+                          ? "SETTINGS"
+                          : "STASH",
               label:
                 t === "history"
                   ? self
@@ -162,6 +165,7 @@ export const ProfilePage: React.FC<{
           )}
           {tab === "stash" && self && <StashShelf tab={sub} add={add} />}
           {tab === "notifications" && self && <NotificationList />}
+          {tab === "settings" && self && <SettingsPanel />}
           {tab === "you" && self && profile && <AboutYou profile={profile} me={me} friends={friends} />}
           {tab === "shelf" && profile && <Shelf items={profile.shelf} me={me} />}
           {tab === "friends" && profile && (

@@ -14,6 +14,8 @@ import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
 import { errorMessage } from "../../services/api";
+import { Glyph } from "../common/Glyph";
+import { Doodle } from "./Doodle";
 
 const STORE = (code: string) => `jqzz.mine.${code}`;
 
@@ -111,6 +113,15 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
   const vote = (v: { choice?: string; match?: number; guesses?: Record<string, string> }) =>
     act(() => playService.vote(code, me, v));
 
+  // done with this step: nothing left to answer or vote on
+  const running = game.status === "PLAYING" || game.status === "PAUSED";
+  const judging = game.interaction === "vote" || game.interaction === "guess" || game.interaction === "bracket";
+  const answered =
+    (game.phase === "QUESTION" && (game.answered ?? []).includes(me)) || (judging && (game.acted ?? []).includes(me));
+  const owes = (game.phase === "QUESTION" || judging) && !answered;
+  const done = running && !!player && !owes;
+  const hurry = done && game.status === "PLAYING" && game.hostId !== me ? () => act(() => playService.hurry(code, me)) : null;
+
   return (
     <PlayFrame phase={game.phase}>
       <header className="jqzz-play-bar compact">
@@ -165,6 +176,8 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
             submit={submit}
             vote={vote}
             remember={(patch) => q && remember(q.id, patch)}
+            answered={answered}
+            hurry={hurry}
           />
         )}
 
@@ -184,6 +197,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
         )}
       </main>
 
+      {player && running && <Doodle code={code} me={me} allowed={done} />}
       {game.status === "PAUSED" && <div className="jqzz-paused OEF">paused</div>}
       {error && (
         <button className="jqzz-play-error" onClick={() => setError(null)}>
@@ -214,16 +228,35 @@ const PhoneStep: React.FC<{
   submit: (a: { picks?: number[]; text?: string; tiers?: Record<number, string> }) => Promise<boolean>;
   vote: (v: { choice?: string; match?: number; guesses?: Record<string, string> }) => Promise<boolean>;
   remember: (patch: MyAnswer) => void;
-}> = ({ game, me, mine, serverNow, submit, vote, remember }) => {
+  /** sent, so the clock is all that's left to watch: it gets big */
+  answered: boolean;
+  /** nudge the host, once you're done; null when there's nothing to nudge */
+  hurry: (() => void) | null;
+}> = ({ game, me, mine, serverNow, submit, vote, remember, answered, hurry }) => {
   const q = game.question;
   const phase = game.phase;
   const player = game.players.find((p) => p.id === me);
   const gain = game.reveal?.settled ? (game.reveal.gains?.[me] ?? 0) : null;
 
+  const nudged = (game.hurry ?? []).includes(me);
+  const waiting = (game.hurry ?? []).length;
   const top = (
-    <div className="jqzz-stage-top">
+    <div className={`jqzz-stage-top jqzz-phone-top${answered ? " answered" : ""}`}>
       {q ? <QuestionHead game={game} /> : <span />}
-      <Countdown game={game} serverNow={serverNow} size={52} />
+      <div className="jqzz-timer-slot">
+        <Countdown game={game} serverNow={serverNow} size={answered ? 168 : 92} />
+        {hurry && (
+          <button
+            className={`jqzz-play-btn small jqzz-hurry${nudged ? " sent" : ""}`}
+            disabled={nudged}
+            onClick={hurry}
+            title="tell the host you're ready for the next one"
+          >
+            <Glyph name="HURRY" size={13} />
+            {nudged ? (waiting > 1 ? `nudged · ${waiting} waiting` : "host nudged") : "hurry the host"}
+          </button>
+        )}
+      </div>
     </div>
   );
 

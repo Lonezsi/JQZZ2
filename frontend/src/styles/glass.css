@@ -168,12 +168,10 @@
   background-image: var(--scratches);
   opacity: calc(var(--imperfection-opacity) * 0.4);
 }
-@media (prefers-color-scheme: light) {
-  .jqzz-imperfections .dust,
-  .jqzz-imperfections .scratches {
-    filter: invert(1);
-    mix-blend-mode: multiply;
-  }
+:root[data-theme="light"] .jqzz-imperfections .dust,
+:root[data-theme="light"] .jqzz-imperfections .scratches {
+  filter: invert(1);
+  mix-blend-mode: multiply;
 }
 
 /* ─── Holo: the material for overlays (palette, popovers, dialogs) ──

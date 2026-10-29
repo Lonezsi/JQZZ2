@@ -191,6 +191,23 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M12.5 8.5v4.5M10.25 10.75h4.5" />
     </>
   ),
+  SETTINGS: (
+    <>
+      <path d="M2.5 4.5h6M11.5 4.5h2M2.5 11.5h2M7.5 11.5h6" />
+      <circle cx="10" cy="4.5" r="1.5" />
+      <circle cx="6" cy="11.5" r="1.5" />
+    </>
+  ),
+  MOON: (
+    <>
+      <path d="M13.2 9.8A5.6 5.6 0 1 1 6.2 2.8a4.5 4.5 0 0 0 7 7z" />
+    </>
+  ),
+  HURRY: (
+    <>
+      <path d="M2.5 4 7 8l-4.5 4M8.5 4 13 8l-4.5 4" />
+    </>
+  ),
   CHECK: (
     <>
       <path d="m3 8.5 3.2 3.2L13 4.8" />

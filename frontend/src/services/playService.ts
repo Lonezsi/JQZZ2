@@ -30,6 +30,11 @@ export const playService = {
   invite: (code: string, userId: string, playerId: string) =>
     api.post<{ invited: string }>(`/play/${code}/invite`, { userId, playerId }).then((r) => r.data),
 
+  /** done with this step: nudge the host to move on */
+  hurry: (code: string, userId: string) => post(`/play/${code}/hurry`, { userId }),
+  /** drawing on the background, or not any more */
+  drawing: (code: string, userId: string, on: boolean) => post(`/play/${code}/drawing`, { userId, on }),
+
   submit: (
     code: string,
     userId: string,

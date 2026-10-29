@@ -2438,3 +2438,344 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     transition: none;
   }
 }
+
+/* ─── in game: the clock, the nudge, the doodles ──────────────────── */
+/* the ring grows when it changes size (answering makes it the main thing) */
+.jqzz-countdown {
+  transition:
+    width 460ms var(--ease),
+    height 460ms var(--ease),
+    font-size 460ms var(--ease);
+}
+.jqzz-timer-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+/* sent: the clock takes its own row, in the middle */
+.jqzz-phone-top.answered {
+  flex-wrap: wrap;
+}
+.jqzz-phone-top.answered .jqzz-timer-slot {
+  flex-basis: 100%;
+  animation: viewIn var(--dur-3) var(--ease) backwards;
+}
+.jqzz-phone-top.answered .jqzz-countdown {
+  filter: drop-shadow(0 0 28px color-mix(in srgb, var(--accent) 35%, transparent));
+}
+.jqzz-hurry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.jqzz-hurry.sent {
+  opacity: 1;
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+/* the host's skip wiggles whenever someone new nudges */
+.jqzz-play-btn.nudged {
+  border-color: var(--warm);
+  color: var(--warm);
+  animation: nudge 520ms var(--ease-pop) 2;
+}
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-2deg); }
+  45% { transform: translateX(4px) rotate(2deg); }
+  70% { transform: translateX(-2px); }
+}
+
+/* the host's corner: who wants to move on, who's drawing */
+.jqzz-wait {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+}
+.jqzz-wait-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 90%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 14px 34px -18px rgba(0, 0, 0, 0.9);
+  font-size: var(--fs-small);
+  animation: waitIn 420ms var(--ease-pop) backwards;
+}
+.jqzz-wait-row.drawing {
+  padding-right: 12px;
+}
+.jqzz-wait-row.hurry svg {
+  color: var(--warm);
+}
+.jqzz-wait-row.drawing svg {
+  color: var(--accent);
+}
+@keyframes waitIn {
+  from {
+    opacity: 0;
+    transform: translateX(40%);
+  }
+}
+.jqzz-wait-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.jqzz-wait-faces {
+  display: flex;
+  align-items: center;
+}
+.jqzz-wait-face {
+  margin-left: -8px;
+  animation: faceIn 360ms var(--ease-pop) backwards;
+}
+.jqzz-wait-face:first-child {
+  margin-left: 0;
+}
+.jqzz-wait-face .jqzz-play-face {
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 2px var(--surface-solid);
+}
+.jqzz-wait-row.drawing .jqzz-wait-face .jqzz-play-face {
+  animation: doodling 1.6s var(--ease-in-out) infinite alternate;
+}
+@keyframes faceIn {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+@keyframes doodling {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(6deg) translateY(-1px); }
+}
+
+/* drawing on the background: behind the game, until the pen is up */
+.jqzz-doodle {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: -1;
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease);
+}
+.jqzz-doodle.drawing {
+  z-index: 30;
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+.jqzz-doodle-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  animation: fadeIn var(--dur-2) var(--ease);
+}
+.jqzz-doodle-tools {
+  position: fixed;
+  left: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 31;
+  max-width: calc(100vw - 28px);
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px;
+  border-radius: 999px;
+  animation: toolsIn 380ms var(--ease-pop) backwards;
+}
+.jqzz-doodle-tools.open {
+  background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 14px 34px -18px rgba(0, 0, 0, 0.9);
+}
+.jqzz-doodle-tools .jqzz-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@keyframes toolsIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.jqzz-doodle-inks {
+  display: flex;
+  gap: 6px;
+  padding-left: 4px;
+}
+.jqzz-doodle-ink {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: transform var(--dur-1) var(--ease-pop);
+}
+.jqzz-doodle-ink.on {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 2px var(--surface-solid),
+    0 0 0 3.5px var(--ink);
+}
+/* the phone keeps room at the bottom for the pen */
+.jqzz-phone {
+  padding-bottom: 76px;
+}
+
+/* ─── settings, on your profile ──────────────────────────────────── */
+.jqzz-settings {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 560px;
+}
+.jqzz-setting {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-solid) 80%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.jqzz-setting-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.jqzz-setting-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.jqzz-setting-name {
+  font-weight: 600;
+}
+.jqzz-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: background var(--dur-2) var(--ease);
+}
+.jqzz-switch.on {
+  background: var(--accent-fill);
+}
+.jqzz-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text);
+  transition:
+    transform var(--dur-2) var(--ease-pop),
+    background var(--dur-2) var(--ease);
+}
+.jqzz-switch.on .jqzz-switch-knob {
+  transform: translateX(18px);
+  background: var(--on-accent);
+}
+.jqzz-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* switching themes: everything crossfades instead of snapping */
+:root.theme-switching,
+:root.theme-switching * {
+  transition:
+    background-color 360ms var(--ease),
+    color 360ms var(--ease),
+    border-color 360ms var(--ease) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-countdown,
+  .jqzz-play-btn.nudged,
+  .jqzz-wait-row,
+  .jqzz-wait-face,
+  .jqzz-wait-row.drawing .jqzz-wait-face .jqzz-play-face,
+  .jqzz-doodle-tools,
+  .jqzz-phone-top.answered .jqzz-timer-slot {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* the identity card's two faces: the content slides across, the card's
+   height is animated from script so it glides instead of jumping */
+.jqzz-modal-body {
+  overflow: hidden;
+  /* room for focus rings and the switch's glow at the clipped edges */
+  margin: -4px;
+  padding: 4px;
+}
+.jqzz-modal-pane {
+  animation: paneFromRight 380ms var(--ease) backwards;
+}
+.jqzz-modal-pane.from-left {
+  animation-name: paneFromLeft;
+}
+@keyframes paneFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+@keyframes paneFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+}
+/* the first face appears with the card, not sliding in on its own */
+.jqzz-modal-pane.still {
+  animation: none;
+}
+.jqzz-modal-body .jqzz-settings {
+  margin: 4px 0 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-modal-pane {
+    animation: none;
+  }
+}
+/* a way back to another game sits at the bottom too: the pen goes above it */
+body:has(.jqzz-return) .jqzz-doodle-tools {
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+}

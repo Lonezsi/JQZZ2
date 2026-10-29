@@ -151,6 +151,10 @@ public class Game {
     final Random random;
     final Map<String, Player> players = new LinkedHashMap<>();
     final Map<Long, QState> questions = new HashMap<>();
+    /** done with this step and waiting on the host to move on; empties every step */
+    final Set<String> hurry = new LinkedHashSet<>();
+    /** doodling on their screen's background while they wait */
+    final Set<String> drawing = new LinkedHashSet<>();
 
     Status status = Status.LOBBY;
     int index = -1;
@@ -194,7 +198,24 @@ public class Game {
     }
 
     public void removePlayer(String id, long now) {
+        hurry.remove(id);
+        drawing.remove(id);
         if (players.remove(id) != null) changed(now);
+    }
+
+    // ─── while they wait ───────────────────────────────────────────────
+
+    /** A player is done with this step and nudges the host to move on. Once per step. */
+    public void hurry(String id, long now) {
+        if (!players.containsKey(id)) throw new IllegalStateException("You're not in this game");
+        if (status != Status.PLAYING && status != Status.PAUSED) throw new IllegalStateException("The game is not running");
+        if (hurry.add(id)) changed(now);
+    }
+
+    /** A player started or stopped drawing on their screen. */
+    public void drawing(String id, boolean on, long now) {
+        if (!players.containsKey(id)) throw new IllegalStateException("You're not in this game");
+        if (on ? drawing.add(id) : drawing.remove(id)) changed(now);
     }
 
     /** Out, and can't come back to this game. */
@@ -230,6 +251,8 @@ public class Game {
         status = Status.LOBBY;
         index = -1;
         endsAt = 0;
+        hurry.clear();
+        drawing.clear();
         changed(now);
     }
 
@@ -286,6 +309,7 @@ public class Game {
 
     private void enter(int k, long now) {
         index = k;
+        hurry.clear();
         Step step = steps.get(k);
         endsAt = now + Math.max(1, step.seconds()) * 1000L;
         QuestionSnap q = step.question();
@@ -332,6 +356,8 @@ public class Game {
         }
         status = Status.FINISHED;
         index = steps.size();
+        hurry.clear();
+        drawing.clear();
         endsAt = 0;
         changed(now);
     }
@@ -710,6 +736,8 @@ public class Game {
             v.put("acted", List.copyOf(acted));
         }
         v.put("players", playersView(online));
+        v.put("hurry", List.copyOf(hurry));
+        v.put("drawing", List.copyOf(drawing));
         // the host's screen: here, or gone and (while playing) holding the game
         v.put("hostHere", online.test(hostId));
         v.put("pausedForHost", pausedForHost);

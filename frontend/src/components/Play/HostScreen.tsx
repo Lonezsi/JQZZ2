@@ -11,6 +11,7 @@ import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
 import { InvitePeople } from "./InvitePeople";
+import { Glyph } from "../common/Glyph";
 
 /** The big screen: what the room looks at while the host runs the game. */
 export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
@@ -71,7 +72,12 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
                 ❚❚ pause
               </button>
             )}
-            <button className="jqzz-play-btn" onClick={() => run(playService.skip)} title="next step now">
+            <button
+              key={`skip-${(game.hurry ?? []).length}`}
+              className={`jqzz-play-btn${(game.hurry ?? []).length ? " nudged" : ""}`}
+              onClick={() => run(playService.skip)}
+              title="next step now"
+            >
               ▶▶ skip
             </button>
             <button
@@ -109,6 +115,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
         )}
       </main>
 
+      {live && <WhileTheyWait game={game} me={me} onSkip={() => run(playService.skip)} />}
       {game.status === "PAUSED" && <div className="jqzz-paused OEF">paused</div>}
       {error && (
         <button className="jqzz-play-error" onClick={() => setError(null)}>
@@ -195,7 +202,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
     return (
       <div className="jqzz-stage-wait">
         <QuestionHead game={game} />
-        <Countdown game={game} serverNow={serverNow} size={150} />
+        <Countdown game={game} serverNow={serverNow} size={230} />
         <p className="jqzz-play-note">get ready</p>
       </div>
     );
@@ -209,7 +216,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
       <div className="jqzz-stage-result">
         <div className="jqzz-stage-top">
           {q && <QuestionHead game={game} />}
-          <Countdown game={game} serverNow={serverNow} size={56} />
+          <Countdown game={game} serverNow={serverNow} size={110} />
         </div>
         {worthShowing && game.reveal && <Reveal game={game} />}
         <Leaderboard players={game.players} viewerId={me} limit={8} />
@@ -226,7 +233,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
     <div className={`jqzz-stage-q phase-${phase}`}>
       <div className="jqzz-stage-top">
         <QuestionHead game={game} />
-        <Countdown game={game} serverNow={serverNow} size={phase === "QUESTION" ? 88 : 56} />
+        <Countdown game={game} serverNow={serverNow} size={phase === "QUESTION" ? 170 : 110} />
       </div>
       <h1 className={`jqzz-stage-prompt jqzz-holo sheen${phase === "QUESTION" ? "" : " small"}`}>{q.text}</h1>
 
@@ -295,6 +302,52 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
         </div>
       )}
     </div>
+  );
+};
+
+/**
+ * In the corner of the host's screen: who's done and wants the next one, and
+ * who's passing the time drawing.
+ */
+const WhileTheyWait: React.FC<{ game: GameState; me: string; onSkip: () => void }> = ({ game, me, onSkip }) => {
+  const people = (ids: string[] | undefined, onScreen: boolean) =>
+    (ids ?? []).map((id) => game.players.find((p) => p.id === id && (p.online || !onScreen))).filter((p) => !!p);
+  const hurry = people(game.hurry, false);
+  // a tab closed mid-drawing never says it stopped: only count people still here
+  const drawing = people(game.drawing, true);
+  if (!hurry.length && !drawing.length) return null;
+  const faces = (list: typeof hurry) => (
+    <span className="jqzz-wait-faces">
+      {list.slice(0, 8).map((p) => (
+        <span key={p.id} className="jqzz-wait-face" title={p.name}>
+          <PlayerFace player={p} viewerId={me} />
+        </span>
+      ))}
+      {list.length > 8 && <span className="jqzz-annot">+{list.length - 8}</span>}
+    </span>
+  );
+  return (
+    <aside className="jqzz-wait" aria-live="polite">
+      {hurry.length > 0 && (
+        <div className="jqzz-wait-row hurry">
+          <Glyph name="HURRY" size={14} />
+          <span className="jqzz-wait-label">
+            {hurry.length === 1 ? `${hurry[0].name} wants` : `${hurry.length} want`} the next one
+          </span>
+          {faces(hurry)}
+          <button className="jqzz-play-btn small primary" onClick={onSkip}>
+            go on
+          </button>
+        </div>
+      )}
+      {drawing.length > 0 && (
+        <div className="jqzz-wait-row drawing">
+          <Glyph name="PEN" size={14} />
+          <span className="jqzz-wait-label">{drawing.length === 1 ? `${drawing[0].name} is` : `${drawing.length} are`} drawing</span>
+          {faces(drawing)}
+        </div>
+      )}
+    </aside>
   );
 };
 

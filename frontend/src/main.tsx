@@ -5,6 +5,9 @@ import { WebSocketProvider } from "./contexts/WebSocketContext";
 import App from "./App";
 import "./index.css";
 import { QuizProvider } from "./contexts/QuizContext";
+import { watchTheme } from "./utils/theme";
+
+watchTheme();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

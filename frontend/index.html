@@ -8,6 +8,19 @@
       name="description"
       content="JQZZ - Experience Interactive Quiz Gaming"
     />
+    <script>
+      // dark or light before the first paint: your pick from settings, else the device's
+      (function () {
+        var t;
+        try {
+          t = localStorage.getItem("jqzz.theme");
+        } catch (e) {}
+        if (t !== "dark" && t !== "light") {
+          t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
     <link rel="stylesheet" href="/src/index.css" />
     <title>JQZZ - Quiz Gaming Platform</title>
   </head>

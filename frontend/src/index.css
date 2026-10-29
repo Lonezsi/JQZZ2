@@ -158,64 +158,62 @@
 
 /* ─── Paper (light) ───────────────────────────────────────────────
    worst case: panel over the aura (#e6e0f1) */
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
+:root[data-theme="light"] {
+  color-scheme: light;
 
-    --bg: #ebe7e0;
-    --surface: rgba(250, 248, 244, 0.84);
-    --surface-solid: #faf8f4;
-    --raised: rgba(253, 252, 249, 0.9);
-    --raised-hover: #ffffff;
-    --sunken: rgba(232, 227, 219, 0.7);
-    --line: rgba(22, 19, 31, 0.16);
-    --line-strong: rgba(22, 19, 31, 0.32);
+  --bg: #ebe7e0;
+  --surface: rgba(250, 248, 244, 0.84);
+  --surface-solid: #faf8f4;
+  --raised: rgba(253, 252, 249, 0.9);
+  --raised-hover: #ffffff;
+  --sunken: rgba(232, 227, 219, 0.7);
+  --line: rgba(22, 19, 31, 0.16);
+  --line-strong: rgba(22, 19, 31, 0.32);
 
-    --text: #0f0c17; /* 15.0:1 */
-    --text-2: #37314a; /* 9.6:1 */
-    --text-3: #4f4a62; /* 6.5:1 */
+  --text: #0f0c17; /* 15.0:1 */
+  --text-2: #37314a; /* 9.6:1 */
+  --text-3: #4f4a62; /* 6.5:1 */
 
-    --accent: #4a2fbf; /* 6.7:1 */
-    --accent-fill: #5236c9;
-    --on-accent: #ffffff; /* 7.7:1 on the fill */
-    --accent-soft: rgba(82, 54, 201, 0.1);
-    --link: #3a1fa8;
-    --warm: #a0482a; /* 4.7:1 */
-    --danger: #b3261e;
-    --ok: #1f7a4a;
+  --accent: #4a2fbf; /* 6.7:1 */
+  --accent-fill: #5236c9;
+  --on-accent: #ffffff; /* 7.7:1 on the fill */
+  --accent-soft: rgba(82, 54, 201, 0.1);
+  --link: #3a1fa8;
+  --warm: #a0482a; /* 4.7:1 */
+  --danger: #b3261e;
+  --ok: #1f7a4a;
 
-    --phase-WAITING: #4f6286;
-    --phase-QUESTION: #5236c9;
-    --phase-ANSWER: #2f62b8;
-    --phase-ELABORATION: #a0482a;
-    --phase-RESULT: #a3325e;
-    --phase-TEXT: #5e5870;
-    --phase-DIVIDER: #5e5870;
-    --phase-SETTING: #1d7564;
+  --phase-WAITING: #4f6286;
+  --phase-QUESTION: #5236c9;
+  --phase-ANSWER: #2f62b8;
+  --phase-ELABORATION: #a0482a;
+  --phase-RESULT: #a3325e;
+  --phase-TEXT: #5e5870;
+  --phase-DIVIDER: #5e5870;
+  --phase-SETTING: #1d7564;
 
-    --aura-a: #7b5cff;
-    --aura-b: #f6a684;
-    --aura-c: #b9a6ff;
-    --aura-opacity: 0.5;
-    --paper: url("/bg.jpg");
-    --grain-opacity: 0.13;
-    --grain-blend: multiply;
-    --dot: rgba(22, 19, 31, 0.45);
+  --aura-a: #7b5cff;
+  --aura-b: #f6a684;
+  --aura-c: #b9a6ff;
+  --aura-opacity: 0.5;
+  --paper: url("/bg.jpg");
+  --grain-opacity: 0.13;
+  --grain-blend: multiply;
+  --dot: rgba(22, 19, 31, 0.45);
 
-    --dither-opacity: 0.07;
-    --dither-blend: multiply;
-    --tex-floor-opacity: 0;
-    --lens-a-opacity: 0.32;
-    --lens-b-opacity: 0.1;
-    --lens-b-blend: multiply;
-    --grain-huge-opacity: 0.04;
+  --dither-opacity: 0.07;
+  --dither-blend: multiply;
+  --tex-floor-opacity: 0;
+  --lens-a-opacity: 0.32;
+  --lens-b-opacity: 0.1;
+  --lens-b-blend: multiply;
+  --grain-huge-opacity: 0.04;
 
-    /* on paper, leaks tint instead of glow */
-    --leak-a: rgba(246, 166, 132, 0.5);
-    --leak-b: rgba(123, 92, 255, 0.35);
-    --leak-blend: multiply;
-    --imperfection-opacity: 0.24;
-  }
+  /* on paper, leaks tint instead of glow */
+  --leak-a: rgba(246, 166, 132, 0.5);
+  --leak-b: rgba(123, 92, 255, 0.35);
+  --leak-blend: multiply;
+  --imperfection-opacity: 0.24;
 }
 
 /* ─── Accessibility settings ────────────────────────────────────── */
