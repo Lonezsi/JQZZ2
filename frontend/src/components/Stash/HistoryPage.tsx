@@ -341,7 +341,9 @@ const Result: React.FC<{ q: StashedQuestion; r: QuestionResult; recordId: number
               .sort((a, b) => b.votes - a.votes)
               .map((e, i) => (
                 <li key={i}>
-                  <span className="jqzz-entry-text">“{e.text}”</span>
+                  <span className="jqzz-entry-text">
+                    “{e.text}”{e.word ? <b> · {e.word}</b> : null}
+                  </span>
                   <span className="jqzz-annot">
                     {e.by}
                     {e.votes > 0 && ` · ${e.votes}`}
