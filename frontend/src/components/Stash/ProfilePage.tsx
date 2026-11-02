@@ -21,6 +21,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { GoogleAccount } from "../common/GoogleAccount";
 import { SecretId } from "../common/SecretId";
 import { useGoogleEnabled } from "../common/GoogleButton";
+import { hits } from "../../utils/search";
 import { RefChip } from "./StashBits";
 import { Glide } from "../common/Glide";
 
@@ -50,6 +51,10 @@ export const ProfilePage: React.FC<{
   const [editing, setEditing] = useState(false);
   const edit = usePresence(editing, 240);
   const friends = useFriends();
+  // one search for the whole page: it looks through whichever tab is open,
+  // and starts over when another one is
+  const [search, setSearch] = useState<{ tab: Tab; q: string }>({ tab, q: "" });
+  const query = search.tab === tab ? search.q : "";
 
   const load = useCallback(() => {
     if (!me || !id) return;
@@ -118,6 +123,7 @@ export const ProfilePage: React.FC<{
             {profile && <Stats profile={profile} />}
           </section>
 
+          <div className="jqzz-space-bar">
           <Glide
             className="jqzz-space-tabs"
             label="Sections"
@@ -149,10 +155,23 @@ export const ProfilePage: React.FC<{
                       : t,
             }))}
           />
+          <label className="jqzz-search jqzz-space-search">
+            <span className="jqzz-search-icon" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              placeholder={SEARCHES[tab]}
+              aria-label={SEARCHES[tab]}
+              onChange={(e) => setSearch({ tab, q: e.target.value })}
+              onKeyDown={(e) => e.key === "Escape" && setSearch({ tab, q: "" })}
+            />
+          </label>
+          </div>
 
           {tab === "history" && profile && (
             <GameList
-              games={profile.games}
+              games={profile.games.filter((g) => hits(query, g.quizName, ...g.podium.map((p) => p.name)))}
+              searching={!!query.trim()}
               me={me}
               empty={
                 self ? (
@@ -166,13 +185,23 @@ export const ProfilePage: React.FC<{
               }
             />
           )}
-          {tab === "stash" && self && <StashShelf tab={sub} add={add} />}
-          {tab === "notifications" && self && <NotificationList />}
-          {tab === "settings" && self && <SettingsPanel />}
-          {tab === "you" && self && profile && <AboutYou profile={profile} me={me} friends={friends} />}
-          {tab === "shelf" && profile && <Shelf items={profile.shelf} me={me} />}
+          {tab === "stash" && self && <StashShelf tab={sub} add={add} query={query} />}
+          {tab === "notifications" && self && <NotificationList query={query} />}
+          {tab === "settings" && self && <SettingsPanel query={query} />}
+          {tab === "you" && self && profile && <AboutYou profile={profile} me={me} friends={friends} query={query} />}
+          {tab === "shelf" && profile && (
+            <Shelf
+              items={profile.shelf.filter((i) => hits(query, i.title, i.handle, i.reference))}
+              me={me}
+              empty={query.trim() ? "nothing on their shelf matches that." : "nothing public yet."}
+            />
+          )}
           {tab === "friends" && profile && (
-            <FriendGrid people={profile.friends} me={me} empty="no friends here yet." />
+            <FriendGrid
+              people={profile.friends.filter((p) => hits(query, p.name, p.handle))}
+              me={me}
+              empty={query.trim() ? "none of their friends match that." : "no friends here yet."}
+            />
           )}
         </main>
       </div>
@@ -192,6 +221,17 @@ export const ProfilePage: React.FC<{
 };
 
 type Friends = ReturnType<typeof useFriends>;
+
+/** what the search box offers to look through, per tab */
+const SEARCHES: Record<Tab, string> = {
+  history: "search your games",
+  stash: "search stash and public",
+  notifications: "search notifications",
+  you: "search your friends",
+  settings: "search settings",
+  shelf: "search their shelf",
+  friends: "search their friends",
+};
 
 /** Add friend, requested, accept or decline, or friends: how you stand, and what you can do about it. */
 const FriendButton: React.FC<{ status: Profile["friendship"]; otherId: string; friends: Friends }> = ({
@@ -306,7 +346,14 @@ const Stats: React.FC<{ profile: Profile }> = ({ profile }) => {
 };
 
 /** You, as others see you: details, friends, and the people asking to be. */
-const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends }> = ({ profile, me, friends }) => {
+const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends; query: string }> = ({
+  profile,
+  me,
+  friends,
+  query,
+}) => {
+  const asking = friends.incoming.filter((p) => hits(query, p.name, p.handle));
+  const yours = friends.friends.filter((p) => hits(query, p.name, p.handle));
   const { user } = useAuth();
   const googleOn = useGoogleEnabled();
   const [busy, setBusy] = useState<string | null>(null);
@@ -366,11 +413,11 @@ const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends }> = (
         </dl>
       </section>
 
-      {friends.incoming.length > 0 && (
+      {asking.length > 0 && (
         <section className="jqzz-about-card">
-          <h2 className="jqzz-annot">want to be your friend · {friends.incoming.length}</h2>
+          <h2 className="jqzz-annot">want to be your friend · {asking.length}</h2>
           <ul className="jqzz-friend-grid">
-            {friends.incoming.map((p) => (
+            {asking.map((p) => (
               <li key={p.id} className="jqzz-friend">
                 <PersonLink person={p} me={me} />
                 <span className="jqzz-friend-actions">
@@ -393,11 +440,13 @@ const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends }> = (
       )}
 
       <section className="jqzz-about-card">
-        <h2 className="jqzz-annot">friends · {friends.friends.length}</h2>
+        <h2 className="jqzz-annot">friends · {yours.length}</h2>
         <FriendGrid
-          people={friends.friends}
+          people={yours}
           me={me}
-          empty="no friends yet. open someone from the people list or a game and add them."
+          empty={
+            query.trim() ? "none of your friends match that." : "no friends yet. open someone from the people list or a game and add them."
+          }
         />
         {friends.outgoing.length > 0 && (
           <p className="jqzz-annot jqzz-about-waiting">
@@ -438,10 +487,10 @@ const FriendGrid: React.FC<{ people: FriendPerson[]; me: string; empty: string }
 };
 
 /** What someone else made public, ready to copy into your own stash. */
-const Shelf: React.FC<{ items: StashItem[]; me: string }> = ({ items, me }) => {
+const Shelf: React.FC<{ items: StashItem[]; me: string; empty: string }> = ({ items, me, empty }) => {
   const [copied, setCopied] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
-  if (items.length === 0) return <p className="jqzz-shelf-empty">nothing public yet.</p>;
+  if (items.length === 0) return <p className="jqzz-shelf-empty">{empty}</p>;
   return (
     <>
       {error && <p className="jqzz-play-note bad">{error}</p>}

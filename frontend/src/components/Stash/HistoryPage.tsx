@@ -15,12 +15,15 @@ import { typeLabel } from "../../utils/questionInfo";
  * Games as a timeline, newest on top: where you (or whoever's profile it is)
  * placed, how many played, who made the podium.
  */
-export const GameList: React.FC<{ games: HistorySummary[]; me: string; empty: React.ReactNode }> = ({
-  games,
-  me,
-  empty,
-}) => {
-  if (games.length === 0) return <p className="jqzz-shelf-empty">{empty}</p>;
+export const GameList: React.FC<{
+  games: HistorySummary[];
+  me: string;
+  empty: React.ReactNode;
+  /** the list is filtered by a search: empty means no match */
+  searching?: boolean;
+}> = ({ games, me, empty, searching = false }) => {
+  if (games.length === 0)
+    return <p className="jqzz-shelf-empty">{searching ? "no game matches that: try a quiz or a player's name." : empty}</p>;
   return (
     <ol className="jqzz-timeline-games">
       {games.map((g, i) => (

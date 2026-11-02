@@ -12,7 +12,8 @@ import { typeLabel } from "../../utils/questionInfo";
 import { contentToActions, readContent, readType } from "../../utils/stashContent";
 import type { TypeShape } from "../../types/stash";
 import type { Phase } from "../../types";
-import { Glide } from "../common/Glide";
+import { Toggles } from "../common/Toggles";
+import { hits } from "../../utils/search";
 import { Glyph } from "../common/Glyph";
 import { Select } from "../common/Select";
 import { setTypesCache } from "../../hooks/useTypes";
@@ -21,33 +22,54 @@ import { QuestionImage } from "../Play/PlayCommon";
 import { ConfirmButton, RefChip, VisibilitySwitch } from "./StashBits";
 import { plural, when } from "../../utils/format";
 
-type Tab = "quizzes" | "questions" | "types" | "images" | "browse";
-const TABS: { tab: Tab; kind: StashKind | null; label: string; icon: string }[] = [
-  { tab: "quizzes", kind: "QUIZ", label: "quizzes", icon: "QUIZ" },
-  { tab: "questions", kind: "QUESTION", label: "questions", icon: "ITEM_QUESTION" },
-  { tab: "types", kind: "TYPE", label: "types", icon: "TYPE" },
-  { tab: "images", kind: "IMAGE", label: "images", icon: "IMAGE" },
-  { tab: "browse", kind: null, label: "browse", icon: "BROWSE" },
+/** the four kinds, in the order their sections appear */
+const SECTIONS: { tab: string; kind: StashKind; label: string; icon: string; noun: string }[] = [
+  { tab: "quizzes", kind: "QUIZ", label: "quizzes", icon: "QUIZ", noun: "quiz" },
+  { tab: "questions", kind: "QUESTION", label: "questions", icon: "ITEM_QUESTION", noun: "question" },
+  { tab: "types", kind: "TYPE", label: "types", icon: "TYPE", noun: "type" },
+  { tab: "images", kind: "IMAGE", label: "images", icon: "IMAGE", noun: "image" },
 ];
 
 const KINDS: Record<string, StashKind> = { quiz: "QUIZ", question: "QUESTION", image: "IMAGE", type: "TYPE" };
 
+/** what a saved item can be found by: its names and the questions in it */
+function itemText(item: StashItem) {
+  const content = readContent(item);
+  return [item.title, item.handle, item.reference, ...content.questions.map((q) => q.text)];
+}
+
 /**
- * Everything you saved: whole quizzes, single questions, pictures. Each has an
- * id like the image library's: ":name" for you, "yourid:name" for others when
- * shared, just "name" once public. Lives on your profile, under "stash".
+ * Everything you saved: whole quizzes, single questions, types, pictures. Each
+ * has an id like the image library's: ":name" for you, "yourid:name" for
+ * others when shared, just "name" once public. Lives on your profile, under
+ * "stash".
  *
+ * The four kinds switch on and off on their own; none on shows them all, each
+ * in its section. The profile's search filters them, and while you search it
+ * also finds public ones from everyone, and someone's "id:name" to copy in.
+ *
+ * tab: from the address, a kind to start with (#/me/stash/quizzes)
  * add: arrived through a share link, #/stash/add/quiz/theirid:name
  */
-export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: string } }> = ({
+export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: string }; query?: string }> = ({
   tab: fromRoute,
   add,
+  query = "",
 }) => {
   const { user } = useAuth();
   const me = user?.id ?? "";
   const addKind = add ? KINDS[add.kind] : undefined;
-  const tab =
-    TABS.find((t) => t.tab === fromRoute) ?? (addKind && TABS.find((t) => t.kind === addKind)) ?? TABS[0];
+  const startWith = SECTIONS.find((s) => s.tab === fromRoute)?.kind ?? addKind;
+  const [on, setOn] = useState<Set<StashKind>>(() => new Set(startWith ? [startWith] : []));
+  const toggle = (k: string) =>
+    setOn((prev) => {
+      const next = new Set(prev);
+      if (next.has(k as StashKind)) next.delete(k as StashKind);
+      else next.add(k as StashKind);
+      return next;
+    });
+  const shown = SECTIONS.filter((s) => on.size === 0 || on.has(s.kind));
+
   const [data, setData] = useState<StashList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [linkNote, setLinkNote] = useState<{ text: string; bad?: boolean } | null>(null);
@@ -93,6 +115,7 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
     const key = `${addKind}|${add.ref}`;
     if (followed.current === key) return;
     followed.current = key;
+    const kindTab = SECTIONS.find((s) => s.kind === addKind)?.tab ?? "";
     stashService
       .fromRef(me, addKind, add.ref)
       .then((item) => {
@@ -100,10 +123,8 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
         setLinkNote({ text: `${item.title || item.handle} is in your stash now` });
       })
       .catch((err) => setLinkNote({ text: errorMessage(err), bad: true }))
-      .finally(() => window.history.replaceState(null, "", `#/me/stash/${tab.tab}`));
-  }, [me, data, add, addKind, put, tab.tab]);
-
-  const items = useMemo(() => data?.items.filter((i) => i.kind === tab.kind) ?? [], [data, tab.kind]);
+      .finally(() => window.history.replaceState(null, "", `#/me/stash/${kindTab}`));
+  }, [me, data, add, addKind, put]);
 
   // the add tray shows the same types: keep it in step with edits here
   useEffect(() => {
@@ -115,18 +136,24 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
     return c;
   }, [data]);
 
+  const of = (kind: StashKind) =>
+    data?.items.filter((i) => i.kind === kind && hits(query, ...itemText(i))) ?? [];
+  const searching = query.trim().length > 0;
+  const several = shown.length > 1;
+
   return (
     <div className="jqzz-shelf-body-wrap">
-      <Glide
+      <Toggles
         className="jqzz-shelf-tabs"
-        label="What you saved"
-        value={tab.tab}
-        options={TABS.map((t) => ({
-          key: t.tab,
-          label: t.label,
-          icon: t.icon,
-          href: `#/me/stash/${t.tab}`,
-          extra: t.kind ? <span className="jqzz-annot">{counts[t.kind]}</span> : undefined,
+        label="What to show: none on shows everything"
+        on={on}
+        onToggle={toggle}
+        options={SECTIONS.map((s) => ({
+          key: s.kind,
+          label: s.label,
+          icon: s.icon,
+          title: on.has(s.kind) ? `hide ${s.label}` : `show ${s.label}`,
+          extra: <span className="jqzz-annot">{counts[s.kind]}</span>,
         }))}
       />
 
@@ -138,84 +165,105 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
       {error && <p className="jqzz-play-note bad">{error}</p>}
       {!data && !error && <p className="jqzz-annot jqzz-shelf-empty">loading...</p>}
 
-      {data && tab.tab === "browse" && <Browse me={me} onAdded={put} />}
-      {data && tab.kind && tab.kind !== "TYPE" && <AddByRef kind={tab.kind} me={me} onAdded={put} />}
-      {data && tab.kind === "TYPE" && <TypesTab types={items} me={me} put={put} drop={drop} reload={setData} />}
-      {data && tab.kind === "IMAGE" && (
-        <ImagesTab images={data.images} saved={items} me={me} put={put} drop={drop} putImage={putImage} />
+      {data && searching && query.includes(":") && (
+        <CopyByRef query={query.trim()} kinds={shown.map((s) => s.kind).filter((k) => k !== "TYPE")} me={me} onAdded={put} />
       )}
-      {data && (tab.kind === "QUIZ" || tab.kind === "QUESTION") && (
-        <>
-          {tab.kind === "QUESTION" && items.length >= 2 && <ShuffleQuiz questions={items} me={me} />}
-          {items.length === 0 && (
-            <p className="jqzz-shelf-empty">
-              nothing here yet. finish a game and save {tab.kind === "QUIZ" ? "the quiz" : "a question"} from
-              the final screen or from <a href="#/me/history">your history</a>, or browse what others shared.
-            </p>
-          )}
-          <ul className="jqzz-shelf-list">
-            {items.map((item, i) => (
-              <StashRow key={item.id} item={item} me={me} index={i} put={put} drop={drop} />
-            ))}
-          </ul>
-        </>
-      )}
+
+      {data &&
+        shown.map((s) => {
+          const items = of(s.kind);
+          const head = several && (
+            <h2 className="jqzz-shelf-head jqzz-annot">
+              {s.label} · {s.kind === "IMAGE" ? items.length + data.images.filter((img) => hits(query, img.handle, img.reference)).length : items.length}
+            </h2>
+          );
+          if (s.kind === "TYPE") {
+            return (
+              <section key={s.kind} className="jqzz-shelf-section" aria-label={s.label}>
+                {head}
+                <TypesTab types={items} me={me} put={put} drop={drop} reload={setData} searching={searching} />
+              </section>
+            );
+          }
+          if (s.kind === "IMAGE") {
+            return (
+              <section key={s.kind} className="jqzz-shelf-section" aria-label={s.label}>
+                {head}
+                <ImagesTab
+                  images={data.images.filter((img) => hits(query, img.handle, img.reference))}
+                  saved={items}
+                  me={me}
+                  put={put}
+                  drop={drop}
+                  putImage={putImage}
+                />
+              </section>
+            );
+          }
+          return (
+            <section key={s.kind} className="jqzz-shelf-section" aria-label={s.label}>
+              {head}
+              {s.kind === "QUESTION" && !searching && items.length >= 2 && <ShuffleQuiz questions={items} me={me} />}
+              {items.length === 0 &&
+                (searching ? (
+                  <p className="jqzz-shelf-empty">none of your {s.label} match that.</p>
+                ) : (
+                  <p className="jqzz-shelf-empty">
+                    nothing here yet. finish a game and save {s.kind === "QUIZ" ? "the quiz" : "a question"} from the
+                    final screen or from <a href="#/me/history">your history</a>, or search to find public ones.
+                  </p>
+                ))}
+              <ul className="jqzz-shelf-list">
+                {items.map((item, i) => (
+                  <StashRow key={item.id} item={item} me={me} index={i} put={put} drop={drop} />
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+
+      {data && searching && <FromEveryone query={query.trim()} kinds={shown.map((s) => s.kind)} me={me} onAdded={put} />}
     </div>
   );
 };
 
-/** Public quizzes and questions from everyone, to copy in. */
-const Browse: React.FC<{ me: string; onAdded: (item: StashItem) => void }> = ({ me, onAdded }) => {
-  const [kind, setKind] = useState<StashKind>("QUIZ");
-  const [q, setQ] = useState("");
+/** While you search your stash: public quizzes, questions, types and pictures from everyone, to copy in. */
+const FromEveryone: React.FC<{ query: string; kinds: StashKind[]; me: string; onAdded: (item: StashItem) => void }> = ({
+  query,
+  kinds,
+  me,
+  onAdded,
+}) => {
   const [found, setFound] = useState<StashItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<Set<number>>(new Set());
+  const kindsKey = kinds.join(",");
 
   useEffect(() => {
     let cancelled = false;
     const t = window.setTimeout(() => {
-      stashService
-        .browse(kind, q)
-        .then((r) => !cancelled && setFound(r))
+      Promise.all(kindsKey.split(",").map((k) => stashService.browse(k as StashKind, query)))
+        .then((lists) => {
+          if (cancelled) return;
+          setFound(lists.flat().filter((item) => item.savedBy !== me));
+          setError(null);
+        })
         .catch((err) => !cancelled && setError(errorMessage(err)));
     }, 220);
     return () => {
       cancelled = true;
       window.clearTimeout(t);
     };
-  }, [kind, q]);
+  }, [kindsKey, query, me]);
 
-  const kinds: StashKind[] = ["QUIZ", "QUESTION", "TYPE", "IMAGE"];
   return (
-    <>
-      <div className="jqzz-shelf-add">
-        <Glide
-          kind="radio"
-          label="What to browse"
-          value={kind}
-          onPick={(k) => setKind(k as StashKind)}
-          options={kinds.map((k) => ({
-            key: k,
-            icon: k === "QUESTION" ? "ITEM_QUESTION" : k,
-            label: k === "QUIZ" ? "quizzes" : k === "QUESTION" ? "questions" : k === "TYPE" ? "types" : "images",
-          }))}
-        />
-        <input
-          className="jqzz-field-input"
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="search public ones"
-          aria-label="Search public items"
-        />
-      </div>
+    <section className="jqzz-shelf-section" aria-label="From everyone">
+      <h2 className="jqzz-shelf-head jqzz-annot">from everyone · {found ? found.length : "..."}</h2>
       {error && <p className="jqzz-play-note bad">{error}</p>}
       {found && found.length === 0 && <p className="jqzz-shelf-empty">nothing public matches that yet.</p>}
       <ul className="jqzz-shelf-list">
         {found?.map((item, i) => {
           const content = readContent(item);
-          const mine = item.savedBy === me;
           return (
             <li key={item.id} className="jqzz-shelf-row" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
               {item.kind === "IMAGE" && item.imageId != null && (
@@ -225,20 +273,20 @@ const Browse: React.FC<{ me: string; onAdded: (item: StashItem) => void }> = ({ 
                 <span className="jqzz-shelf-title">{item.title || item.handle}</span>
                 <span className="jqzz-annot">
                   {item.kind === "QUIZ"
-                    ? plural(content.questions.length, "question")
+                    ? `quiz · ${plural(content.questions.length, "question")}`
                     : item.kind === "QUESTION"
                       ? typeLabel(content.questions[0]?.type)
                       : item.kind === "TYPE"
                         ? "question type"
                         : "picture"}
                   {` · `}
-                  <a href={`#/u/${encodeURIComponent(item.savedBy)}`}>{mine ? "yours" : "whose is it"}</a>
+                  <a href={`#/u/${encodeURIComponent(item.savedBy)}`}>whose is it</a>
                 </span>
               </div>
               <RefChip reference={item.reference} me={me} />
               <button
                 className="jqzz-play-btn small"
-                disabled={mine || copied.has(item.id)}
+                disabled={copied.has(item.id)}
                 onClick={() =>
                   stashService
                     .fromRef(me, item.kind, item.reference)
@@ -249,13 +297,52 @@ const Browse: React.FC<{ me: string; onAdded: (item: StashItem) => void }> = ({ 
                     .catch((err) => setError(errorMessage(err)))
                 }
               >
-                {mine ? "yours" : copied.has(item.id) ? "copied ✓" : "copy in"}
+                {copied.has(item.id) ? "copied ✓" : "copy in"}
               </button>
             </li>
           );
         })}
       </ul>
-    </>
+    </section>
+  );
+};
+
+/** Searching for someone's "id:name": copy it in, as whichever kind it is. */
+const CopyByRef: React.FC<{ query: string; kinds: StashKind[]; me: string; onAdded: (item: StashItem) => void }> = ({
+  query,
+  kinds,
+  me,
+  onAdded,
+}) => {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
+  if (kinds.length === 0) return null;
+  const copy = (kind: StashKind) => {
+    setBusy(true);
+    setNote(null);
+    stashService
+      .fromRef(me, kind, query)
+      .then((item) => {
+        onAdded(item);
+        setNote({ text: `saved as ${item.handle}` });
+      })
+      .catch((err) => setNote({ text: errorMessage(err), bad: true }))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="jqzz-shelf-add">
+      <span className="jqzz-annot">copy {query} in as a</span>
+      {kinds.map((k) => (
+        <button key={k} className="jqzz-play-btn small" disabled={busy} onClick={() => copy(k)}>
+          {SECTIONS.find((s) => s.kind === k)?.noun}
+        </button>
+      ))}
+      {note && (
+        <span className={`jqzz-play-note${note.bad ? " bad" : ""}`} role="status">
+          {note.text}
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -300,57 +387,6 @@ const ShuffleQuiz: React.FC<{ questions: StashItem[]; me: string }> = ({ questio
       </button>
       {error && <span className="jqzz-play-note bad">{error}</span>}
     </div>
-  );
-};
-
-/** "id:name" or "name" from someone else, copied into your stash */
-const AddByRef: React.FC<{ kind: StashKind; me: string; onAdded: (item: StashItem) => void }> = ({
-  kind,
-  me,
-  onAdded,
-}) => {
-  const [ref, setRef] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null);
-  const noun = kind === "QUIZ" ? "quiz" : kind === "QUESTION" ? "question" : "image";
-  return (
-    <form
-      className="jqzz-shelf-add"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const r = ref.trim();
-        if (!r) return;
-        setBusy(true);
-        setNote(null);
-        stashService
-          .fromRef(me, kind, r)
-          .then((item) => {
-            onAdded(item);
-            setRef("");
-            setNote({ text: `saved as ${item.handle}` });
-          })
-          .catch((err) => setNote({ text: errorMessage(err), bad: true }))
-          .finally(() => setBusy(false));
-      }}
-    >
-      <input
-        className="jqzz-field-input"
-        value={ref}
-        onChange={(e) => setRef(e.target.value)}
-        placeholder="name or theirid:name"
-        aria-label={`Copy a ${noun} into your stash by its id`}
-        spellCheck={false}
-        autoComplete="off"
-      />
-      <button className="jqzz-play-btn small" disabled={busy || !ref.trim()}>
-        {busy ? "copying..." : "copy in"}
-      </button>
-      {note && (
-        <span className={`jqzz-play-note${note.bad ? " bad" : ""}`} role="status">
-          {note.text}
-        </span>
-      )}
-    </form>
   );
 };
 
@@ -666,7 +702,9 @@ const TypesTab: React.FC<{
   put: (i: StashItem) => void;
   drop: (id: number) => void;
   reload: React.Dispatch<React.SetStateAction<StashList | null>>;
-}> = ({ types, me, put, drop, reload }) => {
+  /** filtered by a search: an empty list means no match, not no types */
+  searching?: boolean;
+}> = ({ types, me, put, drop, reload, searching = false }) => {
   const [resetting, setResetting] = useState(false);
   return (
     <>
@@ -679,9 +717,12 @@ const TypesTab: React.FC<{
           reset to default
         </button>
       </div>
-      {types.length === 0 && (
-        <p className="jqzz-shelf-empty">no types left. reset to default to get the built-in ones back.</p>
-      )}
+      {types.length === 0 &&
+        (searching ? (
+          <p className="jqzz-shelf-empty">none of your types match that.</p>
+        ) : (
+          <p className="jqzz-shelf-empty">no types left. reset to default to get the built-in ones back.</p>
+        ))}
       <ul className="jqzz-type-grid">
         {types.map((t, i) => (
           <TypeCard key={`${t.id}:${t.payload}`} item={t} me={me} index={i} put={put} drop={drop} />

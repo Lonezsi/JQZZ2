@@ -3005,3 +3005,55 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 .jqzz-sid-places.with-arrow {
   --cut: calc(75% - 5px);
 }
+
+/* ─── the profile's one search, beside its tabs ───────────────────── */
+.jqzz-space-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.jqzz-space-bar > .jqzz-space-tabs {
+  align-self: auto;
+}
+.jqzz-search.jqzz-space-search {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+}
+
+/* ─── on/off toggles: the switch's look, each segment on its own ─────
+   no sliding thumb; a segment that's on wears the thumb's surface itself */
+.jqzz-toggles > button {
+  border-radius: var(--radius-pill);
+  transition:
+    color var(--dur-2) var(--ease),
+    background var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
+}
+.jqzz-toggles > [aria-pressed="true"] {
+  color: var(--text);
+  background: var(--raised-hover);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--space, var(--line-strong)) 60%, var(--line-strong)),
+    0 4px 14px -6px rgba(0, 0, 0, 0.5);
+}
+.jqzz-toggles > [aria-pressed="true"] svg {
+  opacity: 1;
+  color: var(--space, var(--accent));
+}
+.jqzz-toggles > button:active {
+  transform: scale(0.97);
+}
+@media (max-width: 760px) {
+  .jqzz-toggles > [aria-pressed="true"] .jqzz-glide-label {
+    display: inline;
+  }
+}
+
+/* the stash's kinds, each in its own section when several are shown */
+.jqzz-shelf-section + .jqzz-shelf-section {
+  margin-top: 24px;
+}
