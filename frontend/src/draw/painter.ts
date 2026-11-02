@@ -24,12 +24,57 @@ export interface Sample {
   t: number;
 }
 
-interface Change {
-  x: number;
-  y: number;
-  before: ImageData;
-  after: ImageData | null;
+/**
+ * One layer of the drawing. Layers stack bottom first; each joins the ones
+ * under it through its own blend mode, at its own opacity.
+ */
+export interface Layer {
+  id: number;
+  name: string;
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  visible: boolean;
+  opacity: number;
+  blend: GlobalCompositeOperation;
+  /** paint only lands where the layer already has paint */
+  lockAlpha: boolean;
 }
+
+/** what a change covered on a layer, or how the stack of layers was before and after */
+type Change =
+  | { kind: "pixels"; layer: Layer; x: number; y: number; before: ImageData; after: ImageData | null }
+  | { kind: "layers"; before: Stack; after: Stack; bytes: number };
+
+interface Stack {
+  list: Layer[];
+  active: number;
+}
+
+/** how layers can join the ones under them, as the layer menu offers them */
+export const BLENDS: { id: GlobalCompositeOperation; label: string }[] = [
+  { id: "source-over", label: "normal" },
+  { id: "multiply", label: "multiply" },
+  { id: "screen", label: "screen" },
+  { id: "overlay", label: "overlay" },
+  { id: "darken", label: "darken" },
+  { id: "lighten", label: "lighten" },
+  { id: "color-dodge", label: "colour dodge" },
+  { id: "color-burn", label: "colour burn" },
+  { id: "hard-light", label: "hard light" },
+  { id: "soft-light", label: "soft light" },
+  { id: "difference", label: "difference" },
+  { id: "exclusion", label: "exclusion" },
+  { id: "hue", label: "hue" },
+  { id: "saturation", label: "saturation" },
+  { id: "color", label: "colour" },
+  { id: "luminosity", label: "luminosity" },
+];
+
+/** more than this and a phone runs short of memory */
+export const MAX_LAYERS = 8;
+
+const bytesOf = (c: Change) =>
+  c.kind === "pixels" ? c.before.data.length + (c.after?.data.length ?? 0) : c.bytes;
 
 interface Live {
   brush: Brush;
@@ -89,12 +134,21 @@ export class Painter {
   onPick: (hex: string) => void = () => {};
 
   private readonly vctx: CanvasRenderingContext2D;
-  readonly paint: HTMLCanvasElement;
-  private readonly pctx: CanvasRenderingContext2D;
+  /** bottom first */
+  layers: Layer[] = [];
+  /** the layer strokes go on */
+  active = 0;
+  private layerCount = 0;
   private readonly wet: HTMLCanvasElement;
   private readonly wctx: CanvasRenderingContext2D;
   private readonly scratch: HTMLCanvasElement;
   private readonly sctx: CanvasRenderingContext2D;
+  /** the active layer with the wet stroke on it, before it's blended in */
+  private readonly comp: HTMLCanvasElement;
+  private readonly cctx: CanvasRenderingContext2D;
+  /** the wet stroke held to the active layer's paint (lock alpha) */
+  private readonly locked: HTMLCanvasElement;
+  private readonly lctx: CanvasRenderingContext2D;
   private sheet: HTMLCanvasElement;
   paper: string;
 
@@ -113,15 +167,136 @@ export class Painter {
     view.width = this.width;
     view.height = this.height;
     this.vctx = view.getContext("2d")!;
-    this.paint = canvas(this.width, this.height);
-    this.pctx = this.paint.getContext("2d")!;
+    this.layers = [this.newLayer()];
     this.wet = canvas(this.width, this.height);
     this.wctx = this.wet.getContext("2d")!;
     this.scratch = canvas(this.width, this.height);
     this.sctx = this.scratch.getContext("2d")!;
+    this.comp = canvas(this.width, this.height);
+    this.cctx = this.comp.getContext("2d")!;
+    this.locked = canvas(this.width, this.height);
+    this.lctx = this.locked.getContext("2d")!;
     this.paper = opts.paper;
     this.sheet = paperSheet(opts.paper, this.width, this.height);
     this.redraw();
+  }
+
+  // ─── layers ──────────────────────────────────────────────────────
+
+  private newLayer(name?: string): Layer {
+    const c = canvas(this.width, this.height);
+    const id = ++this.layerCount;
+    return {
+      id,
+      name: name ?? `layer ${id}`,
+      canvas: c,
+      ctx: c.getContext("2d")!,
+      visible: true,
+      opacity: 1,
+      blend: "source-over",
+      lockAlpha: false,
+    };
+  }
+
+  /** the layer strokes go on */
+  get layer(): Layer {
+    return this.layers[this.active];
+  }
+
+  /** its canvas: what the brushes see as the drawing */
+  get paint(): HTMLCanvasElement {
+    return this.layer.canvas;
+  }
+
+  private get pctx(): CanvasRenderingContext2D {
+    return this.layer.ctx;
+  }
+
+  private stack(): Stack {
+    return { list: [...this.layers], active: this.active };
+  }
+
+  /** a change to the stack: kept for undo, then shown */
+  private restack(next: Stack, bytes = 0) {
+    if (this.live) this.cancel();
+    const before = this.stack();
+    this.layers = next.list;
+    this.active = Math.max(0, Math.min(next.active, next.list.length - 1));
+    this.remember({ kind: "layers", before, after: this.stack(), bytes });
+    this.marks++;
+    this.schedule();
+    this.onChange();
+  }
+
+  selectLayer(i: number) {
+    if (i < 0 || i >= this.layers.length || i === this.active) return;
+    if (this.live) this.cancel();
+    this.active = i;
+    this.onChange();
+  }
+
+  /** a new empty layer, above the one in use */
+  addLayer() {
+    if (this.layers.length >= MAX_LAYERS) return;
+    const list = [...this.layers];
+    list.splice(this.active + 1, 0, this.newLayer());
+    this.restack({ list, active: this.active + 1 });
+  }
+
+  duplicateLayer() {
+    if (this.layers.length >= MAX_LAYERS) return;
+    const from = this.layer;
+    const copy = this.newLayer(`${from.name} copy`);
+    copy.ctx.drawImage(from.canvas, 0, 0);
+    Object.assign(copy, { visible: from.visible, opacity: from.opacity, blend: from.blend, lockAlpha: from.lockAlpha });
+    const list = [...this.layers];
+    list.splice(this.active + 1, 0, copy);
+    this.restack({ list, active: this.active + 1 }, this.width * this.height * 4);
+  }
+
+  deleteLayer() {
+    if (this.layers.length <= 1) return;
+    const list = this.layers.filter((_, i) => i !== this.active);
+    this.restack({ list, active: Math.min(this.active, list.length - 1) });
+  }
+
+  /** up (+1) or down (-1) the stack */
+  moveLayer(by: 1 | -1) {
+    const to = this.active + by;
+    if (to < 0 || to >= this.layers.length) return;
+    const list = [...this.layers];
+    [list[this.active], list[to]] = [list[to], list[this.active]];
+    this.restack({ list, active: to });
+  }
+
+  /** the layer in use and the one under it become one, blended as they look */
+  mergeDown() {
+    if (this.active === 0) return;
+    const upper = this.layer;
+    const lower = this.layers[this.active - 1];
+    const merged = this.newLayer(lower.name);
+    Object.assign(merged, { visible: lower.visible, opacity: lower.opacity, blend: lower.blend, lockAlpha: lower.lockAlpha });
+    merged.ctx.drawImage(lower.canvas, 0, 0);
+    if (upper.visible) {
+      merged.ctx.globalAlpha = upper.opacity;
+      merged.ctx.globalCompositeOperation = upper.blend;
+      merged.ctx.drawImage(upper.canvas, 0, 0);
+      merged.ctx.globalAlpha = 1;
+      merged.ctx.globalCompositeOperation = "source-over";
+    }
+    const list = [...this.layers];
+    list.splice(this.active - 1, 2, merged);
+    this.restack({ list, active: this.active - 1 }, this.width * this.height * 4);
+  }
+
+  /** name, visibility, opacity, blend, lock: shown at once, not kept for undo */
+  setLayer(patch: Partial<Pick<Layer, "name" | "visible" | "opacity" | "blend" | "lockAlpha">>, i = this.active) {
+    const l = this.layers[i];
+    if (!l) return;
+    Object.assign(l, patch);
+    this.marks++;
+    this.schedule();
+    this.onChange();
   }
 
   // ─── settings ────────────────────────────────────────────────────
@@ -432,26 +607,50 @@ export class Painter {
     if (brush.direct) {
       // already on the drawing: what it covered comes from the copy made at the start
       const before = l.backup!.getContext("2d")!.getImageData(area.x, area.y, area.w, area.h);
-      this.remember({ x: area.x, y: area.y, before, after: null });
+      this.remember({ kind: "pixels", layer: this.layer, x: area.x, y: area.y, before, after: null });
     } else {
       const before = this.pctx.getImageData(area.x, area.y, area.w, area.h);
       this.pctx.save();
       this.pctx.globalCompositeOperation = brush.composite;
       if (brush.dry) {
         const dried = brush.dry(s, this.wet, area);
+        if (this.layer.lockAlpha) {
+          const dc = dried.getContext("2d")!;
+          dc.globalCompositeOperation = "destination-in";
+          dc.drawImage(this.paint, area.x, area.y, area.w, area.h, 0, 0, area.w, area.h);
+        }
         this.pctx.globalAlpha = 1;
         this.pctx.drawImage(dried, area.x, area.y);
       } else {
         this.pctx.globalAlpha = brush.id === "eraser" || brush.composite === "multiply" || brush.kind === "path" ? s.opacity : 1;
-        this.pctx.drawImage(this.capped(l), area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
+        this.pctx.drawImage(this.strokeImage(l), area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
       }
       this.pctx.restore();
-      this.remember({ x: area.x, y: area.y, before, after: null });
+      this.remember({ kind: "pixels", layer: this.layer, x: area.x, y: area.y, before, after: null });
     }
     this.wctx.clearRect(0, 0, this.width, this.height);
     this.marks++;
     this.schedule();
     this.onChange();
+  }
+
+  /** the wet stroke as it joins the layer: held to the grain, and to the layer's paint when its alpha is locked */
+  private strokeImage(l: Live): HTMLCanvasElement {
+    const src = this.capped(l);
+    if (!this.layer.lockAlpha || l.brush.composite === "destination-out") return src;
+    const area = this.clampBox(l.box);
+    if (!area) return src;
+    const c = this.lctx;
+    c.save();
+    c.beginPath();
+    c.rect(area.x, area.y, area.w, area.h);
+    c.clip();
+    c.globalCompositeOperation = "copy";
+    c.drawImage(src, 0, 0);
+    c.globalCompositeOperation = "destination-in";
+    c.drawImage(this.paint, 0, 0);
+    c.restore();
+    return this.locked;
   }
 
   /** the wet stroke held to the paper's grain (dry media), or the wet stroke as it is */
@@ -494,12 +693,11 @@ export class Painter {
 
   private remember(c: Change) {
     this.undos.push(c);
-    this.undoBytes += c.before.data.length;
-    for (const r of this.redos) this.undoBytes -= r.before.data.length + (r.after?.data.length ?? 0);
+    this.undoBytes += bytesOf(c);
+    for (const r of this.redos) this.undoBytes -= bytesOf(r);
     this.redos = [];
     while (this.undoBytes > UNDO_BYTES && this.undos.length > 1) {
-      const old = this.undos.shift()!;
-      this.undoBytes -= old.before.data.length + (old.after?.data.length ?? 0);
+      this.undoBytes -= bytesOf(this.undos.shift()!);
     }
   }
 
@@ -507,11 +705,16 @@ export class Painter {
     if (this.live) this.cancel();
     const c = this.undos.pop();
     if (!c) return;
-    if (!c.after) {
-      c.after = this.pctx.getImageData(c.x, c.y, c.before.width, c.before.height);
-      this.undoBytes += c.after.data.length;
+    if (c.kind === "layers") {
+      this.layers = [...c.before.list];
+      this.active = c.before.active;
+    } else {
+      if (!c.after) {
+        c.after = c.layer.ctx.getImageData(c.x, c.y, c.before.width, c.before.height);
+        this.undoBytes += c.after.data.length;
+      }
+      c.layer.ctx.putImageData(c.before, c.x, c.y);
     }
-    this.pctx.putImageData(c.before, c.x, c.y);
     this.redos.push(c);
     this.marks++;
     this.schedule();
@@ -520,28 +723,36 @@ export class Painter {
 
   redo() {
     const c = this.redos.pop();
-    if (!c || !c.after) return;
-    this.pctx.putImageData(c.after, c.x, c.y);
+    if (!c) return;
+    if (c.kind === "layers") {
+      this.layers = [...c.after.list];
+      this.active = c.after.active;
+    } else {
+      if (!c.after) return;
+      c.layer.ctx.putImageData(c.after, c.x, c.y);
+    }
     this.undos.push(c);
     this.marks++;
     this.schedule();
     this.onChange();
   }
 
+  /** the layer in use, emptied */
   clear() {
     if (this.live) this.cancel();
     const before = this.pctx.getImageData(0, 0, this.width, this.height);
     this.pctx.clearRect(0, 0, this.width, this.height);
-    this.remember({ x: 0, y: 0, before, after: null });
+    this.remember({ kind: "pixels", layer: this.layer, x: 0, y: 0, before, after: null });
     this.marks++;
     this.schedule();
     this.onChange();
   }
 
-  /** a blank sheet with nothing to undo, for a fresh start */
+  /** a blank sheet, one layer, with nothing to undo, for a fresh start */
   wipe() {
     if (this.live) this.cancel();
-    this.pctx.clearRect(0, 0, this.width, this.height);
+    this.layers = [this.newLayer()];
+    this.active = 0;
     this.undos = [];
     this.redos = [];
     this.undoBytes = 0;
@@ -640,19 +851,18 @@ export class Painter {
     this.pctx.globalCompositeOperation = empty ? "destination-over" : "source-over";
     this.pctx.drawImage(tmp, x0, y0);
     this.pctx.restore();
-    this.remember({ x: x0, y: y0, before, after: null });
+    this.remember({ kind: "pixels", layer: this.layer, x: x0, y: y0, before, after: null });
     this.marks++;
     this.schedule();
     this.onChange();
   }
 
-  /** the colour on the sheet at a point, paper included */
+  /** the colour on the sheet at a point, as it looks: paper and every layer */
   pick(x: number, y: number): string {
     const c = this.sctx;
     c.globalCompositeOperation = "copy";
     c.drawImage(this.sheet, 0, 0);
-    c.globalCompositeOperation = "source-over";
-    c.drawImage(this.paint, 0, 0);
+    this.drawLayers(c);
     const d = c.getImageData(Math.max(0, Math.min(this.width - 1, Math.floor(x))), Math.max(0, Math.min(this.height - 1, Math.floor(y))), 1, 1).data;
     return hexOf(d[0], d[1], d[2]);
   }
@@ -673,31 +883,44 @@ export class Painter {
     v.globalCompositeOperation = "source-over";
     v.globalAlpha = 1;
     v.drawImage(this.sheet, 0, 0);
-    const l = this.live;
-    if (l && !l.brush.direct && l.brush.composite === "destination-out") {
-      // erasing: show the drawing with the wet stroke taken out of it
-      const c = this.sctx;
-      c.globalCompositeOperation = "copy";
-      c.globalAlpha = 1;
-      c.drawImage(this.paint, 0, 0);
-      c.globalCompositeOperation = "destination-out";
-      c.globalAlpha = l.s.opacity;
-      c.drawImage(this.wet, 0, 0);
-      c.globalCompositeOperation = "source-over";
-      c.globalAlpha = 1;
-      v.drawImage(this.scratch, 0, 0);
-      return;
+    this.drawLayers(v, true);
+  }
+
+  /**
+   * Every visible layer onto `to`, bottom first, each through its blend mode
+   * at its opacity. While a stroke is wet it's put on its own layer first, so
+   * the layer's blend applies to the stroke the way it will once it's dry.
+   */
+  private drawLayers(to: CanvasRenderingContext2D, withWet = false) {
+    const l = withWet ? this.live : null;
+    this.layers.forEach((layer, i) => {
+      if (!layer.visible) return;
+      let img: HTMLCanvasElement = layer.canvas;
+      if (l && i === this.active && !l.brush.direct) img = this.withWet(l);
+      to.globalAlpha = layer.opacity;
+      to.globalCompositeOperation = layer.blend;
+      to.drawImage(img, 0, 0);
+    });
+    to.globalAlpha = 1;
+    to.globalCompositeOperation = "source-over";
+  }
+
+  /** the active layer with the wet stroke on it */
+  private withWet(l: Live): HTMLCanvasElement {
+    const c = this.cctx;
+    c.globalCompositeOperation = "copy";
+    c.globalAlpha = 1;
+    c.drawImage(this.paint, 0, 0);
+    const area = this.clampBox(l.box);
+    if (area) {
+      c.globalCompositeOperation = l.brush.composite;
+      const whole = l.brush.composite === "multiply" || l.brush.kind === "path" || l.brush.composite === "destination-out";
+      c.globalAlpha = (l.brush.composite === "destination-out" ? 1 : l.brush.live) * (whole ? l.s.opacity : 1);
+      c.drawImage(this.strokeImage(l), area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
     }
-    v.drawImage(this.paint, 0, 0);
-    if (l && !l.brush.direct) {
-      v.globalCompositeOperation = l.brush.composite;
-      const whole = l.brush.composite === "multiply" || l.brush.kind === "path";
-      v.globalAlpha = l.brush.live * (whole ? l.s.opacity : 1);
-      const area = this.clampBox(l.box);
-      if (area) v.drawImage(this.capped(l), area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
-      v.globalCompositeOperation = "source-over";
-      v.globalAlpha = 1;
-    }
+    c.globalCompositeOperation = "source-over";
+    c.globalAlpha = 1;
+    return this.comp;
   }
 
   // ─── in and out ──────────────────────────────────────────────────
@@ -707,7 +930,7 @@ export class Painter {
     const out = canvas(this.width, this.height);
     const c = out.getContext("2d")!;
     c.drawImage(this.sheet, 0, 0);
-    c.drawImage(this.paint, 0, 0);
+    this.drawLayers(c);
     return out;
   }
 
@@ -723,20 +946,61 @@ export class Painter {
     return out;
   }
 
-  /** the drawing alone (no paper), to keep for a reload */
+  /** the drawing alone (no paper), every layer, to keep for a reload */
   snapshot(): string {
-    return this.paint.toDataURL("image/webp", 0.92);
+    return JSON.stringify({
+      active: this.active,
+      layers: this.layers.map((l) => ({
+        name: l.name,
+        visible: l.visible,
+        opacity: l.opacity,
+        blend: l.blend,
+        lockAlpha: l.lockAlpha,
+        image: l.canvas.toDataURL("image/webp", 0.92),
+      })),
+    });
   }
 
   /** puts a picture back: a snapshot of our own, or a drawing already sent */
   async load(src: string): Promise<void> {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = src;
-    await img.decode();
+    const picture = async (url: string) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await img.decode();
+      return img;
+    };
+    let layers: Layer[];
+    let active = 0;
+    if (src.trimStart().startsWith("{")) {
+      // a snapshot of our own: every layer as it was
+      const saved = JSON.parse(src) as {
+        active?: number;
+        layers?: { name?: string; visible?: boolean; opacity?: number; blend?: GlobalCompositeOperation; lockAlpha?: boolean; image: string }[];
+      };
+      layers = [];
+      for (const s of (saved.layers ?? []).slice(0, MAX_LAYERS)) {
+        const layer = this.newLayer(s.name);
+        Object.assign(layer, {
+          visible: s.visible ?? true,
+          opacity: s.opacity ?? 1,
+          blend: BLENDS.some((b) => b.id === s.blend) ? s.blend : "source-over",
+          lockAlpha: !!s.lockAlpha,
+        });
+        layer.ctx.drawImage(await picture(s.image), 0, 0, this.width, this.height);
+        layers.push(layer);
+      }
+      if (!layers.length) layers = [this.newLayer()];
+      active = Math.max(0, Math.min(saved.active ?? 0, layers.length - 1));
+    } else {
+      // a picture: one layer of it
+      const layer = this.newLayer();
+      layer.ctx.drawImage(await picture(src), 0, 0, this.width, this.height);
+      layers = [layer];
+    }
     this.cancel();
-    this.pctx.clearRect(0, 0, this.width, this.height);
-    this.pctx.drawImage(img, 0, 0, this.width, this.height);
+    this.layers = layers;
+    this.active = active;
     this.undos = [];
     this.redos = [];
     this.undoBytes = 0;

@@ -117,6 +117,48 @@ const actions = {
       <path d="M14.5 3.5V8H19" />
     </>
   ),
+  // sheets stacked
+  layers: (
+    <>
+      <path d="M12 4l8 4-8 4-8-4z" />
+      <path d="M4 12l8 4 8-4M4 16l8 4 8-4" />
+    </>
+  ),
+  add: <path d="M12 5v14M5 12h14" />,
+  duplicate: (
+    <>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+    </>
+  ),
+  // two layers pressed into one
+  merge: (
+    <>
+      <path d="M12 3v8M8.5 7.5 12 11l3.5-3.5" />
+      <path d="M4 14l8 4 8-4" />
+    </>
+  ),
+  up: <path d="M12 19V5M6 11l6-6 6 6" />,
+  down: <path d="M12 5v14M6 13l6 6 6-6" />,
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  hidden: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5c2 0 3.7.7 5.1 1.7M21.5 12S18 18.5 12 18.5c-2 0-3.7-.7-5.1-1.7" />
+      <path d="M4 20 20 4" />
+    </>
+  ),
+  // a padlock: paint only where there's paint
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </>
+  ),
 };
 
 export const ActionIcon: React.FC<{ name: keyof typeof actions; size?: number }> = ({ name, size = 18 }) => (

@@ -3,6 +3,7 @@ import { BRUSHES, brushOf, type ToolId } from "./brushes";
 import { Painter, type Sample } from "./painter";
 import { PAPERS } from "./paper";
 import { ActionIcon, ToolIcon } from "./icons";
+import { LayersPanel } from "./LayersPanel";
 
 /*
  * The drawing frame: a sheet of paper and a box of tools. Everything here
@@ -88,6 +89,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const [recent, setRecent] = useState<string[]>(kept.current.recent);
   const [mirror, setMirror] = useState(false);
   const [papers, setPapers] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [, setTick] = useState(0);
   const [sentAt, setSentAt] = useState(-1);
   const [sending, setSending] = useState(false);
@@ -493,8 +495,17 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
         <button className="jqzz-draw-act" onClick={() => p?.redo()} disabled={!p?.canRedo} title="redo (Ctrl+Shift+Z)">
           <ActionIcon name="redo" />
         </button>
-        <button className="jqzz-draw-act" onClick={() => p?.clear()} disabled={!p || p.isEmpty} title="clear the sheet">
+        <button className="jqzz-draw-act" onClick={() => p?.clear()} disabled={!p || p.isEmpty} title="clear this layer">
           <ActionIcon name="clear" />
+        </button>
+        <button
+          className={`jqzz-draw-act with-count${layersOpen ? " on" : ""}`}
+          onClick={() => setLayersOpen((o) => !o)}
+          aria-expanded={layersOpen}
+          title="layers"
+        >
+          <ActionIcon name="layers" />
+          {p && p.layers.length > 1 && <span className="jqzz-draw-count">{p.layers.length}</span>}
         </button>
         <button className={`jqzz-draw-act${mirror ? " on" : ""}`} onClick={() => setMirror((m) => !m)} aria-pressed={mirror} title="mirror: draw both halves at once">
           <ActionIcon name="mirror" />
@@ -532,6 +543,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
           </div>
         )}
       </div>
+      {layersOpen && p && <LayersPanel painter={p} revision={p.revision} />}
     </div>
   );
 });

@@ -355,3 +355,143 @@
     transition: none;
   }
 }
+
+/* ─── layers ─── */
+
+.jqzz-draw-act.with-count {
+  position: relative;
+}
+.jqzz-draw-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-family: var(--font-data);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+.jqzz-draw-act.small {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+}
+.jqzz-draw-act.ghost {
+  border-color: transparent;
+  background: none;
+}
+
+.jqzz-draw-layers {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--sunken);
+  animation: snippetIn var(--dur-2) var(--ease) backwards;
+}
+.jqzz-layers-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.jqzz-layers-acts {
+  display: inline-flex;
+  gap: 4px;
+}
+.jqzz-layer-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.jqzz-layer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+}
+.jqzz-layer.on {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+}
+.jqzz-layer.hidden .jqzz-layer-thumb,
+.jqzz-layer.hidden .jqzz-layer-name {
+  opacity: 0.45;
+}
+.jqzz-layer-pick {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.jqzz-layer-pick:hover {
+  background: var(--raised-hover);
+}
+.jqzz-layer-thumb {
+  grid-row: 1 / 3;
+  width: 64px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  /* the paper, so a thumbnail reads like the sheet */
+  background: #fbfaf7;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.jqzz-layer-name {
+  overflow: hidden;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.jqzz-layer-tune {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.jqzz-layer-blend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.jqzz-layer-blend select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+}
+@media (max-width: 520px) {
+  .jqzz-layer-tune {
+    grid-template-columns: 1fr auto;
+  }
+  .jqzz-layer-tune .jqzz-draw-slider {
+    grid-column: 1 / -1;
+  }
+}
