@@ -255,7 +255,7 @@ export const GuessWords: React.FC<{
   if (!entries.length) return <p className="jqzz-play-note">only your own drawing is up. sit this one out.</p>;
   return (
     <div className="jqzz-judging">
-      <p className="jqzz-play-prompt small">what's each one a drawing of?</p>
+      <p className="jqzz-play-prompt small">{entries.some((e) => e.image) ? "what's each one a drawing of?" : "what's each one describing?"}</p>
       <div className="jqzz-guess-grid">
         {entries.map((e) => (
           <form
