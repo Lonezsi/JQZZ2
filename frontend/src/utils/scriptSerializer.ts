@@ -3,7 +3,7 @@ import { PHASE_FN_MAP } from "../constants/phaseMaps";
 import { DEFAULTS, parseSettings } from "./settings";
 import type { QuizSettings } from "./settings";
 
-export const EMPTY_SCRIPT = `# New Quiz — JQzz Script v1
+export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v1
 # Author: you
 #
 # ─── How to write a quiz ─────────────────────────────
@@ -57,7 +57,7 @@ export function quizToScript(quiz: Quiz | undefined): string {
   if (!quiz || quiz.actions.length === 0) return EMPTY_SCRIPT;
 
   const lines: string[] = [
-    `# ${quiz.name} — JQzz Script v1`,
+    `# ${quiz.name} · JQzz Script v1`,
     `# Author: ${quiz.authorId}`,
     "",
   ];

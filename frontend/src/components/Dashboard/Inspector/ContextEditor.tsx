@@ -87,7 +87,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
   if (action.phase === "DIVIDER") {
     return (
       <p className="jqzz-panel-hint">
-        just a line that splits the quiz into sections. it's skipped when the quiz runs.
+        a line that splits the quiz into sections. it's skipped when the quiz runs.
       </p>
     );
   }
@@ -138,7 +138,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
         </div>
         <p className="jqzz-panel-hint">
           these hold for every question after this block, until another block changes them. in text
-          mode it's a group: <code>shuffle {"{"}</code> … <code>{"}"}</code>
+          mode it's a group: <code>shuffle {"{"}</code> ... <code>{"}"}</code>
         </p>
       </>
     );

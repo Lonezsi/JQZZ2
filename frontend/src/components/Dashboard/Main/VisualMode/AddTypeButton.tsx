@@ -44,7 +44,7 @@ export const AddTypeButton: React.FC<{ question: Question; actions: Action[] }> 
       title="keep this question's type and steps in your stash, to add more like it"
     >
       <Glyph name={state === "done" ? "CHECK" : "TYPE"} size={12} />
-      {state === "busy" ? "saving…" : state === "done" ? "type saved" : state === "error" ? "try again" : "add type"}
+      {state === "busy" ? "saving..." : state === "done" ? "type saved" : state === "error" ? "try again" : "add type"}
     </button>
   );
 };

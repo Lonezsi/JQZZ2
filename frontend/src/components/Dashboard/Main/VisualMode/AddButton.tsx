@@ -112,7 +112,7 @@ const StashTray: React.FC<{ onPick: (id: string) => void }> = ({ onPick }) => {
   }, [user]);
 
   if (error) return <p className="jqzz-play-note bad jqzz-tray-note">{error}</p>;
-  if (!items) return <p className="jqzz-annot jqzz-tray-note">loading your stash…</p>;
+  if (!items) return <p className="jqzz-annot jqzz-tray-note">loading your stash...</p>;
   if (items.length === 0) {
     return (
       <p className="jqzz-tray-note">

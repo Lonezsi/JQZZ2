@@ -38,7 +38,7 @@ const ChoiceReveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mi
             <span className="jqzz-tile-bar" aria-hidden="true" />
             <AnswerPicture src={a.imageUrl} game={game} />
             <span className="jqzz-tile-letter">{right ? "✓" : tileLetter(i)}</span>
-            <span className="jqzz-tile-text">{a.text || "…"}</span>
+            <span className="jqzz-tile-text">{a.text || "..."}</span>
             <span className="jqzz-tile-count">
               {n}
               {a.value ? <small> · {a.value} pts</small> : null}

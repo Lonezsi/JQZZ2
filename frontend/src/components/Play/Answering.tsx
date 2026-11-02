@@ -72,7 +72,7 @@ const Choice: React.FC<Props> = ({ game, mine, submit, remember }) => {
           >
             <AnswerPicture src={a.imageUrl} game={game} />
             <span className="jqzz-tile-letter">{tileLetter(i)}</span>
-            <span className="jqzz-tile-text">{a.text || "…"}</span>
+            <span className="jqzz-tile-text">{a.text || "..."}</span>
           </button>
         ))}
       </div>
@@ -108,7 +108,7 @@ const Tiers: React.FC<Props> = ({ game, mine, submit, remember }) => {
       {q.answers.map((a) => (
         <div key={a.id} className="jqzz-tier-item">
           <AnswerPicture src={a.imageUrl} game={game} className="jqzz-tier-item-img" />
-          <span className="jqzz-tier-item-text">{a.text || "…"}</span>
+          <span className="jqzz-tier-item-text">{a.text || "..."}</span>
           <div className="jqzz-tier-picks" role="group" aria-label={`Tier for ${a.text}`}>
             {TIERS.map((t) => (
               <button

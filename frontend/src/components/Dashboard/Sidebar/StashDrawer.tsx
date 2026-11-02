@@ -222,7 +222,7 @@ export const StashDrawer: React.FC<{ me: string; quizId: number }> = ({ me, quiz
         ) : (
         <ul className="jqzz-stash-drawer-list">
           {error && <li className="jqzz-annot">{error}</li>}
-          {!error && items === null && <li className="jqzz-annot">looking…</li>}
+          {!error && items === null && <li className="jqzz-annot">looking...</li>}
           {items !== null && shown.length === 0 && (
             <li className="jqzz-annot jqzz-stash-drawer-empty">
               {query ? "nothing matches" : "nothing saved here yet. save questions from a game or the editor."}

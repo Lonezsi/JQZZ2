@@ -25,7 +25,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
     return (
       <PlayFrame>
         <div className="jqzz-play-center">
-          <span className="jqzz-annot">{error ?? "loading the game…"}</span>
+          <span className="jqzz-annot">{error ?? "loading the game..."}</span>
           {error && (
             <button className="jqzz-play-btn" onClick={() => go("/")}>
               back to the editor
@@ -172,7 +172,7 @@ const HostLobby: React.FC<{
       <InvitePeople game={game} me={me} />
 
       <div className="jqzz-lobby-people">
-        {game.players.length === 0 && <p className="jqzz-play-note">waiting for people to join…</p>}
+        {game.players.length === 0 && <p className="jqzz-play-note">waiting for people to join...</p>}
         {game.players.map((p, i) => (
           <button
             key={p.id}
@@ -259,7 +259,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
                 <div key={a.id} className="jqzz-tile" style={{ "--tile": tileColour(i) } as React.CSSProperties}>
                   <AnswerPicture src={a.imageUrl} game={game} />
                   <span className="jqzz-tile-letter">{tileLetter(i)}</span>
-                  <span className="jqzz-tile-text">{a.text || "…"}</span>
+                  <span className="jqzz-tile-text">{a.text || "..."}</span>
                 </div>
               ))}
             </div>

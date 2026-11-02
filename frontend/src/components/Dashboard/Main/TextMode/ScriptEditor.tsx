@@ -153,7 +153,7 @@ ShowResult(${q}, time: 10)
             edit(
               hasContent
                 ? `${text.trimEnd()}\n\n${block}`
-                : `# ${prompt} — JQzz Script v1\n# Author: generated\n\n${block}`,
+                : `# ${prompt} · JQzz Script v1\n# Author: generated\n\n${block}`,
             );
           }}
         >

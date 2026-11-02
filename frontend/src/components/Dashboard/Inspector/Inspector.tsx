@@ -120,7 +120,7 @@ export const Inspector: React.FC<InspectorProps> = ({
       {/* keyed, so moving to another card crossfades the fields */}
       <div className="jqzz-insp-body" key={multipleSelected ? "many" : action.id}>
         {multipleSelected ? (
-          <p className="jqzz-panel-hint">click just one card to edit it.</p>
+          <p className="jqzz-panel-hint">pick a single card to edit it.</p>
         ) : (
           <ContextEditor
             action={action}

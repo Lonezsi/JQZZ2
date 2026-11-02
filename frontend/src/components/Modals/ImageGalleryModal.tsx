@@ -89,7 +89,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
           className="jqzz-modal-input"
         />
         <div className="jqzz-gallery-grid">
-          {loading && <p className="jqzz-panel-hint">loading…</p>}
+          {loading && <p className="jqzz-panel-hint">loading...</p>}
           {filtered.map((img) => {
             const ref = toRef(img);
             const url = imageUrls.get(img.id);

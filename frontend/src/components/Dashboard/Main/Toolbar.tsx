@@ -34,7 +34,7 @@ function useSaveNotice(saveState: SaveState | undefined) {
     if (saveState !== "saved") setJustSaved(false);
   }, [saveState]);
 
-  if (saveState === "saving") return { text: "saving…", tone: "saving" };
+  if (saveState === "saving") return { text: "saving...", tone: "saving" };
   if (saveState === "error") return { text: "not saved, retrying", tone: "error" };
   if (justSaved) return { text: "saved", tone: "saved" };
   return null;

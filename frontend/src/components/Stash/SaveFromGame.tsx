@@ -75,9 +75,9 @@ export const SaveFromGame: React.FC<{
         disabled={busy !== null || saved.has("quiz")}
         onClick={() => save("quiz")}
       >
-        {saved.has("quiz") ? "quiz saved ✓" : busy === "quiz" ? "saving…" : "the whole quiz"}
+        {saved.has("quiz") ? "quiz saved ✓" : busy === "quiz" ? "saving..." : "the whole quiz"}
       </button>
-      {!record && !error && <span className="jqzz-annot">loading the questions…</span>}
+      {!record && !error && <span className="jqzz-annot">loading the questions...</span>}
       {record && (
         <ol className="jqzz-keep-list">
           {record.content.questions.map((q, i) => {
@@ -95,7 +95,7 @@ export const SaveFromGame: React.FC<{
                   onClick={() => save(key, q.key)}
                   aria-label={`Save question ${i + 1}`}
                 >
-                  {saved.has(key) ? "saved ✓" : busy === key ? "…" : "save"}
+                  {saved.has(key) ? "saved ✓" : busy === key ? "..." : "save"}
                 </button>
                 <button
                   className="jqzz-play-btn small ghost"

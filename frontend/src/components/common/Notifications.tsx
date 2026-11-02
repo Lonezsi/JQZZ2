@@ -174,7 +174,7 @@ export const NotificationCard: React.FC<{ n: AppNotification; onRead: () => void
     );
   } else if (n.kind === "GUEST_ACCOUNT") {
     text = user?.googleLinked ? (
-      <>your account is tied to Google now. it's safe.</>
+      <>your account is tied to Google now: sign in with it anywhere.</>
     ) : (
       <>
         you're on a <b>guest account</b>: it only lives in this browser. tie it to Google so your games and

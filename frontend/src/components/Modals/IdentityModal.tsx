@@ -402,7 +402,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                     onClick={handleLogin}
                     disabled={loading || !loginId.trim()}
                   >
-                    {loading ? "logging in…" : "Log in"}
+                    {loading ? "logging in..." : "Log in"}
                   </button>
                 </>
               ) : !current ? (
@@ -418,7 +418,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                     onClick={handleSave}
                     disabled={loading || !name.trim()}
                   >
-                    {loading ? "making it…" : "Create"}
+                    {loading ? "making it..." : "Create"}
                   </button>
                 </>
               ) : (
@@ -435,7 +435,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                     onClick={handleSave}
                     disabled={loading}
                   >
-                    {loading ? "saving…" : "Save"}
+                    {loading ? "saving..." : "Save"}
                   </button>
                 </>
               )}

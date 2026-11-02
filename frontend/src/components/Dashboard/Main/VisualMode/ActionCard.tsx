@@ -156,7 +156,7 @@ function PhasePreview({ action }: { action: Action }) {
           {answers.slice(0, 4).map((a) => (
             <span key={a.id} className={`jqzz-ans-chip${(a.value || 0) > 0 ? " scores" : ""}`}>
               {a.imageUrl && <ChipPicture src={a.imageUrl} />}
-              {a.text || "…"}
+              {a.text || "..."}
               <b>{a.value}</b>
             </span>
           ))}

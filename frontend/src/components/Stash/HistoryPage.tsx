@@ -99,7 +99,7 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
         </header>
         <main className="jqzz-shelf">
           {error && <p className="jqzz-play-note bad">{error}</p>}
-          {!record && !error && <p className="jqzz-annot jqzz-shelf-empty">loading…</p>}
+          {!record && !error && <p className="jqzz-annot jqzz-shelf-empty">loading...</p>}
           {record && (
             <div className="jqzz-game">
               <h1 className="jqzz-stage-title OEF jqzz-chroma">{record.quizName || "untitled quiz"}</h1>
@@ -115,7 +115,7 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
                   title="hosts it again and invites everyone who was in it"
                 >
                   <Glyph name="RESET" size={14} />
-                  {busy ? "starting…" : "rematch"}
+                  {busy ? "starting..." : "rematch"}
                 </button>
                 <SaveButton
                   icon="QUIZ"
@@ -220,7 +220,7 @@ const Result: React.FC<{ q: StashedQuestion; r: QuestionResult }> = ({ q, r }) =
       <ul className="jqzz-bars">
         {q.answers.map((a, i) => (
           <li key={i} className={a.value > 0 ? "right" : undefined}>
-            <span className="jqzz-bars-text">{a.text || "…"}</span>
+            <span className="jqzz-bars-text">{a.text || "..."}</span>
             <span className="jqzz-bars-track">
               <span style={{ width: `${((r.counts?.[i] ?? 0) / total) * 100}%` }} />
             </span>
@@ -297,7 +297,7 @@ const SaveButton: React.FC<{
       }}
     >
       <Glyph name={state === "done" ? "ANSWER" : icon} size={small ? 13 : 14} />
-      {state === "busy" ? "saving…" : state === "done" ? done : state === "error" ? "try again" : label}
+      {state === "busy" ? "saving..." : state === "done" ? done : state === "error" ? "try again" : label}
     </button>
   );
 };

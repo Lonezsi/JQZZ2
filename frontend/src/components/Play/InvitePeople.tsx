@@ -98,7 +98,7 @@ export const InvitePeople: React.FC<{ game: GameState; me: string }> = ({ game, 
                           onClick={() => invite(p.id)}
                           title={p.online ? "they'll see it now" : "it waits for them until they're back"}
                         >
-                          {state === "sent" ? "invited" : state === "sending" ? "…" : failed ? "again" : "invite"}
+                          {state === "sent" ? "invited" : state === "sending" ? "..." : failed ? "again" : "invite"}
                         </button>
                       </li>
                     );

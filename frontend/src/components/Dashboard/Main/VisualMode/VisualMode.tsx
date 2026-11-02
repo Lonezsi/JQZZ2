@@ -449,7 +449,7 @@ const DeleteQuestionButton: React.FC<{ n: number; onDelete: () => void }> = ({ n
         else setArmed(true);
       }}
       onBlur={() => setArmed(false)}
-      aria-label={armed ? `Really delete question ${n}` : `Delete question ${n}`}
+      aria-label={armed ? `Confirm: delete question ${n}` : `Delete question ${n}`}
       title={armed ? "click again to delete the whole question" : "delete this question"}
     >
       <span aria-hidden="true">✕</span>

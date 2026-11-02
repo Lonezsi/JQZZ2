@@ -136,7 +136,7 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
         </p>
       )}
       {error && <p className="jqzz-play-note bad">{error}</p>}
-      {!data && !error && <p className="jqzz-annot jqzz-shelf-empty">loading…</p>}
+      {!data && !error && <p className="jqzz-annot jqzz-shelf-empty">loading...</p>}
 
       {data && tab.tab === "browse" && <Browse me={me} onAdded={put} />}
       {data && tab.kind && tab.kind !== "TYPE" && <AddByRef kind={tab.kind} me={me} onAdded={put} />}
@@ -296,7 +296,7 @@ const ShuffleQuiz: React.FC<{ questions: StashItem[]; me: string }> = ({ questio
       />
       <span className="jqzz-annot">random questions from here</span>
       <button className="jqzz-play-btn small" onClick={make} disabled={busy}>
-        {busy ? "making it…" : "make it"}
+        {busy ? "making it..." : "make it"}
       </button>
       {error && <span className="jqzz-play-note bad">{error}</span>}
     </div>
@@ -343,7 +343,7 @@ const AddByRef: React.FC<{ kind: StashKind; me: string; onAdded: (item: StashIte
         autoComplete="off"
       />
       <button className="jqzz-play-btn small" disabled={busy || !ref.trim()}>
-        {busy ? "copying…" : "copy in"}
+        {busy ? "copying..." : "copy in"}
       </button>
       {note && (
         <span className={`jqzz-play-note${note.bad ? " bad" : ""}`} role="status">
@@ -457,7 +457,7 @@ const StashRow: React.FC<{
             <Select
               className="jqzz-shelf-pick"
               value=""
-              placeholder="add to a quiz…"
+              placeholder="add to a quiz..."
               aria-label="Add this question to one of your quizzes"
               onChange={(v) => addTo(Number(v))}
               options={mine.map((q) => ({ value: String(q.id), label: q.name, icon: "QUIZ" }))}
@@ -825,7 +825,7 @@ const TypeCard: React.FC<{
               )
             }
           >
-            {c.busy ? "saving…" : "save"}
+            {c.busy ? "saving..." : "save"}
           </button>
         </span>
       </div>
@@ -885,11 +885,11 @@ const ResetDialog: React.FC<{ me: string; onClose: () => void; onDone: (types: S
         <div className="jqzz-reset-choices">
           <button className="jqzz-play-btn danger" onClick={() => go("full")} disabled={busy !== null}>
             <Glyph name="RESET" size={14} />
-            {busy === "full" ? "resetting…" : "full reset"}
+            {busy === "full" ? "resetting..." : "full reset"}
           </button>
           <button className="jqzz-play-btn primary" onClick={() => go("add")} disabled={busy !== null} autoFocus>
             <Glyph name="ADD" size={14} />
-            {busy === "add" ? "adding…" : "add the defaults"}
+            {busy === "add" ? "adding..." : "add the defaults"}
           </button>
           <button className="jqzz-play-btn ghost" onClick={onClose} disabled={busy !== null}>
             <Glyph name="CLOSE" size={14} />

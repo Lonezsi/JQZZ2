@@ -108,8 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           <span className="jqzz-annot">{unreachable ? "server · down" : "server · connecting"}</span>
           <p>
             {unreachable
-              ? "can't reach the server. is the backend running? trying again…"
-              : "logging you in…"}
+              ? "can't reach the server. is the backend running? trying again..."
+              : "logging you in..."}
           </p>
         </div>
       </div>

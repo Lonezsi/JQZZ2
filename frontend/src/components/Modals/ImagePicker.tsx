@@ -54,7 +54,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   return (
     <div className="jqzz-picker">
       <div className="jqzz-picker-thumb" title={value || undefined}>
-        {loading && <span className="jqzz-annot">…</span>}
+        {loading && <span className="jqzz-annot">...</span>}
         {imageUrl && <img src={imageUrl} alt="Preview" />}
         {!imageUrl && !loading && value && (
           <span className="jqzz-annot" title="can't find this image">?</span>

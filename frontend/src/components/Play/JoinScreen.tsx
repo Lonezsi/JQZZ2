@@ -61,7 +61,7 @@ export const JoinScreen: React.FC<{ code?: string }> = ({ code: fromLink }) => {
             inputMode="text"
           />
           <button className="jqzz-play-btn primary big" disabled={code.length < 5 || busy}>
-            {busy ? "joining…" : "join"}
+            {busy ? "joining..." : "join"}
           </button>
         </form>
         {error && <p className="jqzz-play-note bad">{error}</p>}

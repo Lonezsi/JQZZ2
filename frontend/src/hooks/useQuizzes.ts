@@ -10,7 +10,7 @@ function derivePreview(action: Action): string {
   const q = action.question;
   if (!q) return action.phase;
   const label = action.phase.charAt(0) + action.phase.slice(1).toLowerCase();
-  const snippet = q.text?.length > 40 ? q.text.slice(0, 40) + "\u2026" : q.text || "\u2026";
+  const snippet = q.text?.length > 40 ? q.text.slice(0, 40) + "..." : q.text || "...";
   return `${label}: "${snippet}"`;
 }
 

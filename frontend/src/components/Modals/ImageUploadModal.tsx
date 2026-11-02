@@ -128,7 +128,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             onClick={handleSave}
             disabled={loading || !file || !handle.trim()}
           >
-            {loading ? "uploading…" : "Upload"}
+            {loading ? "uploading..." : "Upload"}
           </button>
         </div>
       </div>

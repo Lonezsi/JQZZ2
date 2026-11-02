@@ -93,7 +93,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
     return (
       <PlayFrame>
         <div className="jqzz-play-center">
-          <span className="jqzz-annot">{error ?? "finding the game…"}</span>
+          <span className="jqzz-annot">{error ?? "finding the game..."}</span>
           {error && (
             <button className="jqzz-play-btn" onClick={() => go("/join")}>
               try another code
@@ -162,7 +162,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
                 </div>
               </>
             ) : (
-              <span className="jqzz-annot">joining…</span>
+              <span className="jqzz-annot">joining...</span>
             )}
           </div>
         )}
@@ -347,7 +347,7 @@ const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }
     text = gain === null ? "answer in" : "not this time";
     tone = gain === null ? "neutral" : "bad";
   } else if (gain === null) {
-    text = "counting…";
+    text = "counting...";
   } else {
     text = "no points this time";
   }
@@ -359,7 +359,7 @@ const LeaveButton: React.FC<{ onLeave: () => void; busy: boolean; quit?: boolean
   <ConfirmButton
     label={quit ? "quit game" : "leave"}
     armedLabel={quit ? "quit? your score goes" : "leave? score goes"}
-    busyLabel="leaving…"
+    busyLabel="leaving..."
     busy={busy}
     title="leave the game for good: your score goes with you"
     onConfirm={onLeave}

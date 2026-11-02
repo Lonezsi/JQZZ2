@@ -34,7 +34,7 @@ export const Select: React.FC<SelectProps> = ({
   value,
   options,
   onChange,
-  placeholder = "choose…",
+  placeholder = "choose...",
   id,
   className = "",
   disabled,
