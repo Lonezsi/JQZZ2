@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import type { Quiz, Question, Action } from "../../../../types";
 import { quizToScript } from "../../../../utils/scriptSerializer";
 import { parseScript } from "../../../../utils/scriptParser";
@@ -25,6 +25,20 @@ const extractQuestionsFromActions = (quiz: Quiz | undefined): Question[] => {
   }
   return result;
 };
+
+/**
+ * The coloured copy sits under the textarea and scrolls with it. It has no
+ * scrollbars of its own, so it's kept to the textarea's inside (scrollbars
+ * left out): otherwise the textarea can scroll further than it can, and at
+ * the bottom or the right edge the colours slide off the words.
+ */
+function alignUnder(ta: HTMLTextAreaElement | null, pre: HTMLPreElement | null) {
+  if (!ta || !pre) return;
+  pre.style.right = `${ta.offsetWidth - ta.clientWidth}px`;
+  pre.style.bottom = `${ta.offsetHeight - ta.clientHeight}px`;
+  pre.scrollTop = ta.scrollTop;
+  pre.scrollLeft = ta.scrollLeft;
+}
 
 export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   quiz,
@@ -70,12 +84,17 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     setText(next);
   };
 
-  const syncScroll = () => {
-    if (taRef.current && preRef.current) {
-      preRef.current.scrollTop = taRef.current.scrollTop;
-      preRef.current.scrollLeft = taRef.current.scrollLeft;
-    }
-  };
+  const syncScroll = () => alignUnder(taRef.current, preRef.current);
+
+  // scrollbars come and go with the text and the size of the editor
+  useLayoutEffect(() => alignUnder(taRef.current, preRef.current), [text]);
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => alignUnder(taRef.current, preRef.current));
+    ro.observe(ta);
+    return () => ro.disconnect();
+  }, []);
 
   // Parse after typing pauses; apply only scripts without errors, so a
   // half-typed line never wipes questions from the quiz.

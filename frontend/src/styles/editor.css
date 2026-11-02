@@ -135,10 +135,11 @@
 .t-punc {
   color: var(--text-3);
 }
+/* the rule is drawn, not a border: a border would make this line a pixel taller than the textarea's */
 .t-div {
   display: inline-block;
   min-width: 100%;
-  border-bottom: 1px solid var(--line-strong);
+  box-shadow: inset 0 -1px 0 var(--line-strong);
 }
 .t-kw {
   color: var(--accent);
