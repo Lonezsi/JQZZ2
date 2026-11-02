@@ -63,10 +63,11 @@ export const VisualMode: React.FC<VisualModeProps> = ({
 }) => {
   const { dropSnippet, setMode, reorderActions, moveActions, deleteActions } = useQuiz();
 
-  // A quiz opens in pieces: the first few items straight away, the rest a
-  // batch at a time while the browser is idle, with placeholders where the
-  // rest will be. Drawing every card of a long quiz in one go is what made
-  // opening one stall.
+  // A quiz opens in two steps: the first few items straight away, then all the
+  // rest at once when the browser has a moment. Drawing every card of a long
+  // quiz in one go made opening it stall; drawing them a few at a time kept
+  // the page reflowing (and its height jumping) for as long as you scrolled.
+  // Cards off screen cost little once drawn: see content-visibility on rows.
   const [shown, setShown] = useState(FIRST_BATCH);
   const [shownFor, setShownFor] = useState(quiz?.id);
   if (quiz?.id !== shownFor) {
@@ -76,7 +77,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   const total = renderItems.length;
   useEffect(() => {
     if (shown >= total) return;
-    return whenIdle(() => setShown((n) => n + BATCH));
+    return whenIdle(() => setShown(total));
   }, [shown, total]);
   const visibleItems = shown >= total ? renderItems : renderItems.slice(0, shown);
   // the order of the rows, which is all the FLIP animation needs to watch
@@ -399,9 +400,8 @@ function firstAction(item: RenderItem | undefined): Action | null {
   return item.kind === "group" ? item.actions[0] : item.action;
 }
 
-/** items drawn when a quiz opens, then each batch after */
-const FIRST_BATCH = 6;
-const BATCH = 6;
+/** items drawn when a quiz opens; the rest follow together */
+const FIRST_BATCH = 8;
 
 /** run when the browser has a moment; returns a cancel */
 function whenIdle(cb: () => void): () => void {

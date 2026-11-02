@@ -72,7 +72,12 @@ export const Main: React.FC<MainProps> = ({
   onStart,
   inspector,
 }) => {
-  const { quiz, quizLoading, renderItems, saveState } = useQuiz();
+  const { quiz, quizLoading, quizSummary, renderItems, saveState } = useQuiz();
+  // as many placeholders as the quiz has questions (up to a screenful)
+  const placeholders = Math.max(
+    1,
+    Math.min(4, new Set(quizSummary?.actions.map((a) => a.question?.id).filter((id) => id != null)).size),
+  );
 
   // margin notes: everything here is read off the quiz itself
   const actions = quiz?.actions ?? [];
@@ -93,17 +98,29 @@ export const Main: React.FC<MainProps> = ({
   const mainRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   useDragAutoScroll(bodyRef);
+  // once a frame at most, and the attributes only touched when they change:
+  // rewriting them on every scroll event made the browser restyle the editor
+  const edgeFrame = useRef(0);
   const markEdges = useCallback(() => {
-    const body = bodyRef.current;
-    const main = mainRef.current;
-    if (!body || !main) return;
-    const under = body.scrollTop > 2;
-    const more = body.scrollTop + body.clientHeight < body.scrollHeight - 2;
-    if (under) main.dataset.under = "1";
-    else delete main.dataset.under;
-    if (more) main.dataset.more = "1";
-    else delete main.dataset.more;
+    if (edgeFrame.current) return;
+    edgeFrame.current = requestAnimationFrame(() => {
+      edgeFrame.current = 0;
+      const body = bodyRef.current;
+      const main = mainRef.current;
+      if (!body || !main) return;
+      const under = body.scrollTop > 2;
+      const more = body.scrollTop + body.clientHeight < body.scrollHeight - 2;
+      if (under !== ("under" in main.dataset)) {
+        if (under) main.dataset.under = "1";
+        else delete main.dataset.under;
+      }
+      if (more !== ("more" in main.dataset)) {
+        if (more) main.dataset.more = "1";
+        else delete main.dataset.more;
+      }
+    });
   }, []);
+  useEffect(() => () => cancelAnimationFrame(edgeFrame.current), []);
   // a new quiz or mode changes how much there is to scroll
   useEffect(() => {
     markEdges();
@@ -157,7 +174,7 @@ export const Main: React.FC<MainProps> = ({
         >
           {quizLoading ? (
             <div className="jqzz-timeline jqzz-quiz-loading" aria-busy="true" aria-label="Opening the quiz">
-              <LoadingSkeleton count={3} />
+              <LoadingSkeleton count={placeholders} />
             </div>
           ) : mode === "visual" || !quiz ? (
             <VisualMode

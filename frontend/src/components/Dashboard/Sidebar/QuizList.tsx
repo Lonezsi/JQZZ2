@@ -4,6 +4,7 @@ import { formatTimecode, quizCode, quizRuntime } from "../../../utils/timecode";
 import { matchQuiz } from "../../../utils/quizSearch";
 import { Keys } from "../../common/Keys";
 import { DeleteQuizButton } from "../../common/DeleteQuizButton";
+import { useQuiz } from "../../../contexts/QuizContext";
 
 interface QuizListProps {
   quizzes: Quiz[];
@@ -34,6 +35,7 @@ export const QuizList: React.FC<QuizListProps> = ({
   onSelectQuiz,
   onCreate,
 }) => {
+  const { prefetchQuiz } = useQuiz();
   const results = quizzes
     .map((q) => ({ q, m: matchQuiz(q, query) }))
     .filter((r) => r.m.hit);
@@ -73,6 +75,9 @@ export const QuizList: React.FC<QuizListProps> = ({
                 : `${quizCode(q.id)} · ${q.actions.length} actions · ${formatTimecode(quizRuntime(q))}`
             }
             onClick={() => onSelectQuiz(q.id)}
+            // pointing at it (or tabbing to it) starts loading it in full
+            onPointerEnter={() => prefetchQuiz(q.id)}
+            onFocus={() => prefetchQuiz(q.id)}
           >
             <span className="jqzz-quiz-name">
               <Highlight text={q.name} query={query} />

@@ -22,12 +22,12 @@ export const Atmosphere: React.FC = () => {
       <Texture className="tex-floor" src={`${BASE}bg.webp`} filter={() => "contrast(0.5)"} />
       <Texture
         className="tex-lens-a"
-        src="https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_171S.jpg"
+        src={`${BASE}tex/lens-a.webp`}
         filter={() => "hue-rotate(-20deg) brightness(3) saturate(0.5)"}
       />
       <Texture
         className="tex-lens-b"
-        src="https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_130S.jpg"
+        src={`${BASE}tex/lens-b.webp`}
         filter={(k) => `blur(${2 * k}px) hue-rotate(-80deg)`}
       />
     </div>

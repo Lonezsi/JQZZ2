@@ -90,13 +90,13 @@
   opacity: var(--tex-floor-opacity);
 }
 .jqzz-aura .tex-lens-a {
-  background-image: url("https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_171S.jpg");
+  background-image: url("/tex/lens-a.webp");
   mix-blend-mode: soft-light;
   filter: hue-rotate(-20deg) brightness(3) saturate(0.5);
   opacity: var(--lens-a-opacity);
 }
 .jqzz-aura .tex-lens-b {
-  background-image: url("https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_130S.jpg");
+  background-image: url("/tex/lens-b.webp");
   mix-blend-mode: var(--lens-b-blend);
   filter: blur(2px) hue-rotate(-80deg);
   opacity: var(--lens-b-opacity);

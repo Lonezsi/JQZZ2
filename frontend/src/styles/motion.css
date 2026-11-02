@@ -49,12 +49,12 @@ a.jqzz-board-name {
 .jqzz-add-type {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   height: 22px;
   margin-left: auto;
-  padding: 0 9px 0 7px;
+  padding: 0 8px 0 8px;
   border: 1px dashed color-mix(in srgb, var(--warm) 55%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--text-2);
   font-size: var(--fs-small);
@@ -133,7 +133,7 @@ a.jqzz-board-name {
 }
 .jqzz-quiz-rhythm > span {
   min-width: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 .jqzz-quiz-row {
   animation: snippetIn var(--dur-3) var(--ease) backwards;
@@ -693,9 +693,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 10px 10px 16px;
+  padding: 12px 12px 12px 16px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
   box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.8), 0 0 30px -14px var(--accent);
   animation: popIn var(--dur-3) var(--ease-pop) backwards;
@@ -801,7 +801,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   gap: 8px;
   width: 100%;
   min-height: 32px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: var(--sunken);
@@ -850,18 +850,18 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-select.jqzz-shelf-pick {
   width: auto;
   max-width: 220px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px 12px;
   font-size: var(--fs-small);
 }
 .jqzz-type-steps .jqzz-select {
   min-height: 28px;
-  padding: 3px 8px;
+  padding: 4px 8px;
 }
 
 .jqzz-select-panel {
   position: fixed;
-  z-index: 120;
+  z-index: var(--z-menu);
   max-height: 320px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -869,7 +869,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   padding: 6px;
   list-style: none;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%),
     color-mix(in srgb, var(--surface-solid) 96%, transparent);
@@ -901,9 +901,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-select-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   min-height: 32px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   color: var(--text-2);
   font-size: var(--fs-body);
@@ -929,7 +929,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-select-item.active {
   background: var(--raised-hover);
   color: var(--text);
-  padding-left: 14px;
+  padding-left: 16px;
 }
 .jqzz-select-item.active > svg,
 .jqzz-select-item.chosen > svg {
@@ -958,12 +958,12 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 /* ─── our tooltip ─────────────────────────────────────────────────── */
 .jqzz-tooltip {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-tooltip);
   width: max-content;
   max-width: min(280px, calc(100vw - 24px));
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 60%),
     color-mix(in srgb, var(--surface-solid) 97%, transparent);
@@ -1143,7 +1143,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   position: absolute;
   top: -19px;
   left: 50%;
-  margin-left: -13px;
+  margin-left: -12px;
 }
 .jqzz-stash-arrow {
   z-index: 1;
@@ -1153,7 +1153,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   place-items: center;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text-3);
   cursor: pointer;
@@ -1224,7 +1224,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 4px 14px 6px 16px;
+  padding: 4px 16px 6px 16px;
 }
 .jqzz-stash-drawer-head a {
   text-decoration: none;
@@ -1248,12 +1248,12 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   min-height: 28px;
   min-width: 0;
-  padding: 0 5px;
+  padding: 0 6px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-3);
   font-size: var(--fs-small);
@@ -1288,7 +1288,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   gap: 2px;
 }
 .jqzz-stash-drawer-list > li.jqzz-annot {
-  padding: 10px 8px;
+  padding: 12px 8px;
 }
 .jqzz-stash-drawer-list > li.jqzz-stash-drawer-empty {
   font-family: inherit;
@@ -1312,10 +1312,10 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 8px 8px 10px;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: none;
   color: var(--text);
   text-align: left;
@@ -1347,7 +1347,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-3);
   transition:
     color var(--dur-1) var(--ease),
@@ -1374,7 +1374,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   gap: 6px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -1393,7 +1393,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   align-items: flex-end;
   overflow: hidden;
   border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--sunken);
   animation: slotIn 320ms var(--ease-pop, var(--ease)) backwards;
   animation-delay: calc(var(--i, 0) * 40ms);
@@ -1433,7 +1433,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-img-slot-name {
   position: relative;
   width: 100%;
-  padding: 3px 7px 4px;
+  padding: 4px 8px 4px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1461,7 +1461,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--sunken);
   cursor: grab;
   transition:
@@ -1485,7 +1485,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-stash-pic-name {
   position: relative;
   width: 100%;
-  padding: 3px 7px 4px;
+  padding: 4px 8px 4px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1503,10 +1503,10 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 /* ─── what a drag will become, where it will land ──────────────────── */
 .jqzz-drop-skeleton {
   position: relative;
-  margin: 0 0 26px calc(var(--tc-w) + var(--node-w));
+  margin: 0 0 24px calc(var(--tc-w) + var(--node-w));
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   pointer-events: none;
   animation: skelIn 260ms var(--ease) backwards;
 }
@@ -1531,15 +1531,15 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 /* a whole quiz: one bracket around everything it brings */
 .jqzz-drop-skeleton.whole {
-  padding: 10px 12px 12px 14px;
+  padding: 12px 12px 12px 16px;
   border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 .jqzz-skel-label {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   color: var(--text);
   font-size: var(--fs-small);
   font-weight: 650;
@@ -1559,9 +1559,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px 12px;
+  padding: 12px 12px 12px;
   border: 1px dashed var(--line-strong);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--surface-solid) 55%, transparent);
 }
 /* a slow sheen across it: not real yet */
@@ -1588,10 +1588,10 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-skel-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   padding: 2px 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--text-3);
   font-size: 11px;
 }
@@ -1610,15 +1610,15 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   opacity: 0.6;
 }
 .jqzz-skel-strip > span {
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 .jqzz-skel-step {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid color-mix(in srgb, var(--node) 30%, var(--line));
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   color: color-mix(in srgb, var(--node) 70%, var(--text-3));
   font-family: var(--font-data);
   font-size: 11px;
@@ -1632,7 +1632,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-skel-bar {
   flex: 1;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--node) 16%, transparent);
 }
 .jqzz-skel-setting {
@@ -1640,9 +1640,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 8px 12px;
   border: 1px dashed color-mix(in srgb, var(--phase-SETTING) 50%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--phase-SETTING);
 }
 .jqzz-skel-line {
@@ -1674,7 +1674,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   aspect-ratio: 16 / 10;
   max-height: 34vh;
   object-fit: cover;
-  border-radius: calc(var(--radius-md) - 6px);
+  border-radius: calc(var(--radius-lg) - 6px);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--tile) 40%, transparent);
 }
 .jqzz-tile.wrong .jqzz-tile-img {
@@ -1686,27 +1686,27 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   height: 34px;
   flex-shrink: 0;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 .jqzz-chip-img {
   width: 22px;
   height: 22px;
   margin: -2px 6px -2px -4px;
   vertical-align: middle;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 .jqzz-tier-item:has(> .jqzz-tier-item-img) {
-  gap: 10px;
+  gap: 8px;
 }
 
 /* in the editor: a thumbnail in the answer's chip */
 .jqzz-ans-chip-img {
   width: 16px;
   height: 16px;
-  margin: -2px 5px -2px -3px;
+  margin: -2px 4px -2px -4px;
   vertical-align: middle;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* the inspector's answer rows: a picture slot at the start */
@@ -1719,7 +1719,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   padding: 0;
   overflow: hidden;
   border: 1px dashed var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--sunken);
   color: var(--text-3);
   cursor: default;
@@ -1777,7 +1777,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   .jqzz-text-block,
   .jqzz-divider-block {
     gap: 8px;
-    padding-right: 10px;
+    padding-right: 12px;
   }
   .jqzz-card-glyph {
     width: 28px;
@@ -1793,8 +1793,8 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     right: 6px;
     z-index: 3;
     margin: 0;
-    padding: 3px;
-    border-radius: 10px;
+    padding: 4px;
+    border-radius: var(--radius-lg);
     background: var(--surface-solid);
     box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.8);
     pointer-events: none;
@@ -1875,8 +1875,8 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 /* with a quiz open: just the star, round, next to Start */
 .jqzz-cmdk.folded {
-  padding-left: 11px;
-  padding-right: 11px;
+  padding-left: 12px;
+  padding-right: 12px;
   transition:
     padding 320ms var(--ease),
     color var(--dur-1) var(--ease),
@@ -1891,7 +1891,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 .jqzz-cmdk.folded:hover,
 .jqzz-cmdk.folded:focus-visible {
-  padding-left: 13px;
+  padding-left: 12px;
 }
 .jqzz-cmdk.folded:hover .jqzz-cmdk-more,
 .jqzz-cmdk.folded:focus-visible .jqzz-cmdk-more {
@@ -1910,9 +1910,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 0 0 26px calc(var(--tc-w) + var(--node-w));
-  padding: 12px 14px 14px;
-  border-radius: 16px;
+  margin: 0 0 24px calc(var(--tc-w) + var(--node-w));
+  padding: 12px 16px 16px;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--surface-solid) 45%, transparent);
   box-shadow: inset 0 0 0 1px var(--line);
   opacity: 0;
@@ -1935,13 +1935,13 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-load-bar {
   height: 10px;
   width: 70%;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--sunken);
 }
 .jqzz-load-bar.short {
   width: 28%;
   height: 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 .jqzz-load-bar.title {
   width: 55%;
@@ -1949,7 +1949,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 .jqzz-load-card {
   height: 48px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--sunken);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -1986,7 +1986,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   justify-content: center;
   padding: 0 6px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--text-3);
   font-size: 11px;
@@ -2025,7 +2025,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 .jqzz-group-del.armed .jqzz-group-del-text {
   max-width: 60px;
-  margin-left: 5px;
+  margin-left: 4px;
 }
 /* no hover on a phone: always there */
 @media (hover: none) {
@@ -2055,8 +2055,8 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   align-items: center;
   gap: 2px;
   margin-bottom: 6px;
-  padding: 3px;
-  border-radius: 999px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
   box-shadow:
     inset 0 0 0 1px var(--line-strong),
@@ -2082,9 +2082,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   align-items: center;
   gap: 6px;
   height: 26px;
-  padding: 0 10px 0 8px;
+  padding: 0 12px 0 8px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-soft);
   color: var(--text);
 }
@@ -2114,7 +2114,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   min-width: 26px;
   padding: 0 8px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--text-3);
   font-size: 12px;
@@ -2174,7 +2174,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 .jqzz-inbox-more {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--text-3);
   font-size: 12px;
   text-decoration: none;
@@ -2189,9 +2189,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 30px 10px 10px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 12px 32px 12px 12px;
+  border-radius: var(--radius-xl);
   background:
     linear-gradient(120deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
     color-mix(in srgb, var(--surface-solid) 94%, transparent);
@@ -2243,7 +2243,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .jqzz-alert-text {
   font-size: var(--fs-small);
@@ -2254,7 +2254,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 .jqzz-alert-x {
   position: absolute;
@@ -2266,7 +2266,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   place-items: center;
   padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--text-3);
   transition:
@@ -2285,14 +2285,14 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-alert-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   max-width: 560px;
 }
 .jqzz-alert-list-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 .jqzz-alert-list ul {
   list-style: none;
@@ -2326,13 +2326,13 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 .jqzz-invite-search {
   width: 150px;
-  padding: 5px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--sunken);
   color: var(--text);
   font-size: var(--fs-small);
@@ -2346,9 +2346,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  gap: 8px;
+  padding: 12px 12px;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--surface-solid) 70%, transparent);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -2375,9 +2375,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-invite-group li {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 4px 4px 4px 2px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   animation: noteListIn 320ms var(--ease) backwards;
   animation-delay: calc(var(--i, 0) * 30ms);
 }
@@ -2451,7 +2451,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 /* sent: the clock takes its own row, in the middle */
 .jqzz-phone-top.answered {
@@ -2503,9 +2503,9 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-wait-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 6px 6px 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--surface-solid) 90%, transparent);
   box-shadow:
     inset 0 0 0 1px var(--line-strong),
@@ -2590,7 +2590,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 
 /* the phone keeps room at the bottom for the quit button */
 .jqzz-phone {
-  padding-bottom: 76px;
+  padding-bottom: 80px;
 }
 
 /* ─── settings, on your profile ──────────────────────────────────── */
@@ -2598,7 +2598,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   max-width: 560px;
 }
 .jqzz-setting {
@@ -2606,8 +2606,8 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--surface-solid) 80%, transparent);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -2636,7 +2636,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   height: 26px;
   padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--sunken);
   box-shadow: inset 0 0 0 1px var(--line-strong);
   transition: background var(--dur-2) var(--ease);
@@ -2717,7 +2717,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   animation: none;
 }
 .jqzz-modal-body .jqzz-settings {
-  margin: 4px 0 10px;
+  margin: 4px 0 8px;
 }
 @media (prefers-reduced-motion: reduce) {
   .jqzz-modal-pane {
@@ -2730,7 +2730,7 @@ body:has(.jqzz-return) .jqzz-quit-dock {
 }
 /* and the page itself keeps room under its end, so nothing stays stuck behind them */
 body:has(.jqzz-return) .jqzz-play-frame {
-  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
@@ -2742,21 +2742,21 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  margin: 2px 0 10px;
+  margin: 2px 0 8px;
   font-size: var(--fs-small);
 }
 .jqzz-google.linked {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   color: var(--ok);
 }
 .jqzz-google-or {
   align-self: stretch;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-3);
   font-size: var(--fs-annot);
   letter-spacing: 0.1em;
@@ -2806,7 +2806,7 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  padding-inline: 9px;
+  padding-inline: 8px;
 }
 .jqzz-slide-btn svg {
   flex-shrink: 0;
@@ -2825,7 +2825,7 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 .jqzz-slide-btn:hover .jqzz-slide-btn-label,
 .jqzz-slide-btn:focus-visible .jqzz-slide-btn-label {
   max-width: 140px;
-  margin-left: 7px;
+  margin-left: 6px;
   opacity: 1;
 }
 
@@ -2839,8 +2839,8 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 .jqzz-secret code {
   flex: 1;
   min-width: 0;
-  padding: 7px 10px;
-  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
   background: var(--sunken);
   box-shadow: inset 0 0 0 1px var(--line);
   font-family: var(--font-data);
@@ -2858,7 +2858,7 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 .jqzz-modal-inline .jqzz-secret-toggle {
   flex-shrink: 0;
@@ -2869,12 +2869,12 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   min-height: 42px;
-  padding: 0 18px;
+  padding: 0 16px;
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--raised);
   color: var(--text);
   font: 600 13px var(--font-ui);
@@ -2950,4 +2950,21 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 }
 :root[data-effects="reduced"] .jqzz-holo::before {
   animation: none;
+}
+
+/* ─── long quizzes: what's off screen isn't laid out or painted ───────
+   Each question and loose row is skipped until it's near the screen, and
+   remembers its size once drawn (the "auto"), so the scroll height holds
+   still. Paint containment clips, so the margin keeps the plate's frame and
+   shadow, which sit outside its box, whole. */
+.jqzz-timeline > .jqzz-group,
+.jqzz-timeline > .jqzz-row {
+  content-visibility: auto;
+  overflow-clip-margin: 48px;
+}
+.jqzz-timeline > .jqzz-group {
+  contain-intrinsic-size: auto 348px;
+}
+.jqzz-timeline > .jqzz-row {
+  contain-intrinsic-size: auto 72px;
 }

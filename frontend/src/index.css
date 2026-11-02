@@ -104,9 +104,25 @@
   --fs-body: 13px;
   --fs-title: 15px;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* corners: one base radius, and every other corner a fixed multiple of it,
+     so changing --radius restyles the lot. Controls sm/md, cards lg/xl,
+     panels and dialogs 2xl; pill and round are shapes, not sizes. */
+  --radius: 10px;
+  --radius-xs: calc(var(--radius) * 0.4); /* 4 */
+  --radius-sm: calc(var(--radius) * 0.6); /* 6 */
+  --radius-md: calc(var(--radius) * 0.8); /* 8 */
+  --radius-lg: var(--radius); /* 10 */
+  --radius-xl: calc(var(--radius) * 1.4); /* 14 */
+  --radius-2xl: calc(var(--radius) * 1.8); /* 18 */
+  --radius-pill: 999px;
+
+  /* stacking, bottom to top; nothing goes above the drag ghost */
+  --z-float: 30;
+  --z-overlay: 50;
+  --z-dialog: 60;
+  --z-menu: 70;
+  --z-tooltip: 80;
+  --z-drag: 90;
 
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -285,7 +301,7 @@
 .jqzz-keys {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
 }
 .jqzz-key {
@@ -293,10 +309,10 @@
   place-items: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 5px;
+  padding: 0 6px;
   border: 1px solid var(--line-strong);
   border-bottom-width: 2px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(var(--raised-hover), var(--raised));
   font-family: var(--font-data);
   font-size: 10.5px;
@@ -354,7 +370,7 @@
 }
 *::-webkit-scrollbar-thumb {
   background: var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 2px solid transparent;
   background-clip: padding-box;
 }

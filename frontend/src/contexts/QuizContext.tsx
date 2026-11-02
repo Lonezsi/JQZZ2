@@ -42,6 +42,10 @@ interface QuizContextType {
   quiz: Quiz | undefined;
   /** the open quiz is still on its way: only its summary is here so far */
   quizLoading: boolean;
+  /** that summary, while it's all there is: enough to draw the right placeholders */
+  quizSummary: Quiz | undefined;
+  /** start fetching a quiz in full before it's opened (pointing at it in the list) */
+  prefetchQuiz: (id: number) => void;
   renderItems: RenderItem[];
   // Mutations
   updateAction: (id: number, patch: Partial<Action>) => void;
@@ -96,6 +100,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const quiz = listed?.summary ? undefined : listed;
   const quizLoading = !!listed?.summary;
+  const quizSummary = listed?.summary ? listed : undefined;
 
   const renderItems = useMemo(() => buildRenderItems(quiz), [quiz]);
 
@@ -233,28 +238,37 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     saveTimer.current = window.setTimeout(flush, SAVE_DELAY_MS);
   }, [quizzes, flush]);
 
-  // the open quiz, in full: the list only holds its summary
+  // A quiz in full, in place of its summary: when it's opened, or earlier,
+  // when the pointer rests on it in the list, so it's usually here by the
+  // time it's clicked and opens without placeholders.
+  const fetching = useRef(new Set<number>());
+  const loadFull = useCallback(
+    (id: number) => {
+      const summary = quizzesRef.current.find((q) => q.id === id);
+      if (!summary?.summary || fetching.current.has(id)) return;
+      fetching.current.add(id);
+      quizService
+        .getOne(id)
+        .then((res) => {
+          const full = {
+            ...res.data,
+            actions: res.data.actions.map((a) => ({
+              ...a,
+              preview: a.preview || summary.actions.find((s) => s.id === a.id)?.preview || "",
+            })),
+          };
+          // it's what the server has: loading it isn't an edit, so nothing to save
+          persisted.current.set(id, full);
+          setQuizzes((prev) => prev.map((q) => (q.id === id && q.summary ? full : q)));
+        })
+        .catch(() => {})
+        .finally(() => fetching.current.delete(id));
+    },
+    [setQuizzes],
+  );
   useEffect(() => {
-    if (!listed?.summary) return;
-    let live = true;
-    const id = listed.id;
-    quizService
-      .getOne(id)
-      .then((res) => {
-        if (!live) return;
-        const full = {
-          ...res.data,
-          actions: res.data.actions.map((a) => ({ ...a, preview: a.preview || listed.actions.find((s) => s.id === a.id)?.preview || "" })),
-        };
-        // it's what the server has: loading it isn't an edit, so nothing to save
-        persisted.current.set(id, full);
-        setQuizzes((prev) => prev.map((q) => (q.id === id ? full : q)));
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [listed, setQuizzes]);
+    if (listed?.summary) loadFull(listed.id);
+  }, [listed, loadFull]);
 
   // Last-chance save when the tab closes or reloads mid-debounce.
   useEffect(() => {
@@ -366,6 +380,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     lastSavedAt,
     quiz,
     quizLoading,
+    quizSummary,
+    prefetchQuiz: loadFull,
     renderItems,
     updateAction,
     updateQuestion,

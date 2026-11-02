@@ -38,6 +38,7 @@ export function useFlip<T extends HTMLElement>(signature: string) {
   const ref = useRef<T>(null);
   const last = useRef(new Map<string, number>());
   const lastSignature = useRef<string | null>(null);
+  const lastKeys = useRef<string[]>([]);
 
   useLayoutEffect(() => {
     const root = ref.current;
@@ -49,6 +50,25 @@ export function useFlip<T extends HTMLElement>(signature: string) {
     }
     lastSignature.current = signature;
     const nodes = root.querySelectorAll<HTMLElement>("[data-flip]");
+    const keys = Array.from(nodes, (n) => n.dataset.flip!);
+    const before = lastKeys.current;
+    lastKeys.current = keys;
+
+    // only added to the end (the rest of a quiz arriving): nothing moved, so
+    // nothing to measure; the new rows fade in where the placeholders were
+    const appended = before.length > 0 && before.length < keys.length && before.every((k, i) => keys[i] === k);
+    if (appended) {
+      if (!prefersReducedMotion()) {
+        nodes.forEach((n, i) => {
+          if (i < before.length) return;
+          n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: EASE });
+        });
+      }
+      return whenIdle(() => {
+        if (ref.current) last.current = positions(ref.current);
+      });
+    }
+
     const next = positions(root);
 
     const prev = last.current;

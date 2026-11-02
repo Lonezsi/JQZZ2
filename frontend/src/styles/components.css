@@ -100,7 +100,7 @@
 .jqzz-node.note {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: none;
   border: 1.5px solid var(--text-3);
 }
@@ -133,7 +133,7 @@
   top: -10px;
   bottom: -6px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-2xl);
   background:
     radial-gradient(90% 60% at 0% 0%, color-mix(in srgb, var(--phase-QUESTION) 12%, transparent), transparent 70%),
     color-mix(in srgb, var(--surface-solid) 84%, transparent);
@@ -141,7 +141,7 @@
 }
 .jqzz-group-head {
   align-items: start;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .jqzz-group-num {
   display: flex;
@@ -199,9 +199,9 @@
   align-items: center;
   gap: 6px;
   height: 22px;
-  padding: 0 9px 0 7px;
+  padding: 0 8px 0 8px;
   border: 1px solid color-mix(in srgb, var(--phase-QUESTION) 40%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--phase-QUESTION) 12%, transparent);
   color: var(--text);
   font-size: var(--fs-small);
@@ -229,7 +229,7 @@
   gap: 12px;
   min-height: 52px;
   padding: 8px 12px 8px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   cursor: pointer;
   user-select: none;
   transition:
@@ -298,7 +298,7 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   color: var(--node);
   background: color-mix(in srgb, var(--node) 16%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--node) 35%, transparent);
@@ -310,7 +310,7 @@
 .jqzz-card-main {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -338,7 +338,7 @@
   content: "";
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--chip, var(--text-3));
 }
 .badge-WAITING { --chip: var(--phase-WAITING); }
@@ -393,13 +393,13 @@
 }
 .jqzz-ticks {
   display: inline-flex;
-  gap: 3px;
+  gap: 4px;
   align-items: center;
 }
 .jqzz-ticks > span {
   width: 3px;
   height: 10px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--node) 70%, transparent);
 }
 .jqzz-ticks > span:nth-child(5n) {
@@ -410,8 +410,8 @@
   align-items: center;
   gap: 6px;
   height: 22px;
-  padding: 0 4px 0 9px;
-  border-radius: 999px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: var(--sunken);
   font-size: var(--fs-small);
@@ -421,10 +421,10 @@
 .jqzz-ans-chip b {
   min-width: 18px;
   height: 16px;
-  padding: 0 5px;
+  padding: 0 6px;
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-family: var(--font-data);
   font-size: 10px;
   font-weight: 700;
@@ -493,7 +493,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--sunken);
   color: var(--text-2);
   font-size: 12px;
@@ -546,7 +546,7 @@
 .jqzz-divider-block {
   min-height: 36px;
   border: 1px solid transparent;
-  gap: 10px;
+  gap: 8px;
   background: radial-gradient(40% 100% at 50% 50%, color-mix(in srgb, var(--surface-solid) 85%, transparent), transparent);
 }
 .jqzz-divider-block .jqzz-annot {
@@ -575,11 +575,11 @@
   align-items: start;
 }
 .jqzz-row.kind-add .jqzz-node.end {
-  margin-top: 18px;
+  margin-top: 16px;
 }
 .jqzz-add {
   border: 1px dashed var(--line-strong);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   transition:
     border-color var(--dur-2) var(--ease),
     background var(--dur-2) var(--ease);
@@ -599,7 +599,7 @@
   gap: 12px;
   width: 100%;
   min-height: 48px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border: none;
   background: none;
   color: var(--text-2);
@@ -627,8 +627,8 @@
   top: 50%;
   width: 10px;
   height: 2px;
-  margin: -1px 0 0 -5px;
-  border-radius: 1px;
+  margin: -1px 0 0 -4px;
+  border-radius: var(--radius-xs);
   background: var(--on-accent);
 }
 .jqzz-plus::after {
@@ -659,14 +659,14 @@
   overflow: hidden;
 }
 .jqzz-add-tray .jqzz-tray-grid {
-  padding: 0 14px 14px;
+  padding: 0 16px 16px;
 }
 
 /* ─── Snippet library ───────────────────────────────────────────── */
 .jqzz-tray-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 .jqzz-snippet {
@@ -674,9 +674,9 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px 14px 13px;
+  padding: 12px 16px 12px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--raised);
   text-align: left;
   cursor: grab;
@@ -732,7 +732,7 @@
   margin-top: 2px;
 }
 .jqzz-phase-strip > span {
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 /* ─── Empty state ───────────────────────────────────────────────── */
@@ -744,9 +744,9 @@
   gap: 12px;
   max-width: 780px;
   margin: 0 auto;
-  padding: 72px 24px 32px;
+  padding: 80px 24px 32px;
   text-align: center;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   transition: background var(--dur-2) var(--ease);
 }
 .jqzz-empty-state.over {
@@ -828,7 +828,7 @@
 .jqzz-node.setting {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--phase-SETTING);
   transform: rotate(45deg);
 }
@@ -836,11 +836,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 40px;
   padding: 6px 12px 6px 8px;
   border: 1px solid color-mix(in srgb, var(--phase-SETTING) 40%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--phase-SETTING) 9%, var(--surface));
   cursor: pointer;
   user-select: none;
@@ -884,7 +884,7 @@
 .jqzz-setting-chips span {
   padding: 2px 8px;
   border: 1px solid;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--fs-small);
 }
 .jqzz-snippet.setting {
@@ -896,10 +896,10 @@
 
 /* ─── The add tray's tabs ─────────────────────────────────────────── */
 .jqzz-add-tabs {
-  margin: 0 14px 12px;
+  margin: 0 12px 12px;
 }
 .jqzz-tray-note {
-  padding: 0 14px 14px;
+  padding: 0 16px 16px;
   color: var(--text-3);
 }
 .jqzz-tray-note a {
