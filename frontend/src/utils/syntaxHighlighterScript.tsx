@@ -1,28 +1,37 @@
-import { tokenizeLine, TOKEN_COLOR } from "./syntaxHighlighter";
+import React, { useMemo } from "react";
+import { analyze, type Piece } from "./scriptInsight";
 
-export const HighlightedScript = ({ text }: { text: string }) => {
+const pieceClass = (p: Piece) =>
+  p.kind === "bracket"
+    ? `br br-${p.role ?? "other"}${p.bad ? " bad" : ""}${p.lit ? " lit" : ""}`
+    : `t-${p.kind}`;
+
+/**
+ * The script, coloured, under the transparent textarea it mirrors. Every
+ * character here sits exactly where it sits in the textarea; the hints only
+ * ever come after the end of a line, so they never push anything along.
+ */
+export const HighlightedScript: React.FC<{ text: string; caret?: number | null }> = ({ text, caret = null }) => {
+  const lines = useMemo(() => analyze(text, caret), [text, caret]);
   return (
     <>
-      {text.split("\n").map((line, li) => (
-        <span key={li} style={{ display: "block", minHeight: "1.8em" }}>
-          {line === "---" ? (
+      {lines.map((line, li) => (
+        <span key={li} className="jqzz-hl-line">
+          {line.pieces.map((p, pi) => (
             <span
-              style={{
-                color: TOKEN_COLOR.div,
-                borderBottom: "1px solid var(--line-strong)",
-                display: "block",
-              }}
+              key={pi}
+              className={pieceClass(p)}
+              style={p.phase ? ({ "--br": `var(--phase-${p.phase})` } as React.CSSProperties) : undefined}
             >
-              {line || " "}
+              {p.v}
             </span>
-          ) : (
-            tokenizeLine(line).map((tk, ti) => (
-              <span key={ti} style={{ color: TOKEN_COLOR[tk.t] }}>
-                {tk.v}
-              </span>
-            ))
+          ))}
+          {line.pieces.length === 0 && " "}
+          {line.hint && (
+            <span className={`jqzz-hint ${line.hint.tone}`} aria-hidden="true">
+              {line.hint.text}
+            </span>
           )}
-          {line.length === 0 && "\u00a0"}
         </span>
       ))}
     </>

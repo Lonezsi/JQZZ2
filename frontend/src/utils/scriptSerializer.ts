@@ -73,8 +73,8 @@ export function quizToScript(quiz: Quiz | undefined): string {
   if (!quiz || quiz.actions.length === 0) return EMPTY_SCRIPT;
 
   const lines: string[] = [
+    // no author line: a quiz's author id is its owner's login, and scripts get shared
     `# ${quiz.name} · JQzz Script v3`,
-    `# Author: ${quiz.authorId}`,
     "",
   ];
 

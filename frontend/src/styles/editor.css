@@ -125,6 +125,98 @@
   background: color-mix(in srgb, var(--accent) 30%, transparent);
   color: transparent;
 }
+/* ─── the script's colours (utils/scriptInsight) ─── */
+.jqzz-hl-line {
+  display: block;
+  min-height: 1.8em;
+}
+.t-comment,
+.t-div,
+.t-punc {
+  color: var(--text-3);
+}
+.t-div {
+  display: inline-block;
+  min-width: 100%;
+  border-bottom: 1px solid var(--line-strong);
+}
+.t-kw {
+  color: var(--accent);
+}
+.t-ref {
+  color: var(--phase-ANSWER);
+}
+.t-str {
+  color: var(--text);
+}
+.t-num {
+  color: var(--warm);
+}
+.t-key,
+.t-plain,
+.t-note {
+  color: var(--text-2);
+}
+.t-set {
+  color: var(--phase-SETTING);
+}
+
+/* a bracket takes the colour of what it opens, and its closer the same */
+.br {
+  font-weight: 700;
+  border-radius: 2px;
+}
+.br-question {
+  color: var(--accent);
+}
+.br-step {
+  color: var(--br, var(--text-2));
+}
+.br-group {
+  color: var(--phase-SETTING);
+}
+.br-list {
+  color: var(--warm);
+}
+.br-answer {
+  color: var(--ok);
+}
+.br-other {
+  color: var(--text-2);
+}
+.br.bad {
+  color: var(--danger);
+  text-decoration: wavy underline var(--danger);
+  text-underline-offset: 3px;
+}
+/* the bracket at the caret and its partner: a ring, which takes no room */
+.br.lit {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 70%, transparent);
+}
+
+/* what a line does, after its end: never in the way of the text */
+.jqzz-hint {
+  margin-left: 4ch;
+  color: var(--text-3);
+  opacity: 0.75;
+  user-select: none;
+}
+.jqzz-hint::before {
+  content: "· ";
+}
+.jqzz-hint.good {
+  color: color-mix(in srgb, var(--ok) 75%, var(--text-3));
+}
+.jqzz-hint.warn {
+  color: var(--warm);
+  opacity: 0.9;
+}
+.jqzz-hint.error {
+  color: var(--danger);
+  opacity: 1;
+}
+
 .jqzz-script-status {
   padding: 0 4px;
   letter-spacing: 0.08em;

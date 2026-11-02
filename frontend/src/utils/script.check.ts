@@ -7,6 +7,7 @@ import { quizToScript } from "./scriptSerializer";
 import { ASKS, SCORES, modeOf, parseOptions } from "./questionTypes";
 import { GAME_MODES } from "../modes";
 import { parseSettings } from "./settings";
+import { analyze } from "./scriptInsight";
 import type { Action, Question } from "../types";
 
 let failed = 0;
@@ -257,6 +258,35 @@ const asks = new Set(GAME_MODES.flatMap((m) => m.modes.map((x) => x.ask)));
 const scores = new Set(GAME_MODES.flatMap((m) => m.modes.map((x) => x.score)));
 check("the modes use every ask", ASKS.every((a) => asks.has(a.id)), ASKS.filter((a) => !asks.has(a.id)).map((a) => a.id));
 check("the modes use every score", SCORES.every((x) => scores.has(x.id)), SCORES.filter((x) => !scores.has(x.id)).map((x) => x.id));
+
+// ─── the editor's colours and hints (scriptInsight) ───────────────────
+{
+  const script = `NewQuestion Q1 (
+  type: "poll",
+  prompt: "Cats or dogs?",
+  answers: [
+    { text: "Cats", value: 100 },
+  ],
+)
+speed {
+  ShowQuestion(Q1, time: 20)
+}
+ShowAnswers(Q1, time: 10)`;
+  const lines = analyze(script);
+  const brackets = (ln: number) => lines[ln].pieces.filter((p) => p.kind === "bracket");
+  check("insight: a question's brackets", brackets(0)[0]?.role === "question" && brackets(6)[0]?.role === "question");
+  check("insight: the answer list and an answer", brackets(3)[0]?.role === "list" && brackets(4).every((p) => p.role === "answer") && brackets(5)[0]?.role === "list");
+  check("insight: a step's brackets carry its phase", brackets(8).every((p) => p.role === "step" && p.phase === "QUESTION"), brackets(8));
+  check("insight: a settings group closes in its colour", brackets(7)[0]?.role === "group" && brackets(9)[0]?.role === "group");
+  check("insight: a shorthand says what it stands for", lines[1].hint?.text.includes('ask: "pick", score: "crowd"') === true, lines[1].hint);
+  check("insight: steps say when they run", lines[8].hint?.text.startsWith("00:00 → 00:20") === true && lines[10].hint?.text.startsWith("00:20 → 00:30") === true, [lines[8].hint, lines[10].hint]);
+  check("insight: a group says what it changes", lines[7].hint?.text.includes("speed counts") === true, lines[7].hint);
+  check("insight: a question says what it is", lines[0].hint?.text.startsWith("poll") === true, lines[0].hint);
+  const lit = analyze(script, script.indexOf("(") + 1);
+  check("insight: the caret lights a bracket and its partner", lit[0].pieces.some((p) => p.lit) && lit[6].pieces.some((p) => p.lit));
+  const broken = analyze(`ShowQuestion(Q9, time: 5]`);
+  check("insight: a bracket closing the wrong thing is marked", broken[0].pieces.some((p) => p.bad) && broken[0].hint?.tone === "error", broken[0]);
+}
 
 console.log(`${passed} passed, ${failed} failed`);
 // a failure fails the run (scripts/check-script.mjs runs this under Node)

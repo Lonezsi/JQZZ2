@@ -35,6 +35,13 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   const [text, setText] = useState<string>(() => quizToScript(quiz));
   const [errors, setErrors] = useState<string[]>([]);
   const [summary, setSummary] = useState({ questions: 0, actions: 0 });
+  // where the caret is, so the bracket next to it and its partner light up
+  const [caret, setCaret] = useState<number | null>(null);
+  const trackCaret = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    setCaret(ta.selectionStart === ta.selectionEnd ? ta.selectionStart : null);
+  };
   const taRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const aiRef = useRef<HTMLInputElement>(null);
@@ -133,8 +140,8 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
             const used = [...text.matchAll(/NewQuestion\s+Q(\d+)/g)].map((m) => Number(m[1]));
             const q = `Q${used.length > 0 ? Math.max(...used) + 1 : 1}`;
             const block = `NewQuestion ${q} (
+  ask: "pick", score: "right",
   prompt: ${JSON.stringify(`${prompt}?`)},
-  type: "prewritten-single",
   elaboration: "Add your explanation here",
   answers: [
     { text: "Answer A", value: 100 },
@@ -153,7 +160,7 @@ ShowResult(${q}, time: 10)
             edit(
               hasContent
                 ? `${text.trimEnd()}\n\n${block}`
-                : `# ${prompt} · JQzz Script v1\n# Author: generated\n\n${block}`,
+                : `# ${prompt} · JQzz Script v3\n# Author: generated\n\n${block}`,
             );
           }}
         >
@@ -169,7 +176,7 @@ ShowResult(${q}, time: 10)
       )}
       <div className="jqzz-editor-wrap">
         <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
-          <HighlightedScript text={text} />
+          <HighlightedScript text={text} caret={caret} />
         </pre>
         <textarea
           ref={taRef}
@@ -178,6 +185,10 @@ ShowResult(${q}, time: 10)
           onChange={(e) => edit(e.target.value)}
           onScroll={syncScroll}
           onKeyDown={handleTab}
+          onSelect={trackCaret}
+          onKeyUp={trackCaret}
+          onClick={trackCaret}
+          onBlur={() => setCaret(null)}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
@@ -186,7 +197,7 @@ ShowResult(${q}, time: 10)
         />
       </div>
       <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
-        jqzz script v1 · {text.split("\n").length} lines · {summary.questions} questions ·{" "}
+        jqzz script v3 · {text.split("\n").length} lines · {summary.questions} questions ·{" "}
         {summary.actions} actions
       </div>
     </div>
