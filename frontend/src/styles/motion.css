@@ -1236,40 +1236,33 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   font-size: 22px;
   line-height: 1;
 }
-.jqzz-stash-kinds {
-  display: flex;
-  gap: 2px;
+/* the stash's four kinds: the shared sliding switch, compact for the sidebar */
+.jqzz-glide.jqzz-stash-kinds {
+  align-self: stretch;
   margin: 0 12px 8px;
-  min-width: 0;
 }
-.jqzz-stash-kinds button {
-  flex: 0 1 auto;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.jqzz-glide.jqzz-stash-kinds > button {
   gap: 4px;
-  min-height: 28px;
   min-width: 0;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--text-3);
-  font-size: var(--fs-small);
-  transition:
-    color var(--dur-1) var(--ease),
-    background var(--dur-1) var(--ease),
-    border-color var(--dur-1) var(--ease);
+  min-height: 28px;
+  padding: 4px;
 }
-.jqzz-stash-kinds button:hover {
-  color: var(--text);
+.jqzz-glide.jqzz-stash-kinds .jqzz-glide-label {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.jqzz-stash-kinds button.on {
-  flex: 1 0 auto;
-  color: var(--text);
-  background: var(--sunken);
-  border-color: var(--line);
+.jqzz-glide.jqzz-stash-kinds > [aria-selected="true"] .jqzz-glide-label {
+  display: inline;
+}
+.jqzz-glide.jqzz-stash-kinds > [aria-selected="true"] .jqzz-sid-count {
+  display: none;
+}
+.jqzz-glide.jqzz-stash-kinds svg {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
 }
 .jqzz-stash-kinds .jqzz-sid-count {
   margin-left: 0;
@@ -2967,4 +2960,25 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 }
 .jqzz-timeline > .jqzz-row {
   contain-intrinsic-size: auto 72px;
+}
+
+/* history and stash: each fills its half of the row */
+.jqzz-sid-stash {
+  justify-self: stretch;
+  display: flex;
+}
+.jqzz-sid-stash > a {
+  flex: 1;
+}
+.jqzz-sid-places a {
+  justify-content: center;
+}
+
+/* the identity card's own row: its four buttons spread across it */
+.jqzz-modal-row.secondary {
+  justify-content: space-between;
+}
+/* the chosen kind says its name instead of its icon: both don't fit a quarter */
+.jqzz-glide.jqzz-stash-kinds > [aria-selected="true"] svg {
+  display: none;
 }

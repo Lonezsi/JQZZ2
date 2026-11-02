@@ -8,6 +8,7 @@ import { contentToActions, readContent, readType, typeToActions } from "../../..
 import { typeLabel } from "../../../utils/questionInfo";
 import { plural } from "../../../utils/format";
 import { Glyph } from "../../common/Glyph";
+import { Glide } from "../../common/Glide";
 
 const KINDS: { kind: StashKind; label: string; icon: string }[] = [
   { kind: "QUESTION", label: "questions", icon: "ITEM_QUESTION" },
@@ -167,23 +168,21 @@ export const StashDrawer: React.FC<{ me: string; quizId: number }> = ({ me, quiz
             all of it
           </a>
         </div>
-        <div className="jqzz-stash-kinds" role="tablist" aria-label="What to show">
-          {KINDS.map((k) => (
-            <button
-              key={k.kind}
-              role="tab"
-              aria-selected={kind === k.kind}
-              className={kind === k.kind ? "on" : undefined}
-              onClick={() => setKind(k.kind)}
-              aria-label={k.label}
-              title={k.label}
-            >
-              <Glyph name={k.icon} size={12} />
-              {kind === k.kind && <span>{k.label}</span>}
-              {count(k.kind) ? <span className="jqzz-sid-count">{count(k.kind)}</span> : null}
-            </button>
-          ))}
-        </div>
+        {/* four equal segments and a thumb that slides: the chosen one says its
+            name, the others their icon and how many there are */}
+        <Glide
+          className="jqzz-stash-kinds"
+          label="What to show"
+          value={kind}
+          onPick={(k) => setKind(k as StashKind)}
+          options={KINDS.map((k) => ({
+            key: k.kind,
+            icon: k.icon,
+            label: k.label,
+            title: k.label,
+            extra: count(k.kind) ? <span className="jqzz-sid-count">{count(k.kind)}</span> : null,
+          }))}
+        />
         <label className="jqzz-search">
           <span className="jqzz-search-icon" aria-hidden="true" />
           <input
