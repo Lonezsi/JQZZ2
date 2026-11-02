@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Select } from "../common/Select";
+import { VisibilitySwitch } from "../Stash/StashBits";
 import { createPortal } from "react-dom";
 import { api, errorMessage } from "../../services/api";
 import type { ImageVisibility } from "../../types";
@@ -99,19 +99,9 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
           }
         />
-        <label className="jqzz-field-label" htmlFor="jqzz-img-vis">
-          who can use it
-        </label>
-        <Select
-          id="jqzz-img-vis"
-          value={visibility}
-          onChange={(v) => setVisibility(v as ImageVisibility)}
-          options={[
-            { value: "PRIVATE", label: "only me", icon: "PRIVATE" },
-            { value: "SEMI_PRIVATE", label: "others too, it stays mine", icon: "SEMI_PRIVATE" },
-            { value: "PUBLIC", label: "everyone, public name", icon: "PUBLIC" },
-          ]}
-        />
+        <span className="jqzz-field-label">who can use it</span>
+        {/* the same three steps, and the same switch, as in the stash */}
+        <VisibilitySwitch value={visibility} onChange={setVisibility} />
 
         {error && (
           <p className="jqzz-modal-error" role="alert">

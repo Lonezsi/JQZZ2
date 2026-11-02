@@ -1071,7 +1071,7 @@ a.jqzz-board-name:hover {
     flex-wrap: wrap;
   }
   .jqzz-answer-actions {
-    margin-left: 48px;
+    margin-left: 46px;
     justify-content: flex-start;
   }
   .jqzz-glide-label {
@@ -1167,7 +1167,7 @@ a.jqzz-board-name:hover {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: end;
   gap: 4px 16px;
-  margin-top: -48px;
+  margin-top: -56px;
   padding: 0 24px 16px;
 }
 .jqzz-pcard-face {

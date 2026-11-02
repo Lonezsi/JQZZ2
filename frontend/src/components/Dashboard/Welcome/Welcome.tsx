@@ -21,7 +21,7 @@ const FEATURES: { tag: string; title: string; body: string }[] = [
   {
     tag: "accounts",
     title: "Sign in philosophy",
-    body: "No accounts. No bullshit. No motherfucking please give us 5 pages of data to click a button. God I hate corporate enshittification",
+    body: "No accounts needed. Guest account is made automatically. No bullshit. No motherfucking please give us 5 pages of data to click a button. God I hate corporate enshittification",
   },
   {
     tag: "play",

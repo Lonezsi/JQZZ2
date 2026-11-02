@@ -575,7 +575,10 @@
   align-items: start;
 }
 .jqzz-row.kind-add .jqzz-node.end {
-  margin-top: 16px;
+  /* centred on the add button's circle: the panel's 1px border, half the
+     button's 48px, less half this 11px mark. An alignment, not spacing:
+     keep it exact. */
+  margin-top: calc(1px + 48px / 2 - 11px / 2);
 }
 .jqzz-add {
   border: 1px dashed var(--line-strong);
@@ -627,7 +630,7 @@
   top: 50%;
   width: 10px;
   height: 2px;
-  margin: -1px 0 0 -4px;
+  margin: -1px 0 0 -5px;
   border-radius: var(--radius-xs);
   background: var(--on-accent);
 }

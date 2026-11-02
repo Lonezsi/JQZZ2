@@ -34,11 +34,17 @@ function positions(root: HTMLElement) {
  * so the full pass only runs when the order changes; otherwise the remembered
  * positions are refreshed once the page is idle, ready for the next reorder.
  */
-export function useFlip<T extends HTMLElement>(signature: string) {
+export function useFlip<T extends HTMLElement>(
+  signature: string,
+  /** changes when the list only grew because more of it was drawn (the rest of a
+      quiz arriving): that is not news, so nothing animates */
+  drawn?: number,
+) {
   const ref = useRef<T>(null);
   const last = useRef(new Map<string, number>());
   const lastSignature = useRef<string | null>(null);
   const lastKeys = useRef<string[]>([]);
+  const lastDrawn = useRef(drawn);
 
   useLayoutEffect(() => {
     const root = ref.current;
@@ -50,20 +56,15 @@ export function useFlip<T extends HTMLElement>(signature: string) {
     }
     lastSignature.current = signature;
     const nodes = root.querySelectorAll<HTMLElement>("[data-flip]");
-    const keys = Array.from(nodes, (n) => n.dataset.flip!);
     const before = lastKeys.current;
-    lastKeys.current = keys;
+    lastKeys.current = Array.from(nodes, (n) => n.dataset.flip!);
+    const moreDrawn = drawn !== lastDrawn.current;
+    lastDrawn.current = drawn;
 
-    // only added to the end (the rest of a quiz arriving): nothing moved, so
-    // nothing to measure; the new rows fade in where the placeholders were
-    const appended = before.length > 0 && before.length < keys.length && before.every((k, i) => keys[i] === k);
-    if (appended) {
-      if (!prefersReducedMotion()) {
-        nodes.forEach((n, i) => {
-          if (i < before.length) return;
-          n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: EASE });
-        });
-      }
+    // the rest of the list drawn in: nothing moved, so nothing to measure, and
+    // nothing to show either. The rows slip in where the placeholders were;
+    // animating them read as the quiz loading twice.
+    if (moreDrawn && before.length > 0) {
       return whenIdle(() => {
         if (ref.current) last.current = positions(ref.current);
       });

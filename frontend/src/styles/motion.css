@@ -1143,7 +1143,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   position: absolute;
   top: -19px;
   left: 50%;
-  margin-left: -12px;
+  margin-left: -13px;
 }
 .jqzz-stash-arrow {
   z-index: 1;
@@ -1696,7 +1696,7 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-ans-chip-img {
   width: 16px;
   height: 16px;
-  margin: -2px 4px -2px -4px;
+  margin: -2px 5px -2px -3px;
   vertical-align: middle;
   object-fit: cover;
   border-radius: var(--radius-xs);
@@ -2981,4 +2981,27 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 /* the chosen kind says its name instead of its icon: both don't fit a quarter */
 .jqzz-glide.jqzz-stash-kinds > [aria-selected="true"] svg {
   display: none;
+}
+
+/* a switch that takes the full width of its field, in the inspector and forms */
+.jqzz-glide.jqzz-glide-fill {
+  align-self: stretch;
+  width: 100%;
+}
+.jqzz-glide.jqzz-glide-fill > button {
+  gap: 4px;
+  min-width: 0;
+  padding: 4px;
+}
+/* five points steps in a narrow panel: the numbers carry it, the star doesn't fit */
+.jqzz-glide.jqzz-glide-points > button:not(:first-of-type) svg {
+  display: none;
+}
+
+/* where the arrow sits, so where the line is cut: the arrow is centred in the
+   right half of the two-column row (12px padding, 4px gap), which puts it at
+   three quarters of the row less 5px. Worked out here rather than measured,
+   so it can't go stale when something moves it. */
+.jqzz-sid-places.with-arrow {
+  --cut: calc(75% - 5px);
 }

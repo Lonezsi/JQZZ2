@@ -460,10 +460,10 @@
   overflow: hidden;
 }
 .jqzz-stack-avatar + .jqzz-stack-avatar {
-  margin-left: -6px;
+  margin-left: -7px;
 }
 .jqzz-people-btn:hover .jqzz-stack-avatar + .jqzz-stack-avatar {
-  margin-left: -4px;
+  margin-left: -3px;
 }
 .jqzz-stack-avatar {
   transition: margin var(--dur-2) var(--ease);

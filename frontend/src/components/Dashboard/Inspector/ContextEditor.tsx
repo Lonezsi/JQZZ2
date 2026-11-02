@@ -11,6 +11,7 @@ import { useQuiz } from "../../../contexts/QuizContext";
 import { DRAG_IMAGE_KEY, dragging } from "../../../utils/dragKeys";
 import { QuestionImage } from "../../Play/PlayCommon";
 import { Glyph } from "../../common/Glyph";
+import { Glide } from "../../common/Glide";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -107,32 +108,33 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
         <div className="jqzz-section-label">settings from here on</div>
         {flags.map((k) => (
           <div key={k} className="jqzz-field-group">
-            <label className="jqzz-field-label" htmlFor={`jqzz-set-${k}`}>
-              {SETTING_LABEL[k]}
-            </label>
-            <Select
-              id={`jqzz-set-${k}`}
-              value={s[k] === undefined ? "" : s[k] ? "on" : "off"}
-              onChange={(v) => set({ [k]: v === "" ? undefined : v === "on" })}
+            <span className="jqzz-field-label">{SETTING_LABEL[k]}</span>
+            {/* three fixed choices: a switch, not a menu */}
+            <Glide
+              kind="radio"
+              className="jqzz-glide-fill"
+              label={SETTING_LABEL[k]}
+              value={s[k] === undefined ? "keep" : s[k] ? "on" : "off"}
+              onPick={(v) => set({ [k]: v === "keep" ? undefined : v === "on" })}
               options={[
-                { value: "", label: "keep as it was", icon: "RESET" },
-                { value: "on", label: "on", icon: "CHECK" },
-                { value: "off", label: "off", icon: "CLOSE" },
+                { key: "keep", label: "keep", icon: "RESET", title: "keep as it was" },
+                { key: "on", label: "on", icon: "CHECK" },
+                { key: "off", label: "off", icon: "CLOSE" },
               ]}
             />
           </div>
         ))}
         <div className="jqzz-field-group">
-          <label className="jqzz-field-label" htmlFor="jqzz-set-points">
-            {SETTING_LABEL.points}
-          </label>
-          <Select
-            id="jqzz-set-points"
-            value={s.points === undefined ? "" : String(s.points)}
-            onChange={(v) => set({ points: v === "" ? undefined : Number(v) })}
+          <span className="jqzz-field-label">{SETTING_LABEL.points}</span>
+          <Glide
+            kind="radio"
+            className="jqzz-glide-fill jqzz-glide-points"
+            label={SETTING_LABEL.points}
+            value={s.points === undefined ? "keep" : String(s.points)}
+            onPick={(v) => set({ points: v === "keep" ? undefined : Number(v) })}
             options={[
-              { value: "", label: "keep as it was", icon: "RESET" },
-              ...[0.5, 1, 2, 3].map((n) => ({ value: String(n), label: `×${n}`, text: String(n), icon: "STAR" })),
+              { key: "keep", label: "keep", icon: "RESET", title: "keep as it was" },
+              ...[0.5, 1, 2, 3].map((n) => ({ key: String(n), label: `×${n}`, icon: "STAR", title: `points ×${n}` })),
             ]}
           />
         </div>

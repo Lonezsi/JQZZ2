@@ -68,13 +68,15 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   // quiz in one go made opening it stall; drawing them a few at a time kept
   // the page reflowing (and its height jumping) for as long as you scrolled.
   // Cards off screen cost little once drawn: see content-visibility on rows.
-  const [shown, setShown] = useState(FIRST_BATCH);
+  // a quiz short enough to draw at once is drawn at once: no second step at all
+  const total = renderItems.length;
+  const firstStep = total <= DRAW_AT_ONCE ? total : FIRST_BATCH;
+  const [shown, setShown] = useState(firstStep);
   const [shownFor, setShownFor] = useState(quiz?.id);
   if (quiz?.id !== shownFor) {
     setShownFor(quiz?.id);
-    setShown(FIRST_BATCH);
+    setShown(firstStep);
   }
-  const total = renderItems.length;
   useEffect(() => {
     if (shown >= total) return;
     return whenIdle(() => setShown(total));
@@ -88,7 +90,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
         : item.action.id,
     )
     .join("|")}`;
-  const timelineRef = useFlip<HTMLDivElement>(flipSignature);
+  const timelineRef = useFlip<HTMLDivElement>(flipSignature, shown >= total ? total : shown);
 
   // Something being dragged in from the tray or the stash: what it will become
   // (read once, when the drag starts, since a drag hides its data until the
@@ -400,8 +402,10 @@ function firstAction(item: RenderItem | undefined): Action | null {
   return item.kind === "group" ? item.actions[0] : item.action;
 }
 
-/** items drawn when a quiz opens; the rest follow together */
+/** items drawn when a long quiz opens; the rest follow together */
 const FIRST_BATCH = 8;
+/** up to this many items, a quiz is simply drawn whole */
+const DRAW_AT_ONCE = 24;
 
 /** run when the browser has a moment; returns a cancel */
 function whenIdle(cb: () => void): () => void {

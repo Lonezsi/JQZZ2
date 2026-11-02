@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { User, Quiz } from "../../../types";
 import { QuizList } from "./QuizList";
 import { Avatar } from "../../common/Avatar";
@@ -68,24 +68,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
   const widthDrag = useRef(false);
 
-  // the arrow cuts the line it sits on: where, measured, since it follows the stash link
-  const placesRef = useRef<HTMLElement>(null);
-  const arrowRef = useRef<HTMLButtonElement>(null);
-  const [cut, setCut] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const nav = placesRef.current;
-    const arrow = arrowRef.current;
-    if (!nav || !arrow) return;
-    const measure = () => {
-      const n = nav.getBoundingClientRect();
-      const a = arrow.getBoundingClientRect();
-      setCut(Math.round(a.left + a.width / 2 - n.left));
-    };
-    measure();
-    const watch = new ResizeObserver(measure);
-    watch.observe(nav);
-    return () => watch.disconnect();
-  }, [canStash]);
   const { connected } = useWebSocket();
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -224,10 +206,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* your own places: they live on your profile */}
       {identity && (
         <nav
-          ref={placesRef}
           className={`jqzz-sid-places${canStash ? " with-arrow" : ""}`}
           aria-label="Yours"
-          style={canStash && cut != null ? ({ "--cut": `${cut}px` } as React.CSSProperties) : undefined}
         >
           <a href="#/me/history" aria-keyshortcuts={ariaShortcut("Mod H")} title={`your games · ${modLabel("Mod H")}`}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -237,7 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </a>
           <span className="jqzz-sid-stash">
             {canStash && (
-              <StashArrow ref={arrowRef} open={stashOpen} onToggle={() => setLayout({ stashOpen: !stashOpen })} />
+              <StashArrow open={stashOpen} onToggle={() => setLayout({ stashOpen: !stashOpen })} />
             )}
             <a href="#/me/stash" aria-keyshortcuts={ariaShortcut("Mod B")} title={`what you saved · ${modLabel("Mod B")}`}>
               <svg viewBox="0 0 16 16" aria-hidden="true">
