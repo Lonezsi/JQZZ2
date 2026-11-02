@@ -1,0 +1,101 @@
+# Classic, but faster · JQzz Script v2
+# about: Kahoot rules. Right answers score, quick right answers score more, and the last one counts double.
+# players: 1+
+
+NewQuestion Q1 (
+  type: "single",
+  prompt: "Which planet has the most known moons?",
+  elaboration: "Saturn. It passed 270 confirmed moons in 2025, well ahead of Jupiter.",
+  answers: [
+    { text: "Jupiter", value: 0 },
+    { text: "Saturn", value: 1000 },
+    { text: "Uranus", value: 0 },
+    { text: "Neptune", value: 0 },
+  ],
+)
+NewQuestion Q2 (
+  type: "multiple",
+  prompt: "Which of these are mammals?",
+  elaboration: "Whales, bats and platypuses all feed their young milk. Sharks and penguins don't.",
+  answers: [
+    { text: "Blue whale", value: 300 },
+    { text: "Bat", value: 300 },
+    { text: "Great white shark", value: -300 },
+    { text: "Platypus", value: 400 },
+    { text: "Penguin", value: -300 },
+  ],
+)
+NewQuestion Q3 (
+  type: "single",
+  prompt: "When did the Berlin Wall fall?",
+  elaboration: "On 9 November 1989, after a botched announcement opened the border crossings.",
+  answers: [
+    { text: "1987", value: 0 },
+    { text: "1989", value: 1000 },
+    { text: "1991", value: 0 },
+    { text: "1993", value: 0 },
+  ],
+)
+NewQuestion Q4 (
+  type: "single",
+  prompt: "Which element has the symbol K?",
+  elaboration: "Potassium, from its Latin name, kalium.",
+  answers: [
+    { text: "Krypton", value: 0 },
+    { text: "Potassium", value: 1000 },
+    { text: "Calcium", value: 0 },
+    { text: "Carbon", value: 0 },
+  ],
+)
+NewQuestion Q5 (
+  type: "single",
+  prompt: "How many strings does a violin have?",
+  elaboration: "Four: G, D, A and E.",
+  answers: [
+    { text: "4", value: 1000 },
+    { text: "5", value: 0 },
+    { text: "6", value: 0 },
+    { text: "7", value: 0 },
+  ],
+)
+NewQuestion Q6 (
+  type: "single",
+  prompt: "Which is the largest ocean?",
+  elaboration: "The Pacific. It's bigger than all the land on Earth put together.",
+  answers: [
+    { text: "Atlantic", value: 0 },
+    { text: "Indian", value: 0 },
+    { text: "Pacific", value: 1000 },
+    { text: "Arctic", value: 0 },
+  ],
+)
+
+speed {
+  ShowWaiting(Q1, time: 5)
+  ShowQuestion(Q1, time: 20)
+  ShowAnswers(Q1, time: 8)
+  ShowElaboration(Q1, time: 8)
+  ShowWaiting(Q2, time: 4)
+  ShowQuestion(Q2, time: 25)
+  ShowAnswers(Q2, time: 8)
+  ShowElaboration(Q2, time: 8)
+  ShowResult(Q2, time: 8)
+  ShowWaiting(Q3, time: 4)
+  ShowQuestion(Q3, time: 20)
+  ShowAnswers(Q3, time: 8)
+  ShowWaiting(Q4, time: 4)
+  ShowQuestion(Q4, time: 20)
+  ShowAnswers(Q4, time: 8)
+  ShowWaiting(Q5, time: 4)
+  ShowQuestion(Q5, time: 15)
+  ShowAnswers(Q5, time: 8)
+  ShowResult(Q5, time: 8)
+  ---
+  points=2 {
+    ShowWaiting(Q6, time: 6)
+    ShowQuestion(Q6, time: 20)
+    ShowAnswers(Q6, time: 8)
+    ShowElaboration(Q6, time: 8)
+    ShowResult(Q6, time: 12)
+  }
+}

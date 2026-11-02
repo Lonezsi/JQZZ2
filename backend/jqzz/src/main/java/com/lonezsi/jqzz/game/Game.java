@@ -777,16 +777,29 @@ public class Game {
         return !present.isEmpty() && did.containsAll(present);
     }
 
+    /**
+     * Who's done with the question. Tier lists and pairs are saved with every
+     * tap, so time running out loses nothing; they're done once every item has
+     * its place, not at the first one.
+     */
     private Set<String> answeredBy(QState st, QuestionSnap q) {
         return switch (type(q)) {
             case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE, POLL, ORDER -> st.picks.keySet();
-            case TIERLIST -> st.tiers.keySet();
-            case MATCH -> st.pairs.keySet();
+            case TIERLIST -> whole(st.tiers, q);
+            case MATCH -> whole(st.pairs, q);
             case NUMBER -> st.numbers.keySet();
             case DRAW, DRAW_VOTE, DRAW_GUESS, DRAW_BATTLE -> st.drawings.keySet();
             case TELEPHONE -> st.telephone == null || st.telephone.done ? Set.of() : st.telephone.doneThisRound();
             default -> st.texts.keySet();
         };
+    }
+
+    private static Set<String> whole(Map<String, Map<Long, String>> placed, QuestionSnap q) {
+        Set<String> done = new LinkedHashSet<>();
+        placed.forEach((user, items) -> {
+            if (items.size() >= q.answers().size()) done.add(user);
+        });
+        return done;
     }
 
     private void requirePlayer(String userId) {
@@ -1168,6 +1181,7 @@ public class Game {
                         tv.put("rounds", t.rounds);
                         tv.put("kind", t.kind().name().toLowerCase());
                         tv.put("roundEndsAt", status == Status.PAUSED ? null : t.roundEndsAt);
+                        tv.put("roundSeconds", t.roundMs() / 1000.0);
                         tv.put("players", t.players);
                         v.put("telephone", tv);
                     }

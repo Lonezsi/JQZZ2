@@ -281,6 +281,80 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M2 3h3.5v4H9M2 11h3.5V7M9 7h1.5v2H14M10.5 9v2.5H14" />
     </>
   ),
+  // an input with its caret
+  TYPED: (
+    <>
+      <rect x="1.5" y="4.5" width="13" height="7" rx="1.5" />
+      <path d="M4 8h3M9.5 6.3v3.4" />
+    </>
+  ),
+  // rows, and the arrows that move them
+  ORDER: (
+    <>
+      <path d="M7 4h6.5M7 8h6.5M7 12h6.5" />
+      <path d="M3.5 2.5v11M2 4l1.5-1.5L5 4M2 12l1.5 1.5L5 12" />
+    </>
+  ),
+  // a dial and its needle
+  NUMBER: (
+    <>
+      <path d="M2.2 11.5a5.8 5.8 0 0 1 11.6 0" />
+      <path d="M8 11.5l2.6-3.4" />
+      <path d="M4 7.6l.8.6M8 5.7v1M12 7.6l-.8.6" />
+    </>
+  ),
+  // two of each, crossed over
+  MATCH: (
+    <>
+      <circle cx="3" cy="4" r="1.3" />
+      <circle cx="3" cy="12" r="1.3" />
+      <circle cx="13" cy="4" r="1.3" />
+      <circle cx="13" cy="12" r="1.3" />
+      <path d="M4.2 4.7l7.6 6.6M4.2 11.3l7.6-6.6" />
+    </>
+  ),
+  // a slice taken out of the whole
+  POLL: (
+    <>
+      <path d="M13.5 9A5.5 5.5 0 1 1 7 2.5" />
+      <path d="M9.5 1.8A5 5 0 0 1 14.2 6.5H9.5z" />
+    </>
+  ),
+  // a loaded brush
+  DRAW: (
+    <>
+      <path d="M9.4 6.4l4-4a1.1 1.1 0 0 1 1.6 1.6l-4 4" />
+      <path d="M9 7.1l1.5 1.5c.3 2.1-1.1 4-4.1 4.4-1.3.1-2.6-.3-3.6-1 1.4-.3 1.6-1.4 1.8-2.4.4-2.2 2.4-3.2 4.4-2.5z" />
+    </>
+  ),
+  // a framed picture with a star on it
+  DRAW_VOTE: (
+    <>
+      <rect x="2" y="2.5" width="12" height="11" rx="1.2" />
+      <path d="M8 5.2l.9 1.8 2 .3-1.45 1.4.35 2L8 9.8l-1.8.9.35-2L5.1 7.3l2-.3z" />
+    </>
+  ),
+  // a framed picture asking what it is
+  DRAW_GUESS: (
+    <>
+      <rect x="2" y="2.5" width="12" height="11" rx="1.2" />
+      <path d="M6.6 6.4a1.4 1.4 0 1 1 1.9 1.3c-.4.2-.5.5-.5.9v.2M8 10.6v.05" />
+    </>
+  ),
+  // two pictures face off
+  DRAW_BATTLE: (
+    <>
+      <rect x="1.5" y="4.5" width="5" height="6" rx="1" />
+      <rect x="9.5" y="4.5" width="5" height="6" rx="1" />
+      <path d="M8.6 3.5L7.2 7h1.6l-1.4 3.5" />
+    </>
+  ),
+  // passed one way, then back the other
+  TELEPHONE: (
+    <>
+      <path d="M2.5 5.5h9.5l-2-2M13.5 10.5H4l2 2" />
+    </>
+  ),
 };
 
 interface GlyphProps {

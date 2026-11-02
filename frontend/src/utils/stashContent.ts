@@ -2,6 +2,7 @@ import type { Action, Question } from "../types";
 import type { StashContent, StashItem, TypeShape } from "../types/stash";
 import { SNIPPETS } from "../constants/snippets";
 import { generateId } from "./idGenerator";
+import { typeInfo } from "./questionTypes";
 
 export function readContent(item: Pick<StashItem, "payload">): StashContent {
   try {
@@ -26,11 +27,13 @@ export function contentToActions(content: StashContent): Action[] {
       imageUrl: q.imageUrl ?? undefined,
       elaborationText: q.elaborationText ?? undefined,
       elaborationImageUrl: q.elaborationImageUrl ?? undefined,
+      ...(q.options ? { options: q.options } : {}),
       answers: q.answers.map((a) => ({
         id: generateId(),
         text: a.text ?? "",
         value: a.value ?? 0,
         imageUrl: a.imageUrl ?? undefined,
+        ...(a.match != null ? { match: a.match } : {}),
       })),
     });
   }
@@ -65,7 +68,13 @@ export function typeToActions(t: TypeShape): Action[] {
     imageUrl: "",
     type: t.questionType,
     elaborationText: "",
-    answers: t.answers.map((a) => ({ id: generateId(), text: a.text ?? "", value: a.value ?? 0 })),
+    answers: t.answers.map((a) => ({
+      id: generateId(),
+      text: a.text ?? "",
+      value: a.value ?? 0,
+      // pairs need their other half, even an empty one, for the editor to offer it
+      ...(typeInfo(t.questionType).answers?.match ? { match: a.match ?? "" } : {}),
+    })),
   };
   return t.steps.map((s) => ({
     id: generateId(),

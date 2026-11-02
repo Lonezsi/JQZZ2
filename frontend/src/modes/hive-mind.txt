@@ -1,0 +1,77 @@
+# Hive mind · JQzz Script v2
+# about: No right answers, only popular ones. You score by thinking like everyone else.
+# players: 3+
+
+NewQuestion Q1 (
+  type: "poll",
+  prompt: "The best pizza topping",
+  answers: [
+    { text: "Mushrooms", value: 100 },
+    { text: "Pepperoni", value: 100 },
+    { text: "Pineapple", value: 100 },
+    { text: "Olives", value: 100 },
+  ],
+)
+NewQuestion Q2 (
+  type: "poll",
+  prompt: "Morning person or night owl?",
+  answers: [
+    { text: "Morning person", value: 100 },
+    { text: "Night owl", value: 100 },
+  ],
+)
+NewQuestion Q3 (
+  type: "poll",
+  prompt: "Cats or dogs?",
+  answers: [
+    { text: "Cats", value: 100 },
+    { text: "Dogs", value: 100 },
+    { text: "Neither, thanks", value: 100 },
+  ],
+)
+NewQuestion Q4 (
+  type: "poll",
+  prompt: "The best season",
+  answers: [
+    { text: "Spring", value: 100 },
+    { text: "Summer", value: 100 },
+    { text: "Autumn", value: 100 },
+    { text: "Winter", value: 100 },
+  ],
+)
+NewQuestion Q5 (
+  type: "poll",
+  prompt: "How do you eat a KitKat?",
+  answers: [
+    { text: "Snap it into fingers", value: 100 },
+    { text: "Bite straight across", value: 100 },
+    { text: "Chocolate off first", value: 100 },
+  ],
+)
+NewQuestion Q6 (
+  type: "poll",
+  prompt: "Toilet paper: over or under?",
+  answers: [
+    { text: "Over", value: 200 },
+    { text: "Under", value: 200 },
+    { text: "It's paper, I don't care", value: 200 },
+  ],
+)
+
+ShowQuestion(Q1, time: 15)
+ShowAnswers(Q1, time: 8)
+ShowQuestion(Q2, time: 12)
+ShowAnswers(Q2, time: 8)
+ShowQuestion(Q3, time: 12)
+ShowAnswers(Q3, time: 8)
+ShowResult(Q3, time: 8)
+ShowQuestion(Q4, time: 15)
+ShowAnswers(Q4, time: 8)
+ShowQuestion(Q5, time: 15)
+ShowAnswers(Q5, time: 8)
+---
+the last one is worth double, and it's the one that ends friendships
+ShowWaiting(Q6, time: 5)
+ShowQuestion(Q6, time: 15)
+ShowAnswers(Q6, time: 10)
+ShowResult(Q6, time: 12)

@@ -296,6 +296,54 @@ export function typeFromScript(name: string): QuestionTypeInfo | undefined {
 /** Server ids of every type, in the order the editor offers them. */
 export const QUESTION_TYPE_IDS = QUESTION_TYPES_INFO.map((t) => t.id);
 
+type Step = { phase: "WAITING" | "QUESTION" | "ANSWER" | "ELABORATION" | "RESULT"; time: number; preview: string };
+const step = (phase: Step["phase"], time: number, preview: string): Step => ({ phase, time, preview });
+
+/** how many answer slots a new question of each family starts with */
+const SLOTS: Partial<Record<Family, number>> = { choice: 4, multi: 4, typed: 2, order: 4, number: 1, match: 4, poll: 3, tier: 4 };
+
+/**
+ * A new question of a type, as the add tray offers it when your stash has
+ * no shape of that type yet: the type's answer slots and steps that suit it.
+ */
+export function starterShape(t: QuestionTypeInfo) {
+  const slots = t.answers ? (t.id === "DRAW_GUESS" ? 4 : (SLOTS[t.family] ?? 0)) : 0;
+  const answers = Array.from({ length: slots }, (_, i) => ({
+    text: "",
+    value: t.family === "choice" || t.family === "multi" ? (i === 0 ? 100 : 0) : t.family === "tier" ? 0 : t.answers!.starts,
+    ...(t.answers?.match ? { match: "" } : {}),
+  }));
+  let steps: Step[];
+  switch (t.family) {
+    case "poll":
+      steps = [step("QUESTION", 20, "Everyone votes"), step("ANSWER", 10, "What the room thinks")];
+      break;
+    case "tier":
+      steps = [step("WAITING", 6, "Get ready"), step("QUESTION", 60, "Drag items into tiers"), step("RESULT", 15, "The group's tiers")];
+      break;
+    case "write":
+      steps = t.judged
+        ? [step("WAITING", 6, "Get ready"), step("QUESTION", 45, "Players write"), step("ANSWER", 40, "Judging"), step("RESULT", 10, "Leaderboard")]
+        : [step("QUESTION", 45, "Players write"), step("ANSWER", 20, "The wall")];
+      break;
+    case "draw":
+      steps = t.judged
+        ? [step("WAITING", 5, "Get ready"), step("QUESTION", 90, "Everyone draws"), step("ANSWER", t.id === "DRAW_BATTLE" ? 60 : 45, "Judging"), step("RESULT", 10, "Leaderboard")]
+        : [step("QUESTION", 90, "Everyone draws"), step("ANSWER", 30, "The gallery")];
+      break;
+    case "telephone":
+      steps = [step("QUESTION", 300, "Write, draw, describe, pass it on"), step("ANSWER", 120, "The chains")];
+      break;
+    default:
+      steps = [
+        step("WAITING", 5, "Get ready"),
+        step("QUESTION", t.family === "order" || t.family === "match" ? 40 : 25, t.blurb),
+        step("ANSWER", 12, "The answer"),
+      ];
+  }
+  return { name: t.label, questionType: t.id, answers, steps };
+}
+
 // ─── a question's extra fields, stored as "unit=m, min=0, max=100" ─────
 
 export type QuestionOptions = Partial<Record<QuestionField, string>>;

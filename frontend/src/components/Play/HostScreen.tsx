@@ -8,6 +8,7 @@ import { ConfirmButton, Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, Q
 import { Doodle } from "./Doodle";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
+import { typeInfo } from "../../utils/questionTypes";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
@@ -201,6 +202,42 @@ const HostLobby: React.FC<{
   );
 };
 
+/** what the big screen says while everyone answers on their phone */
+function onTheirPhones(game: GameState): string {
+  const q = game.question!;
+  const info = typeInfo(q.type);
+  if (q.type === "DRAW_GUESS") return "everyone's drawing a secret word. no letters allowed.";
+  switch (info.family) {
+    case "choice":
+    case "multi":
+      return "";
+    case "poll":
+      return "points for siding with the most";
+    case "typed":
+      return "type the answer on your phone";
+    case "order":
+      return "put them in order on your phone";
+    case "number": {
+      const range = q.min != null && q.max != null ? ` between ${q.min} and ${q.max}` : "";
+      return `guess the number${range}${q.unit ? ` (${q.unit})` : ""}. the closer, the more.`;
+    }
+    case "match":
+      return "pair them up on your phone";
+    case "tier":
+      return "";
+    case "draw":
+      return "everyone's drawing on their phone";
+    case "telephone":
+      return game.telephone?.kind === "draw"
+        ? "everyone's drawing what they were handed"
+        : game.telephone?.kind === "describe"
+          ? "everyone's working out what they were handed"
+          : "everyone's writing something for someone else to draw";
+    default:
+      return "everyone's writing their answer on their phone";
+  }
+}
+
 const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number }> = ({
   game,
   me,
@@ -231,7 +268,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
           {q && <QuestionHead game={game} />}
           <Countdown game={game} serverNow={serverNow} size={110} />
         </div>
-        {worthShowing && game.reveal && <Reveal game={game} />}
+        {worthShowing && game.reveal && <Reveal game={game} me={me} serverNow={serverNow} />}
         <Leaderboard players={game.players} viewerId={me} limit={8} />
       </div>
     );
@@ -274,10 +311,69 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
               ))}
             </div>
           )}
-          {q.type !== "PREWRITTEN_SINGLE" && q.type !== "PREWRITTEN_MULTIPLE" && q.type !== "TIERLIST" && (
-            <p className="jqzz-play-note">everyone's writing their answer on their phone</p>
+          {q.type === "POLL" && (
+            <div className="jqzz-tiles">
+              {q.answers.map((a, i) => (
+                <div key={a.id} className="jqzz-tile" style={{ "--tile": tileColour(i) } as React.CSSProperties}>
+                  <AnswerPicture src={a.imageUrl} game={game} />
+                  <span className="jqzz-tile-letter">{tileLetter(i)}</span>
+                  <span className="jqzz-tile-text">{a.text || "..."}</span>
+                </div>
+              ))}
+            </div>
           )}
-          <Progress label="answered" done={answered} game={game} total={everyone} me={me} />
+          {q.type === "ORDER" && (
+            <div className="jqzz-tier-items preview">
+              {q.answers.map((a) => (
+                <span key={a.id} className="jqzz-chip">
+                  <AnswerPicture src={a.imageUrl} game={game} className="jqzz-chip-img" />
+                  {a.text}
+                </span>
+              ))}
+            </div>
+          )}
+          {q.type === "MATCH" && (
+            <div className="jqzz-match-preview">
+              <div className="jqzz-tier-items preview">
+                {q.answers.map((a) => (
+                  <span key={a.id} className="jqzz-chip">
+                    {a.text}
+                  </span>
+                ))}
+              </div>
+              <div className="jqzz-tier-items preview">
+                {(q.halves ?? []).map((h) => (
+                  <span key={h.key} className="jqzz-chip">
+                    {h.text}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {onTheirPhones(game) && <p className="jqzz-play-note">{onTheirPhones(game)}</p>}
+          {game.telephone && (
+            <div className="jqzz-stage-round">
+              <span className="jqzz-annot">
+                turn {game.telephone.round} of {game.telephone.rounds} · {game.telephone.kind}
+              </span>
+              {game.telephone.roundEndsAt && (
+                <Countdown
+                  game={game}
+                  serverNow={serverNow}
+                  size={44}
+                  endsAt={game.telephone.roundEndsAt}
+                  seconds={game.telephone.roundSeconds}
+                />
+              )}
+            </div>
+          )}
+          <Progress
+            label={game.telephone ? "passed on" : "answered"}
+            done={answered}
+            game={game}
+            total={game.telephone ? game.telephone.players.length : everyone}
+            me={me}
+          />
         </>
       )}
 
@@ -295,7 +391,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
               />
             </div>
           )}
-          <Reveal game={game} />
+          <Reveal game={game} me={me} serverNow={serverNow} />
           {game.interaction && (
             <Progress
               label={game.interaction === "guess" ? "guessing" : "voted"}

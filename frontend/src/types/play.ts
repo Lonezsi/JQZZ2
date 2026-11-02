@@ -22,6 +22,8 @@ export interface GameAnswer {
   imageUrl?: string | null;
   /** only once the question is revealed */
   value?: number;
+  /** the other half of a pair (MATCH), once revealed */
+  match?: string;
 }
 
 export interface GameQuestion {
@@ -34,20 +36,38 @@ export interface GameQuestion {
   answers: GameAnswer[];
   elaborationText?: string | null;
   elaborationImageUrl?: string | null;
+  /** answering sooner scores more */
+  speed?: boolean;
+  /** NUMBER: what it's counted in, and the ends of the slider */
+  unit?: string;
+  min?: number;
+  max?: number;
+  /** MATCH: the other halves, shuffled, under keys that don't give the pairs away */
+  halves?: { key: string; text: string }[];
 }
 
-/** a written answer, anonymous until the voting on it is over */
+/** something a player made: written (text) or drawn (image, an art id); anonymous until the voting on it is over */
 export interface GameEntry {
   key: string;
-  text: string;
+  text?: string;
+  image?: string;
   authorId?: string;
   votes?: number;
+  /** DRAW_GUESS, once settled: the secret word, and what everyone guessed */
+  word?: string | null;
+  guesses?: { userId: string; text: string; right: boolean }[];
+}
+
+export interface GameSide {
+  key: string;
+  text?: string;
+  image?: string;
 }
 
 export interface GameMatch {
   id: number;
-  a: { key: string; text: string };
-  b: { key: string; text: string } | null;
+  a: GameSide;
+  b: GameSide | null;
   votesA?: number;
   votesB?: number;
   winner?: string | null;
@@ -62,7 +82,13 @@ export interface GameBracket {
   done: boolean;
   matches: GameMatch[];
   history: GameMatch[][];
-  champion?: { key: string; text: string; authorId: string };
+  champion?: GameSide & { authorId: string };
+}
+
+/** one telephone chain: what its starter wrote, and everything handed on from it */
+export interface GameChain {
+  starter: string;
+  links: { authorId: string; text?: string; image?: string }[];
 }
 
 export interface GameReveal {
@@ -75,6 +101,43 @@ export interface GameReveal {
   authors?: string[];
   bracket?: GameBracket;
   gains?: Record<string, number>;
+  /** TYPED: what was typed, alike answers together */
+  typed?: { text: string; count: number; right: boolean }[];
+  /** ORDER: the right order, and how many put each one in its place */
+  order?: number[];
+  placedRight?: Record<string, number>;
+  /** MATCH: how many paired each one right */
+  pairedRight?: Record<string, number>;
+  /** NUMBER: the right number, everyone's guess, who came closest */
+  right?: number | null;
+  numbers?: Record<string, number>;
+  closest?: string[];
+  /** TELEPHONE */
+  prompt?: string;
+  chains?: GameChain[];
+}
+
+/** a telephone question while it's handed round */
+export interface GameTelephone {
+  round: number;
+  rounds: number;
+  kind: "write" | "draw" | "describe";
+  roundEndsAt: number | null;
+  /** how long this turn gets */
+  roundSeconds: number;
+  players: string[];
+}
+
+/** what only you see now: your secret word, what you're handed */
+export interface GameTask {
+  question?: number;
+  kind?: "draw" | "write" | "describe" | "watch";
+  word?: string | null;
+  drawing?: string | null;
+  round?: number;
+  rounds?: number;
+  handed?: { text?: string; image?: string };
+  mine?: { text?: string; image?: string };
 }
 
 export interface GameState {
@@ -109,6 +172,8 @@ export interface GameState {
   pausedForHost?: boolean;
   /** players done with this step who nudged the host to move on */
   hurry?: string[];
+  /** a telephone question being handed round */
+  telephone?: GameTelephone;
 }
 
 /** a game you're in that hasn't finished, as /play/mine lists it */

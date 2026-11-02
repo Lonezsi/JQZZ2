@@ -1,0 +1,53 @@
+# Sketch and guess · JQzz Script v2
+# about: Everyone gets a secret word to draw, then guesses everyone else's. Points for guessing right, and for being guessed.
+# players: 3+
+
+NewQuestion Q1 (
+  type: "draw-guess",
+  prompt: "Draw your secret word",
+  answers: [
+    { text: "lighthouse", value: 100 },
+    { text: "volcano", value: 100 },
+    { text: "snowman", value: 100 },
+    { text: "octopus", value: 100 },
+    { text: "castle", value: 100 },
+    { text: "rocket", value: 100 },
+  ],
+)
+NewQuestion Q2 (
+  type: "draw-guess",
+  prompt: "Harder words this time",
+  answers: [
+    { text: "time travel", value: 150 },
+    { text: "homesick", value: 150 },
+    { text: "traffic jam", value: 150 },
+    { text: "gravity", value: 150 },
+    { text: "bad haircut", value: 150 },
+    { text: "echo", value: 150 },
+  ],
+)
+NewQuestion Q3 (
+  type: "draw-guess",
+  prompt: "Animals with jobs",
+  answers: [
+    { text: "penguin chef", value: 200 },
+    { text: "cat lawyer", value: 200 },
+    { text: "giraffe firefighter", value: 200 },
+    { text: "snail courier", value: 200 },
+    { text: "bear DJ", value: 200 },
+    { text: "shark dentist", value: 200 },
+  ],
+)
+
+ShowWaiting(Q1, time: 5)
+ShowQuestion(Q1, time: 80)
+ShowAnswers(Q1, time: 60)
+ShowResult(Q1, time: 10)
+ShowWaiting(Q2, time: 5)
+ShowQuestion(Q2, time: 90)
+ShowAnswers(Q2, time: 60)
+ShowResult(Q2, time: 10)
+ShowWaiting(Q3, time: 5)
+ShowQuestion(Q3, time: 90)
+ShowAnswers(Q3, time: 60)
+ShowResult(Q3, time: 15)

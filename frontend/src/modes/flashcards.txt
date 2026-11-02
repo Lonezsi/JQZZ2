@@ -1,0 +1,99 @@
+# Flashcards · JQzz Script v2
+# about: Quizlet in a room. Type it, match it, put it in order. Spelling is forgiven a little.
+# players: 1+
+
+NewQuestion Q1 (
+  type: "typed",
+  prompt: "What's the capital of Australia?",
+  elaboration: "Not Sydney. Canberra was built as a compromise between Sydney and Melbourne.",
+  answers: [ { text: "Canberra", value: 500 } ],
+)
+NewQuestion Q2 (
+  type: "match",
+  prompt: "Match each country to its capital",
+  answers: [
+    { text: "Canada", match: "Ottawa", value: 100 },
+    { text: "Turkey", match: "Ankara", value: 100 },
+    { text: "Brazil", match: "Brasília", value: 100 },
+    { text: "New Zealand", match: "Wellington", value: 100 },
+    { text: "Switzerland", match: "Bern", value: 100 },
+  ],
+)
+NewQuestion Q3 (
+  type: "typed",
+  prompt: "Which gas do plants take in to make their food?",
+  elaboration: "Carbon dioxide, turned into sugar with light and water. The oxygen is what's left over.",
+  answers: [
+    { text: "carbon dioxide", value: 500 },
+    { text: "CO2", value: 500 },
+  ],
+)
+NewQuestion Q4 (
+  type: "order",
+  prompt: "Oldest first",
+  elaboration: "Giza around 2560 BC, the Colosseum in AD 80, Machu Picchu in the 1450s, the Eiffel Tower in 1889.",
+  answers: [
+    { text: "Great Pyramid of Giza", value: 100 },
+    { text: "Colosseum", value: 100 },
+    { text: "Machu Picchu", value: 100 },
+    { text: "Eiffel Tower", value: 100 },
+  ],
+)
+NewQuestion Q5 (
+  type: "match",
+  prompt: "Match the thank you to its language",
+  answers: [
+    { text: "Danke", match: "German", value: 100 },
+    { text: "Merci", match: "French", value: 100 },
+    { text: "Grazie", match: "Italian", value: 100 },
+    { text: "Köszönöm", match: "Hungarian", value: 100 },
+    { text: "Gracias", match: "Spanish", value: 100 },
+  ],
+)
+NewQuestion Q6 (
+  type: "typed",
+  prompt: "Who painted the Mona Lisa?",
+  answers: [
+    { text: "Leonardo da Vinci", value: 500 },
+    { text: "da Vinci", value: 500 },
+    { text: "Leonardo", value: 500 },
+  ],
+)
+NewQuestion Q7 (
+  type: "order",
+  prompt: "Closest to the Sun first",
+  answers: [
+    { text: "Mercury", value: 100 },
+    { text: "Venus", value: 100 },
+    { text: "Earth", value: 100 },
+    { text: "Mars", value: 100 },
+    { text: "Jupiter", value: 100 },
+  ],
+)
+
+ShowWaiting(Q1, time: 4)
+ShowQuestion(Q1, time: 25)
+ShowAnswers(Q1, time: 8)
+ShowElaboration(Q1, time: 8)
+ShowWaiting(Q2, time: 4)
+ShowQuestion(Q2, time: 45)
+ShowAnswers(Q2, time: 12)
+ShowWaiting(Q3, time: 4)
+ShowQuestion(Q3, time: 25)
+ShowAnswers(Q3, time: 8)
+ShowElaboration(Q3, time: 8)
+ShowResult(Q3, time: 8)
+ShowWaiting(Q4, time: 4)
+ShowQuestion(Q4, time: 35)
+ShowAnswers(Q4, time: 10)
+ShowElaboration(Q4, time: 10)
+ShowWaiting(Q5, time: 4)
+ShowQuestion(Q5, time: 45)
+ShowAnswers(Q5, time: 12)
+ShowWaiting(Q6, time: 4)
+ShowQuestion(Q6, time: 25)
+ShowAnswers(Q6, time: 8)
+ShowWaiting(Q7, time: 4)
+ShowQuestion(Q7, time: 35)
+ShowAnswers(Q7, time: 10)
+ShowResult(Q7, time: 12)

@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuiz } from "../../../contexts/QuizContext";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
+import { GameModes } from "./GameModes";
 
 interface WelcomeProps {
   onCreate?: () => void;
@@ -79,6 +80,8 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
           {quizzes.length > 0 ? "or open one on the left. " : ""}ctrl k for everything else.
         </p>
       </header>
+
+      <GameModes />
 
       <section className="jqzz-welcome-features" aria-label="What this is">
         {FEATURES.map((f) => (

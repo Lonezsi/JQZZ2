@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../hooks/useGame";
 import { go } from "../../hooks/useHashRoute";
-import { playService } from "../../services/playService";
+import { playService, type Submission } from "../../services/playService";
+import { typeInfo } from "../../utils/questionTypes";
 import type { GameState } from "../../types/play";
 import { IdentityModal } from "../Modals/IdentityModal";
 import { usePresence } from "../../hooks/usePresence";
@@ -108,8 +109,16 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
   const q = game.question;
   const myAnswer = (q && mine[q.id]) || {};
 
-  const submit = (answer: { picks?: number[]; text?: string; tiers?: Record<number, string> }) =>
-    act(() => playService.submit(code, me, answer));
+  const submit = (answer: Submission) => act(() => playService.submit(code, me, answer));
+  const draw = async (picture: Blob) => {
+    let id: string | null = null;
+    const ok = await act(async () => {
+      const r = await playService.draw(code, me, picture);
+      id = r.drawing;
+      return r;
+    });
+    return ok ? id : null;
+  };
   const vote = (v: { choice?: string; match?: number; guesses?: Record<string, string> }) =>
     act(() => playService.vote(code, me, v));
 
@@ -175,6 +184,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
             serverNow={serverNow}
             submit={submit}
             vote={vote}
+            draw={draw}
             remember={(patch) => q && remember(q.id, patch)}
             answered={answered}
             hurry={hurry}
@@ -230,16 +240,21 @@ const PhoneStep: React.FC<{
   me: string;
   mine: MyAnswer;
   serverNow: () => number;
-  submit: (a: { picks?: number[]; text?: string; tiers?: Record<number, string> }) => Promise<boolean>;
+  submit: (a: Submission) => Promise<boolean>;
   vote: (v: { choice?: string; match?: number; guesses?: Record<string, string> }) => Promise<boolean>;
+  draw: (picture: Blob) => Promise<string | null>;
   remember: (patch: MyAnswer) => void;
   /** sent, so the clock is all that's left to watch: it gets big */
   answered: boolean;
   /** nudge the host, once you're done; null when there's nothing to nudge */
   hurry: (() => void) | null;
-}> = ({ game, me, mine, serverNow, submit, vote, remember, answered, hurry }) => {
+}> = ({ game, me, mine, serverNow, submit, vote, draw, remember, answered, hurry }) => {
   const q = game.question;
   const phase = game.phase;
+  const family = typeInfo(q?.type).family;
+  // drawing takes the whole screen: the clock stays small, and the sheet keeps its place
+  const drawing = phase === "QUESTION" && (family === "draw" || family === "telephone");
+  const answers = { game, me, mine, submit, vote, draw, remember, serverNow };
   const player = game.players.find((p) => p.id === me);
   const gain = game.reveal?.settled ? (game.reveal.gains?.[me] ?? 0) : null;
 
@@ -249,7 +264,7 @@ const PhoneStep: React.FC<{
     <div className={`jqzz-stage-top jqzz-phone-top${answered ? " answered" : ""}`}>
       {q ? <QuestionHead game={game} /> : <span />}
       <div className="jqzz-timer-slot">
-        <Countdown game={game} serverNow={serverNow} size={answered ? 168 : 92} />
+        <Countdown game={game} serverNow={serverNow} size={answered && !drawing ? 168 : drawing ? 56 : 92} />
         {hurry && (
           <button
             className={`jqzz-play-btn small jqzz-hurry${nudged ? " sent" : ""}`}
@@ -261,7 +276,7 @@ const PhoneStep: React.FC<{
             {nudged ? (waiting > 1 ? `nudged · ${waiting} waiting` : "host nudged") : "hurry the host"}
           </button>
         )}
-        {answered && <span className="jqzz-annot jqzz-doodle-hint">drag on any empty spot to doodle</span>}
+        {answered && !drawing && <span className="jqzz-annot jqzz-doodle-hint">drag on any empty spot to doodle</span>}
       </div>
     </div>
   );
@@ -279,7 +294,7 @@ const PhoneStep: React.FC<{
     return (
       <>
         {top}
-        <Answering game={game} me={me} mine={mine} submit={submit} vote={vote} remember={remember} />
+        <Answering {...answers} />
       </>
     );
   }
@@ -289,12 +304,12 @@ const PhoneStep: React.FC<{
       <>
         {top}
         {game.interaction && game.interaction !== "answer" ? (
-          <Judging game={game} me={me} mine={mine} submit={submit} vote={vote} remember={remember} />
+          <Judging {...answers} />
         ) : (
           <>
-            <Outcome game={game} mine={mine} gain={gain} />
+            {family !== "telephone" && <Outcome game={game} mine={mine} gain={gain} />}
             <p className="jqzz-play-prompt small">{q.text}</p>
-            <Reveal game={game} mine={mine} />
+            <Reveal game={game} mine={mine} me={me} serverNow={serverNow} controls />
           </>
         )}
       </>
@@ -318,7 +333,7 @@ const PhoneStep: React.FC<{
   return (
     <>
       {top}
-      {q?.type === "TIERLIST" && game.reveal && <Reveal game={game} mine={mine} />}
+      {(family === "tier" || family === "draw") && game.reveal && <Reveal game={game} mine={mine} me={me} serverNow={serverNow} />}
       {player && (
         <div className="jqzz-phone-rank">
           <span className="jqzz-play-qnum OEF jqzz-chroma">#{player.rank}</span>
@@ -334,16 +349,23 @@ const PhoneStep: React.FC<{
 
 /** How your answer did, in one line. */
 const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }> = ({ game, mine, gain }) => {
-  const type = game.question?.type;
-  const sent = mine.picks?.length || mine.text || (mine.tiers && Object.keys(mine.tiers).length);
+  const info = typeInfo(game.question?.type);
+  const sent =
+    mine.picks?.length ||
+    mine.text ||
+    mine.drawing ||
+    (mine.tiers && Object.keys(mine.tiers).length) ||
+    (mine.pairs && Object.keys(mine.pairs).length);
+  // scored straight from the answers: right or not is known as soon as it's revealed
+  const known = !info.judged && info.family !== "tier" && info.family !== "write" && info.family !== "draw";
   let text: string;
   let tone = "neutral";
   if (gain && gain > 0) {
     text = `+${gain}`;
     tone = "good";
   } else if (!sent) {
-    text = "no answer sent";
-  } else if (type === "PREWRITTEN_SINGLE" || type === "PREWRITTEN_MULTIPLE") {
+    text = info.family === "draw" ? "nothing drawn" : "no answer sent";
+  } else if (known) {
     text = gain === null ? "answer in" : "not this time";
     tone = gain === null ? "neutral" : "bad";
   } else if (gain === null) {

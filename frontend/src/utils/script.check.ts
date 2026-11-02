@@ -4,7 +4,8 @@
  */
 import { parseScript } from "./scriptParser";
 import { quizToScript } from "./scriptSerializer";
-import { parseOptions } from "./questionTypes";
+import { QUESTION_TYPE_IDS, parseOptions } from "./questionTypes";
+import { GAME_MODES } from "../modes";
 import { parseSettings } from "./settings";
 import type { Action, Question } from "../types";
 
@@ -189,6 +190,16 @@ check("missing ) is caught", said.includes('missing its closing ")"'), said);
 
 const quoted = parseScript(`NewQuestion Q1 (\n  prompt: "a, b: \\"c\\"",\n)\nShowQuestion(Q1, time: 5)`, []);
 check("strings keep commas, colons and quotes", quoted.questions[0]?.text === 'a, b: "c"', quoted.questions[0]?.text);
+
+// ─── the game modes: every one reads cleanly and comes back the same ───
+for (const mode of GAME_MODES) {
+  roundTrip(`mode ${mode.id}`, mode.script);
+  check(`mode ${mode.id}: has a name, an about and a player count`, !!mode.name && !!mode.about && !!mode.players, mode);
+  check(`mode ${mode.id}: has questions`, mode.questions > 0);
+}
+const covered = new Set(GAME_MODES.flatMap((m) => m.types));
+const missing = QUESTION_TYPE_IDS.filter((t) => !covered.has(t) && t !== "TIERLIST" && t !== "USER_GENERATED" && t !== "DRAW");
+check("the modes play every new type", missing.length === 0, missing);
 
 console.log(`${passed} passed, ${failed} failed`);
 // a failure fails the run (scripts/check-script.mjs runs this under Node)

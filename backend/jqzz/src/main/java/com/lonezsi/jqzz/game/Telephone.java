@@ -61,6 +61,11 @@ final class Telephone {
         return kind(round);
     }
 
+    /** how long this round gets */
+    long roundMs() {
+        return roundMs[round - 1];
+    }
+
     /** the chain they hold in this round, or -1 when they aren't playing it */
     int chainOf(String userId, int r) {
         int i = players.indexOf(userId);

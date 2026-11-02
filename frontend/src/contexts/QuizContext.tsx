@@ -65,7 +65,8 @@ interface QuizContextType {
   addQuiz: (quiz: Quiz) => void;
   /** steps from the stash, added to the end of a quiz */
   appendActions: (quizId: number, actions: Action[]) => void;
-  importScript: (name: string, script: string) => Promise<void>;
+  /** a new quiz from a script, opened; resolves to it, or null when it couldn't be made */
+  importScript: (name: string, script: string) => Promise<Quiz | null>;
   dropSnippet: (snippetId: string, at?: number) => void;
   handleParsed: (questions: Question[], actions: Action[]) => void;
 }
@@ -130,7 +131,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
       const { actions, errors } = parseScript(script, []);
       if (errors.length > 0) {
         alert(`couldn't import ${name}:\n\n${errors.slice(0, 10).join("\n")}`);
-        return;
+        return null;
       }
       try {
         const res = await quizService.create(
@@ -138,8 +139,10 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
         );
         setQuizzes((prev) => [...prev, res.data]);
         setActiveQuizId(res.data.id);
+        return res.data;
       } catch (err) {
         alert(`import failed: ${errorMessage(err)}`);
+        return null;
       }
     },
     [authorId, setQuizzes],

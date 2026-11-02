@@ -159,3 +159,77 @@
   color: var(--text-3);
   font-size: var(--fs-small);
 }
+
+/* ─── game modes: ready-made quizzes, one per way of playing ─── */
+.jqzz-modes {
+  width: 100%;
+  max-width: 1040px;
+  margin-top: 64px;
+}
+.jqzz-modes-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.jqzz-modes-head p {
+  margin: 0;
+  color: var(--text-2);
+}
+.jqzz-modes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.jqzz-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  text-align: left;
+  animation: snippetIn var(--dur-3) var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+  transition: border-color var(--dur-1) var(--ease);
+}
+.jqzz-mode:hover {
+  border-color: var(--line-strong);
+}
+.jqzz-mode[aria-busy="true"] {
+  border-color: var(--accent);
+}
+.jqzz-mode h3 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--text);
+}
+.jqzz-mode p {
+  flex: 1;
+  margin: 0;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.jqzz-mode-glyphs {
+  display: flex;
+  gap: 6px;
+  color: var(--accent);
+}
+.jqzz-mode-glyphs span {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+.jqzz-mode-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}

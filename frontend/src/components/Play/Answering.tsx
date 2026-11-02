@@ -1,14 +1,21 @@
 import React, { useState } from "react";
 import type { GameEntry, GameState } from "../../types/play";
 import { TIERS } from "../../types/play";
+import type { Submission } from "../../services/playService";
 import { AnswerPicture, QuestionImage } from "./PlayCommon";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
+import { typeInfo } from "../../utils/questionTypes";
+import { Estimate, Order, Pairs, Typed } from "./Recall";
+import { DrawAnswer, EntryFace, GuessWords, TelephoneTurn } from "./Drawn";
 
 /** What this player sent for a question, remembered on their own device. */
 export interface MyAnswer {
   picks?: number[];
   text?: string;
   tiers?: Record<number, string>;
+  pairs?: Record<number, string>;
+  /** the art id of what you drew */
+  drawing?: string;
   vote?: string;
   guesses?: Record<string, string>;
   battles?: Record<number, string>;
@@ -19,9 +26,12 @@ interface Props {
   me: string;
   mine: MyAnswer;
   /** send an answer; resolves true when the server took it */
-  submit: (answer: { picks?: number[]; text?: string; tiers?: Record<number, string> }) => Promise<boolean>;
+  submit: (answer: Submission) => Promise<boolean>;
   vote: (v: { choice?: string; match?: number; guesses?: Record<string, string> }) => Promise<boolean>;
+  /** send a drawing; resolves to its art id, or null when it wasn't taken */
+  draw: (picture: Blob) => Promise<string | null>;
   remember: (patch: MyAnswer) => void;
+  serverNow: () => number;
 }
 
 /** Answering the current question, in whatever way its type asks for. */
@@ -29,14 +39,22 @@ export const Answering: React.FC<Props> = (props) => {
   const { game } = props;
   const q = game.question;
   if (!q) return null;
-  const type = q.type;
+  const family = typeInfo(q.type).family;
   let body: React.ReactNode;
-  if (type === "PREWRITTEN_SINGLE" || type === "PREWRITTEN_MULTIPLE") body = <Choice {...props} />;
-  else if (type === "TIERLIST") body = <Tiers {...props} />;
+  if (family === "choice" || family === "multi" || family === "poll") body = <Choice {...props} />;
+  else if (family === "tier") body = <Tiers {...props} />;
+  else if (family === "typed") body = <Typed {...props} />;
+  else if (family === "order") body = <Order {...props} />;
+  else if (family === "number") body = <Estimate {...props} />;
+  else if (family === "match") body = <Pairs {...props} />;
+  else if (family === "draw") body = <DrawAnswer {...props} />;
+  else if (family === "telephone") body = <TelephoneTurn {...props} />;
   else body = <Written {...props} />;
+  const drawing = family === "draw" || family === "telephone";
   return (
-    <div className="jqzz-answering">
-      <p className="jqzz-play-prompt jqzz-holo sheen">{q.text}</p>
+    <div className={`jqzz-answering${drawing ? " drawing" : ""}`}>
+      <p className={`jqzz-play-prompt jqzz-holo sheen${drawing ? " small" : ""}`}>{q.text}</p>
+      {family === "poll" && <p className="jqzz-play-note">points if you side with the most</p>}
       <QuestionImage src={q.imageUrl} ownerId={game.authorId} viewerId={props.me} />
       {body}
     </div>
@@ -181,23 +199,26 @@ const Written: React.FC<Props> = ({ mine, submit, remember }) => {
 /** Voting, guessing or judging battles during the reveal. */
 export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => {
   const entries = game.reveal?.entries ?? [];
-  const isMine = (e: { text: string }) => !!mine.text && e.text === mine.text;
+  const isMine = (e: { text?: string; image?: string }) =>
+    e.image ? !!mine.drawing && e.image === mine.drawing : !!mine.text && e.text === mine.text;
+  const drawn = typeInfo(game.question?.type).family === "draw";
 
   if (game.interaction === "vote") {
     const others = entries.filter((e) => !isMine(e));
     return (
       <div className="jqzz-judging">
         <p className="jqzz-play-prompt small">vote for the best one</p>
-        <div className="jqzz-entry-grid">
+        <div className={drawn ? "jqzz-gallery pick" : "jqzz-entry-grid"}>
           {others.map((e) => (
             <button
               key={e.key}
-              className={`jqzz-entry${mine.vote === e.key ? " picked" : ""}`}
+              className={`${drawn ? "jqzz-frame" : "jqzz-entry"}${mine.vote === e.key ? " picked" : ""}`}
               onClick={async () => {
                 if (await vote({ choice: e.key })) remember({ vote: e.key });
               }}
+              aria-pressed={mine.vote === e.key}
             >
-              {e.text}
+              <EntryFace game={game} e={e} />
             </button>
           ))}
         </div>
@@ -207,6 +228,9 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
   }
 
   if (game.interaction === "guess") {
+    if (game.question?.type === "DRAW_GUESS") {
+      return <GuessWords game={game} entries={entries.filter((e) => !isMine(e))} mine={mine} vote={vote} remember={remember} />;
+    }
     return <Guessing game={game} me={me} mine={mine} entries={entries.filter((e) => !isMine(e))} vote={vote} remember={remember} />;
   }
 
@@ -223,11 +247,11 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
           .map((m) => {
             const own = isMine(m.a) || isMine(m.b!);
             return (
-              <div key={m.id} className={`jqzz-battle${own ? " own" : ""}`}>
+              <div key={m.id} className={`jqzz-battle${own ? " own" : ""}${drawn ? " drawn" : ""}`}>
                 {[m.a, m.b!].map((side) => (
                   <button
                     key={side.key}
-                    className={`jqzz-entry${mine.battles?.[m.id] === side.key ? " picked" : ""}`}
+                    className={`${drawn ? "jqzz-frame" : "jqzz-entry"}${mine.battles?.[m.id] === side.key ? " picked" : ""}`}
                     disabled={own}
                     onClick={async () => {
                       if (await vote({ choice: side.key, match: m.id })) {
@@ -235,7 +259,7 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
                       }
                     }}
                   >
-                    {side.text}
+                    <EntryFace game={game} e={side} />
                   </button>
                 ))}
                 {own && <span className="jqzz-annot">yours is in this one</span>}

@@ -45,8 +45,9 @@ function App() {
 }
 
 function page(where?: string, a?: string, b?: string, c?: string) {
-  if (where === "host" && a) return <HostScreen code={a.toUpperCase()} />;
-  if (where === "play" && a) return <PlayScreen code={a.toUpperCase()} />;
+  // one screen per game: going from one game to the next (a rematch) starts the screen afresh
+  if (where === "host" && a) return <HostScreen key={a.toUpperCase()} code={a.toUpperCase()} />;
+  if (where === "play" && a) return <PlayScreen key={a.toUpperCase()} code={a.toUpperCase()} />;
   if (where === "join") return <JoinScreen code={a} />;
   if (where === "me") return <ProfilePage tab={a} sub={b} />;
   if (where === "u" && a) return <ProfilePage userId={decodeURIComponent(a)} tab={b} />;

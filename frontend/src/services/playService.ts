@@ -1,7 +1,19 @@
-import { api } from "./api";
-import type { GameState, MyGame } from "../types/play";
+import { api, API_BASE_URL } from "./api";
+import type { GameState, GameTask, MyGame } from "../types/play";
 
 /* Hosting and playing. Every call answers with the game's whole state. */
+
+/** an answer, in whichever shape its question takes */
+export interface Submission {
+  picks?: number[];
+  text?: string;
+  tiers?: Record<number, string>;
+  pairs?: Record<number, string>;
+}
+
+/** a drawing from a game in progress, or one kept with a game's history */
+export const artUrl = (code: string, id: string) => `${API_BASE_URL}/play/${code}/art/${id}`;
+export const keptArtUrl = (recordId: number, id: string) => `${API_BASE_URL}/history/${recordId}/drawing/${id}`;
 
 const post = (path: string, body: object) => api.post<GameState>(path, body).then((r) => r.data);
 
@@ -33,11 +45,17 @@ export const playService = {
   /** done with this step: nudge the host to move on */
   hurry: (code: string, userId: string) => post(`/play/${code}/hurry`, { userId }),
 
-  submit: (
-    code: string,
-    userId: string,
-    answer: { picks?: number[]; text?: string; tiers?: Record<number, string> },
-  ) => post(`/play/${code}/submit`, { userId, ...answer }),
+  submit: (code: string, userId: string, answer: Submission) => post(`/play/${code}/submit`, { userId, ...answer }),
+  /** a drawing, sent as the picture file itself; who drew it goes in a header, not the address */
+  draw: (code: string, userId: string, picture: Blob) =>
+    api
+      .post<GameState & { drawing: string }>(`/play/${code}/draw`, picture, {
+        headers: { "Content-Type": picture.type || "image/png", "X-User-Id": userId },
+      })
+      .then((r) => r.data),
+  /** what only you see right now: your secret word, what you're handed */
+  task: (code: string, userId: string) =>
+    api.get<GameTask>(`/play/${code}/task`, { headers: { "X-User-Id": userId } }).then((r) => r.data),
   vote: (
     code: string,
     userId: string,

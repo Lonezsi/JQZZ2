@@ -3,6 +3,7 @@ import { useTypes } from "../../../../hooks/useTypes";
 import type { TypeShape } from "../../../../types/stash";
 import { FALLBACK_TYPES, readType } from "../../../../utils/stashContent";
 import { typeLabel } from "../../../../utils/questionInfo";
+import { QUESTION_TYPES_INFO, starterShape } from "../../../../utils/questionTypes";
 import { Glyph } from "../../../common/Glyph";
 
 export const DRAG_SNIPPET_KEY = "jqzz-snippet";
@@ -18,16 +19,19 @@ interface SnippetTrayProps {
  */
 export const SnippetTray: React.FC<SnippetTrayProps> = ({ onPick }) => {
   const stashed = useTypes();
-  const types: TypeShape[] = stashed && stashed.length > 0 ? stashed.map((t) => readType(t)) : FALLBACK_TYPES;
+  const yours: TypeShape[] = stashed && stashed.length > 0 ? stashed.map((t) => readType(t)) : FALLBACK_TYPES;
+  // every type there is, even the ones your stash has no shape of yet
+  const have = new Set(yours.map((t) => t.questionType));
+  const more: TypeShape[] = QUESTION_TYPES_INFO.filter((t) => !have.has(t.id)).map(starterShape);
   return (
     <div className="jqzz-tray-grid">
-      {types.map((t, i) => {
+      {[...yours, ...more].map((t, i) => {
         const total = t.steps.reduce((sum, step) => sum + step.time, 0);
         const id = `type:${JSON.stringify(t)}`;
         return (
           <button
             key={`${t.name}-${i}`}
-            className="jqzz-snippet"
+            className={`jqzz-snippet${i >= yours.length ? " starter" : ""}`}
             style={{ "--i": i } as React.CSSProperties}
             draggable
             onDragStart={(e) => {

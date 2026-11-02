@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { go } from "../../hooks/useHashRoute";
 import { errorMessage } from "../../services/api";
 import { historyService, stashService } from "../../services/stashService";
-import { playService } from "../../services/playService";
+import { keptArtUrl, playService } from "../../services/playService";
 import type { HistoryRecord, HistorySummary, QuestionResult, StashedQuestion } from "../../types/stash";
 import { PlayFrame } from "../Play/PlayCommon";
 import { BackButton } from "../common/BackButton";
@@ -204,7 +204,7 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
                 </span>
               </div>
               {r && Object.keys(r).length > 0 ? (
-                <Result q={q} r={r} />
+                <Result q={q} r={r} recordId={record.id} />
               ) : (
                 <p className="jqzz-annot">the game ended before this one</p>
               )}
@@ -216,7 +216,73 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
   );
 };
 
-const Result: React.FC<{ q: StashedQuestion; r: QuestionResult }> = ({ q, r }) => {
+/** a drawing kept with the game */
+const Kept: React.FC<{ recordId: number; id: string; alt: string }> = ({ recordId, id, alt }) => (
+  <img className="jqzz-art" src={keptArtUrl(recordId, id)} alt={alt} loading="lazy" />
+);
+
+const Result: React.FC<{ q: StashedQuestion; r: QuestionResult; recordId: number }> = ({ q, r, recordId }) => {
+  if (r.chains) {
+    const chains = r.chains.filter((c) => c.links.length > 0);
+    if (chains.length === 0) return <p className="jqzz-annot">nothing got handed on</p>;
+    return (
+      <div className="jqzz-chains-recap">
+        {chains.map((c, i) => (
+          <ol key={i} className="jqzz-chain">
+            {c.links.map((l, j) => (
+              <li key={j} className={`jqzz-link${l.image ? " drawn" : " said"}`}>
+                <span className="jqzz-link-who jqzz-annot">{l.by}</span>
+                {l.image ? <Kept recordId={recordId} id={l.image} alt={`drawn by ${l.by}`} /> : <p className="jqzz-link-text">“{l.text}”</p>}
+              </li>
+            ))}
+          </ol>
+        ))}
+      </div>
+    );
+  }
+  if (r.typed) {
+    return (
+      <ul className="jqzz-typed-list">
+        {r.typed.map((t) => (
+          <li key={t.text} className={t.right ? "right" : "wrong"}>
+            <span>{t.text}</span>
+            <span className="jqzz-annot">×{t.count}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (r.numbers) {
+    const right = Number(q.answers[0]?.text);
+    return (
+      <ul className="jqzz-entries-recap">
+        <li>
+          <span className="jqzz-entry-text">the answer: {q.answers[0]?.text}</span>
+        </li>
+        {[...r.numbers]
+          .sort((a, b) => (Number.isFinite(right) ? Math.abs(a.value - right) - Math.abs(b.value - right) : 0))
+          .map((n, i) => (
+            <li key={i}>
+              <span className="jqzz-entry-text">{n.value}</span>
+              <span className="jqzz-annot">{n.by}</span>
+            </li>
+          ))}
+      </ul>
+    );
+  }
+  if (r.right) {
+    return (
+      <ul className="jqzz-tier-recap">
+        {q.answers.map((a, i) => (
+          <li key={i}>
+            <b>{r.right?.[i] ?? 0}</b>
+            {a.text}
+            {a.match ? ` → ${a.match}` : ""}
+          </li>
+        ))}
+      </ul>
+    );
+  }
   if (r.counts) {
     const total = Math.max(1, r.counts.reduce((a, b) => a + b, 0));
     return (
@@ -251,22 +317,39 @@ const Result: React.FC<{ q: StashedQuestion; r: QuestionResult }> = ({ q, r }) =
       <>
         {r.champion && (
           <p className="jqzz-champion">
-            won: <b>{r.champion.text}</b> by {r.champion.by}
+            won: {r.champion.image ? "" : <b>{r.champion.text}</b>} by {r.champion.by}
           </p>
         )}
-        <ul className="jqzz-entries-recap">
-          {[...r.entries]
-            .sort((a, b) => b.votes - a.votes)
-            .map((e, i) => (
-              <li key={i}>
-                <span className="jqzz-entry-text">“{e.text}”</span>
-                <span className="jqzz-annot">
-                  {e.by}
-                  {e.votes > 0 && ` · ${e.votes}`}
-                </span>
-              </li>
-            ))}
-        </ul>
+        {r.entries.some((e) => e.image) ? (
+          <div className="jqzz-gallery">
+            {[...r.entries]
+              .sort((a, b) => b.votes - a.votes)
+              .map((e, i) => (
+                <figure key={i} className="jqzz-frame">
+                  {e.image && <Kept recordId={recordId} id={e.image} alt={`drawn by ${e.by}`} />}
+                  <figcaption>
+                    {e.word && <strong className="jqzz-frame-word">{e.word}</strong>}
+                    <span>{e.by}</span>
+                    {e.votes > 0 && <span className="jqzz-annot">{e.votes}</span>}
+                  </figcaption>
+                </figure>
+              ))}
+          </div>
+        ) : (
+          <ul className="jqzz-entries-recap">
+            {[...r.entries]
+              .sort((a, b) => b.votes - a.votes)
+              .map((e, i) => (
+                <li key={i}>
+                  <span className="jqzz-entry-text">“{e.text}”</span>
+                  <span className="jqzz-annot">
+                    {e.by}
+                    {e.votes > 0 && ` · ${e.votes}`}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        )}
       </>
     );
   }

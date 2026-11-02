@@ -200,6 +200,29 @@ class NewTypesTest {
         assertThat(list(q(g.view(3, EVERYONE_ONLINE)).get("answers"))).allSatisfy(a -> assertThat(a).containsKey("match"));
     }
 
+    @Test
+    void pairsAndTiers_saveAsYouGo_butYoureOnlyDoneWhenEverythingHasItsPlace() {
+        Game.QuestionSnap q = question(QuestionType.MATCH,
+            new Game.AnswerSnap(10, "Gold", null, 100, "Au"),
+            new Game.AnswerSnap(11, "Iron", null, 100, "Fe"));
+        Game g = game(q, "ann");
+        long full = g.endsAt;
+        List<String> keys = list(q(g.view(1, EVERYONE_ONLINE)).get("halves")).stream().map(h -> (String) h.get("key")).toList();
+        g.submit("ann", null, null, null, Map.of(10L, keys.get(0)), 1, EVERYONE_ONLINE);
+        assertThat(g.view(1, EVERYONE_ONLINE).get("answered")).as("one pair isn't done").isEqualTo(List.of());
+        assertThat(g.endsAt).isEqualTo(full);
+        g.submit("ann", null, null, null, Map.of(10L, keys.get(0), 11L, keys.get(1)), 2, EVERYONE_ONLINE);
+        assertThat(g.view(2, EVERYONE_ONLINE).get("answered")).isEqualTo(List.of("ann"));
+        assertThat(g.endsAt).isEqualTo(2 + Game.EVERYONE_DONE_MS);
+
+        Game tiers = game(question(QuestionType.TIERLIST, answer(10, "a", 0), answer(11, "b", 0)), "bob");
+        long tiersFull = tiers.endsAt;
+        tiers.submit("bob", null, null, Map.of(10L, "S"), 1, EVERYONE_ONLINE);
+        assertThat(tiers.endsAt).as("one item placed isn't done").isEqualTo(tiersFull);
+        tiers.submit("bob", null, null, Map.of(10L, "S", 11L, "A"), 2, EVERYONE_ONLINE);
+        assertThat(tiers.endsAt).isEqualTo(2 + Game.EVERYONE_DONE_MS);
+    }
+
     // ─── poll ──────────────────────────────────────────────────────────
 
     @Test

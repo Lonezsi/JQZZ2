@@ -1,0 +1,87 @@
+# Party mix · JQzz Script v2
+# about: A bit of everything: a quick quiz, an estimate, a poll, a joke, a drawing and a round of telephone.
+# players: 3+
+
+NewQuestion Q1 (
+  type: "single",
+  prompt: "What's the fastest land animal?",
+  elaboration: "The cheetah: about 110 km/h, in short bursts.",
+  answers: [
+    { text: "Cheetah", value: 1000 },
+    { text: "Pronghorn", value: 0 },
+    { text: "Lion", value: 0 },
+    { text: "Greyhound", value: 0 },
+  ],
+)
+NewQuestion Q2 (
+  type: "typed",
+  prompt: "Name the largest planet in the solar system",
+  answers: [ { text: "Jupiter", value: 500 } ],
+)
+NewQuestion Q3 (
+  type: "number",
+  prompt: "How many countries are there in the world?",
+  elaboration: "195: the 193 UN members, plus two observer states, the Vatican and Palestine.",
+  unit: "countries", min: 0, max: 400,
+  answers: [ { text: "195", value: 1000 } ],
+)
+NewQuestion Q4 (
+  type: "poll",
+  prompt: "Which superpower would most of this room pick?",
+  answers: [
+    { text: "Flying", value: 200 },
+    { text: "Invisibility", value: 200 },
+    { text: "Reading minds", value: 200 },
+    { text: "Time travel", value: 200 },
+  ],
+)
+NewQuestion Q5 (
+  type: "write-vote",
+  prompt: "The worst possible slogan for a dentist",
+)
+NewQuestion Q6 (
+  type: "draw-guess",
+  prompt: "Draw your secret word",
+  answers: [
+    { text: "haunted house", value: 150 },
+    { text: "sandcastle", value: 150 },
+    { text: "dragon", value: 150 },
+    { text: "submarine", value: 150 },
+    { text: "rainbow", value: 150 },
+    { text: "robot", value: 150 },
+  ],
+)
+NewQuestion Q7 (
+  type: "telephone",
+  prompt: "Write a headline from the future",
+  rounds: 4,
+)
+
+speed {
+  ShowWaiting(Q1, time: 5)
+  ShowQuestion(Q1, time: 15)
+  ShowAnswers(Q1, time: 8)
+  ShowWaiting(Q2, time: 4)
+  ShowQuestion(Q2, time: 20)
+  ShowAnswers(Q2, time: 8)
+}
+ShowWaiting(Q3, time: 4)
+ShowQuestion(Q3, time: 25)
+ShowAnswers(Q3, time: 12)
+ShowElaboration(Q3, time: 8)
+ShowResult(Q3, time: 8)
+ShowQuestion(Q4, time: 15)
+ShowAnswers(Q4, time: 8)
+ShowQuestion(Q5, time: 50)
+ShowAnswers(Q5, time: 25)
+ShowResult(Q5, time: 8)
+ShowWaiting(Q6, time: 5)
+ShowQuestion(Q6, time: 80)
+ShowAnswers(Q6, time: 60)
+ShowResult(Q6, time: 10)
+---
+latejoin=off {
+  ShowQuestion(Q7, time: 300)
+  ShowAnswers(Q7, time: 120)
+}
+ShowResult(Q7, time: 15)

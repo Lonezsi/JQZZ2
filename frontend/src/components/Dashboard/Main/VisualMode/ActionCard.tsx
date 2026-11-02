@@ -7,6 +7,7 @@ import { describe, parseSettings } from "../../../../utils/settings";
 import { formatTimecode } from "../../../../utils/timecode";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
+import { optionNumber, parseOptions, typeInfo } from "../../../../utils/questionTypes";
 import { DRAG_IMAGE_KEY, dragging } from "../../../../utils/dragKeys";
 import { imageSlots, placeImage } from "../../../../utils/imageSlots";
 import type { ImageSlot } from "../../../../utils/imageSlots";
@@ -127,8 +128,32 @@ function PhasePreview({ action }: { action: Action }) {
     }
     case "QUESTION": {
       // the prompt is already on the plate above; say what's on screen around it
-      const written = q?.type?.startsWith("USER_GENERATED");
       const options = q?.answers?.length ?? 0;
+      const opts = parseOptions(q?.options);
+      const info = typeInfo(q?.type);
+      const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+      const onScreen = (() => {
+        switch (info.family) {
+          case "typed":
+            return "prompt on screen, players type the answer";
+          case "order":
+            return `${plural(options, "item", "items")} to put in order`;
+          case "number":
+            return opts.unit ? `players guess a number, in ${opts.unit}` : "players guess a number";
+          case "match":
+            return `${plural(options, "pair", "pairs")} to match`;
+          case "tier":
+            return `${plural(options, "item", "items")} to rank`;
+          case "write":
+            return "prompt on screen, players type";
+          case "draw":
+            return q?.type === "DRAW_GUESS" ? `players draw one of ${plural(options, "secret word", "secret words")}` : "players draw";
+          case "telephone":
+            return `write, draw, describe: ${opts.rounds ? `${optionNumber(opts, "rounds", 0)} turns` : "a turn each"}`;
+          default:
+            return `prompt + ${plural(options, "option", "options")} to pick`;
+        }
+      })();
       return (
         <span className="jqzz-prev">
           <span className="jqzz-type-pill">
@@ -136,11 +161,7 @@ function PhasePreview({ action }: { action: Action }) {
             {typeLabel(q?.type)}
           </span>
           <span className="jqzz-prev-note">
-            {!q?.text
-              ? "no prompt yet"
-              : written
-                ? "prompt on screen, players type"
-                : `prompt + ${options} ${options === 1 ? "option" : "options"} to pick`}
+            {!q?.text ? "no prompt yet" : onScreen}
           </span>
           {q?.imageUrl && <span className="jqzz-prev-note">· with image</span>}
         </span>
@@ -157,6 +178,7 @@ function PhasePreview({ action }: { action: Action }) {
             <span key={a.id} className={`jqzz-ans-chip${(a.value || 0) > 0 ? " scores" : ""}`}>
               {a.imageUrl && <ChipPicture src={a.imageUrl} />}
               {a.text || "..."}
+              {a.match != null && <> → {a.match || "..."}</>}
               <b>{a.value}</b>
             </span>
           ))}

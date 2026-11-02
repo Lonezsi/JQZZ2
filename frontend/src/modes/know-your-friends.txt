@@ -1,0 +1,42 @@
+# Know your friends · JQzz Script v2
+# about: Write something true about yourself, then guess who wrote what. Points for seeing through people.
+# players: 3+
+
+NewQuestion Q1 (
+  type: "who-wrote",
+  prompt: "Your most useless talent",
+)
+NewQuestion Q2 (
+  type: "who-wrote",
+  prompt: "A food everyone loves that you secretly hate",
+)
+NewQuestion Q3 (
+  type: "who-wrote",
+  prompt: "The first thing you'd buy with a million",
+)
+NewQuestion Q4 (
+  type: "who-wrote",
+  prompt: "The title of your autobiography",
+)
+NewQuestion Q5 (
+  type: "write-vote",
+  prompt: "Describe this group in five words",
+)
+
+ShowWaiting(Q1, time: 5)
+ShowQuestion(Q1, time: 45)
+ShowAnswers(Q1, time: 40)
+ShowResult(Q1, time: 8)
+ShowQuestion(Q2, time: 45)
+ShowAnswers(Q2, time: 40)
+ShowResult(Q2, time: 8)
+ShowQuestion(Q3, time: 45)
+ShowAnswers(Q3, time: 40)
+ShowResult(Q3, time: 8)
+ShowQuestion(Q4, time: 45)
+ShowAnswers(Q4, time: 40)
+ShowResult(Q4, time: 8)
+---
+ShowQuestion(Q5, time: 50)
+ShowAnswers(Q5, time: 25)
+ShowResult(Q5, time: 15)

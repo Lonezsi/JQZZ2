@@ -4,18 +4,45 @@ import { TIERS } from "../../types/play";
 import type { MyAnswer } from "./Answering";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { AnswerPicture } from "./PlayCommon";
+import { typeInfo } from "../../utils/questionTypes";
+import { MatchReveal, NumberReveal, OrderReveal, TypedReveal } from "./Recall";
+import { ChainsReveal, DrawnReveal, EntryFace } from "./Drawn";
 
 /** What happened on the current question, for whichever type it is. */
-export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mine }) => {
+export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer; me?: string; serverNow?: () => number; controls?: boolean }> = ({
+  game,
+  mine,
+  me,
+  serverNow,
+  controls,
+}) => {
   const q = game.question;
   const r = game.reveal;
   if (!q || !r) return null;
-  if (q.type === "PREWRITTEN_SINGLE" || q.type === "PREWRITTEN_MULTIPLE") {
-    return <ChoiceReveal game={game} mine={mine} />;
+  const family = typeInfo(q.type).family;
+  if (r.bracket && (q.type === "KNOCKOUT_BATTLE" || q.type === "DRAW_BATTLE")) return <BracketReveal game={game} bracket={r.bracket} />;
+  switch (family) {
+    case "choice":
+    case "multi":
+    case "poll":
+      return <ChoiceReveal game={game} mine={mine} />;
+    case "tier":
+      return <TierReveal game={game} mine={mine} />;
+    case "typed":
+      return <TypedReveal game={game} mine={mine} />;
+    case "order":
+      return <OrderReveal game={game} mine={mine} />;
+    case "number":
+      return <NumberReveal game={game} me={me} />;
+    case "match":
+      return <MatchReveal game={game} mine={mine} />;
+    case "draw":
+      return <DrawnReveal game={game} me={me} />;
+    case "telephone":
+      return <ChainsReveal game={game} serverNow={serverNow ?? Date.now} controls={controls} />;
+    default:
+      return <EntriesReveal game={game} />;
   }
-  if (q.type === "TIERLIST") return <TierReveal game={game} mine={mine} />;
-  if (q.type === "KNOCKOUT_BATTLE" && r.bracket) return <BracketReveal game={game} bracket={r.bracket} />;
-  return <EntriesReveal game={game} />;
 };
 
 const ChoiceReveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mine }) => {
@@ -122,7 +149,7 @@ const MatchCard: React.FC<{ game: GameState; m: GameMatch }> = ({ game, m }) => 
     <div className={`jqzz-match${m.b ? "" : " bye"}`}>
       {sides.map(({ side, votes, author }) => (
         <div key={side.key} className={`jqzz-match-side${m.winner === side.key ? " won" : m.winner ? " lost" : ""}`}>
-          <span className="jqzz-entry-text">{side.text}</span>
+          <EntryFace game={game} e={side} />
           {votes !== undefined && (
             <span className="jqzz-annot">
               {votes} · {nameOf(game, author)}
@@ -140,7 +167,11 @@ const BracketReveal: React.FC<{ game: GameState; bracket: GameBracket }> = ({ ga
     {bracket.champion && (
       <div className="jqzz-champion">
         <span className="jqzz-annot">champion</span>
-        <p className="jqzz-champion-text">“{bracket.champion.text}”</p>
+        {bracket.champion.image ? (
+          <EntryFace game={game} e={bracket.champion} className="champion" />
+        ) : (
+          <p className="jqzz-champion-text">“{bracket.champion.text}”</p>
+        )}
         <span>{nameOf(game, bracket.champion.authorId)}</span>
       </div>
     )}

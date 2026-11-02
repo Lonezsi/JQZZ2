@@ -8,7 +8,7 @@ export type StashKind = "QUIZ" | "QUESTION" | "IMAGE" | "TYPE";
 export interface TypeShape {
   name: string;
   questionType: string;
-  answers: { text: string; value: number }[];
+  answers: { text: string; value: number; match?: string }[];
   steps: { phase: Phase; time: number; preview: string | null }[];
 }
 
@@ -39,7 +39,9 @@ export interface StashedQuestion {
   imageUrl?: string | null;
   elaborationText?: string | null;
   elaborationImageUrl?: string | null;
-  answers: { text: string; value: number; imageUrl?: string | null }[];
+  answers: { text: string; value: number; imageUrl?: string | null; match?: string | null }[];
+  /** what the type needs besides answers, as the script writes it */
+  options?: string | null;
 }
 
 /** A quiz, or a single question with its own steps; picture refs are absolute. */
@@ -56,9 +58,17 @@ export interface QuestionResult {
   counts?: number[];
   /** tier lists: the group's tier for each answer, by position */
   tiers?: (string | null)[];
-  /** written answers, with who wrote them once it was over */
-  entries?: { text: string; by: string; votes: number }[];
-  champion?: { text: string; by: string };
+  /** written or drawn answers (image: a drawing kept with the game), with who made them */
+  entries?: { text?: string; image?: string; by: string; votes: number; word?: string }[];
+  champion?: { text?: string; image?: string; by: string };
+  /** order and pairs: how many got each one right, by position */
+  right?: number[];
+  /** typed: what was typed, alike answers together */
+  typed?: { text: string; count: number; right: boolean }[];
+  /** estimates: everyone's number */
+  numbers?: { by: string; value: number }[];
+  /** telephone: each chain as it was handed on */
+  chains?: { links: { by: string; text?: string; image?: string }[] }[];
   /** points each player got, by user id */
   gains?: Record<string, number>;
 }
