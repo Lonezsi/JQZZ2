@@ -2,14 +2,15 @@ import type { Quiz, Action, Question } from "../types";
 import { PHASE_FN_MAP } from "../constants/phaseMaps";
 import { DEFAULTS, parseSettings } from "./settings";
 import type { QuizSettings } from "./settings";
+import { parseOptions, typeInfo } from "./questionTypes";
 
-export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v1
+export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v2
 # Author: you
 #
-# ─── How to write a quiz ─────────────────────────────
+# ─── How to write a quiz (all of it: docs/script.md) ──
 #
 # NewQuestion Q1 (
-#   type: "prewritten-single",
+#   type: "single",
 #   prompt: "Your question here?",
 #   elaboration: "Fun fact about the answer",
 #   answers: [
@@ -24,6 +25,19 @@ export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v1
 # ShowElaboration(Q1, time: 20)
 # ShowResult(Q1, time: 10)
 #
+# Types:
+#   single, multiple    pick one / pick any; value = points
+#   typed               type it; answers = accepted spellings
+#   order               answers in the right order; value = points each
+#   number              one answer: the right number; also unit, min, max
+#   match               { text: "Gold", match: "Au", value: 100 }
+#   poll                value goes to whoever picks the most picked
+#   tierlist            rank the answers S to D
+#   write, write-vote, who-wrote, knockout     players write
+#   draw, draw-vote, draw-knockout             players draw
+#   draw-guess          answers = the secret words to draw
+#   telephone           write, draw, describe... rounds: 4
+#
 # Use --- to insert a visual divider.
 # Settings group what's inside them, until the closing brace:
 #
@@ -32,6 +46,7 @@ export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v1
 # grade=off {          played, but nobody scores
 # latejoin=off {       nobody new can join from here
 # points=2 {           double points
+# speed {              faster answers score more
 # }                    back to how it was before the group
 #
 # Any other line becomes a text note block.
@@ -57,7 +72,7 @@ export function quizToScript(quiz: Quiz | undefined): string {
   if (!quiz || quiz.actions.length === 0) return EMPTY_SCRIPT;
 
   const lines: string[] = [
-    `# ${quiz.name} · JQzz Script v1`,
+    `# ${quiz.name} · JQzz Script v2`,
     `# Author: ${quiz.authorId}`,
     "",
   ];
@@ -72,15 +87,23 @@ export function quizToScript(quiz: Quiz | undefined): string {
   uniqueQuestions.forEach((q) => {
     const qid = `Q${qIndexMap.get(q.id)}`;
     lines.push(`NewQuestion ${qid} (`);
-    const type = (q.type || "PREWRITTEN_SINGLE").toLowerCase().replace(/_/g, "-");
+    const info = typeInfo(q.type);
     const answers = q.answers ?? [];
-    lines.push(`  type: ${str(type)},`);
+    lines.push(`  type: ${str(info.script)},`);
     lines.push(`  prompt: ${str(q.text)},`);
     if (q.elaborationText) lines.push(`  elaboration: ${str(q.elaborationText)},`);
+    // a type's extras, numbers bare and words quoted
+    const extras = parseOptions(q.options);
+    (Object.keys(extras) as (keyof typeof extras)[]).forEach((k) => {
+      const v = extras[k]!;
+      lines.push(`  ${k}: ${/^-?\d+(\.\d+)?$/.test(v) ? v : str(v)},`);
+    });
     if (answers.length > 0) {
       lines.push(`  answers: [`);
       answers.forEach((a) =>
-        lines.push(`    { text: ${str(a.text)}, value: ${a.value} },`),
+        lines.push(
+          `    { text: ${str(a.text)}${a.match !== undefined && a.match !== null ? `, match: ${str(a.match)}` : ""}, value: ${a.value} },`,
+        ),
       );
       lines.push(`  ],`);
     }

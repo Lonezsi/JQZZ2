@@ -18,9 +18,11 @@ export interface QuizSettings {
   points: number;
   /** someone new can join while these questions play; whoever was in can always come back */
   latejoin: boolean;
+  /** the faster you answer, the more you get: the last moment is worth half */
+  speed: boolean;
 }
 
-export const DEFAULTS: QuizSettings = { shuffle: false, mix: false, grade: true, points: 1, latejoin: true };
+export const DEFAULTS: QuizSettings = { shuffle: false, mix: false, grade: true, points: 1, latejoin: true, speed: false };
 
 export const SETTING_LABEL: Record<keyof QuizSettings, string> = {
   shuffle: "shuffle questions",
@@ -28,6 +30,7 @@ export const SETTING_LABEL: Record<keyof QuizSettings, string> = {
   grade: "counts for points",
   points: "points ×",
   latejoin: "new players can join",
+  speed: "faster answers score more",
 };
 
 const OFF = ["off", "false", "no", "0"];
@@ -40,7 +43,9 @@ export function parseSettings(text: string | undefined): Partial<QuizSettings> {
     if (!rawKey) continue;
     const value = rawValue ?? "on";
     const on = !OFF.includes(value);
-    if (rawKey === "shuffle" || rawKey === "mix" || rawKey === "grade" || rawKey === "latejoin") out[rawKey] = on;
+    if (rawKey === "shuffle" || rawKey === "mix" || rawKey === "grade" || rawKey === "latejoin" || rawKey === "speed") {
+      out[rawKey] = on;
+    }
     if (rawKey === "points") {
       const n = Number(value.replace(/^[x×]/, ""));
       out.points = Number.isFinite(n) ? Math.max(0, Math.min(10, n)) : 1;
@@ -64,6 +69,7 @@ export function describe(s: Partial<QuizSettings>, all = false): string[] {
   if (s.grade !== undefined && (all || !s.grade)) chips.push(s.grade ? "graded" : "no points");
   if (s.points !== undefined && (all || s.points !== 1)) chips.push(`×${s.points}`);
   if (s.latejoin !== undefined && (all || !s.latejoin)) chips.push(s.latejoin ? "open to newcomers" : "doors closed");
+  if (s.speed !== undefined && (all || s.speed)) chips.push(s.speed ? "speed counts" : "no speed bonus");
   return chips;
 }
 
@@ -94,5 +100,6 @@ export const SETTING_PRESETS: { label: string; text: string; note: string }[] = 
   { label: "no points", text: "grade=off", note: "played, but nobody scores" },
   { label: "double points", text: "points=2", note: "everything scores ×2" },
   { label: "close the doors", text: "latejoin=off", note: "from here, nobody new can join" },
-  { label: "back to normal", text: "shuffle=off, mix=off, grade=on, points=1, latejoin=on", note: "ends every setting above" },
+  { label: "speed round", text: "speed=on", note: "faster answers score more" },
+  { label: "back to normal", text: "shuffle=off, mix=off, grade=on, points=1, latejoin=on, speed=off", note: "ends every setting above" },
 ];

@@ -44,9 +44,9 @@ export function tokenizeLine(line: string): HToken[] {
     if (eat(/^(NewQuestion|Show\w+)\b/, "kw")) continue;
     if (eat(/^Q\d+\b/, "fn")) continue;
     if (eat(/^"[^"]*"/, "str")) continue;
-    if (eat(/^-?\d+/, "num")) continue;
+    if (eat(/^-?\d+(?:\.\d+)?/, "num")) continue;
     if (
-      eat(/^(time|type|prompt|elaboration|answers|text|value)(?=\s*:)/, "key")
+      eat(/^(time|type|prompt|elaboration|answers|text|value|match|unit|min|max|rounds)(?=\s*:)/, "key")
     )
       continue;
     if (eat(/^[(),:[\]{}]/, "punc")) continue;

@@ -102,7 +102,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
       });
       onActionUpdate(action.id, { preview: formatSettings(next) });
     };
-    const flags: ("shuffle" | "mix" | "grade" | "latejoin")[] = ["shuffle", "mix", "grade", "latejoin"];
+    const flags: ("shuffle" | "mix" | "grade" | "latejoin" | "speed")[] = ["shuffle", "mix", "grade", "latejoin", "speed"];
     return (
       <>
         <div className="jqzz-section-label">settings from here on</div>

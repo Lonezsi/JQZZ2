@@ -20,6 +20,8 @@ export interface Answer {
   value: number;
   imageUrl?: string;
   userId?: string;
+  /** the other half of a pair, for "match" questions */
+  match?: string;
 }
 
 export interface Question {
@@ -31,6 +33,8 @@ export interface Question {
   type: string;
   userId?: string;
   answers: Answer[];
+  /** a type's extra fields, "unit=m, min=0, max=100" (questionTypes: parseOptions) */
+  options?: string;
 }
 
 export interface Action {

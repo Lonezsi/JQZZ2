@@ -3,6 +3,13 @@ import { FN_PHASE_MAP } from "../constants/phaseMaps";
 import { generateId } from "./idGenerator";
 import { DEFAULTS, formatSettings, parseSettings } from "./settings";
 import type { QuizSettings } from "./settings";
+import { formatOptions, QUESTION_TYPE_IDS, typeFromScript } from "./questionTypes";
+import type { QuestionField, QuestionOptions } from "./questionTypes";
+
+/*
+ * Reads a JQzz script (docs/script.md) into questions and timeline steps.
+ * The script is the source of truth: whatever it can say, the quiz can be.
+ */
 
 export interface ParseResult {
   questions: Question[];
@@ -11,33 +18,136 @@ export interface ParseResult {
 }
 
 /** Question types the backend accepts (QuestionType.java). */
-export const QUESTION_TYPES = [
-  "PREWRITTEN_SINGLE",
-  "PREWRITTEN_MULTIPLE",
-  "USER_GENERATED",
-  "USER_GENERATED_VOTE",
-  "USER_GENERATED_IDENTIFY",
-  "TIERLIST",
-  "KNOCKOUT_BATTLE",
-];
+export const QUESTION_TYPES = QUESTION_TYPE_IDS;
 
-// A double-quoted string with JSON-style escapes, e.g. "say \"hi\""
-const STRING = String.raw`"(?:[^"\\]|\\.)*"`;
-const ANSWER_RE = new RegExp(
-  String.raw`^\{\s*text:\s*(${STRING})\s*,\s*value:\s*(-?\d+)\s*\},?$`,
-);
+/** fields a question block can have besides its extras (questionTypes: QuestionField) */
+const EXTRA_FIELDS: QuestionField[] = ["unit", "min", "max", "rounds"];
 
-function readString(literal: string): string {
-  try {
-    return JSON.parse(literal);
-  } catch {
-    return literal.slice(1, -1);
+// ─── the inside of a NewQuestion ( ... ) block ─────────────────────────
+
+type Tok =
+  | { k: "id" | "str" | "num"; v: string; line: number }
+  | { k: "punc"; v: string; line: number };
+
+/** `prompt: "a, b"` -> id prompt, punc :, str "a, b": strings keep their commas and colons */
+function tokenize(lines: { text: string; no: number }[], errors: string[]): Tok[] {
+  const out: Tok[] = [];
+  for (const { text, no } of lines) {
+    let s = text;
+    while (s.length) {
+      const ws = s.match(/^\s+/);
+      if (ws) {
+        s = s.slice(ws[0].length);
+        continue;
+      }
+      if (s.startsWith("#")) break;
+      const str = s.match(/^"(?:[^"\\]|\\.)*"/);
+      if (str) {
+        let v: string;
+        try {
+          v = JSON.parse(str[0]);
+        } catch {
+          v = str[0].slice(1, -1);
+        }
+        out.push({ k: "str", v, line: no });
+        s = s.slice(str[0].length);
+        continue;
+      }
+      const num = s.match(/^-?\d+(?:\.\d+)?/);
+      if (num) {
+        out.push({ k: "num", v: num[0], line: no });
+        s = s.slice(num[0].length);
+        continue;
+      }
+      const id = s.match(/^[A-Za-z_][\w-]*/);
+      if (id) {
+        out.push({ k: "id", v: id[0], line: no });
+        s = s.slice(id[0].length);
+        continue;
+      }
+      if ("{}[]:,".includes(s[0])) {
+        out.push({ k: "punc", v: s[0], line: no });
+        s = s.slice(1);
+        continue;
+      }
+      errors.push(`Line ${no}: can't read "${s.trim()}"`);
+      break;
+    }
   }
+  return out;
 }
 
-function readField(line: string, key: string): string | undefined {
-  const m = line.match(new RegExp(String.raw`^${key}:\s*(${STRING})\s*,?$`));
-  return m ? readString(m[1]) : undefined;
+type Value = string | number;
+type Fields = { key: string; value: Value | Record<string, Value>[]; line: number }[];
+
+/** key: value, key: value ... where a value is a string, a number or a [ { ... } ] list */
+function readFields(toks: Tok[], errors: string[]): Fields {
+  const fields: Fields = [];
+  let i = 0;
+  const peek = () => toks[i];
+  const isPunc = (t: Tok | undefined, v: string) => !!t && t.k === "punc" && t.v === v;
+  const skipComma = () => {
+    while (isPunc(peek(), ",")) i++;
+  };
+  const scalar = (t: Tok | undefined): Value | undefined =>
+    !t ? undefined : t.k === "str" ? t.v : t.k === "num" ? Number(t.v) : undefined;
+
+  while (i < toks.length) {
+    skipComma();
+    const key = toks[i];
+    if (!key) break;
+    if (key.k !== "id" || !isPunc(toks[i + 1], ":")) {
+      errors.push(`Line ${key.line}: expected a field like "prompt: ...", found "${key.v}"`);
+      // skip to the next line's tokens
+      const line = key.line;
+      while (i < toks.length && toks[i].line === line) i++;
+      continue;
+    }
+    i += 2;
+    if (isPunc(peek(), "[")) {
+      i++;
+      const list: Record<string, Value>[] = [];
+      while (i < toks.length && !isPunc(peek(), "]")) {
+        skipComma();
+        if (isPunc(peek(), "]")) break;
+        if (!isPunc(peek(), "{")) {
+          errors.push(`Line ${peek().line}: expected { ... } in ${key.v}`);
+          i++;
+          continue;
+        }
+        i++;
+        const obj: Record<string, Value> = {};
+        while (i < toks.length && !isPunc(peek(), "}")) {
+          skipComma();
+          const k = toks[i];
+          if (!k || isPunc(k, "}")) break;
+          const v = scalar(toks[i + 2]);
+          if (k.k !== "id" || !isPunc(toks[i + 1], ":") || v === undefined) {
+            errors.push(`Line ${k.line}: can't read "${k.v}" in ${key.v}`);
+            i++;
+            continue;
+          }
+          obj[k.v] = v;
+          i += 3;
+        }
+        if (isPunc(peek(), "}")) i++;
+        list.push(obj);
+      }
+      if (isPunc(peek(), "]")) i++;
+      else errors.push(`Line ${key.line}: ${key.v} is missing its closing "]"`);
+      fields.push({ key: key.v, value: list, line: key.line });
+      continue;
+    }
+    const v = scalar(peek());
+    if (v === undefined) {
+      errors.push(`Line ${key.line}: ${key.v} needs a "string" or a number`);
+      i++;
+      continue;
+    }
+    fields.push({ key: key.v, value: v, line: key.line });
+    i++;
+  }
+  return fields;
 }
 
 /**
@@ -45,10 +155,7 @@ function readField(line: string, key: string): string | undefined {
  * question with the same Q-number in `prevQuestions`, so editing the text
  * doesn't detach anything that isn't represented in the script.
  */
-export function parseScript(
-  text: string,
-  prevQuestions: Question[],
-): ParseResult {
+export function parseScript(text: string, prevQuestions: Question[]): ParseResult {
   const lines = text.split(/\r?\n/);
   const questions: Question[] = [];
   const actions: Action[] = [];
@@ -71,13 +178,7 @@ export function parseScript(
     if (!line || line.startsWith("#")) continue;
 
     if (line === "---") {
-      actions.push({
-        id: generateId(),
-        phase: "DIVIDER",
-        time: 0,
-        question: null,
-        preview: "---",
-      });
+      actions.push({ id: generateId(), phase: "DIVIDER", time: 0, question: null, preview: "---" });
       continue;
     }
 
@@ -104,6 +205,21 @@ export function parseScript(
       const qRef = newQMatch[1];
       if (qRefMap.has(qRef)) errors.push(`Line ${lineNo}: ${qRef} is defined twice`);
       const prev = prevQuestions[parseInt(qRef.slice(1), 10) - 1];
+
+      // the block runs to the line that's just ")"
+      const body: { text: string; no: number }[] = [];
+      let closed = false;
+      while (i < lines.length) {
+        const fl = lines[i];
+        i++;
+        if (fl.trim() === ")") {
+          closed = true;
+          break;
+        }
+        body.push({ text: fl, no: i });
+      }
+      if (!closed) errors.push(`Line ${lineNo}: ${qRef} is missing its closing ")"`);
+
       const question: Question = {
         id: prev?.id ?? generateId(),
         text: "",
@@ -114,67 +230,55 @@ export function parseScript(
         elaborationText: "",
         answers: [],
       };
-
-      let closed = false;
-      while (i < lines.length) {
-        const fieldNo = i + 1;
-        const fl = lines[i].trim();
-        i++;
-        if (fl === ")") {
-          closed = true;
-          break;
-        }
-        if (!fl || fl.startsWith("#")) continue;
-
-        const prompt = readField(fl, "prompt");
-        if (prompt !== undefined) {
-          question.text = prompt;
-          continue;
-        }
-        const type = readField(fl, "type");
-        if (type !== undefined) {
-          const normalized = type.toUpperCase().replace(/-/g, "_");
-          if (QUESTION_TYPES.includes(normalized)) question.type = normalized;
-          else errors.push(`Line ${fieldNo}: unknown question type "${type}"`);
-          continue;
-        }
-        const elaboration = readField(fl, "elaboration");
-        if (elaboration !== undefined) {
-          question.elaborationText = elaboration;
-          continue;
-        }
-        if (/^time:\s*\d+\s*,?$/.test(fl)) continue; // per-action time lives on Show* calls
-
-        if (/^answers:\s*\[$/.test(fl)) {
-          const answers: Answer[] = [];
-          while (i < lines.length) {
-            const answerNo = i + 1;
-            const al = lines[i].trim();
-            if (al === ")") break; // missing "]": let the question block close
-            i++;
-            if (/^\],?$/.test(al)) break;
-            if (!al || al.startsWith("#")) continue;
-            const am = al.match(ANSWER_RE);
-            if (!am) {
-              errors.push(`Line ${answerNo}: can't read answer ${al}`);
-              continue;
-            }
-            const prevAnswer = prev?.answers?.[answers.length];
-            answers.push({
-              id: prevAnswer?.id ?? generateId(),
-              text: readString(am[1]),
-              value: Number(am[2]),
-              imageUrl: prevAnswer?.imageUrl,
-              userId: prevAnswer?.userId,
-            });
+      const options: QuestionOptions = {};
+      for (const f of readFields(tokenize(body, errors), errors)) {
+        const asText = typeof f.value === "string" ? f.value : typeof f.value === "number" ? String(f.value) : undefined;
+        switch (f.key) {
+          case "prompt":
+            question.text = asText ?? "";
+            break;
+          case "elaboration":
+            question.elaborationText = asText ?? "";
+            break;
+          case "type": {
+            const t = asText ? typeFromScript(asText) : undefined;
+            if (t) question.type = t.id;
+            else errors.push(`Line ${f.line}: unknown question type "${asText}"`);
+            break;
           }
-          question.answers = answers;
-          continue;
+          case "time":
+            break; // v1: per-step time lives on the Show lines
+          case "answers": {
+            if (!Array.isArray(f.value)) {
+              errors.push(`Line ${f.line}: answers is a list: answers: [ { text: "...", value: 0 } ]`);
+              break;
+            }
+            question.answers = f.value.map((o, n): Answer => {
+              const prevAnswer = prev?.answers?.[n];
+              const answer: Answer = {
+                id: prevAnswer?.id ?? generateId(),
+                text: o.text === undefined ? "" : String(o.text),
+                value: typeof o.value === "number" ? Math.round(o.value) : Number(o.value) || 0,
+                imageUrl: prevAnswer?.imageUrl,
+                userId: prevAnswer?.userId,
+              };
+              if (o.match !== undefined) answer.match = String(o.match);
+              const unknown = Object.keys(o).filter((k) => !["text", "value", "match"].includes(k));
+              if (unknown.length) errors.push(`Line ${f.line}: answers don't have ${unknown.map((k) => `"${k}"`).join(", ")}`);
+              return answer;
+            });
+            break;
+          }
+          default:
+            if ((EXTRA_FIELDS as string[]).includes(f.key) && asText !== undefined) {
+              options[f.key as QuestionField] = asText;
+            } else {
+              errors.push(`Line ${f.line}: unexpected "${f.key}" in ${qRef}`);
+            }
         }
-
-        errors.push(`Line ${fieldNo}: unexpected "${fl}" in ${qRef}`);
       }
-      if (!closed) errors.push(`Line ${lineNo}: ${qRef} is missing its closing ")"`);
+      const extras = formatOptions(options);
+      if (extras) question.options = extras;
 
       questions.push(question);
       qRefMap.set(qRef, question);
@@ -197,20 +301,13 @@ export function parseScript(
         continue;
       }
       errors.push(
-        phase
-          ? `Line ${lineNo}: ${qRef} is used before it is defined`
-          : `Line ${lineNo}: unknown function ${fn}`,
+        phase ? `Line ${lineNo}: ${qRef} is used before it is defined` : `Line ${lineNo}: unknown function ${fn}`,
       );
     }
 
-    actions.push({
-      id: generateId(),
-      phase: "TEXT",
-      time: 0,
-      question: null,
-      preview: line,
-    });
+    actions.push({ id: generateId(), phase: "TEXT", time: 0, question: null, preview: line });
   }
 
+  // a group still open at the end simply lasts to the end
   return { questions, actions, errors };
 }
