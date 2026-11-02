@@ -19,7 +19,10 @@ public class User {
     private String name;
 
     // these are actually ALL optional
+    @JsonIgnore
     private String password;
+    /** only ever sent to its owner: see UserController.self */
+    @JsonIgnore
     private String email;
     private String profilePictureUrl;
 

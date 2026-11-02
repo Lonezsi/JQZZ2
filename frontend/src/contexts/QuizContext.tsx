@@ -40,6 +40,8 @@ interface QuizContextType {
   lastSavedAt: Date | null;
   // Derived
   quiz: Quiz | undefined;
+  /** the open quiz is still on its way: only its summary is here so far */
+  quizLoading: boolean;
   renderItems: RenderItem[];
   // Mutations
   updateAction: (id: number, patch: Partial<Action>) => void;
@@ -87,10 +89,13 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   const [mode, setMode] = useState<EditorMode>("visual");
   const [aiPrompt, setAiPrompt] = useState("");
 
-  const quiz = useMemo(
+  // the list holds summaries; the open quiz is swapped for the whole thing
+  const listed = useMemo(
     () => quizzes.find((q) => q.id === activeQuizId),
     [quizzes, activeQuizId],
   );
+  const quiz = listed?.summary ? undefined : listed;
+  const quizLoading = !!listed?.summary;
 
   const renderItems = useMemo(() => buildRenderItems(quiz), [quiz]);
 
@@ -228,6 +233,29 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     saveTimer.current = window.setTimeout(flush, SAVE_DELAY_MS);
   }, [quizzes, flush]);
 
+  // the open quiz, in full: the list only holds its summary
+  useEffect(() => {
+    if (!listed?.summary) return;
+    let live = true;
+    const id = listed.id;
+    quizService
+      .getOne(id)
+      .then((res) => {
+        if (!live) return;
+        const full = {
+          ...res.data,
+          actions: res.data.actions.map((a) => ({ ...a, preview: a.preview || listed.actions.find((s) => s.id === a.id)?.preview || "" })),
+        };
+        // it's what the server has: loading it isn't an edit, so nothing to save
+        persisted.current.set(id, full);
+        setQuizzes((prev) => prev.map((q) => (q.id === id ? full : q)));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [listed, setQuizzes]);
+
   // Last-chance save when the tab closes or reloads mid-debounce.
   useEffect(() => {
     const onUnload = () => {
@@ -337,6 +365,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     saveState,
     lastSavedAt,
     quiz,
+    quizLoading,
     renderItems,
     updateAction,
     updateQuestion,

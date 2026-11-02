@@ -2911,3 +2911,43 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 :root[data-fonts="clean"] .jqzz-genav-letter {
   font-weight: 700;
 }
+
+/* the countdown ticks once a second; its ring glides through each second */
+.jqzz-countdown .fill {
+  transition:
+    stroke-dashoffset 1s linear,
+    stroke var(--dur-2) var(--ease);
+}
+.jqzz-countdown.paused .fill {
+  transition: stroke var(--dur-2) var(--ease);
+}
+
+/* while a page's code is loading: the app's background, nothing else */
+.jqzz-page-loading {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+}
+
+/* ─── reduce effects: the setting for slower machines ─────────────────
+   Blur behind panels is the heaviest thing on integrated graphics; the
+   grain, textures and dither are blended layers over the whole screen. All
+   of it goes, and the moving light stops (Atmosphere stops its loop). */
+:root[data-effects="reduced"] *,
+:root[data-effects="reduced"] *::before,
+:root[data-effects="reduced"] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+:root[data-effects="reduced"] .jqzz-aura .tex,
+:root[data-effects="reduced"] .jqzz-aura::after,
+:root[data-effects="reduced"] .jqzz-dither,
+:root[data-effects="reduced"] .jqzz-imperfections,
+:root[data-effects="reduced"] .jqzz-holo-dust,
+:root[data-effects="reduced"] .jqzz-holo-dots,
+:root[data-effects="reduced"] .jqzz-welcome-burst::after {
+  display: none;
+}
+:root[data-effects="reduced"] .jqzz-holo::before {
+  animation: none;
+}

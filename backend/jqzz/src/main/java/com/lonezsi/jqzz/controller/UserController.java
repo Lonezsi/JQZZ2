@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,7 +33,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public User register(@RequestBody RegisterRequest request) {
+    public Map<String, Object> register(@RequestBody RegisterRequest request) {
 
         String id = IdGenerator.generateId();
 
@@ -66,11 +67,11 @@ public class UserController {
             (Object) Map.of("event", "user_registered", "user", saved)
         );
 
-        return saved;
+        return self(saved);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<User> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         return userRepository.findById(request.getId())
                 .map(user -> {
                     user.setOnline(true);
@@ -79,7 +80,7 @@ public class UserController {
                         "/topic/users",
                         (Object) Map.of("event", "user_logged_in", "user", saved)
                     );
-                    return ResponseEntity.ok(saved);
+                    return ResponseEntity.ok(self(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -103,7 +104,7 @@ public class UserController {
     }
 
     @PostMapping("/{id}/handle")
-    public ResponseEntity<User> updateHandle(@PathVariable String id, @RequestBody Map<String,String> body) {
+    public ResponseEntity<Map<String, Object>> updateHandle(@PathVariable String id, @RequestBody Map<String,String> body) {
 
         User user = userRepository.findById(id).orElse(null);
         if (user == null) {
@@ -124,22 +125,22 @@ public class UserController {
             (Object) Map.of("event", "user_updated", "user", saved)
         );
 
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(self(saved));
     }
 
     @PostMapping("/{id}/name")
-    public ResponseEntity<User> updateName(@PathVariable String id, @RequestBody Map<String,String> body) {
+    public ResponseEntity<Map<String, Object>> updateName(@PathVariable String id, @RequestBody Map<String,String> body) {
         return userRepository.findById(id)
                 .map(user -> {
                     user.setName(body.get("name"));
                     User saved = userRepository.save(user);
-                    return ResponseEntity.ok(saved);
+                    return ResponseEntity.ok(self(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/{id}/update")
-    public ResponseEntity<User> update(@PathVariable String id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, Object>> update(@PathVariable String id, @RequestBody Map<String, String> body) {
         return userRepository.findById(id)
                 .map(user -> {
                     if (body.containsKey("name")) user.setName(body.get("name"));
@@ -163,13 +164,17 @@ public class UserController {
                         (Object) Map.of("event", "user_updated", "user", saved)
                     );
 
-                    return ResponseEntity.ok(saved);
+                    return ResponseEntity.ok(self(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(@PathVariable String id,
+            @RequestHeader(value = "X-User-Id", required = false) String caller) {
+        if (caller == null || !caller.equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only you can delete your account");
+        }
         if (!userRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -191,6 +196,22 @@ public class UserController {
         return userRepository.findById(userId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * The account as its owner sees it: the public record plus the email, which
+     * nobody else is sent.
+     */
+    static Map<String, Object> self(User u) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id", u.getId());
+        m.put("handle", u.getHandle());
+        m.put("name", u.getName());
+        m.put("email", u.getEmail());
+        m.put("profilePictureUrl", u.getProfilePictureUrl());
+        m.put("online", u.isOnline());
+        m.put("googleLinked", u.isGoogleLinked());
+        return m;
     }
 
     private static String sanitizeHandle(String raw) {

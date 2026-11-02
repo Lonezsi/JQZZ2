@@ -317,6 +317,18 @@ public class GameEngine {
         if (touched) record(game);
     }
 
+    /** Games under way right now, with someone in them: a deploy waits for these to finish. */
+    public int liveGames() {
+        int n = 0;
+        for (Game game : games.values()) {
+            synchronized (game) {
+                Game.Status s = game.status();
+                if ((s == Game.Status.PLAYING || s == Game.Status.PAUSED) && !game.players.isEmpty()) n++;
+            }
+        }
+        return n;
+    }
+
     /** Games you're hosting or playing that haven't finished: the way back to them. */
     public List<Map<String, Object>> mine(String userId) {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -437,7 +449,7 @@ public class GameEngine {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
         reschedule(game);
-        messaging.convertAndSend("/topic/play/" + game.code(), (Object) view);
+        send(game, view);
         if (record(game)) {
             synchronized (game) {
                 view = view(game);
@@ -553,7 +565,42 @@ public class GameEngine {
         synchronized (game) {
             view = view(game);
         }
-        messaging.convertAndSend("/topic/play/" + game.code(), (Object) view);
+        send(game, view);
+    }
+
+    /**
+     * Out to everyone at the game. Most changes touch a key or two (who has
+     * answered, who's online), so after a whole state each message carries only
+     * what changed since the one before: {base, patch, gone}, where base is the
+     * version it applies on top of. A screen that missed one asks for the whole
+     * state again. When most of it changed, the whole state goes instead.
+     */
+    void send(Game game, Map<String, Object> view) {
+        String topic = "/topic/play/" + game.code();
+        synchronized (game.sendLock) {
+            Map<String, Object> prev = game.lastSent;
+            game.lastSent = view;
+            if (prev == null || prev.get("version") == null) {
+                messaging.convertAndSend(topic, (Object) view);
+                return;
+            }
+            Map<String, Object> patch = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> e : view.entrySet()) {
+                if (!java.util.Objects.equals(e.getValue(), prev.get(e.getKey()))) patch.put(e.getKey(), e.getValue());
+            }
+            List<String> gone = prev.keySet().stream().filter(k -> !view.containsKey(k)).toList();
+            if (patch.size() + gone.size() > view.size() / 2) {
+                messaging.convertAndSend(topic, (Object) view);
+                return;
+            }
+            patch.put("version", view.get("version"));
+            patch.put("now", view.get("now"));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("base", prev.get("version"));
+            out.put("patch", patch);
+            if (!gone.isEmpty()) out.put("gone", gone);
+            messaging.convertAndSend(topic, (Object) out);
+        }
     }
 
     private Map<String, Object> view(Game game) {

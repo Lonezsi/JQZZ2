@@ -19,6 +19,7 @@ import com.lonezsi.jqzz.service.StashService;
  * POST /play/host                 {quizId, userId}       a new game, you host it
  * POST /play/{code}/join          {userId}               you're in
  * GET  /play/{code}                                      where it is
+ * GET  /play/live                                        {live}: games under way (a deploy waits for none)
  * POST /play/{code}/start|pause|resume|skip|end|restart  {userId}  host only
  * POST /play/{code}/kick          {userId, playerId}     host only
  * POST /play/{code}/invite        {userId, playerId}     host only: playerId gets a notification
@@ -45,6 +46,11 @@ public class PlayController {
     @GetMapping("/mine")
     public List<Map<String, Object>> mine(@org.springframework.web.bind.annotation.RequestParam("userId") String userId) {
         return engine.mine(userId);
+    }
+
+    @GetMapping("/live")
+    public Map<String, Integer> live() {
+        return Map.of("live", engine.liveGames());
     }
 
     @PostMapping("/host")

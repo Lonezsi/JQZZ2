@@ -1,5 +1,5 @@
 import React from "react";
-import { useFonts, useTheme } from "../../utils/theme";
+import { useEffectsSetting, useFonts, useTheme } from "../../utils/theme";
 import { Glyph } from "../common/Glyph";
 
 /** How the app looks on this device. */
@@ -8,6 +8,8 @@ export const SettingsPanel: React.FC = () => {
   const dark = theme === "dark";
   const fonts = useFonts();
   const clean = fonts.fonts === "clean";
+  const effects = useEffectsSetting();
+  const reduced = effects.effects === "reduced";
   return (
     <section className="jqzz-settings" aria-label="Settings">
       <div className="jqzz-setting">
@@ -53,6 +55,26 @@ export const SettingsPanel: React.FC = () => {
           aria-checked={clean}
           aria-labelledby="setting-fonts"
           onClick={() => fonts.set(clean ? "classic" : "clean")}
+        >
+          <span className="jqzz-switch-knob" />
+        </button>
+      </div>
+      <div className="jqzz-setting">
+        <span className="jqzz-setting-icon" aria-hidden="true">
+          <Glyph name="STAR" size={16} />
+        </span>
+        <span className="jqzz-setting-text">
+          <span className="jqzz-setting-name" id="setting-effects">
+            reduce effects
+          </span>
+          <span className="jqzz-annot">no blur, grain or moving light. lighter on slow devices</span>
+        </span>
+        <button
+          className={`jqzz-switch${reduced ? " on" : ""}`}
+          role="switch"
+          aria-checked={reduced}
+          aria-labelledby="setting-effects"
+          onClick={() => effects.set(reduced ? "full" : "reduced")}
         >
           <span className="jqzz-switch-knob" />
         </button>

@@ -192,7 +192,40 @@ class UserControllerTest {
         // First, mock that the user exists
         when(userRepository.existsById("test123")).thenReturn(true);
         
-        mockMvc.perform(delete("/users/test123"))
+        mockMvc.perform(delete("/users/test123").header("X-User-Id", "test123"))
                 .andExpect(status().isNoContent());  // Change from 200 to 204
+    }
+
+    @Test
+    void deleteUser_onlyTheAccountItself() throws Exception {
+        mockMvc.perform(delete("/users/test123"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/users/test123").header("X-User-Id", "someoneElse"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void emailIsOnlySentToItsOwner() throws Exception {
+        User user = new User();
+        user.setId("test123");
+        user.setName("Ann");
+        user.setHandle("ann");
+        user.setEmail("ann@example.com");
+        user.setPassword("secret");
+        when(userRepository.findById("test123")).thenReturn(Optional.of(user));
+        when(userRepository.findAll()).thenReturn(Arrays.asList(user));
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        // anyone listing or looking people up sees neither
+        mockMvc.perform(get("/users"))
+                .andExpect(jsonPath("$[0].name").value("Ann"))
+                .andExpect(jsonPath("$[0].email").doesNotExist())
+                .andExpect(jsonPath("$[0].password").doesNotExist());
+        mockMvc.perform(get("/users/test123"))
+                .andExpect(jsonPath("$.email").doesNotExist());
+        // logging in as yourself gets your email back, never a password
+        mockMvc.perform(post("/users/login").contentType(MediaType.APPLICATION_JSON).content("{\"id\": \"test123\"}"))
+                .andExpect(jsonPath("$.email").value("ann@example.com"))
+                .andExpect(jsonPath("$.password").doesNotExist());
     }
 }

@@ -1,5 +1,5 @@
-/* small text: Albert Sans; the grey computer labels: Spline Sans Mono (both SIL OFL) */
-@import url("https://fonts.googleapis.com/css2?family=Albert+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Spline+Sans+Mono:wght@400;500;700&display=swap");
+/* small text: Albert Sans; the grey computer labels: Spline Sans Mono (both SIL OFL),
+   linked from index.html so they start loading with the page, not after this file */
 @import "./styles/reset.css";
 @import "./styles/glass.css";
 @import "./styles/layout.css";
@@ -17,7 +17,9 @@
 
 @font-face {
   font-family: "Old English Five";
-  src: url("/OldEnglishFive.ttf") format("truetype");
+  src:
+    url("/OldEnglishFive.woff2") format("woff2"),
+    url("/OldEnglishFive.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -26,7 +28,9 @@
 /* medium text, for questions: free for personal use, not in the repo (see .gitignore) */
 @font-face {
   font-family: "Great Warrior";
-  src: url("/GreatWarrior.ttf") format("truetype");
+  src:
+    url("/GreatWarrior.woff2") format("woff2"),
+    url("/GreatWarrior.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -196,7 +200,7 @@
   --aura-b: #f6a684;
   --aura-c: #b9a6ff;
   --aura-opacity: 0.5;
-  --paper: url("/bg.jpg");
+  --paper: url("/bg.webp");
   --grain-opacity: 0.13;
   --grain-blend: multiply;
   --dot: rgba(22, 19, 31, 0.45);

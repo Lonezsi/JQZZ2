@@ -84,7 +84,7 @@
   background-repeat: no-repeat;
 }
 .jqzz-aura .tex-floor {
-  background-image: url("/bg.jpg");
+  background-image: url("/bg.webp");
   mix-blend-mode: color-dodge;
   filter: contrast(0.5);
   opacity: var(--tex-floor-opacity);

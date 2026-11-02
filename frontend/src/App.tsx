@@ -1,9 +1,4 @@
-import { Dashboard } from "./components/Dashboard/Dashboard";
-import { HostScreen } from "./components/Play/HostScreen";
-import { PlayScreen } from "./components/Play/PlayScreen";
-import { JoinScreen } from "./components/Play/JoinScreen";
-import { HistoryPage } from "./components/Stash/HistoryPage";
-import { ProfilePage } from "./components/Stash/ProfilePage";
+import { lazy, Suspense } from "react";
 import { Notifications } from "./components/common/Notifications";
 import { ReturnToGame } from "./components/common/ReturnToGame";
 import { Tooltip } from "./components/common/Tooltip";
@@ -20,7 +15,17 @@ import { useNavShortcuts } from "./hooks/useNavShortcuts";
    #/history/ID        one finished game
    #/stash/add/KIND/REF  a share link: copies the item into your stash
    #/stash, #/history  older links, now your profile's tabs
-   anything else the editor */
+   anything else the editor
+
+   Each page is its own download, fetched when it's first shown: a phone
+   joining with a code never loads the editor. */
+const Dashboard = lazy(() => import("./components/Dashboard/Dashboard").then((m) => ({ default: m.Dashboard })));
+const HostScreen = lazy(() => import("./components/Play/HostScreen").then((m) => ({ default: m.HostScreen })));
+const PlayScreen = lazy(() => import("./components/Play/PlayScreen").then((m) => ({ default: m.PlayScreen })));
+const JoinScreen = lazy(() => import("./components/Play/JoinScreen").then((m) => ({ default: m.JoinScreen })));
+const HistoryPage = lazy(() => import("./components/Stash/HistoryPage").then((m) => ({ default: m.HistoryPage })));
+const ProfilePage = lazy(() => import("./components/Stash/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+
 function App() {
   const route = useHashRoute();
   useNavShortcuts();
@@ -28,7 +33,8 @@ function App() {
   const [, where, a, b, c] = route.split("/");
   return (
     <>
-      {page(where, a, b, c)}
+      {/* the page's own background stands in for the moment its code is on its way */}
+      <Suspense fallback={<div className="jqzz-page-loading" aria-busy="true" />}>{page(where, a, b, c)}</Suspense>
       <Notifications />
       <ReturnToGame />
       <Tooltip />

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useQuiz } from "../../contexts/QuizContext";
 import { useDragAndDrop } from "../../hooks/useDragAndDrop";
@@ -8,11 +8,9 @@ import { Main } from "./Main/Main";
 import { Inspector } from "./Inspector/Inspector";
 import { CommandPalette } from "../Modals/CommandPalette";
 import { IdentityModal } from "../Modals/IdentityModal";
-import { userService } from "../../services/userService";
 import { quizService } from "../../services/quizService";
 import { Atmosphere, Imperfections } from "../common/Atmosphere";
 import { usePresence } from "../../hooks/usePresence";
-import { isGuestName } from "../../utils/guestName";
 import { useSwipeDrawer } from "../../hooks/useSwipeDrawer";
 import { playService } from "../../services/playService";
 import { stashService } from "../../services/stashService";
@@ -152,49 +150,6 @@ export const Dashboard: React.FC = () => {
     onImport: handleImport, // Ctrl+I
     onStart: handleStart, // Ctrl+Enter
   });
-
-  useEffect(() => {
-    // Run cleanup every hour
-    const cleanupInterval = setInterval(async () => {
-      if (!user) return; // wait until user is loaded
-
-      try {
-        // Fetch all users and all quizzes
-        const [usersRes, quizzesRes] = await Promise.all([
-          userService.getAll(),
-          quizService.getAll(),
-        ]);
-
-        const allUsers = usersRes.data;
-        const allQuizzes = quizzesRes.data;
-
-        // Build a map of authorId -> count of quizzes
-        const quizCountByAuthor = new Map<string, number>();
-        for (const quiz of allQuizzes) {
-          quizCountByAuthor.set(
-            quiz.authorId,
-            (quizCountByAuthor.get(quiz.authorId) || 0) + 1,
-          );
-        }
-
-        // Delete offline guest users with no quizzes
-        for (const u of allUsers) {
-          if (u.id === user.id) continue; // never delete current user
-          if (isGuestName(u.name) && !u.online) {
-            const hasQuizzes = quizCountByAuthor.has(u.id);
-            if (!hasQuizzes) {
-              await userService.delete(u.id);
-              console.log(`Deleted guest user ${u.id} (${u.name})`);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to clean up guest users", err);
-      }
-    }, 3600000); // 1 hour
-
-    return () => clearInterval(cleanupInterval);
-  }, [user]);
 
   const handleCommand = useCallback((label: string) => {
     switch (label) {

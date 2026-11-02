@@ -55,7 +55,7 @@ public class GoogleController {
     /** Signed in with Google: the account tied to it, or a fresh one made from it. */
     @PostMapping("/google/login")
     @Transactional
-    public User login(@RequestBody Map<String, String> body) {
+    public Map<String, Object> login(@RequestBody Map<String, String> body) {
         GoogleAuth.Account account = google.verify(body.get("credential"));
         User user = users.findByGoogleSub(account.sub()).orElse(null);
         boolean fresh = user == null;
@@ -73,13 +73,13 @@ public class GoogleController {
         User saved = users.save(user);
         messaging.convertAndSend("/topic/users",
                 (Object) Map.of("event", fresh ? "user_registered" : "user_logged_in", "user", saved));
-        return saved;
+        return UserController.self(saved);
     }
 
     /** This account, tied to the Google account that just signed in. */
     @PostMapping("/{id}/google")
     @Transactional
-    public User link(@PathVariable String id, @RequestBody Map<String, String> body) {
+    public Map<String, Object> link(@PathVariable String id, @RequestBody Map<String, String> body) {
         User user = users.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such user"));
         GoogleAuth.Account account = google.verify(body.get("credential"));
         users.findByGoogleSub(account.sub()).filter(other -> !other.getId().equals(id)).ifPresent(other -> {
@@ -96,15 +96,15 @@ public class GoogleController {
         // nothing left to warn them about
         notifications.settle(id, Notification.GUEST_ACCOUNT, null);
         messaging.convertAndSend("/topic/users", (Object) Map.of("event", "user_updated", "user", saved));
-        return saved;
+        return UserController.self(saved);
     }
 
     @DeleteMapping("/{id}/google")
     @Transactional
-    public User unlink(@PathVariable String id) {
+    public Map<String, Object> unlink(@PathVariable String id) {
         User user = users.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such user"));
         user.setGoogleSub(null);
-        return users.save(user);
+        return UserController.self(users.save(user));
     }
 
     private String freeHandle(String name) {

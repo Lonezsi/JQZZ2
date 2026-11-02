@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DitherBlobs } from "./DitherBlobs";
+import { effectsChoice, onEffectsChange } from "../../utils/theme";
 
 const PHASES = ["IDLE", "WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"];
 const BASE = import.meta.env.BASE_URL;
@@ -18,7 +19,7 @@ export const Atmosphere: React.FC = () => {
         <span key={p} className={`phase phase-${p}`} />
       ))}
       <DitherBlobs />
-      <Texture className="tex-floor" src={`${BASE}bg.jpg`} filter={() => "contrast(0.5)"} />
+      <Texture className="tex-floor" src={`${BASE}bg.webp`} filter={() => "contrast(0.5)"} />
       <Texture
         className="tex-lens-a"
         src="https://texturelabs.org/wp-content/uploads/Texturelabs_LensFX_171S.jpg"
@@ -146,6 +147,7 @@ const LIGHTS: Record<string, Light> = {
 const BURST_LEAN: [number, number] = [24, 18];
 
 let users = 0;
+const EPOCH = performance.now();
 let stopLights: (() => void) | null = null;
 const target = { x: 0, y: 0 };
 
@@ -155,22 +157,41 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t 
 function startLights(): () => void {
   const lean = { x: 0, y: 0 };
   let raf = 0;
+  let timer = 0;
   let last = 0;
-  const started = performance.now();
+  // the lights, found again once a second (pages come and go), not every frame
+  let lights: HTMLElement[] = [];
+  let bursts: HTMLElement[] = [];
+  let foundAt = -Infinity;
 
+  // woken by a timer at the rate it needs, rather than on every screen refresh
+  // only to skip most of them; the frame itself still lands on a refresh
+  const next = (ms: number) => {
+    timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(frame);
+    }, ms);
+  };
   const frame = (now: number) => {
-    raf = requestAnimationFrame(frame);
     const settling = Math.abs(target.x - lean.x) + Math.abs(target.y - lean.y) > 0.002;
-    const gap = now - last;
-    if (gap < (settling ? 33 : 66)) return;
+    next(settling ? 33 : 66);
+    const gap = last ? now - last : 66;
     last = now;
+    if (now - foundAt > 1000) {
+      lights = Array.from(
+        document.querySelectorAll<HTMLElement>(".jqzz-aura > .phase, .jqzz-aura > .warm, .jqzz-aura > .shadow"),
+      );
+      bursts = Array.from(document.querySelectorAll<HTMLElement>(".jqzz-welcome-burst"));
+      foundAt = now;
+    }
     // the lean eases toward where the pointer is, about as quick as the old 1.4s transition
     const k = 1 - Math.exp(-Math.min(gap, 100) / 380);
     lean.x += (target.x - lean.x) * k;
     lean.y += (target.y - lean.y) * k;
 
-    const secs = (now - started) / 1000;
-    document.querySelectorAll<HTMLElement>(".jqzz-aura > .phase, .jqzz-aura > .warm, .jqzz-aura > .shadow").forEach((el) => {
+    // one clock for the page: stopped and started again, the drift carries on
+    // from where time says it is, instead of jumping back to its start
+    const secs = (now - EPOCH) / 1000;
+    lights.forEach((el) => {
       const light = LIGHTS[el.classList[0]];
       if (!light) return;
       const cycle = (secs / light.period) % 2;
@@ -182,13 +203,14 @@ function startLights(): () => void {
         `translate3d(${(lean.x * light.lean[0]).toFixed(1)}px, ${(lean.y * light.lean[1]).toFixed(1)}px, 0) ` +
         `translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%) scale(${s.toFixed(4)})`;
     });
-    document.querySelectorAll<HTMLElement>(".jqzz-welcome-burst").forEach((el) => {
+    bursts.forEach((el) => {
       el.style.translate = `${(lean.x * BURST_LEAN[0]).toFixed(1)}px ${(lean.y * BURST_LEAN[1]).toFixed(1)}px`;
     });
   };
   raf = requestAnimationFrame(frame);
   const stopListening = listen();
   return () => {
+    window.clearTimeout(timer);
     cancelAnimationFrame(raf);
     stopListening();
   };
@@ -237,16 +259,25 @@ function listen(): () => void {
   };
 }
 
-/** One loop for the whole page, however many backgrounds are mounted. */
+/** One loop for the whole page, however many backgrounds are mounted; none with effects turned down. */
 function useMovingLights() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (users++ === 0) stopLights = startLights();
-    return () => {
-      if (--users === 0) {
-        stopLights?.();
+    const sync = () => {
+      const want = users > 0 && effectsChoice() !== "reduced";
+      if (want && !stopLights) stopLights = startLights();
+      if (!want && stopLights) {
+        stopLights();
         stopLights = null;
       }
+    };
+    users++;
+    sync();
+    const off = onEffectsChange(sync);
+    return () => {
+      off();
+      users--;
+      sync();
     };
   }, []);
 }

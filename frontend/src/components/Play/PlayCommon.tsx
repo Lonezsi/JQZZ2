@@ -61,7 +61,10 @@ export const Countdown: React.FC<{
   const total = seconds ?? game.seconds ?? 1;
   const live = useSecondsLeft(game.status === "PAUSED" ? null : deadline, serverNow);
   const left = game.status === "PAUSED" ? (game.pausedLeft ?? 0) / 1000 : (live ?? 0);
-  const fraction = Math.max(0, Math.min(1, left / Math.max(1, total)));
+  // it ticks once a second: the ring aims where it'll be at the next tick and
+  // glides there over that second (its transition), so it still moves smoothly
+  const aim = game.status === "PAUSED" ? left : Math.max(0, left - 1);
+  const fraction = Math.max(0, Math.min(1, aim / Math.max(1, total)));
   const r = 26;
   const c = 2 * Math.PI * r;
   const urgent = left <= 5 && game.status !== "PAUSED";

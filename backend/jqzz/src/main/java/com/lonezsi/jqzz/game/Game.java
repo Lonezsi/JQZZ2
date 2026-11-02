@@ -160,6 +160,9 @@ public class Game {
     long pausedLeft;
     long pausedAt;
     long version;
+    /** what the game's topic last carried, so the next message can be just what changed */
+    final Object sendLock = new Object();
+    Map<String, Object> lastSent;
     long touchedAt;
 
     public Game(String code, String hostId, String quizName, List<Step> steps, Random random, long now) {

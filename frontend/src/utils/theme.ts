@@ -67,6 +67,7 @@ export function watchTheme() {
   // picked in another tab: this one follows
   window.addEventListener("storage", (e) => {
     if (e.key === FONTS_KEY || e.key === null) applyFonts(fontsChoice());
+    if (e.key === EFFECTS_KEY || e.key === null) applyEffects(effectsChoice());
     if (e.key !== KEY && e.key !== null) return;
     apply();
     window.dispatchEvent(new Event(`${EVENT}-choice`));
@@ -113,6 +114,50 @@ export function useFonts() {
     return () => window.removeEventListener(FONTS_EVENT, sync);
   }, []);
   return { fonts, set: setFonts };
+}
+
+/*
+ * Fewer effects: no blur behind panels, no grain, textures or moving light.
+ * For slower machines, where those are what makes the page heavy.
+ */
+export type Effects = "full" | "reduced";
+const EFFECTS_KEY = "jqzz.effects";
+const EFFECTS_EVENT = "jqzz-effects";
+
+export function effectsChoice(): Effects {
+  try {
+    return localStorage.getItem(EFFECTS_KEY) === "reduced" ? "reduced" : "full";
+  } catch {
+    return "full";
+  }
+}
+
+function applyEffects(effects: Effects) {
+  if (effects === "reduced") document.documentElement.dataset.effects = "reduced";
+  else delete document.documentElement.dataset.effects;
+  window.dispatchEvent(new Event(EFFECTS_EVENT));
+}
+
+export function setEffects(effects: Effects) {
+  try {
+    if (effects === "reduced") localStorage.setItem(EFFECTS_KEY, "reduced");
+    else localStorage.removeItem(EFFECTS_KEY);
+  } catch {
+    /* storage blocked: it holds for this visit only */
+  }
+  applyEffects(effects);
+}
+
+/** Calls back whenever effects are turned down or back up. */
+export function onEffectsChange(fn: () => void) {
+  window.addEventListener(EFFECTS_EVENT, fn);
+  return () => window.removeEventListener(EFFECTS_EVENT, fn);
+}
+
+export function useEffectsSetting() {
+  const [effects, setState] = useState<Effects>(effectsChoice);
+  useEffect(() => onEffectsChange(() => setState(effectsChoice())), []);
+  return { effects, set: setEffects };
 }
 
 /** Calls back whenever the theme in use changes, for things drawn from its colours. */

@@ -1,6 +1,14 @@
 package com.lonezsi.jqzz.controller;
 
+import com.lonezsi.jqzz.model.Action;
+import com.lonezsi.jqzz.model.Answer;
+import com.lonezsi.jqzz.model.Phase;
+import com.lonezsi.jqzz.model.Question;
+import com.lonezsi.jqzz.model.QuestionType;
 import com.lonezsi.jqzz.model.Quiz;
+import tools.jackson.databind.json.JsonMapper;
+import java.util.ArrayList;
+import java.util.List;
 import com.lonezsi.jqzz.service.QuizService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,14 +35,44 @@ class QuizControllerTest {
     @Mock
     private QuizService quizService;
 
-    @InjectMocks
     private QuizController quizController;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
+        quizController = new QuizController(quizService, JsonMapper.builder().build());
         mockMvc = MockMvcBuilders.standaloneSetup(quizController).build();
+    }
+
+    @Test
+    void theSummaryKeepsQuestionTextsButNotAnswers() throws Exception {
+        Question q = new Question();
+        q.setId(5L);
+        q.setText("Longest river?");
+        q.setType(QuestionType.PREWRITTEN_SINGLE);
+        q.setElaborationText("the Nile");
+        Answer a = new Answer();
+        a.setId(9L);
+        a.setText("Nile");
+        q.setAnswers(List.of(a));
+        Quiz quiz = new Quiz();
+        quiz.setId(1L);
+        quiz.setName("Rivers");
+        quiz.setActions(new ArrayList<>(List.of(new Action(q, Phase.QUESTION, 30))));
+        when(quizService.findAll()).thenReturn(List.of(quiz));
+
+        mockMvc.perform(get("/quizzes").param("summary", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].summary").value(true))
+                .andExpect(jsonPath("$[0].actions[0].phase").value("QUESTION"))
+                .andExpect(jsonPath("$[0].actions[0].time").value(30))
+                .andExpect(jsonPath("$[0].actions[0].question.text").value("Longest river?"))
+                .andExpect(jsonPath("$[0].actions[0].question.answers").doesNotExist())
+                .andExpect(jsonPath("$[0].actions[0].question.elaborationText").doesNotExist());
+        // without asking for it, the list is whole as before
+        mockMvc.perform(get("/quizzes"))
+                .andExpect(jsonPath("$[0].actions[0].question.answers[0].text").value("Nile"));
     }
 
     @Test

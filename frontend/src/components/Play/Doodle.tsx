@@ -163,7 +163,8 @@ export const Doodle: React.FC<{
       // the next batch starts where this one ended, so the line has no gaps
       outbox = outbox.slice(-1);
     };
-    const sender = window.setInterval(flush, SEND_MS);
+    // only runs while a stroke is being drawn
+    let sender = 0;
 
     const add = (clientX: number, clientY: number) => {
       if (!active) return;
@@ -180,6 +181,7 @@ export const Doodle: React.FC<{
       strokes.current.set(active.key, { ink: inkOf(me), points: [] });
       outbox = [];
       add(x, y);
+      if (!sender) sender = window.setInterval(flush, SEND_MS);
     };
     const end = (e: PointerEvent) => {
       if (held && held.id === e.pointerId) {
@@ -190,6 +192,8 @@ export const Doodle: React.FC<{
         flush();
         active = null;
         outbox = [];
+        window.clearInterval(sender);
+        sender = 0;
       }
     };
 

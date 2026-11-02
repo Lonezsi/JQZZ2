@@ -14,7 +14,8 @@ export const ReturnToGame: React.FC = () => {
   const [games, setGames] = useState<MyGame[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  // looked up again whenever you move around the app, and now and then
+  // looked up again whenever you move around the app, or come back to the tab;
+  // a game only ends or starts around those moments, so no timer
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -24,10 +25,11 @@ export const ReturnToGame: React.FC = () => {
         .then((g) => !cancelled && setGames(g))
         .catch(() => {});
     look();
-    const t = window.setInterval(look, 30000);
+    const back = () => document.visibilityState === "visible" && look();
+    document.addEventListener("visibilitychange", back);
     return () => {
       cancelled = true;
-      window.clearInterval(t);
+      document.removeEventListener("visibilitychange", back);
     };
   }, [user, route]);
 

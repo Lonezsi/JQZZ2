@@ -17,7 +17,8 @@ export const userService = {
     api.post<User>(`/users/${id}/name`, data),
   update: (id: string, data: Partial<User>) =>
     api.post<User>(`/users/${id}/update`, data),
-  delete: (id: string) => api.delete(`/users/${id}`),
+  /** only the account itself may: the server checks */
+  delete: (id: string) => api.delete(`/users/${id}`, { headers: { "X-User-Id": id } }),
   getAll: () => api.get<User[]>("/users"),
   getOne: (id: string) => api.get<User>(`/users/${id}`),
   /** the account tied to that Google sign-in, or a new one made from it */

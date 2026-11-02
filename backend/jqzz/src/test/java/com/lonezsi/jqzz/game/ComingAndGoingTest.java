@@ -39,6 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
 class ComingAndGoingTest {
 
     private PresenceTracker presence;
+    private SimpMessagingTemplate messaging;
     private GameEngine engine;
     private boolean hostWatching;
     private Quiz quiz;
@@ -72,13 +73,44 @@ class ComingAndGoingTest {
         });
         presence = mock(PresenceTracker.class);
         when(presence.isWatching(eq("host"), anyString())).thenAnswer(inv -> hostWatching);
-        engine = new GameEngine(quizzes, users, mock(SimpMessagingTemplate.class), presence,
+        messaging = mock(SimpMessagingTemplate.class);
+        engine = new GameEngine(quizzes, users, messaging, presence,
                 mock(GameRecordRepository.class), JsonMapper.builder().build());
     }
 
     @AfterEach
     void tearDown() {
         engine.stop();
+    }
+
+    /** everything the game's topic carried so far */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> sent(String code) {
+        org.mockito.ArgumentCaptor<Object> body = org.mockito.ArgumentCaptor.forClass(Object.class);
+        org.mockito.Mockito.verify(messaging, org.mockito.Mockito.atLeastOnce())
+                .convertAndSend(eq("/topic/play/" + code), body.capture());
+        return body.getAllValues().stream().map(o -> (Map<String, Object>) o).toList();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void aSmallChangeGoesOutAsJustThatOnTopOfTheLastOne() {
+        String code = startedGame();
+        List<Map<String, Object>> before = sent(code);
+        Object lastVersion = before.get(before.size() - 1).containsKey("patch")
+                ? ((Map<String, Object>) before.get(before.size() - 1).get("patch")).get("version")
+                : before.get(before.size() - 1).get("version");
+
+        engine.hurry(code, "p1");
+
+        List<Map<String, Object>> after = sent(code);
+        Map<String, Object> last = after.get(after.size() - 1);
+        assertThat(last).containsKeys("base", "patch");
+        assertThat(last.get("base")).isEqualTo(lastVersion);
+        Map<String, Object> patch = (Map<String, Object>) last.get("patch");
+        assertThat(patch.get("hurry")).isEqualTo(List.of("p1"));
+        // only what changed: the question, the players and the rest stay out
+        assertThat(patch).containsKeys("version", "now").doesNotContainKeys("question", "quizName", "players");
     }
 
     private String startedGame() {

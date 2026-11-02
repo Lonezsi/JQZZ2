@@ -47,6 +47,8 @@ export interface Quiz {
   name: string;
   authorId: string;
   actions: Action[];
+  /** from the list: steps and question texts only; the whole quiz loads when it's opened */
+  summary?: boolean;
 }
 
 export interface User {

@@ -3,6 +3,8 @@ import type { Quiz, CreateQuizRequest, UpdateQuizRequest } from "../types";
 
 export const quizService = {
   getAll: () => api.get<Quiz[]>("/quizzes"),
+  /** everyone's quizzes, light: enough for the list and its search */
+  getSummaries: () => api.get<Quiz[]>("/quizzes", { params: { summary: true } }),
   getOne: (id: number) => api.get<Quiz>(`/quizzes/${id}`),
   create: (data: CreateQuizRequest) => api.post<Quiz>("/quizzes", data),
   update: (id: number, data: UpdateQuizRequest) =>

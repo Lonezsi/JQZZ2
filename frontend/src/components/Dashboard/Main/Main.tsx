@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { useDragAutoScroll } from "../../../hooks/useDragAutoScroll";
 import { Toolbar } from "./Toolbar";
-import { VisualMode } from "./VisualMode/VisualMode";
+import { LoadingSkeleton, VisualMode } from "./VisualMode/VisualMode";
 import { TextMode } from "./TextMode/TextMode";
 import { useQuiz } from "../../../contexts/QuizContext";
 import type { EditorMode, Question, Action } from "../../../types";
@@ -72,7 +72,7 @@ export const Main: React.FC<MainProps> = ({
   onStart,
   inspector,
 }) => {
-  const { quiz, renderItems, saveState } = useQuiz();
+  const { quiz, quizLoading, renderItems, saveState } = useQuiz();
 
   // margin notes: everything here is read off the quiz itself
   const actions = quiz?.actions ?? [];
@@ -155,7 +155,11 @@ export const Main: React.FC<MainProps> = ({
           onDragLeave={mode === "visual" ? onDropZoneDragLeave : undefined}
           onDrop={mode === "visual" ? onDropZoneDrop : undefined}
         >
-          {mode === "visual" || !quiz ? (
+          {quizLoading ? (
+            <div className="jqzz-timeline jqzz-quiz-loading" aria-busy="true" aria-label="Opening the quiz">
+              <LoadingSkeleton count={3} />
+            </div>
+          ) : mode === "visual" || !quiz ? (
             <VisualMode
               quiz={quiz}
               renderItems={renderItems}

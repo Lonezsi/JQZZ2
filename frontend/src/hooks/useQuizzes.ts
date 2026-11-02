@@ -34,7 +34,7 @@ export const useQuizzes = () => {
   const fetchQuizzes = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await quizService.getAll();
+      const response = await quizService.getSummaries();
       setQuizzes(response.data.map(enrichQuizPreview));
       setError(null);
     } catch (err) {

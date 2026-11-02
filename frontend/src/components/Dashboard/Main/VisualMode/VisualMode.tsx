@@ -414,7 +414,7 @@ function whenIdle(cb: () => void): () => void {
 }
 
 /** where the rest of a quiz will be, while it's still being drawn */
-const LoadingSkeleton: React.FC<{ count: number }> = ({ count }) => (
+export const LoadingSkeleton: React.FC<{ count: number }> = ({ count }) => (
   <>
     {Array.from({ length: count }, (_, i) => (
       <div key={i} className="jqzz-load-skeleton" aria-hidden="true" style={{ "--i": i } as React.CSSProperties}>

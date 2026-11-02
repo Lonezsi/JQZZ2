@@ -7,6 +7,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
+
 import org.springframework.http.ResponseEntity;
 
 @RestController
@@ -15,13 +20,28 @@ public class QuizController {
 
     private final QuizService quizService;
 
-    public QuizController(QuizService quizService) {
+    private final JsonMapper json;
+
+    public QuizController(QuizService quizService, JsonMapper json) {
+        this.json = json;
         this.quizService = quizService;
     }
 
     @GetMapping
-    public List<Quiz> getAll() {
-        return quizService.findAll();
+    public Object getAll(@RequestParam(value = "summary", required = false) Boolean summary) {
+        List<Quiz> all = quizService.findAll();
+        if (!Boolean.TRUE.equals(summary)) return all;
+        // the sidebar's list: each step's phase and time, and its question's text
+        // for searching; answers, pictures and explanations come with the quiz itself
+        ArrayNode list = json.valueToTree(all);
+        for (JsonNode quiz : list) {
+            ((ObjectNode) quiz).put("summary", true);
+            for (JsonNode action : quiz.path("actions")) {
+                JsonNode q = action.get("question");
+                if (q instanceof ObjectNode question) question.retain("id", "text", "type");
+            }
+        }
+        return list;
     }
 
     @GetMapping("/{id}")
