@@ -17,7 +17,8 @@ import { hits } from "../../utils/search";
 import { Glyph } from "../common/Glyph";
 import { Select } from "../common/Select";
 import { setTypesCache } from "../../hooks/useTypes";
-import { QUESTION_TYPE_LABEL } from "../../utils/questionInfo";
+import { ModePicker } from "../common/ModePicker";
+import { describe, modeKey, modeOf, typeIdOf } from "../../utils/questionTypes";
 import { QuestionImage } from "../Play/PlayCommon";
 import { ConfirmButton, RefChip, VisibilitySwitch } from "./StashBits";
 import { plural, when } from "../../utils/format";
@@ -690,7 +691,8 @@ const ShareButton: React.FC<{ kind: StashKind; reference: string }> = ({ kind, r
 };
 
 const PHASES: Phase[] = ["WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"];
-const WRITTEN = (t: string) => t.startsWith("USER_GENERATED") || t === "KNOCKOUT_BATTLE";
+/** what players make themselves has no answer slots, unless they're secret words */
+const WRITTEN = (t: TypeShape) => describe(modeOf({ type: t.questionType, mode: t.mode })).answers === null;
 
 /**
  * Question types: what "add" offers in the editor. Everyone starts with the
@@ -756,7 +758,8 @@ const TypeCard: React.FC<{
   const [draft, setDraft] = useState<TypeShape>(saved);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const total = draft.steps.reduce((sum, s) => sum + (s.time || 0), 0);
-  const written = WRITTEN(draft.questionType);
+  const written = WRITTEN(draft);
+  const mode = modeOf({ type: draft.questionType, mode: draft.mode });
   const set = (patch: Partial<TypeShape>) => setDraft((d) => ({ ...d, ...patch }));
   const setStep = (i: number, patch: Partial<TypeShape["steps"][number]>) =>
     set({ steps: draft.steps.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
@@ -769,7 +772,7 @@ const TypeCard: React.FC<{
     <li className="jqzz-type-card" style={{ "--i": Math.min(index, 12) } as React.CSSProperties}>
       <div className="jqzz-type-head">
         <span className="jqzz-type-tile" aria-hidden="true">
-          <Glyph name={draft.questionType} size={18} />
+          <Glyph name={describe(mode).icon} size={18} />
         </span>
         <input
           className="jqzz-type-name"
@@ -782,15 +785,14 @@ const TypeCard: React.FC<{
         </ConfirmButton>
       </div>
       <div className="jqzz-type-fields">
-        <label className="jqzz-annot">
-          question
-          <Select
-            value={draft.questionType}
-            aria-label="Question type"
-            onChange={(v) => set({ questionType: v })}
-            options={Object.entries(QUESTION_TYPE_LABEL).map(([value, label]) => ({ value, label, icon: value }))}
+        <div className="jqzz-annot">
+          <ModePicker
+            id={`jqzz-type-${item.id}`}
+            mode={mode}
+            hint={false}
+            onChange={(next) => set({ mode: modeKey(next), questionType: typeIdOf(next) })}
           />
-        </label>
+        </div>
         {!written && (
           <label className="jqzz-annot">
             answers

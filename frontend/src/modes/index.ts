@@ -5,6 +5,7 @@
  * what it's about and who it's for from its comments, the rest from parsing it.
  */
 import { parseScript } from "../utils/scriptParser";
+import { modeKey, modeOf, type Mode } from "../utils/questionTypes";
 import classic from "./classic.txt?raw";
 import flashcards from "./flashcards.txt?raw";
 import estimation from "./estimation.txt?raw";
@@ -22,8 +23,8 @@ export interface GameMode {
   about: string;
   players: string;
   script: string;
-  /** the question types it plays, first seen first */
-  types: string[];
+  /** what its questions are (ask and score), first seen first */
+  modes: Mode[];
   questions: number;
   /** how long it runs if nobody hurries it */
   minutes: number;
@@ -44,7 +45,7 @@ export function readMode(id: string, script: string): GameMode {
     about: comment(lines, "about"),
     players: comment(lines, "players"),
     script,
-    types: [...new Set(questions.map((q) => q.type))],
+    modes: [...new Map(questions.map((q) => modeOf(q)).map((m) => [modeKey(m), m])).values()],
     questions: questions.length,
     minutes: Math.max(1, Math.round(seconds / 60)),
   };

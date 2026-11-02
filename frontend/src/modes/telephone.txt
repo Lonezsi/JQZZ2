@@ -1,13 +1,13 @@
-# Telephone · JQzz Script v2
+# Telephone · JQzz Script v3
 # about: Write something odd. The next person draws it, the next says what the drawing is, and on. Then watch what it turned into.
 # players: 3+
 
 NewQuestion Q1 (
-  type: "telephone",
+  ask: "chain", score: "none",
   prompt: "Write something odd for someone else to draw",
 )
 NewQuestion Q2 (
-  type: "telephone",
+  ask: "chain", score: "none",
   prompt: "A film plot in one sentence",
   rounds: 5,
 )

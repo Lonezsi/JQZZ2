@@ -47,6 +47,13 @@ public class Question {
     @Column(length = 500)
     private String options;
 
+    /**
+     * What players do and how it scores, "draw/votes" (docs/script.md). Null
+     * for questions saved before modes: their type says (game/Mode.of).
+     */
+    @Column(length = 40)
+    private String mode;
+
     private String userId; // for user generated content, store the author's userId
 
     @OneToMany(mappedBy="question", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -83,6 +90,9 @@ public class Question {
 
     public String getOptions(){return options;}
     public void setOptions(String options){this.options=options;}
+
+    public String getMode(){return mode;}
+    public void setMode(String mode){this.mode=mode;}
 
     // --- Logic to compute results based on type ---
     

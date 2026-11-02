@@ -1,9 +1,9 @@
-# Party mix · JQzz Script v2
+# Party mix · JQzz Script v3
 # about: A bit of everything: a quick quiz, an estimate, a poll, a joke, a drawing and a round of telephone.
 # players: 3+
 
 NewQuestion Q1 (
-  type: "single",
+  ask: "pick", score: "right",
   prompt: "What's the fastest land animal?",
   elaboration: "The cheetah: about 110 km/h, in short bursts.",
   answers: [
@@ -14,19 +14,19 @@ NewQuestion Q1 (
   ],
 )
 NewQuestion Q2 (
-  type: "typed",
+  ask: "type-in", score: "right",
   prompt: "Name the largest planet in the solar system",
   answers: [ { text: "Jupiter", value: 500 } ],
 )
 NewQuestion Q3 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How many countries are there in the world?",
   elaboration: "195: the 193 UN members, plus two observer states, the Vatican and Palestine.",
   unit: "countries", min: 0, max: 400,
   answers: [ { text: "195", value: 1000 } ],
 )
 NewQuestion Q4 (
-  type: "poll",
+  ask: "pick", score: "crowd",
   prompt: "Which superpower would most of this room pick?",
   answers: [
     { text: "Flying", value: 200 },
@@ -36,11 +36,11 @@ NewQuestion Q4 (
   ],
 )
 NewQuestion Q5 (
-  type: "write-vote",
+  ask: "write", score: "votes",
   prompt: "The worst possible slogan for a dentist",
 )
 NewQuestion Q6 (
-  type: "draw-guess",
+  ask: "draw", score: "secret",
   prompt: "Draw your secret word",
   answers: [
     { text: "haunted house", value: 150 },
@@ -52,7 +52,7 @@ NewQuestion Q6 (
   ],
 )
 NewQuestion Q7 (
-  type: "telephone",
+  ask: "chain", score: "none",
   prompt: "Write a headline from the future",
   rounds: 4,
 )

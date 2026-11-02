@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../hooks/useGame";
 import { go } from "../../hooks/useHashRoute";
 import { playService, type Submission } from "../../services/playService";
-import { typeInfo } from "../../utils/questionTypes";
+import { describeQuestion, modeOf } from "../../utils/questionTypes";
 import type { GameState } from "../../types/play";
 import { IdentityModal } from "../Modals/IdentityModal";
 import { usePresence } from "../../hooks/usePresence";
@@ -251,9 +251,9 @@ const PhoneStep: React.FC<{
 }> = ({ game, me, mine, serverNow, submit, vote, draw, remember, answered, hurry }) => {
   const q = game.question;
   const phase = game.phase;
-  const family = typeInfo(q?.type).family;
+  const { ask } = modeOf(q);
   // drawing takes the whole screen: the clock stays small, and the sheet keeps its place
-  const drawing = phase === "QUESTION" && (family === "draw" || family === "telephone");
+  const drawing = phase === "QUESTION" && (ask === "draw" || ask === "chain");
   const answers = { game, me, mine, submit, vote, draw, remember, serverNow };
   const player = game.players.find((p) => p.id === me);
   const gain = game.reveal?.settled ? (game.reveal.gains?.[me] ?? 0) : null;
@@ -307,7 +307,7 @@ const PhoneStep: React.FC<{
           <Judging {...answers} />
         ) : (
           <>
-            {family !== "telephone" && <Outcome game={game} mine={mine} gain={gain} />}
+            {ask !== "chain" && <Outcome game={game} mine={mine} gain={gain} />}
             <p className="jqzz-play-prompt small">{q.text}</p>
             <Reveal game={game} mine={mine} me={me} serverNow={serverNow} controls />
           </>
@@ -333,7 +333,7 @@ const PhoneStep: React.FC<{
   return (
     <>
       {top}
-      {(family === "tier" || family === "draw") && game.reveal && <Reveal game={game} mine={mine} me={me} serverNow={serverNow} />}
+      {(ask === "rank" || ask === "draw") && game.reveal && <Reveal game={game} mine={mine} me={me} serverNow={serverNow} />}
       {player && (
         <div className="jqzz-phone-rank">
           <span className="jqzz-play-qnum OEF jqzz-chroma">#{player.rank}</span>
@@ -349,7 +349,8 @@ const PhoneStep: React.FC<{
 
 /** How your answer did, in one line. */
 const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }> = ({ game, mine, gain }) => {
-  const info = typeInfo(game.question?.type);
+  const info = describeQuestion(game.question);
+  const { ask, score } = info.mode;
   const sent =
     mine.picks?.length ||
     mine.text ||
@@ -357,14 +358,14 @@ const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }
     (mine.tiers && Object.keys(mine.tiers).length) ||
     (mine.pairs && Object.keys(mine.pairs).length);
   // scored straight from the answers: right or not is known as soon as it's revealed
-  const known = !info.judged && info.family !== "tier" && info.family !== "write" && info.family !== "draw";
+  const known = score === "right" || (score === "crowd" && ask !== "rank");
   let text: string;
   let tone = "neutral";
   if (gain && gain > 0) {
     text = `+${gain}`;
     tone = "good";
   } else if (!sent) {
-    text = info.family === "draw" ? "nothing drawn" : "no answer sent";
+    text = ask === "draw" ? "nothing drawn" : "no answer sent";
   } else if (known) {
     text = gain === null ? "answer in" : "not this time";
     tone = gain === null ? "neutral" : "bad";

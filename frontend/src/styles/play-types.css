@@ -648,3 +648,8 @@ button.jqzz-frame:hover:not(:disabled) {
     animation: none;
   }
 }
+
+.jqzz-number-right .jqzz-annot {
+  display: block;
+  font-family: var(--font-data);
+}

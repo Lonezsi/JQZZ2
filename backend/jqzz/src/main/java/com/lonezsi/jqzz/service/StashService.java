@@ -191,6 +191,7 @@ public class StashService {
         String name = str(shape.get("name"));
         clean.put("name", name == null || name.isBlank() ? "question type" : clip(name.trim(), 60));
         clean.put("questionType", str(shape.getOrDefault("questionType", "PREWRITTEN_SINGLE")));
+        if (str(shape.get("mode")) != null) clean.put("mode", str(shape.get("mode")));
         clean.put("answers", shape.getOrDefault("answers", List.of()));
         clean.put("steps", steps);
         return store(StashKind.TYPE, (String) clean.get("name"), "editor", clean, userId).get(0);
@@ -456,6 +457,7 @@ public class StashService {
                 qm.put("elaborationText", q.getElaborationText());
                 qm.put("elaborationImageUrl", GameEngine.absolute(q.getElaborationImageUrl(), quiz.getAuthorId()));
                 if (q.getOptions() != null && !q.getOptions().isBlank()) qm.put("options", q.getOptions());
+                if (q.getMode() != null && !q.getMode().isBlank()) qm.put("mode", q.getMode());
                 List<Map<String, Object>> answers = new ArrayList<>();
                 for (Answer ans : q.getAnswers()) {
                     Map<String, Object> am = new LinkedHashMap<>();
@@ -505,6 +507,7 @@ public class StashService {
             question.setElaborationText(str(q.get("elaborationText")));
             question.setElaborationImageUrl(str(q.get("elaborationImageUrl")));
             question.setOptions(str(q.get("options")));
+            question.setMode(str(q.get("mode")));
             try {
                 question.setType(QuestionType.valueOf(str(q.get("type"))));
             } catch (RuntimeException e) {

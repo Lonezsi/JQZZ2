@@ -1,21 +1,25 @@
-# Art battle · JQzz Script v2
-# about: Same prompt for everyone, everyone draws, the room votes. The final is a knockout.
+# Art battle · JQzz Script v3
+# about: Same prompt for everyone, everyone draws, the room votes. Then guess who drew what, and the final is a knockout.
 # players: 3+
 
 NewQuestion Q1 (
-  type: "draw-vote",
+  ask: "draw", score: "votes",
   prompt: "A cat that just made a terrible decision",
 )
 NewQuestion Q2 (
-  type: "draw-vote",
+  ask: "draw", score: "votes",
   prompt: "Breakfast, but it's a monster",
 )
 NewQuestion Q3 (
-  type: "draw-vote",
+  ask: "draw", score: "votes",
   prompt: "The most dramatic sunset you can manage",
 )
 NewQuestion Q4 (
-  type: "draw-knockout",
+  ask: "draw", score: "authors",
+  prompt: "Yourself, as a vegetable",
+)
+NewQuestion Q5 (
+  ask: "draw", score: "knockout",
   prompt: "An animal nobody has ever seen",
 )
 
@@ -31,9 +35,13 @@ ShowWaiting(Q3, time: 5)
 ShowQuestion(Q3, time: 90)
 ShowAnswers(Q3, time: 30)
 ShowResult(Q3, time: 8)
+ShowWaiting(Q4, time: 5)
+ShowQuestion(Q4, time: 90)
+ShowAnswers(Q4, time: 45)
+ShowResult(Q4, time: 8)
 ---
 the final: drawings battle two at a time until one is left
-ShowWaiting(Q4, time: 6)
-ShowQuestion(Q4, time: 120)
-ShowAnswers(Q4, time: 80)
-ShowResult(Q4, time: 15)
+ShowWaiting(Q5, time: 6)
+ShowQuestion(Q5, time: 120)
+ShowAnswers(Q5, time: 80)
+ShowResult(Q5, time: 15)

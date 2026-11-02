@@ -30,10 +30,13 @@ export interface Question {
   imageUrl?: string;
   elaborationText?: string;
   elaborationImageUrl?: string;
+  /** the server's stored name for its mode: the preset's, or the nearest one (questionTypes: typeIdOf) */
   type: string;
+  /** what players do and how it scores, "draw/votes" (questionTypes: modeOf); without it, the type says */
+  mode?: string | null;
   userId?: string;
   answers: Answer[];
-  /** a type's extra fields, "unit=m, min=0, max=100" (questionTypes: parseOptions) */
+  /** extra fields, "unit=m, min=0, max=100" (questionTypes: parseOptions) */
   options?: string;
 }
 

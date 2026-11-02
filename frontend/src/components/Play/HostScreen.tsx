@@ -8,7 +8,7 @@ import { ConfirmButton, Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, Q
 import { Doodle } from "./Doodle";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
-import { typeInfo } from "../../utils/questionTypes";
+import { modeOf } from "../../utils/questionTypes";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
@@ -205,15 +205,20 @@ const HostLobby: React.FC<{
 /** what the big screen says while everyone answers on their phone */
 function onTheirPhones(game: GameState): string {
   const q = game.question!;
-  const info = typeInfo(q.type);
-  if (q.type === "DRAW_GUESS") return "everyone's drawing a secret word. no letters allowed.";
-  switch (info.family) {
-    case "choice":
-    case "multi":
+  const { ask, score } = modeOf(q);
+  if (score === "secret") {
+    return ask === "draw"
+      ? "everyone's drawing a secret word. no letters allowed."
+      : "everyone's describing a secret word, without saying it";
+  }
+  if (score === "crowd" && ask === "number") return "guess the number: closest to the room's average wins";
+  if (score === "crowd") return ask === "rank" ? "" : "points for siding with the most";
+  if (score === "none" && (ask === "pick" || ask === "pick-many")) return "no points on this one: just to see the room";
+  switch (ask) {
+    case "pick":
+    case "pick-many":
       return "";
-    case "poll":
-      return "points for siding with the most";
-    case "typed":
+    case "type-in":
       return "type the answer on your phone";
     case "order":
       return "put them in order on your phone";
@@ -223,11 +228,11 @@ function onTheirPhones(game: GameState): string {
     }
     case "match":
       return "pair them up on your phone";
-    case "tier":
+    case "rank":
       return "";
     case "draw":
       return "everyone's drawing on their phone";
-    case "telephone":
+    case "chain":
       return game.telephone?.kind === "draw"
         ? "everyone's drawing what they were handed"
         : game.telephone?.kind === "describe"
@@ -261,7 +266,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
   if (phase === "RESULT") {
     // choices were already shown in their own reveal; tier lists and written answers
     // are worth seeing again next to the scores (a tier list round may have no reveal)
-    const worthShowing = q && q.type !== "PREWRITTEN_SINGLE" && q.type !== "PREWRITTEN_MULTIPLE";
+    const worthShowing = q && modeOf(q).ask !== "pick" && modeOf(q).ask !== "pick-many";
     return (
       <div className="jqzz-stage-result">
         <div className="jqzz-stage-top">
@@ -275,6 +280,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
   }
 
   if (!q) return null;
+  const mode = modeOf(q);
   const answered = game.answered ?? [];
   const acted = game.acted ?? [];
   const bracket = game.reveal?.bracket;
@@ -290,7 +296,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
       {phase === "QUESTION" && (
         <>
           <QuestionImage src={q.imageUrl} ownerId={game.authorId} viewerId={me} className="jqzz-stage-img" />
-          {(q.type === "PREWRITTEN_SINGLE" || q.type === "PREWRITTEN_MULTIPLE") && (
+          {(mode.ask === "pick" || mode.ask === "pick-many") && (
             <div className="jqzz-tiles">
               {q.answers.map((a, i) => (
                 <div key={a.id} className="jqzz-tile" style={{ "--tile": tileColour(i) } as React.CSSProperties}>
@@ -301,7 +307,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
               ))}
             </div>
           )}
-          {q.type === "TIERLIST" && (
+          {(mode.ask === "rank" || mode.ask === "order") && (
             <div className="jqzz-tier-items preview">
               {q.answers.map((a) => (
                 <span key={a.id} className="jqzz-chip">
@@ -311,28 +317,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
               ))}
             </div>
           )}
-          {q.type === "POLL" && (
-            <div className="jqzz-tiles">
-              {q.answers.map((a, i) => (
-                <div key={a.id} className="jqzz-tile" style={{ "--tile": tileColour(i) } as React.CSSProperties}>
-                  <AnswerPicture src={a.imageUrl} game={game} />
-                  <span className="jqzz-tile-letter">{tileLetter(i)}</span>
-                  <span className="jqzz-tile-text">{a.text || "..."}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {q.type === "ORDER" && (
-            <div className="jqzz-tier-items preview">
-              {q.answers.map((a) => (
-                <span key={a.id} className="jqzz-chip">
-                  <AnswerPicture src={a.imageUrl} game={game} className="jqzz-chip-img" />
-                  {a.text}
-                </span>
-              ))}
-            </div>
-          )}
-          {q.type === "MATCH" && (
+          {mode.ask === "match" && (
             <div className="jqzz-match-preview">
               <div className="jqzz-tier-items preview">
                 {q.answers.map((a) => (

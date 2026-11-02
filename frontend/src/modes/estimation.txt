@@ -1,55 +1,61 @@
-# Estimation station · JQzz Script v2
+# Estimation station · JQzz Script v3
 # about: Nobody knows these exactly. Closest guess wins, and close is still worth something.
 # players: 2+
 
 NewQuestion Q1 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How tall is Mount Everest?",
   elaboration: "8,849 metres, by the 2020 survey China and Nepal did together.",
   unit: "m", min: 0, max: 12000,
   answers: [ { text: "8849", value: 1000 } ],
 )
 NewQuestion Q2 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How many bones does an adult human have?",
   elaboration: "206. Babies are born with around 300; some fuse together as they grow.",
   unit: "bones", min: 0, max: 500,
   answers: [ { text: "206", value: 1000 } ],
 )
 NewQuestion Q3 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "What year did the first iPhone come out?",
   elaboration: "2007. It had no app store yet: that came a year later.",
   min: 1990, max: 2020,
   answers: [ { text: "2007", value: 1000 } ],
 )
 NewQuestion Q4 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How many hearts does an octopus have?",
   elaboration: "Three: two pump blood through the gills, one through the rest of the body.",
   unit: "hearts", min: 0, max: 10,
   answers: [ { text: "3", value: 1000 } ],
 )
 NewQuestion Q5 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How many keys does a standard piano have?",
   elaboration: "88: 52 white and 36 black.",
   unit: "keys", min: 0, max: 150,
   answers: [ { text: "88", value: 1000 } ],
 )
 NewQuestion Q6 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How far away is the Moon, on average?",
   elaboration: "About 384,400 km. Every planet in the solar system would fit in the gap.",
   unit: "km", min: 0, max: 1000000,
   answers: [ { text: "384400", value: 1000 } ],
 )
 NewQuestion Q7 (
-  type: "number",
+  ask: "number", score: "right",
   prompt: "How long is the Great Wall of China, every branch added up?",
   elaboration: "21,196 km, by China's 2012 survey. Most of it isn't the stone wall from the photos.",
   unit: "km", min: 0, max: 50000,
   answers: [ { text: "21196", value: 1000 } ],
+)
+NewQuestion Q8 (
+  ask: "number", score: "crowd",
+  prompt: "Guess the room's average: how many hours does everyone here sleep on a weeknight?",
+  elaboration: "Nobody knows this one but the room. Closest to the average wins.",
+  unit: "hours", min: 0, max: 14,
 )
 
 ShowWaiting(Q1, time: 4)
@@ -79,3 +85,7 @@ ShowQuestion(Q7, time: 25)
 ShowAnswers(Q7, time: 12)
 ShowElaboration(Q7, time: 8)
 ShowResult(Q7, time: 12)
+ShowWaiting(Q8, time: 4)
+ShowQuestion(Q8, time: 25)
+ShowAnswers(Q8, time: 12)
+ShowResult(Q8, time: 12)

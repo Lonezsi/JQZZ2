@@ -349,6 +349,21 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M8.6 3.5L7.2 7h1.6l-1.4 3.5" />
     </>
   ),
+  // a keyhole: something only you know
+  SECRET: (
+    <>
+      <circle cx="8" cy="8" r="6" />
+      <circle cx="8" cy="6.8" r="1.5" />
+      <path d="M7.4 8.1 6.9 11h2.2l-.5-2.9" />
+    </>
+  ),
+  // a circle crossed out: nobody scores
+  UNSCORED: (
+    <>
+      <circle cx="8" cy="8" r="5.5" />
+      <path d="M4.2 11.8l7.6-7.6" />
+    </>
+  ),
   // passed one way, then back the other
   TELEPHONE: (
     <>

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import type { Action, Question, Answer, Phase } from "../../../types";
 import { generateId } from "../../../utils/idGenerator";
 import { ImagePicker } from "../../Modals/ImagePicker";
-import { QUESTION_TYPES_INFO, formatOptions, parseOptions, typeInfo } from "../../../utils/questionTypes";
-import type { QuestionField } from "../../../utils/questionTypes";
+import { describe, formatOptions, modeKey, modeOf, parseOptions, typeIdOf } from "../../../utils/questionTypes";
+import type { Mode, QuestionField } from "../../../utils/questionTypes";
+import { ModePicker } from "../../common/ModePicker";
 import { Select } from "../../common/Select";
 import { SETTING_LABEL, formatSettings, parseSettings } from "../../../utils/settings";
 import type { QuizSettings } from "../../../utils/settings";
@@ -178,8 +179,17 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
     if (question) onQuestionUpdate(question.id, { answers: next });
   };
 
-  const info = typeInfo(question?.type);
+  const mode = modeOf(question);
+  const info = describe(mode);
   const shape = info.answers;
+  const setMode = (next: Mode) => {
+    if (!question) return;
+    // a pair needs its other half, even an empty one, for its column to show
+    const nextShape = describe(next).answers;
+    const fixed = nextShape?.match ? answers.map((a) => ({ ...a, match: a.match ?? "" })) : answers;
+    if (fixed !== answers) setAnswers(fixed);
+    onQuestionUpdate(question.id, { mode: modeKey(next), type: typeIdOf(next), ...(fixed !== answers ? { answers: fixed } : {}) });
+  };
 
   const addAnswer = () => {
     const next: Answer[] = [...answers, { id: generateId(), text: "", value: shape?.starts ?? 0, ...(shape?.match ? { match: "" } : {}) }];
@@ -233,16 +243,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
         <>
           <div className="jqzz-section-label">question</div>
           <div className="jqzz-field-group">
-            <label className="jqzz-field-label" htmlFor="jqzz-qtype">
-              type
-            </label>
-            <Select
-              id="jqzz-qtype"
-              value={question.type || "PREWRITTEN_SINGLE"}
-              onChange={(v) => onQuestionUpdate(question.id, { type: v })}
-              options={QUESTION_TYPES_INFO.map((t) => ({ value: t.id, label: t.label, icon: t.icon }))}
-            />
-            <p className="jqzz-panel-hint">{info.blurb}</p>
+            <ModePicker id="jqzz-qmode" mode={mode} onChange={setMode} />
           </div>
           <div className="jqzz-field-group">
             <label className="jqzz-field-label" htmlFor="jqzz-prompt">
@@ -300,25 +301,26 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
               <div className="jqzz-section-label">
                 {shape ? `${shape.text}s` : "answers"} <span className="jqzz-section-count">{answers.length}</span>
               </div>
-              {!shape && <p className="jqzz-panel-hint">this type doesn't use answers: players make them.</p>}
-              {info.family === "order" && <p className="jqzz-panel-hint">put them in the right order here. players see them shuffled.</p>}
-              {info.family === "number" && <p className="jqzz-panel-hint">one answer: the right number, and the points for getting it spot on.</p>}
+              {!shape && <p className="jqzz-panel-hint">no answers here: players make them.</p>}
+              {mode.ask === "order" && <p className="jqzz-panel-hint">put them in the right order here. players see them shuffled.</p>}
+              {mode.ask === "number" && <p className="jqzz-panel-hint">one answer: the right number, and the points for getting it spot on.</p>}
+              {mode.score === "secret" && <p className="jqzz-panel-hint">everyone gets one of these to {mode.ask === "draw" ? "draw" : "describe without saying it"}.</p>}
               {answers.length > 0 && (
-                <div className={`jqzz-answer-head${shape?.match ? " pairs" : ""}`} aria-hidden="true">
+                <div className={`jqzz-answer-head${shape?.match ? " pairs" : ""}${shape && !shape.value ? " plain" : ""}`} aria-hidden="true">
                   <span />
                   <span>{shape?.text ?? "answer"}</span>
                   {shape?.match && <span>{shape.match}</span>}
-                  <span title={shape?.value}>points</span>
+                  {(!shape || shape.value) && <span title={shape?.value ?? undefined}>points</span>}
                 </div>
               )}
               {answers.map((a, i) => (
-                <div key={a.id} className={`jqzz-answer-row${shape?.match ? " pairs" : ""}`}>
+                <div key={a.id} className={`jqzz-answer-row${shape?.match ? " pairs" : ""}${shape && !shape.value ? " plain" : ""}`}>
                   <AnswerPictureSlot src={a.imageUrl} index={i} onChange={(ref) => updateAnswer(i, "imageUrl", ref)} />
                   <input
                     className="jqzz-answer-text"
                     value={a.text}
                     placeholder={shape?.text ?? "answer"}
-                    inputMode={info.family === "number" ? "decimal" : undefined}
+                    inputMode={mode.ask === "number" ? "decimal" : undefined}
                     aria-label={`${shape?.text ?? "Answer"} ${i + 1}`}
                     onChange={(e) => updateAnswer(i, "text", e.target.value)}
                   />
@@ -331,13 +333,15 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
                       onChange={(e) => updateAnswer(i, "match", e.target.value)}
                     />
                   )}
-                  <input
-                    className="jqzz-answer-val"
-                    type="number"
-                    value={a.value}
-                    aria-label={`Points for answer ${i + 1}`}
-                    onChange={(e) => updateAnswer(i, "value", e.target.value)}
-                  />
+                  {(!shape || shape.value) && (
+                    <input
+                      className="jqzz-answer-val"
+                      type="number"
+                      value={a.value}
+                      aria-label={`Points for answer ${i + 1}`}
+                      onChange={(e) => updateAnswer(i, "value", e.target.value)}
+                    />
+                  )}
                   <button
                     className="jqzz-answer-del"
                     onClick={() => removeAnswer(i)}
@@ -348,7 +352,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
                   </button>
                 </div>
               ))}
-              {shape && !(info.family === "number" && answers.length >= 1) && (
+              {shape && !(mode.ask === "number" && answers.length >= 1) && (
                 <button className="jqzz-add-answer" onClick={addAnswer}>
                   + Add {shape.text}
                 </button>

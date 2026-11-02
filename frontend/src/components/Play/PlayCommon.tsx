@@ -112,7 +112,7 @@ export const QuestionHead: React.FC<{ game: GameState }> = ({ game }) => {
       <div className="jqzz-play-qhead">
         <span className="jqzz-play-qnum OEF jqzz-chroma">Q{game.questionNumber ?? "?"}</span>
         <span className="jqzz-annot">
-          of {game.questionCount} · {typeLabel(game.question?.type)}
+          of {game.questionCount} · {typeLabel(game.question)}
         </span>
         {/* a settings block made it worth more, or nothing */}
         {game.question?.weight != null && (

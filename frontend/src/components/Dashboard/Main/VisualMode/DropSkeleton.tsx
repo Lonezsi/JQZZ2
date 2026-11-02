@@ -2,7 +2,7 @@ import React from "react";
 import type { Action, Quiz } from "../../../../types";
 import { buildRenderItems } from "../../../../utils/buildRenderItems";
 import { describe, parseSettings } from "../../../../utils/settings";
-import { typeLabel } from "../../../../utils/questionInfo";
+import { typeIcon, typeLabel } from "../../../../utils/questionInfo";
 import { Glyph } from "../../../common/Glyph";
 
 /**
@@ -49,8 +49,8 @@ export const DropSkeleton: React.FC<{ actions: Action[]; name?: string }> = ({ a
           <div key={i} className="jqzz-skel-group" style={style}>
             <div className="jqzz-skel-top">
               <span className="jqzz-skel-chip">
-                <Glyph name={q.type || "PREWRITTEN_SINGLE"} size={11} />
-                {typeLabel(q.type)}
+                <Glyph name={typeIcon(q)} size={11} />
+                {typeLabel(q)}
               </span>
             </div>
             <span className="jqzz-skel-text">{q.text?.trim() || "new question"}</span>

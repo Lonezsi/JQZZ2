@@ -3,8 +3,18 @@ import { FN_PHASE_MAP } from "../constants/phaseMaps";
 import { generateId } from "./idGenerator";
 import { DEFAULTS, formatSettings, parseSettings } from "./settings";
 import type { QuizSettings } from "./settings";
-import { formatOptions, QUESTION_TYPE_IDS, typeFromScript } from "./questionTypes";
-import type { QuestionField, QuestionOptions } from "./questionTypes";
+import {
+  ASKS,
+  SCORES,
+  askFromScript,
+  askInfo,
+  formatOptions,
+  modeKey,
+  presetFromScript,
+  scoreFromScript,
+  typeIdOf,
+} from "./questionTypes";
+import type { Ask, QuestionField, QuestionOptions, Score } from "./questionTypes";
 
 /*
  * Reads a JQzz script (docs/script.md) into questions and timeline steps.
@@ -16,9 +26,6 @@ export interface ParseResult {
   actions: Action[];
   errors: string[];
 }
-
-/** Question types the backend accepts (QuestionType.java). */
-export const QUESTION_TYPES = QUESTION_TYPE_IDS;
 
 /** fields a question block can have besides its extras (questionTypes: QuestionField) */
 const EXTRA_FIELDS: QuestionField[] = ["unit", "min", "max", "rounds"];
@@ -231,6 +238,11 @@ export function parseScript(text: string, prevQuestions: Question[]): ParseResul
         answers: [],
       };
       const options: QuestionOptions = {};
+      // what it is: a `type` shorthand, then `ask` and `score` over it
+      let ask: Ask | undefined;
+      let score: Score | undefined;
+      let preset: ReturnType<typeof presetFromScript>;
+      let scoreLine = lineNo;
       for (const f of readFields(tokenize(body, errors), errors)) {
         const asText = typeof f.value === "string" ? f.value : typeof f.value === "number" ? String(f.value) : undefined;
         switch (f.key) {
@@ -241,9 +253,19 @@ export function parseScript(text: string, prevQuestions: Question[]): ParseResul
             question.elaborationText = asText ?? "";
             break;
           case "type": {
-            const t = asText ? typeFromScript(asText) : undefined;
-            if (t) question.type = t.id;
-            else errors.push(`Line ${f.line}: unknown question type "${asText}"`);
+            preset = asText ? presetFromScript(asText) : undefined;
+            if (!preset) errors.push(`Line ${f.line}: unknown question type "${asText}"`);
+            break;
+          }
+          case "ask": {
+            ask = asText ? askFromScript(asText) : undefined;
+            if (!ask) errors.push(`Line ${f.line}: ask is one of ${ASKS.map((a) => a.id).join(", ")}, not "${asText}"`);
+            break;
+          }
+          case "score": {
+            score = asText ? scoreFromScript(asText) : undefined;
+            scoreLine = f.line;
+            if (!score) errors.push(`Line ${f.line}: score is one of ${SCORES.map((s) => s.id).join(", ")}, not "${asText}"`);
             break;
           }
           case "time":
@@ -279,6 +301,17 @@ export function parseScript(text: string, prevQuestions: Question[]): ParseResul
       }
       const extras = formatOptions(options);
       if (extras) question.options = extras;
+
+      const askId = ask ?? preset?.mode.ask ?? "pick";
+      const scores = askInfo(askId).scores;
+      let scoreId = score ?? (ask && !preset ? scores[0] : preset?.mode.score) ?? scores[0];
+      if (!scores.includes(scoreId)) {
+        if (score) errors.push(`Line ${scoreLine}: ${askId} can't score ${score}: it takes ${scores.join(", ")}`);
+        scoreId = scores[0];
+      }
+      const mode = { ask: askId, score: scoreId };
+      question.mode = modeKey(mode);
+      question.type = typeIdOf(mode);
 
       questions.push(question);
       qRefMap.set(qRef, question);

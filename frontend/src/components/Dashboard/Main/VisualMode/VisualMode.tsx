@@ -8,7 +8,7 @@ import { actionStartTimes } from "../../../../utils/timecode";
 import { useFlip } from "../../../../hooks/useFlip";
 import { useQuiz } from "../../../../contexts/QuizContext";
 import { Glyph } from "../../../common/Glyph";
-import { maxPoints, typeLabel } from "../../../../utils/questionInfo";
+import { maxPoints, typeIcon, typeLabel } from "../../../../utils/questionInfo";
 import { changed, describe, settingsAt } from "../../../../utils/settings";
 import { AddTypeButton } from "./AddTypeButton";
 import { DropSkeleton } from "./DropSkeleton";
@@ -314,8 +314,8 @@ export const VisualMode: React.FC<VisualModeProps> = ({
               <div className="jqzz-plate">
                 <div className="jqzz-plate-top">
                   <span className="jqzz-type-pill">
-                    <Glyph name={q.type || "PREWRITTEN_SINGLE"} size={12} />
-                    {typeLabel(q.type)}
+                    <Glyph name={typeIcon(q)} size={12} />
+                    {typeLabel(q)}
                   </span>
                   {q.imageUrl && (
                     <span className="jqzz-type-pill ghost" title={q.imageUrl}>

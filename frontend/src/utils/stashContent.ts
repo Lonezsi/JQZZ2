@@ -2,7 +2,7 @@ import type { Action, Question } from "../types";
 import type { StashContent, StashItem, TypeShape } from "../types/stash";
 import { SNIPPETS } from "../constants/snippets";
 import { generateId } from "./idGenerator";
-import { typeInfo } from "./questionTypes";
+import { describe, modeOf } from "./questionTypes";
 
 export function readContent(item: Pick<StashItem, "payload">): StashContent {
   try {
@@ -28,6 +28,7 @@ export function contentToActions(content: StashContent): Action[] {
       elaborationText: q.elaborationText ?? undefined,
       elaborationImageUrl: q.elaborationImageUrl ?? undefined,
       ...(q.options ? { options: q.options } : {}),
+      ...(q.mode ? { mode: q.mode } : {}),
       answers: q.answers.map((a) => ({
         id: generateId(),
         text: a.text ?? "",
@@ -52,6 +53,7 @@ export function readType(item: Pick<StashItem, "payload" | "title">): TypeShape 
     return {
       name: t.name ?? item.title ?? "question type",
       questionType: t.questionType ?? "PREWRITTEN_SINGLE",
+      ...(t.mode ? { mode: t.mode } : {}),
       answers: t.answers ?? [],
       steps: t.steps ?? [],
     };
@@ -67,13 +69,14 @@ export function typeToActions(t: TypeShape): Action[] {
     text: "New Question",
     imageUrl: "",
     type: t.questionType,
+    mode: t.mode ?? null,
     elaborationText: "",
     answers: t.answers.map((a) => ({
       id: generateId(),
       text: a.text ?? "",
       value: a.value ?? 0,
       // pairs need their other half, even an empty one, for the editor to offer it
-      ...(typeInfo(t.questionType).answers?.match ? { match: a.match ?? "" } : {}),
+      ...(describe(modeOf({ type: t.questionType, mode: t.mode })).answers?.match ? { match: a.match ?? "" } : {}),
     })),
   };
   return t.steps.map((s) => ({

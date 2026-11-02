@@ -66,7 +66,7 @@ class QuizPersistenceTest {
     void newTypesKeepTheirOptionsAndPairs() throws Exception {
         long quizId = createQuiz();
         String match = """
-            {"id": 21, "text": "Element to symbol", "type": "MATCH", "options": "unit=m%20s, min=0",
+            {"id": 21, "text": "Element to symbol", "type": "MATCH", "mode": "match/right", "options": "unit=m%20s, min=0",
              "answers": [{"id": 22, "text": "Gold", "match": "Au", "value": 100},
                          {"id": 23, "text": "Iron", "match": "Fe", "value": 100}]}
             """;
@@ -78,6 +78,7 @@ class QuizPersistenceTest {
         String saved = send("GET", "/quizzes/" + quizId, null).body();
         assertThat(JsonPath.<String>read(saved, "$.actions[0].question.type")).isEqualTo("MATCH");
         assertThat(JsonPath.<String>read(saved, "$.actions[0].question.options")).isEqualTo("unit=m%20s, min=0");
+        assertThat(JsonPath.<String>read(saved, "$.actions[0].question.mode")).isEqualTo("match/right");
         assertThat(JsonPath.<List<String>>read(saved, "$.actions[0].question.answers[*].match"))
             .containsExactly("Au", "Fe");
     }

@@ -9,7 +9,7 @@ import { PlayFrame } from "../Play/PlayCommon";
 import { BackButton } from "../common/BackButton";
 import { Glyph } from "../common/Glyph";
 import { plural, when } from "../../utils/format";
-import { typeLabel } from "../../utils/questionInfo";
+import { typeIcon, typeLabel } from "../../utils/questionInfo";
 
 /**
  * Games as a timeline, newest on top: where you (or whoever's profile it is)
@@ -167,14 +167,14 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
             <li key={q.key} className="jqzz-answer-card" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
               <div className="jqzz-answer-head">
                 <span className="jqzz-answer-tile" aria-hidden="true">
-                  <Glyph name={q.type} size={16} />
+                  <Glyph name={typeIcon(q)} size={16} />
                 </span>
                 <span className="jqzz-keep-text">
                   <span className="jqzz-answer-q">
                     <span className="jqzz-annot">{i + 1}</span> {q.text || "untitled question"}
                   </span>
                   <span className="jqzz-annot">
-                    {typeLabel(q.type)}
+                    {typeLabel(q)}
                     {gain ? <b className="jqzz-board-gain"> +{gain}</b> : null}
                   </span>
                 </span>
@@ -197,7 +197,7 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
                       stashService.asType(
                         me,
                         { recordId: record.id, questionKey: q.key },
-                        `${typeLabel(q.type)}: ${q.text || "question"}`.slice(0, 60),
+                        `${typeLabel(q)}: ${q.text || "question"}`.slice(0, 60),
                       )
                     }
                   />

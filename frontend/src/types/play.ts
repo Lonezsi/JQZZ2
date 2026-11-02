@@ -36,6 +36,9 @@ export interface GameQuestion {
   answers: GameAnswer[];
   elaborationText?: string | null;
   elaborationImageUrl?: string | null;
+  /** what players do and how it scores (docs/script.md); older servers only send type */
+  ask?: string;
+  score?: string;
   /** answering sooner scores more */
   speed?: boolean;
   /** NUMBER: what it's counted in, and the ends of the slider */
@@ -110,6 +113,8 @@ export interface GameReveal {
   pairedRight?: Record<string, number>;
   /** NUMBER: the right number, everyone's guess, who came closest */
   right?: number | null;
+  /** NUMBER scored by the crowd: right is the room's average */
+  average?: boolean;
   numbers?: Record<string, number>;
   closest?: string[];
   /** TELEPHONE */

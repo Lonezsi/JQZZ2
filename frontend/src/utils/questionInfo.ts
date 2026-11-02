@@ -1,33 +1,36 @@
 import type { Question } from "../types";
-import { QUESTION_TYPES_INFO, typeInfo } from "./questionTypes";
+import { describeQuestion, modeOf } from "./questionTypes";
 
-/** Plain names for question types, as players would describe them (from the registry). */
-export const QUESTION_TYPE_LABEL: Record<string, string> = Object.fromEntries(
-  QUESTION_TYPES_INFO.map((t) => [t.id, t.label]),
-);
+type QuestionLike = Parameters<typeof describeQuestion>[0];
 
-export const typeLabel = (type: string | undefined) =>
-  type ? typeInfo(type).label : "question";
+/**
+ * What a question is, in the words players would use: a preset's name, or
+ * its ask and score. Takes the question, or a stored type name on its own.
+ */
+export const typeLabel = (q: QuestionLike | string | undefined) =>
+  q == null ? "question" : describeQuestion(typeof q === "string" ? { type: q } : q).label;
+
+/** its glyph, the same way */
+export const typeIcon = (q: QuestionLike | string | undefined) =>
+  describeQuestion(typeof q === "string" ? { type: q } : (q ?? null)).icon;
 
 /** Most points one player can get from this question, or null when it isn't scored by answers. */
 export function maxPoints(q: Question | null | undefined): number | null {
-  if (!q || !q.answers?.length) return null;
-  const values = q.answers.map((a) => a.value || 0);
+  if (!q) return null;
+  const { ask, score } = modeOf(q);
+  const values = (q.answers ?? []).map((a) => a.value || 0);
   const best = Math.max(0, ...values);
   const sum = values.filter((v) => v > 0).reduce((s, v) => s + v, 0);
-  switch (q.type) {
-    case "PREWRITTEN_SINGLE":
-    case "TYPED":
-    case "NUMBER":
-    case "POLL":
-      return best;
-    case "PREWRITTEN_MULTIPLE":
-    case "ORDER":
-    case "MATCH":
-      return sum;
-    default:
-      return null;
+  if (score === "right") {
+    if (!values.length) return null;
+    return ask === "pick-many" || ask === "order" || ask === "match" ? sum : best;
   }
+  if (score === "crowd") {
+    if (ask === "number") return values.length ? values[0] : 1000;
+    if (ask === "rank") return (q.answers?.length ?? 0) * 50 || null;
+    return values.length ? best : null;
+  }
+  return null;
 }
 
 /** Answers that score, i.e. the ones a player wants to pick. */

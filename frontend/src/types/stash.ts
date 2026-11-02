@@ -8,6 +8,8 @@ export type StashKind = "QUIZ" | "QUESTION" | "IMAGE" | "TYPE";
 export interface TypeShape {
   name: string;
   questionType: string;
+  /** what players do and how it scores, "draw/votes"; without it, questionType says */
+  mode?: string;
   answers: { text: string; value: number; match?: string }[];
   steps: { phase: Phase; time: number; preview: string | null }[];
 }
@@ -40,8 +42,10 @@ export interface StashedQuestion {
   elaborationText?: string | null;
   elaborationImageUrl?: string | null;
   answers: { text: string; value: number; imageUrl?: string | null; match?: string | null }[];
-  /** what the type needs besides answers, as the script writes it */
+  /** what the question needs besides answers, as the script writes it */
   options?: string | null;
+  /** what players do and how it scores, "draw/votes" */
+  mode?: string | null;
 }
 
 /** A quiz, or a single question with its own steps; picture refs are absolute. */

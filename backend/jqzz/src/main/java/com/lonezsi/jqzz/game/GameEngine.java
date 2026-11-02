@@ -607,6 +607,7 @@ public class GameEngine {
                 qm.put("key", q.id());
                 qm.put("text", q.text());
                 qm.put("type", Game.type(q).name());
+                qm.put("mode", q.mode().key());
                 qm.put("imageUrl", absolute(q.imageUrl(), game.authorId));
                 qm.put("elaborationText", q.elaborationText());
                 qm.put("elaborationImageUrl", absolute(q.elaborationImageUrl(), game.authorId));
@@ -790,10 +791,10 @@ public class GameEngine {
             answers.add(new Game.AnswerSnap(id, ans.getText(), ans.getImageUrl(), ans.getValue(), ans.getMatch()));
         }
         // an order question's answers are the right order: the game shuffles what it shows instead
-        if (settings.mix && q.getType() != QuestionType.ORDER) Collections.shuffle(answers, random);
+        if (settings.mix && Mode.parse(q.getMode(), q.getType()).ask() != Mode.Ask.ORDER) Collections.shuffle(answers, random);
         return new Game.QuestionSnap(q.getId(), q.getText(), q.getImageUrl(), q.getType(),
                 q.getElaborationText(), q.getElaborationImageUrl(), answers, settings.weight(),
-                parseOptions(q.getOptions()), settings.speed);
+                parseOptions(q.getOptions()), settings.speed, Mode.parse(q.getMode(), q.getType()));
     }
 
     /** "unit=m, min=0" (values URL-encoded, as the script writes them) -> {unit: m, min: 0} */

@@ -1,9 +1,9 @@
-# Hive mind · JQzz Script v2
+# Hive mind · JQzz Script v3
 # about: No right answers, only popular ones. You score by thinking like everyone else.
 # players: 3+
 
 NewQuestion Q1 (
-  type: "poll",
+  ask: "pick", score: "crowd",
   prompt: "The best pizza topping",
   answers: [
     { text: "Mushrooms", value: 100 },
@@ -13,7 +13,7 @@ NewQuestion Q1 (
   ],
 )
 NewQuestion Q2 (
-  type: "poll",
+  ask: "pick", score: "crowd",
   prompt: "Morning person or night owl?",
   answers: [
     { text: "Morning person", value: 100 },
@@ -21,7 +21,7 @@ NewQuestion Q2 (
   ],
 )
 NewQuestion Q3 (
-  type: "poll",
+  ask: "pick", score: "crowd",
   prompt: "Cats or dogs?",
   answers: [
     { text: "Cats", value: 100 },
@@ -30,7 +30,7 @@ NewQuestion Q3 (
   ],
 )
 NewQuestion Q4 (
-  type: "poll",
+  ask: "pick", score: "crowd",
   prompt: "The best season",
   answers: [
     { text: "Spring", value: 100 },
@@ -40,7 +40,7 @@ NewQuestion Q4 (
   ],
 )
 NewQuestion Q5 (
-  type: "poll",
+  ask: "pick", score: "crowd",
   prompt: "How do you eat a KitKat?",
   answers: [
     { text: "Snap it into fingers", value: 100 },
@@ -49,12 +49,31 @@ NewQuestion Q5 (
   ],
 )
 NewQuestion Q6 (
-  type: "poll",
+  ask: "rank", score: "crowd",
+  prompt: "Rank the snacks",
+  answers: [
+    { text: "Crisps", value: 0 },
+    { text: "Popcorn", value: 0 },
+    { text: "Chocolate", value: 0 },
+    { text: "Fruit", value: 0 },
+    { text: "Nachos", value: 0 },
+  ],
+)
+NewQuestion Q7 (
+  ask: "pick", score: "crowd",
   prompt: "Toilet paper: over or under?",
   answers: [
     { text: "Over", value: 200 },
     { text: "Under", value: 200 },
     { text: "It's paper, I don't care", value: 200 },
+  ],
+)
+NewQuestion Q8 (
+  ask: "pick", score: "none",
+  prompt: "No points, just curious: first time playing?",
+  answers: [
+    { text: "First time", value: 0 },
+    { text: "Played before", value: 0 },
   ],
 )
 
@@ -69,9 +88,14 @@ ShowQuestion(Q4, time: 15)
 ShowAnswers(Q4, time: 8)
 ShowQuestion(Q5, time: 15)
 ShowAnswers(Q5, time: 8)
+ShowWaiting(Q6, time: 5)
+ShowQuestion(Q6, time: 45)
+ShowResult(Q6, time: 12)
 ---
 the last one is worth double, and it's the one that ends friendships
-ShowWaiting(Q6, time: 5)
-ShowQuestion(Q6, time: 15)
-ShowAnswers(Q6, time: 10)
-ShowResult(Q6, time: 12)
+ShowWaiting(Q7, time: 5)
+ShowQuestion(Q7, time: 15)
+ShowAnswers(Q7, time: 10)
+ShowResult(Q7, time: 12)
+ShowQuestion(Q8, time: 12)
+ShowAnswers(Q8, time: 8)

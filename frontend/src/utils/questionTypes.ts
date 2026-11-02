@@ -1,53 +1,211 @@
 /*
- * Every question type, in one place: its name in the script, the names older
- * scripts used, what it's called on screen, and what its answers and extra
- * fields mean. The parser, the writer, the editor and the play screens all
- * read it from here. The language itself is described in docs/script.md.
+ * What a question can be, in one place. A question is two choices (Script
+ * v3, docs/script.md): what players do, its `ask`, and how that scores, its
+ * `score`. Any pair an ask allows works. The handful of pairs people reach
+ * for most have names, the presets; they're what older scripts and the
+ * server's stored `type` call them. The parser, the writer, the editor and
+ * the play screens all read it from here.
  */
 
-/** How a type is played: what the phone shows while answering. */
-export type Family =
-  | "choice" // pick one option
-  | "multi" // pick any number of options
-  | "typed" // type the answer
-  | "order" // put the items in order
-  | "number" // pick a number
-  | "match" // pair the items up
-  | "poll" // pick one, scored by the crowd
-  | "tier" // rank items into tiers
-  | "write" // write something
-  | "draw" // draw something
-  | "telephone"; // write, draw, describe, in turns
+/** what players do */
+export type Ask = "pick" | "pick-many" | "type-in" | "order" | "number" | "match" | "rank" | "write" | "draw" | "chain";
+/** how it scores */
+export type Score = "right" | "crowd" | "votes" | "authors" | "secret" | "knockout" | "none";
 
-/** Extra fields a question of a type can carry, besides prompt and answers. */
+export interface Mode {
+  ask: Ask;
+  score: Score;
+}
+
+/** Extra fields a question can carry, besides prompt and answers. */
 export type QuestionField = "unit" | "min" | "max" | "rounds";
 
-export interface QuestionTypeInfo {
-  /** what the server stores */
-  id: string;
+/** what a question's answers are, for the editor's columns; null: it has none */
+export type AnswerShape = null | {
+  /** the text column */
+  text: string;
+  /** the points column; null when points don't come from the answers */
+  value: string | null;
+  /** the second text column, for pairs */
+  match?: string;
+  /** points a new answer starts with */
+  starts: number;
+};
+
+export interface AskInfo {
+  id: Ask;
+  label: string;
+  /** a Glyph name */
+  icon: string;
+  /** one line on what players do */
+  blurb: string;
+  fields: QuestionField[];
+  /** the scores it can take; the first is what it gets when none is said */
+  scores: Score[];
+}
+
+export interface ScoreInfo {
+  id: Score;
+  label: string;
+  icon: string;
+  blurb: string;
+  /** players vote, guess or battle during the reveal */
+  judged: boolean;
+}
+
+export const ASKS: AskInfo[] = [
+  { id: "pick", label: "pick one", icon: "PREWRITTEN_SINGLE", blurb: "pick one of the options", fields: [], scores: ["right", "crowd", "none"] },
+  { id: "pick-many", label: "pick any", icon: "PREWRITTEN_MULTIPLE", blurb: "pick any number of the options", fields: [], scores: ["right", "none"] },
+  { id: "type-in", label: "type it", icon: "TYPED", blurb: "type the answer: spelling is forgiven a little", fields: [], scores: ["right"] },
+  { id: "order", label: "put in order", icon: "ORDER", blurb: "put the items in the right order", fields: [], scores: ["right"] },
+  { id: "number", label: "guess a number", icon: "NUMBER", blurb: "guess the number: the closer, the more", fields: ["unit", "min", "max"], scores: ["right", "crowd"] },
+  { id: "match", label: "match pairs", icon: "MATCH", blurb: "pair each one with its other half", fields: [], scores: ["right"] },
+  { id: "rank", label: "rank them", icon: "TIERLIST", blurb: "rank everything from S to D", fields: [], scores: ["crowd", "none"] },
+  { id: "write", label: "write", icon: "USER_GENERATED", blurb: "everyone writes something", fields: [], scores: ["votes", "authors", "secret", "knockout", "none"] },
+  { id: "draw", label: "draw", icon: "DRAW", blurb: "everyone draws something", fields: [], scores: ["votes", "authors", "secret", "knockout", "none"] },
+  { id: "chain", label: "telephone chain", icon: "TELEPHONE", blurb: "write, draw what you're handed, describe that, and on", fields: ["rounds"], scores: ["none"] },
+];
+
+export const SCORES: ScoreInfo[] = [
+  { id: "right", label: "right answers", icon: "ANSWER", blurb: "whoever gets it right scores", judged: false },
+  { id: "crowd", label: "the crowd", icon: "POLL", blurb: "whoever sides with the most scores", judged: false },
+  { id: "votes", label: "votes", icon: "USER_GENERATED_VOTE", blurb: "everyone votes for the best one", judged: true },
+  { id: "authors", label: "who made it", icon: "USER_GENERATED_IDENTIFY", blurb: "everyone guesses who made what", judged: true },
+  { id: "secret", label: "secret words", icon: "SECRET", blurb: "everyone gets a secret word; the others guess it", judged: true },
+  { id: "knockout", label: "knockout", icon: "KNOCKOUT_BATTLE", blurb: "they battle two at a time until one is left", judged: true },
+  { id: "none", label: "no points", icon: "UNSCORED", blurb: "nobody scores: it's for the show", judged: false },
+];
+
+/**
+ * A named pair. `type` is the server's stored name for it, where it has
+ * one: questions keep it so older screens and records still say what they are.
+ */
+export interface Preset {
   /** its name in the script */
   script: string;
   /** names older scripts used, still read */
   aliases: string[];
-  /** what people call it */
+  type?: string;
+  mode: Mode;
   label: string;
-  /** a Glyph name */
   icon: string;
-  family: Family;
-  /** one line on how it plays */
   blurb: string;
-  /** what its answers are, for the editor's columns; null: it has none */
-  answers: null | {
-    /** the text column */
-    text: string;
-    /** the points column */
-    value: string;
-    /** the second text column, for pairs */
-    match?: string;
-    /** points a new answer starts with */
-    starts: number;
-  };
-  /** extra fields it reads */
+}
+
+const m = (ask: Ask, score: Score): Mode => ({ ask, score });
+
+export const PRESETS: Preset[] = [
+  { script: "single", aliases: ["prewritten-single"], type: "PREWRITTEN_SINGLE", mode: m("pick", "right"), label: "single choice", icon: "PREWRITTEN_SINGLE", blurb: "pick one" },
+  { script: "multiple", aliases: ["prewritten-multiple"], type: "PREWRITTEN_MULTIPLE", mode: m("pick-many", "right"), label: "multiple choice", icon: "PREWRITTEN_MULTIPLE", blurb: "pick any that are right" },
+  { script: "typed", aliases: ["type-answer", "type-it"], type: "TYPED", mode: m("type-in", "right"), label: "type it", icon: "TYPED", blurb: "type the answer: spelling is forgiven a little" },
+  { script: "order", aliases: ["puzzle", "sort"], type: "ORDER", mode: m("order", "right"), label: "put in order", icon: "ORDER", blurb: "put the items in the right order" },
+  { script: "number", aliases: ["estimate", "slider"], type: "NUMBER", mode: m("number", "right"), label: "estimate", icon: "NUMBER", blurb: "guess the number: the closer, the more" },
+  { script: "match", aliases: ["pairs"], type: "MATCH", mode: m("match", "right"), label: "match pairs", icon: "MATCH", blurb: "pair each one with its other half" },
+  { script: "poll", aliases: ["hive-mind", "crowd"], type: "POLL", mode: m("pick", "crowd"), label: "poll", icon: "POLL", blurb: "everyone votes: points for siding with the most" },
+  { script: "show-of-hands", aliases: [], mode: m("pick", "none"), label: "show of hands", icon: "POLL", blurb: "everyone picks, nobody scores: just to see the room" },
+  { script: "tierlist", aliases: ["tier-list"], type: "TIERLIST", mode: m("rank", "crowd"), label: "tier list", icon: "TIERLIST", blurb: "rank everything from S to D" },
+  { script: "crowd-guess", aliases: ["wisdom-of-the-crowd"], mode: m("number", "crowd"), label: "guess the crowd", icon: "NUMBER", blurb: "guess a number: closest to the room's average wins" },
+  { script: "write", aliases: ["user-generated"], type: "USER_GENERATED", mode: m("write", "none"), label: "players write", icon: "USER_GENERATED", blurb: "everyone writes; it all goes on a wall" },
+  { script: "write-vote", aliases: ["user-generated-vote", "quip"], type: "USER_GENERATED_VOTE", mode: m("write", "votes"), label: "write + vote", icon: "USER_GENERATED_VOTE", blurb: "write the best answer, then vote for someone else's" },
+  { script: "who-wrote", aliases: ["user-generated-identify"], type: "USER_GENERATED_IDENTIFY", mode: m("write", "authors"), label: "who wrote it", icon: "USER_GENERATED_IDENTIFY", blurb: "write something, then guess who wrote what" },
+  { script: "taboo", aliases: ["say-it-without-saying-it"], mode: m("write", "secret"), label: "say it without saying it", icon: "SECRET", blurb: "describe your secret word without saying it; the others guess" },
+  { script: "knockout", aliases: ["knockout-battle"], type: "KNOCKOUT_BATTLE", mode: m("write", "knockout"), label: "knockout", icon: "KNOCKOUT_BATTLE", blurb: "write, then the answers battle it out" },
+  { script: "draw", aliases: ["drawing"], type: "DRAW", mode: m("draw", "none"), label: "draw it", icon: "DRAW", blurb: "everyone draws; it all goes on a wall" },
+  { script: "draw-vote", aliases: [], type: "DRAW_VOTE", mode: m("draw", "votes"), label: "draw + vote", icon: "DRAW_VOTE", blurb: "draw the prompt, then vote for the best drawing" },
+  { script: "who-drew", aliases: [], mode: m("draw", "authors"), label: "who drew it", icon: "USER_GENERATED_IDENTIFY", blurb: "everyone draws, then guesses who drew what" },
+  { script: "draw-guess", aliases: ["pictionary"], type: "DRAW_GUESS", mode: m("draw", "secret"), label: "draw + guess", icon: "DRAW_GUESS", blurb: "everyone draws a secret word, then guesses the others'" },
+  { script: "draw-knockout", aliases: ["draw-battle"], type: "DRAW_BATTLE", mode: m("draw", "knockout"), label: "draw knockout", icon: "DRAW_BATTLE", blurb: "draw, then the drawings battle it out" },
+  { script: "telephone", aliases: ["gartic"], type: "TELEPHONE", mode: m("chain", "none"), label: "telephone", icon: "TELEPHONE", blurb: "write, then draw what you're handed, then describe the drawing, and on" },
+];
+
+const ASK = new Map(ASKS.map((a) => [a.id, a]));
+const SCORE = new Map(SCORES.map((s) => [s.id, s]));
+export const askInfo = (id: string | null | undefined): AskInfo => ASK.get(id as Ask) ?? ASKS[0];
+export const scoreInfo = (id: string | null | undefined): ScoreInfo => SCORE.get(id as Score) ?? SCORES[0];
+
+/** "draw/votes": how a mode is stored and sent */
+export const modeKey = (mode: Mode) => `${mode.ask}/${mode.score}`;
+const sameMode = (a: Mode, b: Mode) => a.ask === b.ask && a.score === b.score;
+
+/** a pair the ask allows; a score it doesn't take becomes the one it takes first */
+export function fixMode(ask: string | null | undefined, score?: string | null): Mode {
+  const a = askInfo(ask);
+  return { ask: a.id, score: a.scores.includes(score as Score) ? (score as Score) : a.scores[0] };
+}
+
+export function parseMode(text: string | null | undefined): Mode | null {
+  if (!text) return null;
+  const [ask, score] = text.split("/");
+  if (!ASK.has(ask as Ask)) return null;
+  return fixMode(ask, score);
+}
+
+const BY_TYPE = new Map(PRESETS.filter((p) => p.type).map((p) => [p.type!, p]));
+
+/**
+ * The mode of a question as the editor, the server or a game view has it:
+ * its ask and score when it says them, else what its stored type stands for.
+ */
+export function modeOf(q: { type?: string | null; mode?: string | null; ask?: string | null; score?: string | null } | null | undefined): Mode {
+  if (!q) return m("pick", "right");
+  if (q.ask) return fixMode(q.ask, q.score);
+  return parseMode(q.mode) ?? BY_TYPE.get(q.type ?? "")?.mode ?? m("pick", "right");
+}
+
+/** the preset that is exactly this pair, if any */
+export const presetOf = (mode: Mode): Preset | undefined => PRESETS.find((p) => sameMode(p.mode, mode));
+
+/**
+ * The server's stored type for a mode: its preset's, or for a pair without
+ * one, the type nearest it (same ask). The server plays the mode either way.
+ */
+export function typeIdOf(mode: Mode): string {
+  return (
+    presetOf(mode)?.type ??
+    PRESETS.find((p) => p.type && p.mode.ask === mode.ask)?.type ??
+    "PREWRITTEN_SINGLE"
+  );
+}
+
+/** what a question of a mode has for answers */
+export function answerShape(mode: Mode): AnswerShape {
+  const { ask, score } = mode;
+  switch (ask) {
+    case "pick":
+    case "pick-many":
+      return {
+        text: "option",
+        value: score === "none" ? null : score === "crowd" ? "points if most picked" : "points",
+        starts: score === "crowd" ? 100 : 0,
+      };
+    case "type-in":
+      return { text: "accepted answer", value: "points", starts: 100 };
+    case "order":
+      return { text: "item, in the right order", value: "points", starts: 50 };
+    case "number":
+      return score === "right" ? { text: "the right number", value: "points if spot on", starts: 1000 } : null;
+    case "match":
+      return { text: "left", match: "right", value: "points", starts: 100 };
+    case "rank":
+      return { text: "item", value: null, starts: 0 };
+    case "write":
+    case "draw":
+      return score === "secret" ? { text: "secret word", value: "points per right guess", starts: 100 } : null;
+    default:
+      return null;
+  }
+}
+
+export interface Described {
+  mode: Mode;
+  ask: AskInfo;
+  score: ScoreInfo;
+  /** its preset, when it is one */
+  preset?: Preset;
+  label: string;
+  icon: string;
+  blurb: string;
+  answers: AnswerShape;
   fields: QuestionField[];
   /** players vote, guess or battle during the reveal */
   judged: boolean;
@@ -55,293 +213,81 @@ export interface QuestionTypeInfo {
   speed: boolean;
 }
 
-export const QUESTION_TYPES_INFO: QuestionTypeInfo[] = [
-  {
-    id: "PREWRITTEN_SINGLE",
-    script: "single",
-    aliases: ["prewritten-single"],
-    label: "single choice",
-    icon: "PREWRITTEN_SINGLE",
-    family: "choice",
-    blurb: "pick one",
-    answers: { text: "option", value: "points", starts: 0 },
-    fields: [],
-    judged: false,
-    speed: true,
-  },
-  {
-    id: "PREWRITTEN_MULTIPLE",
-    script: "multiple",
-    aliases: ["prewritten-multiple"],
-    label: "multiple choice",
-    icon: "PREWRITTEN_MULTIPLE",
-    family: "multi",
-    blurb: "pick any that are right",
-    answers: { text: "option", value: "points", starts: 0 },
-    fields: [],
-    judged: false,
-    speed: true,
-  },
-  {
-    id: "TYPED",
-    script: "typed",
-    aliases: ["type-answer", "type-it"],
-    label: "type it",
-    icon: "TYPED",
-    family: "typed",
-    blurb: "type the answer: spelling is forgiven a little",
-    answers: { text: "accepted answer", value: "points", starts: 100 },
-    fields: [],
-    judged: false,
-    speed: true,
-  },
-  {
-    id: "ORDER",
-    script: "order",
-    aliases: ["puzzle", "sort"],
-    label: "put in order",
-    icon: "ORDER",
-    family: "order",
-    blurb: "drag the items into the right order",
-    answers: { text: "item, in the right order", value: "points", starts: 50 },
-    fields: [],
-    judged: false,
-    speed: true,
-  },
-  {
-    id: "NUMBER",
-    script: "number",
-    aliases: ["estimate", "slider"],
-    label: "estimate",
-    icon: "NUMBER",
-    family: "number",
-    blurb: "guess the number: the closer, the more",
-    answers: { text: "the right number", value: "points if spot on", starts: 1000 },
-    fields: ["unit", "min", "max"],
-    judged: false,
-    speed: true,
-  },
-  {
-    id: "MATCH",
-    script: "match",
-    aliases: ["pairs"],
-    label: "match pairs",
-    icon: "MATCH",
-    family: "match",
-    blurb: "pair each one with its other half",
-    answers: { text: "left", match: "right", value: "points", starts: 100 },
-    fields: [],
-    judged: false,
-    speed: true,
-  },
-  {
-    id: "POLL",
-    script: "poll",
-    aliases: ["hive-mind", "crowd"],
-    label: "poll",
-    icon: "POLL",
-    family: "poll",
-    blurb: "everyone votes: points for siding with the most",
-    answers: { text: "option", value: "points if most picked", starts: 100 },
-    fields: [],
-    judged: false,
-    speed: false,
-  },
-  {
-    id: "TIERLIST",
-    script: "tierlist",
-    aliases: ["tier-list"],
-    label: "tier list",
-    icon: "TIERLIST",
-    family: "tier",
-    blurb: "rank everything from S to D",
-    answers: { text: "item", value: "points", starts: 0 },
-    fields: [],
-    judged: false,
-    speed: false,
-  },
-  {
-    id: "USER_GENERATED",
-    script: "write",
-    aliases: ["user-generated"],
-    label: "players write",
-    icon: "USER_GENERATED",
-    family: "write",
-    blurb: "everyone writes; it all goes on a wall",
-    answers: null,
-    fields: [],
-    judged: false,
-    speed: false,
-  },
-  {
-    id: "USER_GENERATED_VOTE",
-    script: "write-vote",
-    aliases: ["user-generated-vote"],
-    label: "write + vote",
-    icon: "USER_GENERATED_VOTE",
-    family: "write",
-    blurb: "write the best answer, then vote for someone else's",
-    answers: null,
-    fields: [],
-    judged: true,
-    speed: false,
-  },
-  {
-    id: "USER_GENERATED_IDENTIFY",
-    script: "who-wrote",
-    aliases: ["user-generated-identify"],
-    label: "who wrote it",
-    icon: "USER_GENERATED_IDENTIFY",
-    family: "write",
-    blurb: "write something, then guess who wrote what",
-    answers: null,
-    fields: [],
-    judged: true,
-    speed: false,
-  },
-  {
-    id: "KNOCKOUT_BATTLE",
-    script: "knockout",
-    aliases: ["knockout-battle"],
-    label: "knockout",
-    icon: "KNOCKOUT_BATTLE",
-    family: "write",
-    blurb: "write, then the answers battle it out",
-    answers: null,
-    fields: [],
-    judged: true,
-    speed: false,
-  },
-  {
-    id: "DRAW",
-    script: "draw",
-    aliases: ["drawing"],
-    label: "draw it",
-    icon: "DRAW",
-    family: "draw",
-    blurb: "everyone draws; it all goes on a wall",
-    answers: null,
-    fields: [],
-    judged: false,
-    speed: false,
-  },
-  {
-    id: "DRAW_VOTE",
-    script: "draw-vote",
-    aliases: [],
-    label: "draw + vote",
-    icon: "DRAW_VOTE",
-    family: "draw",
-    blurb: "draw the prompt, then vote for the best drawing",
-    answers: null,
-    fields: [],
-    judged: true,
-    speed: false,
-  },
-  {
-    id: "DRAW_GUESS",
-    script: "draw-guess",
-    aliases: ["pictionary"],
-    label: "draw + guess",
-    icon: "DRAW_GUESS",
-    family: "draw",
-    blurb: "everyone draws a secret word, then guesses the others'",
-    answers: { text: "secret word", value: "points per right guess", starts: 100 },
-    fields: [],
-    judged: true,
-    speed: false,
-  },
-  {
-    id: "DRAW_BATTLE",
-    script: "draw-knockout",
-    aliases: ["draw-battle"],
-    label: "draw knockout",
-    icon: "DRAW_BATTLE",
-    family: "draw",
-    blurb: "draw, then the drawings battle it out",
-    answers: null,
-    fields: [],
-    judged: true,
-    speed: false,
-  },
-  {
-    id: "TELEPHONE",
-    script: "telephone",
-    aliases: ["gartic"],
-    label: "telephone",
-    icon: "TELEPHONE",
-    family: "telephone",
-    blurb: "write, then draw what you're handed, then describe the drawing, and on",
-    answers: null,
-    fields: ["rounds"],
-    judged: false,
-    speed: false,
-  },
-];
+const SPEEDY: Ask[] = ["pick", "pick-many", "type-in", "order", "number", "match"];
 
-const BY_ID = new Map(QUESTION_TYPES_INFO.map((t) => [t.id, t]));
-const BY_NAME = new Map<string, QuestionTypeInfo>();
-for (const t of QUESTION_TYPES_INFO) {
-  for (const n of [t.script, ...t.aliases, t.id.toLowerCase().replace(/_/g, "-")]) BY_NAME.set(n, t);
+/** Everything about a mode, for the screens: what to call it, what to show, what it needs. */
+export function describe(mode: Mode): Described {
+  const ask = askInfo(mode.ask);
+  const score = scoreInfo(mode.score);
+  const preset = presetOf(mode);
+  return {
+    mode,
+    ask,
+    score,
+    preset,
+    label: preset?.label ?? `${ask.label} · ${score.label}`,
+    icon: preset?.icon ?? ask.icon,
+    blurb: preset?.blurb ?? `${ask.blurb}; ${score.blurb}`,
+    answers: answerShape(mode),
+    fields: ask.fields,
+    judged: score.judged,
+    speed: score.id === "right" && SPEEDY.includes(ask.id),
+  };
 }
 
-/** The type with this server id, or single choice for anything unknown. */
-export const typeInfo = (id: string | undefined | null): QuestionTypeInfo => BY_ID.get(id ?? "") ?? QUESTION_TYPES_INFO[0];
+/** a question as the screens see it */
+export const describeQuestion = (q: Parameters<typeof modeOf>[0]) => describe(modeOf(q));
 
-/** The type a script calls this, by its name or an older one; undefined if there's none. */
-export function typeFromScript(name: string): QuestionTypeInfo | undefined {
-  return BY_NAME.get(name.trim().toLowerCase().replace(/[_\s]+/g, "-"));
+// ─── names in the script ──────────────────────────────────────────────
+
+const norm = (name: string) => name.trim().toLowerCase().replace(/[_\s]+/g, "-");
+const BY_PRESET_NAME = new Map<string, Preset>();
+for (const p of PRESETS) {
+  for (const n of [p.script, ...p.aliases, ...(p.type ? [p.type.toLowerCase().replace(/_/g, "-")] : [])]) BY_PRESET_NAME.set(n, p);
 }
 
-/** Server ids of every type, in the order the editor offers them. */
-export const QUESTION_TYPE_IDS = QUESTION_TYPES_INFO.map((t) => t.id);
+/** a `type:` shorthand, by its name or an older one */
+export const presetFromScript = (name: string): Preset | undefined => BY_PRESET_NAME.get(norm(name));
+export const askFromScript = (name: string): Ask | undefined => (ASK.has(norm(name) as Ask) ? (norm(name) as Ask) : undefined);
+export const scoreFromScript = (name: string): Score | undefined => (SCORE.has(norm(name) as Score) ? (norm(name) as Score) : undefined);
+
+// ─── new questions ────────────────────────────────────────────────────
 
 type Step = { phase: "WAITING" | "QUESTION" | "ANSWER" | "ELABORATION" | "RESULT"; time: number; preview: string };
 const step = (phase: Step["phase"], time: number, preview: string): Step => ({ phase, time, preview });
 
-/** how many answer slots a new question of each family starts with */
-const SLOTS: Partial<Record<Family, number>> = { choice: 4, multi: 4, typed: 2, order: 4, number: 1, match: 4, poll: 3, tier: 4 };
+/** how many answer slots a new question of each ask starts with */
+const SLOTS: Partial<Record<Ask, number>> = { pick: 4, "pick-many": 4, "type-in": 2, order: 4, number: 1, match: 4, rank: 4, write: 6, draw: 6 };
 
 /**
- * A new question of a type, as the add tray offers it when your stash has
- * no shape of that type yet: the type's answer slots and steps that suit it.
+ * A new question of a preset, as the add tray offers it when your stash has
+ * no shape like it yet: its answer slots and steps that suit it.
  */
-export function starterShape(t: QuestionTypeInfo) {
-  const slots = t.answers ? (t.id === "DRAW_GUESS" ? 4 : (SLOTS[t.family] ?? 0)) : 0;
+export function starterShape(p: Preset) {
+  const d = describe(p.mode);
+  const { ask, score } = p.mode;
+  const slots = d.answers ? (SLOTS[ask] ?? 0) : 0;
   const answers = Array.from({ length: slots }, (_, i) => ({
     text: "",
-    value: t.family === "choice" || t.family === "multi" ? (i === 0 ? 100 : 0) : t.family === "tier" ? 0 : t.answers!.starts,
-    ...(t.answers?.match ? { match: "" } : {}),
+    value: score === "right" && (ask === "pick" || ask === "pick-many") ? (i === 0 ? 100 : 0) : d.answers?.value ? d.answers.starts : 0,
+    ...(d.answers?.match ? { match: "" } : {}),
   }));
   let steps: Step[];
-  switch (t.family) {
-    case "poll":
-      steps = [step("QUESTION", 20, "Everyone votes"), step("ANSWER", 10, "What the room thinks")];
-      break;
-    case "tier":
-      steps = [step("WAITING", 6, "Get ready"), step("QUESTION", 60, "Drag items into tiers"), step("RESULT", 15, "The group's tiers")];
-      break;
-    case "write":
-      steps = t.judged
-        ? [step("WAITING", 6, "Get ready"), step("QUESTION", 45, "Players write"), step("ANSWER", 40, "Judging"), step("RESULT", 10, "Leaderboard")]
-        : [step("QUESTION", 45, "Players write"), step("ANSWER", 20, "The wall")];
-      break;
-    case "draw":
-      steps = t.judged
-        ? [step("WAITING", 5, "Get ready"), step("QUESTION", 90, "Everyone draws"), step("ANSWER", t.id === "DRAW_BATTLE" ? 60 : 45, "Judging"), step("RESULT", 10, "Leaderboard")]
-        : [step("QUESTION", 90, "Everyone draws"), step("ANSWER", 30, "The gallery")];
-      break;
-    case "telephone":
-      steps = [step("QUESTION", 300, "Write, draw, describe, pass it on"), step("ANSWER", 120, "The chains")];
-      break;
-    default:
-      steps = [
-        step("WAITING", 5, "Get ready"),
-        step("QUESTION", t.family === "order" || t.family === "match" ? 40 : 25, t.blurb),
-        step("ANSWER", 12, "The answer"),
-      ];
+  if (ask === "chain") {
+    steps = [step("QUESTION", 300, "Write, draw, describe, pass it on"), step("ANSWER", 120, "The chains")];
+  } else if (ask === "write" || ask === "draw") {
+    const making = ask === "draw" ? step("QUESTION", 90, "Everyone draws") : step("QUESTION", 45, "Players write");
+    steps = d.judged
+      ? [step("WAITING", 5, "Get ready"), making, step("ANSWER", score === "knockout" ? 60 : 45, "Judging"), step("RESULT", 10, "Leaderboard")]
+      : [making, step("ANSWER", 30, ask === "draw" ? "The gallery" : "The wall")];
+  } else if (ask === "rank") {
+    steps = [step("WAITING", 6, "Get ready"), step("QUESTION", 60, "Rank them"), step("RESULT", 15, "The group's tiers")];
+  } else if (score === "crowd" || score === "none") {
+    steps = [step("QUESTION", 20, "Everyone answers"), step("ANSWER", 10, "What the room thinks")];
+  } else {
+    steps = [step("WAITING", 5, "Get ready"), step("QUESTION", ask === "order" || ask === "match" ? 40 : 25, d.blurb), step("ANSWER", 12, "The answer")];
   }
-  return { name: t.label, questionType: t.id, answers, steps };
+  return { name: p.label, questionType: typeIdOf(p.mode), mode: modeKey(p.mode), answers, steps };
 }
 
 // ─── a question's extra fields, stored as "unit=m, min=0, max=100" ─────

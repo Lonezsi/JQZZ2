@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuiz } from "../../../contexts/QuizContext";
 import { useAuth } from "../../../contexts/AuthContext";
 import { GAME_MODES, type GameMode } from "../../../modes";
-import { typeInfo } from "../../../utils/questionTypes";
+import { describe, modeKey } from "../../../utils/questionTypes";
 import { playService } from "../../../services/playService";
 import { errorMessage } from "../../../services/api";
 import { go } from "../../../hooks/useHashRoute";
@@ -61,10 +61,10 @@ export const GameModes: React.FC = () => {
       <div className="jqzz-modes-grid">
         {GAME_MODES.map((m, i) => (
           <article key={m.id} className="jqzz-mode" style={{ "--i": i } as React.CSSProperties} aria-busy={busy === m.id}>
-            <div className="jqzz-mode-glyphs" aria-label={m.types.map((t) => typeInfo(t).label).join(", ")}>
-              {m.types.map((t) => (
-                <span key={t} title={typeInfo(t).label}>
-                  <Glyph name={typeInfo(t).icon} size={14} />
+            <div className="jqzz-mode-glyphs" aria-label={m.modes.map((x) => describe(x).label).join(", ")}>
+              {m.modes.map((x) => (
+                <span key={modeKey(x)} title={describe(x).label}>
+                  <Glyph name={describe(x).icon} size={14} />
                 </span>
               ))}
             </div>

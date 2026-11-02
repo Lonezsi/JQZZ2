@@ -47,9 +47,8 @@ public class Game {
     public static final int MAX_ART_BYTES = 1_500_000;
     /** every drawing of a game together, so one game can't fill the server */
     public static final long MAX_GAME_ART_BYTES = 160_000_000L;
-    /** the types where answering sooner can count ("speed"); docs/script.md */
-    static final Set<QuestionType> SPEEDY = Set.of(QuestionType.PREWRITTEN_SINGLE, QuestionType.PREWRITTEN_MULTIPLE,
-            QuestionType.TYPED, QuestionType.ORDER, QuestionType.NUMBER, QuestionType.MATCH);
+    /** what a "crowd" number question is worth when its answers don't say */
+    public static final int CROWD_NUMBER_POINTS = 1000;
 
     public enum Status { LOBBY, PLAYING, PAUSED, FINISHED }
 
@@ -62,13 +61,21 @@ public class Game {
 
     /**
      * weight: points it gives, in percent. 100 normally, 0 when not graded, 200 for double.
-     * options: what the type needs besides answers ("unit" to "m"). speed: answering sooner counts.
+     * options: what it needs besides answers ("unit" to "m"). speed: answering sooner counts.
+     * mode: what players do and how it scores; type is only the stored name, for records.
      */
     public record QuestionSnap(long id, String text, String imageUrl, QuestionType type,
             String elaborationText, String elaborationImageUrl, List<AnswerSnap> answers, int weight,
-            Map<String, String> options, boolean speed) {
+            Map<String, String> options, boolean speed, Mode mode) {
         public QuestionSnap {
             options = options == null ? Map.of() : Map.copyOf(options);
+            if (mode == null) mode = Mode.of(type);
+        }
+
+        public QuestionSnap(long id, String text, String imageUrl, QuestionType type,
+                String elaborationText, String elaborationImageUrl, List<AnswerSnap> answers, int weight,
+                Map<String, String> options, boolean speed) {
+            this(id, text, imageUrl, type, elaborationText, elaborationImageUrl, answers, weight, options, speed, null);
         }
 
         public QuestionSnap(long id, String text, String imageUrl, QuestionType type,
@@ -392,14 +399,14 @@ public class Game {
                 reveal(q);
             }
             if (phase == Phase.RESULT) settle(q);
-            if (phase == Phase.ANSWER && isKnockout(type(q))) {
+            if (phase == Phase.ANSWER && q.mode().score() == Mode.Score.KNOCKOUT) {
                 startBracket(q, step.seconds(), now);
             }
-            if (phase == Phase.QUESTION && type(q) == QuestionType.DRAW_GUESS) {
+            if (phase == Phase.QUESTION && q.mode().score() == Mode.Score.SECRET) {
                 QState st = state(q);
                 players.keySet().forEach(p -> secret(q, st, p));
             }
-            if (phase == Phase.QUESTION && type(q) == QuestionType.TELEPHONE) {
+            if (phase == Phase.QUESTION && q.mode().ask() == Mode.Ask.CHAIN) {
                 QState st = state(q);
                 if (st.telephone == null && !st.revealed) {
                     Double rounds = q.number("rounds");
@@ -477,15 +484,15 @@ public class Game {
         requirePlayer(userId);
         QuestionSnap q = step.question();
         QState st = state(q);
-        QuestionType type = type(q);
-        switch (type) {
-            case PREWRITTEN_SINGLE, POLL -> {
+        Mode mode = q.mode();
+        switch (mode.ask()) {
+            case PICK -> {
                 if (picks == null || picks.size() != 1 || !hasAnswer(q, picks.get(0))) {
                     throw new IllegalArgumentException("Pick one answer");
                 }
                 st.picks.put(userId, List.of(picks.get(0)));
             }
-            case PREWRITTEN_MULTIPLE -> {
+            case PICK_MANY -> {
                 if (picks == null || picks.isEmpty()) throw new IllegalArgumentException("Pick at least one answer");
                 List<Long> valid = new ArrayList<>(new LinkedHashSet<>(picks));
                 if (!valid.stream().allMatch(id -> hasAnswer(q, id))) {
@@ -499,7 +506,7 @@ public class Game {
                 if (!whole) throw new IllegalArgumentException("Put every item in the order");
                 st.picks.put(userId, List.copyOf(picks));
             }
-            case TIERLIST -> {
+            case RANK -> {
                 if (tiers == null || tiers.isEmpty()) throw new IllegalArgumentException("Put something in a tier");
                 Map<Long, String> clean = new LinkedHashMap<>();
                 tiers.forEach((id, tier) -> {
@@ -529,7 +536,7 @@ public class Game {
                 }
                 st.numbers.put(userId, x);
             }
-            case TELEPHONE -> {
+            case CHAIN -> {
                 Telephone t = playing(st, userId);
                 if (t.kind() == Telephone.Kind.DRAW) throw new IllegalArgumentException("This round is for drawing");
                 t.put(userId, new Telephone.Link(userId, written(text), null));
@@ -537,12 +544,33 @@ public class Game {
                 changed(now);
                 return;
             }
-            case DRAW, DRAW_VOTE, DRAW_GUESS, DRAW_BATTLE -> throw new IllegalArgumentException("Send a drawing");
+            case DRAW -> throw new IllegalArgumentException("Send a drawing");
+            case WRITE -> {
+                String clean = written(text);
+                if (mode.score() == Mode.Score.SECRET) {
+                    // describing a secret word without saying it
+                    AnswerSnap word = secret(q, st, userId);
+                    if (word != null && saysIt(clean, word.text())) throw new IllegalArgumentException("No saying the word itself");
+                }
+                st.texts.put(userId, clean);
+            }
             default -> st.texts.put(userId, written(text));
         }
-        if (q.speed() && SPEEDY.contains(type)) st.left.put(userId, timeLeft(step, now));
+        if (q.speed() && mode.speedy()) st.left.put(userId, timeLeft(step, now));
         if (everyoneDid(answeredBy(st, q), online)) endsAt = Math.min(endsAt, now + EVERYONE_DONE_MS);
         changed(now);
+    }
+
+    /** whether a description gives its secret word away: the word, or something close to it, in it */
+    static boolean saysIt(String text, String word) {
+        String said = " " + Fuzzy.normalize(text) + " ";
+        String w = Fuzzy.normalize(word);
+        if (w.isEmpty()) return false;
+        if (said.contains(" " + w + " ") || said.replace(" ", "").contains(w.replace(" ", ""))) return true;
+        for (String part : said.trim().split(" ")) {
+            if (Fuzzy.matches(part, w)) return true;
+        }
+        return false;
     }
 
     /**
@@ -556,13 +584,13 @@ public class Game {
         }
         requirePlayer(userId);
         QuestionSnap q = step.question();
-        QuestionType type = type(q);
-        if (!isDrawn(type) && type != QuestionType.TELEPHONE) throw new IllegalArgumentException("This one isn't drawn");
+        Mode.Ask ask = q.mode().ask();
+        if (ask != Mode.Ask.DRAW && ask != Mode.Ask.CHAIN) throw new IllegalArgumentException("This one isn't drawn");
         if (bytes == null || bytes.length == 0) throw new IllegalArgumentException("Draw something first");
         if (bytes.length > MAX_ART_BYTES) throw new IllegalArgumentException("That drawing is too big to send");
         QState st = state(q);
         String id;
-        if (type == QuestionType.TELEPHONE) {
+        if (ask == Mode.Ask.CHAIN) {
             Telephone t = playing(st, userId);
             if (t.kind() != Telephone.Kind.DRAW) throw new IllegalArgumentException("This round is for writing");
             Telephone.Link before = t.mine(userId);
@@ -652,7 +680,7 @@ public class Game {
         }
         requirePlayer(userId);
         QState st = state(step.question());
-        boolean words = type(step.question()) == QuestionType.DRAW_GUESS;
+        boolean words = step.question().mode().score() == Mode.Score.SECRET;
         switch (interaction) {
             case "vote" -> {
                 Entry e = entry(st, choice);
@@ -711,18 +739,18 @@ public class Game {
         QuestionSnap q = step.question();
         QState st = state(q);
         m.put("question", q.id());
-        switch (type(q)) {
-            case DRAW, DRAW_VOTE, DRAW_BATTLE -> {
+        Mode mode = q.mode();
+        if (mode.score() == Mode.Score.SECRET) {
+            AnswerSnap word = secret(q, st, userId);
+            m.put("word", word == null ? null : word.text());
+        }
+        switch (mode.ask()) {
+            case DRAW -> {
                 m.put("kind", "draw");
                 m.put("drawing", st.drawings.get(userId));
             }
-            case DRAW_GUESS -> {
-                AnswerSnap word = secret(q, st, userId);
-                m.put("kind", "draw");
-                m.put("word", word == null ? null : word.text());
-                m.put("drawing", st.drawings.get(userId));
-            }
-            case TELEPHONE -> {
+            case WRITE -> m.put("kind", "write");
+            case CHAIN -> {
                 Telephone t = st.telephone;
                 if (t == null || t.done) return m;
                 if (!t.players.contains(userId)) {
@@ -783,14 +811,14 @@ public class Game {
      * its place, not at the first one.
      */
     private Set<String> answeredBy(QState st, QuestionSnap q) {
-        return switch (type(q)) {
-            case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE, POLL, ORDER -> st.picks.keySet();
-            case TIERLIST -> whole(st.tiers, q);
+        return switch (q.mode().ask()) {
+            case PICK, PICK_MANY, ORDER -> st.picks.keySet();
+            case RANK -> whole(st.tiers, q);
             case MATCH -> whole(st.pairs, q);
             case NUMBER -> st.numbers.keySet();
-            case DRAW, DRAW_VOTE, DRAW_GUESS, DRAW_BATTLE -> st.drawings.keySet();
-            case TELEPHONE -> st.telephone == null || st.telephone.done ? Set.of() : st.telephone.doneThisRound();
-            default -> st.texts.keySet();
+            case DRAW -> st.drawings.keySet();
+            case CHAIN -> st.telephone == null || st.telephone.done ? Set.of() : st.telephone.doneThisRound();
+            case TYPE_IN, WRITE -> st.texts.keySet();
         };
     }
 
@@ -812,9 +840,9 @@ public class Game {
         QState st = state(q);
         if (st.revealed) return;
         st.revealed = true;
-        QuestionType type = type(q);
-        if (hasEntries(type)) {
-            boolean drawn = isDrawn(type);
+        Mode mode = q.mode();
+        if (mode.entries()) {
+            boolean drawn = mode.ask() == Mode.Ask.DRAW;
             List<Map.Entry<String, String>> made = new ArrayList<>((drawn ? st.drawings : st.texts).entrySet());
             Collections.shuffle(made, random);
             List<Entry> entries = new ArrayList<>();
@@ -830,7 +858,7 @@ public class Game {
             st.telephone.done = true;
             st.telephone.roundEndsAt = 0;
         }
-        if (!isVotedOn(type)) settle(q);
+        if (!mode.judged()) settle(q);
     }
 
     private void settle(QuestionSnap q) {
@@ -839,23 +867,74 @@ public class Game {
         reveal(q);
         st.settled = true;
         Map<String, Integer> gains = st.gains;
-        QuestionType type = type(q);
-        switch (type) {
-            case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE -> st.picks.forEach((user, picked) -> {
+        Mode mode = q.mode();
+        switch (mode.score()) {
+            case RIGHT -> scoreRight(q, st, gains);
+            case CROWD -> scoreCrowd(q, st, gains);
+            case VOTES -> {
+                st.votes.values().forEach(key -> {
+                    Entry e = entry(st, key);
+                    if (e != null) e.votes++;
+                });
+                st.entries.forEach(e -> {
+                    if (e.votes > 0) gains.merge(e.authorId, e.votes * VOTE_POINTS, Integer::sum);
+                });
+            }
+            case AUTHORS -> st.guesses.forEach((user, g) -> g.forEach((key, author) -> {
+                Entry e = entry(st, key);
+                if (e != null && e.authorId.equals(author)) {
+                    e.votes++; // how many saw through it
+                    gains.merge(user, GUESS_POINTS, Integer::sum);
+                }
+            }));
+            case SECRET -> st.guesses.forEach((user, g) -> g.forEach((key, said) -> {
+                Entry e = entry(st, key);
+                AnswerSnap word = e == null ? null : wordOf(q, st, e.authorId);
+                if (word != null && Fuzzy.matches(said, word.text())) {
+                    e.votes++; // how many got it
+                    int value = Math.max(0, word.value());
+                    if (value > 0) {
+                        gains.merge(user, value, Integer::sum);
+                        gains.merge(e.authorId, value / 2, Integer::sum);
+                    }
+                }
+            }));
+            case KNOCKOUT -> {
+                if (st.bracket == null) startBracket(q, 0, 0);
+                Bracket b = st.bracket;
+                while (!b.done) advanceRound(b, 0);
+                for (List<Match> round : b.history) {
+                    for (Match m : round) {
+                        if (m.b != null && m.winner != null) gains.merge(m.winner.authorId, BATTLE_POINTS, Integer::sum);
+                    }
+                }
+                if (b.champion != null) gains.merge(b.champion.authorId, CHAMPION_POINTS, Integer::sum);
+            }
+            case NONE -> {
+                // nobody scores; a ranking still shows where the group put things
+                if (mode.ask() == Mode.Ask.RANK) st.consensus = consensus(q, st);
+            }
+        }
+        if (q.speed() && mode.speedy()) {
+            // the last moment is worth half
+            gains.replaceAll((user, points) -> (int) Math.round(points * (0.5 + 0.5 * st.left.getOrDefault(user, 0.0))));
+        }
+        if (q.weight() != 100) gains.replaceAll((user, points) -> points * q.weight() / 100);
+        gains.values().removeIf(points -> points == 0);
+        players.values().forEach(p -> {
+            p.gain = gains.getOrDefault(p.id, 0);
+            p.score += p.gain;
+        });
+    }
+
+    /** "right": whoever gets it right */
+    private void scoreRight(QuestionSnap q, QState st, Map<String, Integer> gains) {
+        switch (q.mode().ask()) {
+            case PICK, PICK_MANY -> st.picks.forEach((user, picked) -> {
                 int sum = picked.stream().mapToInt(id -> valueOf(q, id)).sum();
                 if (sum > 0) gains.merge(user, sum, Integer::sum);
             });
-            case POLL -> {
-                Map<Long, Integer> counts = pickCounts(q, st);
-                int most = counts.values().stream().mapToInt(Integer::intValue).max().orElse(0);
-                st.top = most == 0 ? List.of()
-                        : counts.entrySet().stream().filter(e -> e.getValue() == most).map(Map.Entry::getKey).toList();
-                st.picks.forEach((user, picked) -> {
-                    long id = picked.get(0);
-                    if (st.top.contains(id) && valueOf(q, id) > 0) gains.merge(user, valueOf(q, id), Integer::sum);
-                });
-            }
-            case TYPED -> st.texts.forEach((user, typed) -> {
+            case TYPE_IN -> st.texts.forEach((user, typed) -> {
                 AnswerSnap best = bestTyped(q, typed);
                 if (best != null && best.value() > 0) gains.merge(user, best.value(), Integer::sum);
             });
@@ -877,7 +956,24 @@ public class Game {
             case NUMBER -> numberGains(q, st).forEach((user, points) -> {
                 if (points > 0) gains.merge(user, points, Integer::sum);
             });
-            case TIERLIST -> {
+            default -> { /* no right answer to get */ }
+        }
+    }
+
+    /** "crowd": whoever sides with the most */
+    private void scoreCrowd(QuestionSnap q, QState st, Map<String, Integer> gains) {
+        switch (q.mode().ask()) {
+            case PICK -> {
+                Map<Long, Integer> counts = pickCounts(q, st);
+                int most = counts.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+                st.top = most == 0 ? List.of()
+                        : counts.entrySet().stream().filter(e -> e.getValue() == most).map(Map.Entry::getKey).toList();
+                st.picks.forEach((user, picked) -> {
+                    long id = picked.get(0);
+                    if (st.top.contains(id) && valueOf(q, id) > 0) gains.merge(user, valueOf(q, id), Integer::sum);
+                });
+            }
+            case RANK -> {
                 st.consensus = consensus(q, st);
                 st.tiers.forEach((user, placed) -> {
                     long agreed = placed.entrySet().stream()
@@ -885,63 +981,17 @@ public class Game {
                     if (agreed > 0) gains.merge(user, (int) agreed * TIER_POINTS, Integer::sum);
                 });
             }
-            case USER_GENERATED_VOTE, DRAW_VOTE -> {
-                st.votes.values().forEach(key -> {
-                    Entry e = entry(st, key);
-                    if (e != null) e.votes++;
-                });
-                st.entries.forEach(e -> {
-                    if (e.votes > 0) gains.merge(e.authorId, e.votes * VOTE_POINTS, Integer::sum);
-                });
-            }
-            case USER_GENERATED_IDENTIFY -> st.guesses.forEach((user, g) -> g.forEach((key, author) -> {
-                Entry e = entry(st, key);
-                if (e != null && e.authorId.equals(author)) {
-                    e.votes++; // how many saw through it
-                    gains.merge(user, GUESS_POINTS, Integer::sum);
-                }
-            }));
-            case DRAW_GUESS -> st.guesses.forEach((user, g) -> g.forEach((key, said) -> {
-                Entry e = entry(st, key);
-                AnswerSnap word = e == null ? null : wordOf(q, st, e.authorId);
-                if (word != null && Fuzzy.matches(said, word.text())) {
-                    e.votes++; // how many got it
-                    int value = Math.max(0, word.value());
-                    if (value > 0) {
-                        gains.merge(user, value, Integer::sum);
-                        gains.merge(e.authorId, value / 2, Integer::sum);
-                    }
-                }
-            }));
-            case KNOCKOUT_BATTLE, DRAW_BATTLE -> {
-                if (st.bracket == null) startBracket(q, 0, 0);
-                Bracket b = st.bracket;
-                while (!b.done) advanceRound(b, 0);
-                for (List<Match> round : b.history) {
-                    for (Match m : round) {
-                        if (m.b != null && m.winner != null) gains.merge(m.winner.authorId, BATTLE_POINTS, Integer::sum);
-                    }
-                }
-                if (b.champion != null) gains.merge(b.champion.authorId, CHAMPION_POINTS, Integer::sum);
-            }
-            default -> { /* on a wall, or handed round: nothing to score */ }
+            case NUMBER -> numberGains(q, st).forEach((user, points) -> {
+                if (points > 0) gains.merge(user, points, Integer::sum);
+            });
+            default -> { /* nothing to side with */ }
         }
-        if (q.speed() && SPEEDY.contains(type)) {
-            // the last moment is worth half
-            gains.replaceAll((user, points) -> (int) Math.round(points * (0.5 + 0.5 * st.left.getOrDefault(user, 0.0))));
-        }
-        if (q.weight() != 100) gains.replaceAll((user, points) -> points * q.weight() / 100);
-        gains.values().removeIf(points -> points == 0);
-        players.values().forEach(p -> {
-            p.gain = gains.getOrDefault(p.id, 0);
-            p.score += p.gain;
-        });
     }
 
     /** ORDER shows its items shuffled; MATCH shows the other halves shuffled, under keys of their own */
     private void prepare(QuestionSnap q, QState st) {
-        QuestionType type = type(q);
-        if (type == QuestionType.ORDER && st.shown == null) {
+        Mode.Ask ask = q.mode().ask();
+        if (ask == Mode.Ask.ORDER && st.shown == null) {
             List<Long> right = q.answers().stream().map(AnswerSnap::id).toList();
             List<Long> shown = new ArrayList<>(right);
             for (int tries = 0; tries < 6 && (tries == 0 || shown.equals(right)) && right.size() > 1; tries++) {
@@ -949,7 +999,7 @@ public class Game {
             }
             st.shown = List.copyOf(shown);
         }
-        if (type == QuestionType.MATCH && st.rightKey == null) {
+        if (ask == Mode.Ask.MATCH && st.rightKey == null) {
             List<AnswerSnap> halves = new ArrayList<>(q.answers());
             Collections.shuffle(halves, random);
             Map<Long, String> keys = new LinkedHashMap<>();
@@ -984,9 +1034,18 @@ public class Game {
         return best;
     }
 
-    /** NUMBER: the right number, or null when the question doesn't say one */
-    private static Double rightNumber(QuestionSnap q) {
+    /** NUMBER: the number to be close to: the right one, or the room's average for "crowd"; null when there's none */
+    private static Double rightNumber(QuestionSnap q, QState st) {
+        if (q.mode().score() == Mode.Score.CROWD) {
+            return st.numbers.isEmpty() ? null : st.numbers.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        }
         return q.answers().isEmpty() ? null : Fuzzy.number(q.answers().get(0).text());
+    }
+
+    /** what a number question is worth spot on */
+    private static int numberValue(QuestionSnap q) {
+        if (!q.answers().isEmpty()) return Math.max(0, q.answers().get(0).value());
+        return q.mode().score() == Mode.Score.CROWD ? CROWD_NUMBER_POINTS : 0;
     }
 
     /**
@@ -996,9 +1055,9 @@ public class Game {
      */
     private static Map<String, Integer> numberGains(QuestionSnap q, QState st) {
         Map<String, Integer> out = new LinkedHashMap<>();
-        Double right = rightNumber(q);
+        Double right = rightNumber(q, st);
         if (right == null || st.numbers.isEmpty()) return out;
-        int value = Math.max(0, q.answers().get(0).value());
+        int value = numberValue(q);
         Double min = q.number("min");
         Double max = q.number("max");
         double span = min != null && max != null && max > min ? (max - min) / 4 : Math.max(Math.abs(right) / 2, 1);
@@ -1134,10 +1193,10 @@ public class Game {
         if (s.phase() != Phase.ANSWER) return null;
         QState st = questions.get(s.question().id());
         if (st == null || st.settled) return null;
-        return switch (type(s.question())) {
-            case USER_GENERATED_VOTE, DRAW_VOTE -> st.entries.size() >= 2 ? "vote" : null;
-            case USER_GENERATED_IDENTIFY, DRAW_GUESS -> st.entries.size() >= 1 && players.size() >= 2 ? "guess" : null;
-            case KNOCKOUT_BATTLE, DRAW_BATTLE -> st.bracket != null && !st.bracket.done ? "bracket" : null;
+        return switch (s.question().mode().score()) {
+            case VOTES -> st.entries.size() >= 2 ? "vote" : null;
+            case AUTHORS, SECRET -> st.entries.size() >= 1 && players.size() >= 2 ? "guess" : null;
+            case KNOCKOUT -> st.bracket != null && !st.bracket.done ? "bracket" : null;
             default -> null;
         };
     }
@@ -1222,22 +1281,25 @@ public class Game {
 
     private Map<String, Object> questionView(QuestionSnap q, boolean revealed, boolean showElaboration) {
         Map<String, Object> m = new LinkedHashMap<>();
-        QuestionType type = type(q);
+        Mode mode = q.mode();
+        Mode.Ask ask = mode.ask();
         m.put("id", q.id());
         m.put("text", q.text());
         m.put("imageUrl", q.imageUrl());
-        m.put("type", type.name());
+        m.put("type", type(q).name());
+        m.put("ask", ask.key());
+        m.put("score", mode.score().key());
         if (q.weight() != 100) m.put("weight", q.weight());
-        if (q.speed() && SPEEDY.contains(type)) m.put("speed", true);
-        if (type == QuestionType.NUMBER) {
+        if (q.speed() && mode.speedy()) m.put("speed", true);
+        if (ask == Mode.Ask.NUMBER) {
             for (String key : List.of("unit", "min", "max")) {
                 if (q.options().containsKey(key)) m.put(key, key.equals("unit") ? q.options().get(key) : q.number(key));
             }
         }
-        QState st = type == QuestionType.ORDER || type == QuestionType.MATCH ? state(q) : questions.get(q.id());
+        QState st = ask == Mode.Ask.ORDER || ask == Mode.Ask.MATCH ? state(q) : questions.get(q.id());
         if (st != null) prepare(q, st);
         List<AnswerSnap> listed = q.answers();
-        if (type == QuestionType.ORDER && st != null) {
+        if (ask == Mode.Ask.ORDER && st != null) {
             // shuffled, never in the order that scores
             listed = st.shown.stream().map(id -> q.answers().stream().filter(a -> a.id() == id).findFirst().orElseThrow()).toList();
         }
@@ -1251,7 +1313,7 @@ public class Game {
             if (revealed && a.match() != null) am.put("match", a.match());
             answers.add(am);
         }
-        if (type == QuestionType.MATCH && st != null) {
+        if (ask == Mode.Ask.MATCH && st != null) {
             List<Map<String, Object>> halves = new ArrayList<>();
             for (String key : st.rightShown) {
                 AnswerSnap half = halfOf(q, st, key);
@@ -1261,13 +1323,10 @@ public class Game {
         }
         // what would give the answer away stays hidden until then: what's typed,
         // the number, the secret words (until the guessing is over)
-        boolean hidden = switch (type) {
-            case TYPED, NUMBER -> !revealed;
-            case DRAW_GUESS -> st == null || !st.settled;
-            default -> false;
-        };
-        m.put("answers", hasEntries(type) && type != QuestionType.DRAW_GUESS || type == QuestionType.TELEPHONE || hidden
-                ? List.of() : answers);
+        boolean secret = mode.score() == Mode.Score.SECRET;
+        boolean hidden = secret ? st == null || !st.settled : (ask == Mode.Ask.TYPE_IN || ask == Mode.Ask.NUMBER) && !revealed;
+        boolean none = mode.entries() && !secret || ask == Mode.Ask.CHAIN;
+        m.put("answers", none || hidden ? List.of() : answers);
         if (showElaboration) {
             m.put("elaborationText", q.elaborationText());
             m.put("elaborationImageUrl", q.elaborationImageUrl());
@@ -1277,18 +1336,18 @@ public class Game {
 
     private Map<String, Object> revealView(QuestionSnap q, QState st, long now) {
         Map<String, Object> r = new LinkedHashMap<>();
-        QuestionType type = type(q);
+        Mode mode = q.mode();
         r.put("settled", st.settled);
-        switch (type) {
-            case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE -> {
+        switch (mode.ask()) {
+            case PICK, PICK_MANY -> {
                 r.put("counts", pickCounts(q, st));
-                r.put("correct", q.answers().stream().filter(a -> a.value() > 0).map(AnswerSnap::id).toList());
+                r.put("correct", switch (mode.score()) {
+                    case RIGHT -> q.answers().stream().filter(a -> a.value() > 0).map(AnswerSnap::id).toList();
+                    case CROWD -> st.top;
+                    default -> List.of();
+                });
             }
-            case POLL -> {
-                r.put("counts", pickCounts(q, st));
-                r.put("correct", st.top);
-            }
-            case TYPED -> {
+            case TYPE_IN -> {
                 r.put("typed", typedView(q, st));
                 r.put("correct", q.answers().stream().filter(a -> a.value() > 0).map(AnswerSnap::id).toList());
             }
@@ -1310,16 +1369,17 @@ public class Game {
                 r.put("pairedRight", paired);
             }
             case NUMBER -> {
-                r.put("right", rightNumber(q));
+                Double right = rightNumber(q, st);
+                r.put("right", right);
+                if (mode.score() == Mode.Score.CROWD) r.put("average", true);
                 r.put("numbers", new LinkedHashMap<>(st.numbers));
-                Double right = rightNumber(q);
                 if (right != null && !st.numbers.isEmpty()) {
                     double closest = st.numbers.values().stream().mapToDouble(x -> Math.abs(x - right)).min().orElse(0);
                     r.put("closest", st.numbers.entrySet().stream()
                             .filter(e -> Math.abs(e.getValue() - right) <= closest + 1e-9).map(Map.Entry::getKey).toList());
                 }
             }
-            case TELEPHONE -> {
+            case CHAIN -> {
                 List<Map<String, Object>> chains = new ArrayList<>();
                 Telephone t = st.telephone;
                 if (t != null) {
@@ -1337,7 +1397,7 @@ public class Game {
                 r.put("prompt", q.text());
                 r.put("chains", chains);
             }
-            case TIERLIST -> {
+            case RANK -> {
                 Map<Long, Map<String, Integer>> counts = new LinkedHashMap<>();
                 q.answers().forEach(a -> {
                     Map<String, Integer> c = new LinkedHashMap<>();
@@ -1353,9 +1413,9 @@ public class Game {
             }
             default -> { /* written: entries below */ }
         }
-        if (hasEntries(type)) {
+        if (mode.entries()) {
             // who made what stays hidden while players are voting or guessing on it
-            boolean showAuthors = type == QuestionType.USER_GENERATED || type == QuestionType.DRAW || st.settled;
+            boolean showAuthors = !mode.judged() || st.settled;
             List<Map<String, Object>> entries = new ArrayList<>();
             for (Entry e : st.entries) {
                 Map<String, Object> em = new LinkedHashMap<>();
@@ -1366,7 +1426,7 @@ public class Game {
                     em.put("authorId", e.authorId);
                     em.put("votes", e.votes);
                 }
-                if (type == QuestionType.DRAW_GUESS && st.settled) {
+                if (mode.score() == Mode.Score.SECRET && st.settled) {
                     AnswerSnap word = wordOf(q, st, e.authorId);
                     em.put("word", word == null ? null : word.text());
                     List<Map<String, Object>> said = new ArrayList<>();
@@ -1382,10 +1442,10 @@ public class Game {
                 entries.add(em);
             }
             r.put("entries", entries);
-            if (type == QuestionType.USER_GENERATED_IDENTIFY) {
+            if (mode.score() == Mode.Score.AUTHORS) {
                 r.put("authors", st.entries.stream().map(e -> e.authorId).distinct().toList());
             }
-            if (isKnockout(type) && st.bracket != null) r.put("bracket", bracketView(st.bracket));
+            if (mode.score() == Mode.Score.KNOCKOUT && st.bracket != null) r.put("bracket", bracketView(st.bracket));
         }
         if (st.settled) r.put("gains", st.gains);
         return r;
@@ -1486,9 +1546,9 @@ public class Game {
         Map<String, Object> r = new LinkedHashMap<>();
         QState st = questions.get(q.id());
         if (st == null) return r;
-        QuestionType type = type(q);
-        switch (type) {
-            case PREWRITTEN_SINGLE, PREWRITTEN_MULTIPLE, POLL -> {
+        Mode mode = q.mode();
+        switch (mode.ask()) {
+            case PICK, PICK_MANY -> {
                 List<Integer> counts = new ArrayList<>();
                 for (AnswerSnap a : q.answers()) {
                     counts.add((int) st.picks.values().stream().filter(p -> p.contains(a.id())).count());
@@ -1501,24 +1561,24 @@ public class Game {
                 for (int i = 0; i < q.answers().size(); i++) {
                     AnswerSnap a = q.answers().get(i);
                     int at = i;
-                    right.add((int) (type == QuestionType.ORDER
+                    right.add((int) (mode.ask() == Mode.Ask.ORDER
                             ? st.picks.values().stream().filter(o -> at < o.size() && o.get(at) == a.id()).count()
                             : st.pairs.values().stream().filter(p -> pairedRight(q, st, a, p.get(a.id()))).count()));
                 }
                 r.put("right", right);
             }
-            case TYPED -> r.put("typed", typedView(q, st));
+            case TYPE_IN -> r.put("typed", typedView(q, st));
             case NUMBER -> {
                 List<Map<String, Object>> numbers = new ArrayList<>();
                 st.numbers.forEach((user, x) -> numbers.add(Map.of("by", nameOf(user), "value", x)));
                 r.put("numbers", numbers);
             }
-            case TIERLIST -> {
+            case RANK -> {
                 List<String> tiers = new ArrayList<>();
                 for (AnswerSnap a : q.answers()) tiers.add(st.consensus.get(a.id()));
                 r.put("tiers", tiers);
             }
-            case TELEPHONE -> {
+            case CHAIN -> {
                 List<Map<String, Object>> chains = new ArrayList<>();
                 if (st.telephone != null) {
                     for (Telephone.Link[] chain : st.telephone.chains) {
@@ -1538,7 +1598,7 @@ public class Game {
             }
             default -> { /* written and drawn: entries below */ }
         }
-        if (hasEntries(type)) {
+        if (mode.entries()) {
             List<Map<String, Object>> entries = new ArrayList<>();
             for (Entry e : st.entries) {
                 Map<String, Object> em = new LinkedHashMap<>();
@@ -1546,7 +1606,7 @@ public class Game {
                 else em.put("text", e.text);
                 em.put("by", nameOf(e.authorId));
                 em.put("votes", e.votes);
-                if (type == QuestionType.DRAW_GUESS) {
+                if (mode.score() == Mode.Score.SECRET) {
                     AnswerSnap word = wordOf(q, st, e.authorId);
                     if (word != null) em.put("word", word.text());
                 }
@@ -1575,31 +1635,6 @@ public class Game {
 
     static QuestionType type(QuestionSnap q) {
         return q.type() == null ? QuestionType.PREWRITTEN_SINGLE : q.type();
-    }
-
-    static boolean isWritten(QuestionType t) {
-        return t == QuestionType.USER_GENERATED || t == QuestionType.USER_GENERATED_VOTE
-                || t == QuestionType.USER_GENERATED_IDENTIFY || t == QuestionType.KNOCKOUT_BATTLE;
-    }
-
-    static boolean isDrawn(QuestionType t) {
-        return t == QuestionType.DRAW || t == QuestionType.DRAW_VOTE
-                || t == QuestionType.DRAW_GUESS || t == QuestionType.DRAW_BATTLE;
-    }
-
-    /** what players made goes on the board as entries */
-    static boolean hasEntries(QuestionType t) {
-        return isWritten(t) || isDrawn(t);
-    }
-
-    static boolean isKnockout(QuestionType t) {
-        return t == QuestionType.KNOCKOUT_BATTLE || t == QuestionType.DRAW_BATTLE;
-    }
-
-    static boolean isVotedOn(QuestionType t) {
-        return t == QuestionType.USER_GENERATED_VOTE || t == QuestionType.USER_GENERATED_IDENTIFY
-                || t == QuestionType.KNOCKOUT_BATTLE || t == QuestionType.DRAW_VOTE
-                || t == QuestionType.DRAW_GUESS || t == QuestionType.DRAW_BATTLE;
     }
 
     /** the drawings a finished game shows, to keep with its history */

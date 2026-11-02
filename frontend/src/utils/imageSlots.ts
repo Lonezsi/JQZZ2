@@ -1,4 +1,5 @@
 import type { Action, Question } from "../types";
+import { modeOf } from "./questionTypes";
 
 /** A place on a step where a picture can go. */
 export interface ImageSlot {
@@ -15,7 +16,9 @@ export interface ImageSlot {
 export function imageSlots(action: Action): ImageSlot[] {
   const q = action.question;
   if (!q) return [];
-  const written = q.type?.startsWith("USER_GENERATED");
+  // players make what's on screen: there are no options to picture
+  const { ask } = modeOf(q);
+  const written = ask === "write" || ask === "draw" || ask === "chain";
   const answers = written ? [] : (q.answers ?? []).map((a, i) => ({
     key: `answer:${a.id}`,
     label: a.text?.trim() || `option ${i + 1}`,

@@ -4,7 +4,7 @@ import { TIERS } from "../../types/play";
 import type { MyAnswer } from "./Answering";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { AnswerPicture } from "./PlayCommon";
-import { typeInfo } from "../../utils/questionTypes";
+import { modeOf } from "../../utils/questionTypes";
 import { MatchReveal, NumberReveal, OrderReveal, TypedReveal } from "./Recall";
 import { ChainsReveal, DrawnReveal, EntryFace } from "./Drawn";
 
@@ -19,16 +19,17 @@ export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer; me?: string; s
   const q = game.question;
   const r = game.reveal;
   if (!q || !r) return null;
-  const family = typeInfo(q.type).family;
-  if (r.bracket && (q.type === "KNOCKOUT_BATTLE" || q.type === "DRAW_BATTLE")) return <BracketReveal game={game} bracket={r.bracket} />;
-  switch (family) {
-    case "choice":
-    case "multi":
-    case "poll":
+  const { ask, score } = modeOf(q);
+  if (r.bracket && score === "knockout") return <BracketReveal game={game} bracket={r.bracket} />;
+  // things players wrote with secret words show like drawings: each with its word and the guesses
+  if (ask === "write" && score === "secret") return <DrawnReveal game={game} me={me} />;
+  switch (ask) {
+    case "pick":
+    case "pick-many":
       return <ChoiceReveal game={game} mine={mine} />;
-    case "tier":
+    case "rank":
       return <TierReveal game={game} mine={mine} />;
-    case "typed":
+    case "type-in":
       return <TypedReveal game={game} mine={mine} />;
     case "order":
       return <OrderReveal game={game} mine={mine} />;
@@ -38,7 +39,7 @@ export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer; me?: string; s
       return <MatchReveal game={game} mine={mine} />;
     case "draw":
       return <DrawnReveal game={game} me={me} />;
-    case "telephone":
+    case "chain":
       return <ChainsReveal game={game} serverNow={serverNow ?? Date.now} controls={controls} />;
     default:
       return <EntriesReveal game={game} />;
@@ -113,7 +114,8 @@ const EntriesReveal: React.FC<{ game: GameState }> = ({ game }) => {
   const entries = r.entries ?? [];
   if (entries.length === 0) return <p className="jqzz-play-note">nobody wrote anything.</p>;
   const top = Math.max(0, ...entries.map((e) => e.votes ?? 0));
-  const scored = r.settled && game.question?.type !== "USER_GENERATED";
+  const { score } = modeOf(game.question);
+  const scored = r.settled && score !== "none";
   const sorted = scored ? [...entries].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0)) : entries;
   return (
     <div className="jqzz-entry-grid wall">
@@ -129,7 +131,7 @@ const EntriesReveal: React.FC<{ game: GameState }> = ({ game }) => {
               {e.authorId && <span>{nameOf(game, e.authorId)}</span>}
               {scored && (
                 <span className="jqzz-annot">
-                  {e.votes ?? 0} {game.question?.type === "USER_GENERATED_IDENTIFY" ? "saw through it" : "votes"}
+                  {e.votes ?? 0} {score === "authors" ? "saw through it" : "votes"}
                 </span>
               )}
             </span>

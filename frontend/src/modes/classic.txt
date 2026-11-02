@@ -1,9 +1,9 @@
-# Classic, but faster · JQzz Script v2
+# Classic, but faster · JQzz Script v3
 # about: Kahoot rules. Right answers score, quick right answers score more, and the last one counts double.
 # players: 1+
 
 NewQuestion Q1 (
-  type: "single",
+  ask: "pick", score: "right",
   prompt: "Which planet has the most known moons?",
   elaboration: "Saturn. It passed 270 confirmed moons in 2025, well ahead of Jupiter.",
   answers: [
@@ -14,7 +14,7 @@ NewQuestion Q1 (
   ],
 )
 NewQuestion Q2 (
-  type: "multiple",
+  ask: "pick-many", score: "right",
   prompt: "Which of these are mammals?",
   elaboration: "Whales, bats and platypuses all feed their young milk. Sharks and penguins don't.",
   answers: [
@@ -26,7 +26,7 @@ NewQuestion Q2 (
   ],
 )
 NewQuestion Q3 (
-  type: "single",
+  ask: "pick", score: "right",
   prompt: "When did the Berlin Wall fall?",
   elaboration: "On 9 November 1989, after a botched announcement opened the border crossings.",
   answers: [
@@ -37,7 +37,7 @@ NewQuestion Q3 (
   ],
 )
 NewQuestion Q4 (
-  type: "single",
+  ask: "pick", score: "right",
   prompt: "Which element has the symbol K?",
   elaboration: "Potassium, from its Latin name, kalium.",
   answers: [
@@ -48,7 +48,7 @@ NewQuestion Q4 (
   ],
 )
 NewQuestion Q5 (
-  type: "single",
+  ask: "pick", score: "right",
   prompt: "How many strings does a violin have?",
   elaboration: "Four: G, D, A and E.",
   answers: [
@@ -59,7 +59,7 @@ NewQuestion Q5 (
   ],
 )
 NewQuestion Q6 (
-  type: "single",
+  ask: "pick", score: "right",
   prompt: "Which is the largest ocean?",
   elaboration: "The Pacific. It's bigger than all the land on Earth put together.",
   answers: [

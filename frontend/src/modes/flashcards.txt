@@ -1,15 +1,15 @@
-# Flashcards · JQzz Script v2
+# Flashcards · JQzz Script v3
 # about: Quizlet in a room. Type it, match it, put it in order. Spelling is forgiven a little.
 # players: 1+
 
 NewQuestion Q1 (
-  type: "typed",
+  ask: "type-in", score: "right",
   prompt: "What's the capital of Australia?",
   elaboration: "Not Sydney. Canberra was built as a compromise between Sydney and Melbourne.",
   answers: [ { text: "Canberra", value: 500 } ],
 )
 NewQuestion Q2 (
-  type: "match",
+  ask: "match", score: "right",
   prompt: "Match each country to its capital",
   answers: [
     { text: "Canada", match: "Ottawa", value: 100 },
@@ -20,7 +20,7 @@ NewQuestion Q2 (
   ],
 )
 NewQuestion Q3 (
-  type: "typed",
+  ask: "type-in", score: "right",
   prompt: "Which gas do plants take in to make their food?",
   elaboration: "Carbon dioxide, turned into sugar with light and water. The oxygen is what's left over.",
   answers: [
@@ -29,7 +29,7 @@ NewQuestion Q3 (
   ],
 )
 NewQuestion Q4 (
-  type: "order",
+  ask: "order", score: "right",
   prompt: "Oldest first",
   elaboration: "Giza around 2560 BC, the Colosseum in AD 80, Machu Picchu in the 1450s, the Eiffel Tower in 1889.",
   answers: [
@@ -40,7 +40,7 @@ NewQuestion Q4 (
   ],
 )
 NewQuestion Q5 (
-  type: "match",
+  ask: "match", score: "right",
   prompt: "Match the thank you to its language",
   answers: [
     { text: "Danke", match: "German", value: 100 },
@@ -51,7 +51,7 @@ NewQuestion Q5 (
   ],
 )
 NewQuestion Q6 (
-  type: "typed",
+  ask: "type-in", score: "right",
   prompt: "Who painted the Mona Lisa?",
   answers: [
     { text: "Leonardo da Vinci", value: 500 },
@@ -60,7 +60,7 @@ NewQuestion Q6 (
   ],
 )
 NewQuestion Q7 (
-  type: "order",
+  ask: "order", score: "right",
   prompt: "Closest to the Sun first",
   answers: [
     { text: "Mercury", value: 100 },

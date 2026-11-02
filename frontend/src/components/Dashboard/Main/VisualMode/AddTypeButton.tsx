@@ -4,6 +4,7 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import { stashService } from "../../../../services/stashService";
 import { setTypesCache } from "../../../../hooks/useTypes";
 import { typeLabel } from "../../../../utils/questionInfo";
+import { modeKey, modeOf } from "../../../../utils/questionTypes";
 import { Glyph } from "../../../common/Glyph";
 
 /**
@@ -19,8 +20,9 @@ export const AddTypeButton: React.FC<{ question: Question; actions: Action[] }> 
     setState("busy");
     stashService
       .addType(user.id, {
-        name: `${typeLabel(question.type)}: ${question.text || "question"}`.slice(0, 60),
+        name: `${typeLabel(question)}: ${question.text || "question"}`.slice(0, 60),
         questionType: question.type || "PREWRITTEN_SINGLE",
+        mode: modeKey(modeOf(question)),
         answers: (question.answers ?? []).map((a) => ({ text: "", value: a.value ?? 0 })),
         steps: actions.map((a) => ({ phase: a.phase, time: a.time, preview: a.preview ?? "" })),
       })

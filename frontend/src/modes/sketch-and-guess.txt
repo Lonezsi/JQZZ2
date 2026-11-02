@@ -1,9 +1,9 @@
-# Sketch and guess · JQzz Script v2
-# about: Everyone gets a secret word to draw, then guesses everyone else's. Points for guessing right, and for being guessed.
+# Sketch and guess · JQzz Script v3
+# about: Everyone gets a secret word to draw, then guesses everyone else's. Points for guessing right, and for being guessed. The last round has no pens: describe it without saying it.
 # players: 3+
 
 NewQuestion Q1 (
-  type: "draw-guess",
+  ask: "draw", score: "secret",
   prompt: "Draw your secret word",
   answers: [
     { text: "lighthouse", value: 100 },
@@ -15,7 +15,7 @@ NewQuestion Q1 (
   ],
 )
 NewQuestion Q2 (
-  type: "draw-guess",
+  ask: "draw", score: "secret",
   prompt: "Harder words this time",
   answers: [
     { text: "time travel", value: 150 },
@@ -27,7 +27,7 @@ NewQuestion Q2 (
   ],
 )
 NewQuestion Q3 (
-  type: "draw-guess",
+  ask: "draw", score: "secret",
   prompt: "Animals with jobs",
   answers: [
     { text: "penguin chef", value: 200 },
@@ -36,6 +36,18 @@ NewQuestion Q3 (
     { text: "snail courier", value: 200 },
     { text: "bear DJ", value: 200 },
     { text: "shark dentist", value: 200 },
+  ],
+)
+NewQuestion Q4 (
+  ask: "write", score: "secret",
+  prompt: "No pens: describe your secret word without saying it",
+  answers: [
+    { text: "umbrella", value: 150 },
+    { text: "jellyfish", value: 150 },
+    { text: "bubble wrap", value: 150 },
+    { text: "campfire", value: 150 },
+    { text: "moon landing", value: 150 },
+    { text: "dentist", value: 150 },
   ],
 )
 
@@ -50,4 +62,8 @@ ShowResult(Q2, time: 10)
 ShowWaiting(Q3, time: 5)
 ShowQuestion(Q3, time: 90)
 ShowAnswers(Q3, time: 60)
-ShowResult(Q3, time: 15)
+ShowResult(Q3, time: 10)
+ShowWaiting(Q4, time: 5)
+ShowQuestion(Q4, time: 50)
+ShowAnswers(Q4, time: 50)
+ShowResult(Q4, time: 15)

@@ -5,6 +5,7 @@ import { DrawingFrame } from "../../draw/DrawingFrame";
 import type { MyAnswer } from "./Answering";
 import { Countdown } from "./PlayCommon";
 import { nameOf } from "../../utils/play";
+import { modeOf } from "../../utils/questionTypes";
 
 /*
  * The drawn types on the phone and on the big screen: drawing (with a
@@ -56,17 +57,11 @@ export const DrawAnswer: React.FC<{
 }> = ({ game, me, draw, remember, serverNow }) => {
   const q = game.question!;
   const task = useTask(game, me, true);
-  const guessing = q.type === "DRAW_GUESS";
+  const guessing = modeOf(q).score === "secret";
   if (!task) return <p className="jqzz-play-note">getting your sheet ready...</p>;
   return (
     <div className="jqzz-draw-answer">
-      {guessing && (
-        <div className="jqzz-secret" role="note">
-          <span className="jqzz-annot">your secret word</span>
-          <strong className="OEF">{task.word ?? "anything you like"}</strong>
-          <span className="jqzz-annot">draw it so the others can guess. no letters.</span>
-        </div>
-      )}
+      {guessing && <SecretBanner word={task.word} how="draw it so the others can guess. no letters." />}
       <DrawingFrame
         keepAs={`jqzz:draw:${game.code}:${q.id}`}
         start={task.drawing ? artUrl(game.code, task.drawing) : null}
@@ -79,6 +74,26 @@ export const DrawAnswer: React.FC<{
         serverNow={serverNow}
       />
     </div>
+  );
+};
+
+const SecretBanner: React.FC<{ word?: string | null; how: string }> = ({ word, how }) => (
+  <div className="jqzz-secret" role="note">
+    <span className="jqzz-annot">your secret word</span>
+    <strong className="OEF">{word ?? "anything you like"}</strong>
+    <span className="jqzz-annot">{how}</span>
+  </div>
+);
+
+/** writing with a secret word: the word on top, the writing under it */
+export const SecretWord: React.FC<{ game: GameState; me: string; children: React.ReactNode }> = ({ game, me, children }) => {
+  const task = useTask(game, me, true);
+  if (!task) return <p className="jqzz-play-note">getting your word...</p>;
+  return (
+    <>
+      <SecretBanner word={task.word} how="describe it so the others can guess it, without saying it." />
+      {children}
+    </>
   );
 };
 
@@ -279,8 +294,8 @@ export const DrawnReveal: React.FC<{ game: GameState; me?: string }> = ({ game, 
   const r = game.reveal!;
   const entries = r.entries ?? [];
   if (!entries.length) return <p className="jqzz-play-note">nobody drew anything.</p>;
-  const type = game.question?.type;
-  const scored = r.settled && type !== "DRAW";
+  const { score } = modeOf(game.question);
+  const scored = r.settled && score !== "none";
   const top = Math.max(0, ...entries.map((e) => e.votes ?? 0));
   const sorted = scored ? [...entries].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0)) : entries;
   return (
@@ -298,7 +313,7 @@ export const DrawnReveal: React.FC<{ game: GameState; me?: string }> = ({ game, 
               {e.authorId && <span>{nameOf(game, e.authorId)}</span>}
               {scored && (
                 <span className="jqzz-annot">
-                  {type === "DRAW_GUESS" ? `${e.votes ?? 0} got it` : `${e.votes ?? 0} votes`}
+                  {score === "secret" ? `${e.votes ?? 0} got it` : score === "authors" ? `${e.votes ?? 0} saw through it` : `${e.votes ?? 0} votes`}
                 </span>
               )}
               {e.guesses && e.guesses.length > 0 && (

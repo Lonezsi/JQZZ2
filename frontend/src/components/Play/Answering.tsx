@@ -4,9 +4,9 @@ import { TIERS } from "../../types/play";
 import type { Submission } from "../../services/playService";
 import { AnswerPicture, QuestionImage } from "./PlayCommon";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
-import { typeInfo } from "../../utils/questionTypes";
+import { modeOf } from "../../utils/questionTypes";
 import { Estimate, Order, Pairs, Typed } from "./Recall";
-import { DrawAnswer, EntryFace, GuessWords, TelephoneTurn } from "./Drawn";
+import { DrawAnswer, EntryFace, GuessWords, SecretWord, TelephoneTurn } from "./Drawn";
 
 /** What this player sent for a question, remembered on their own device. */
 export interface MyAnswer {
@@ -39,22 +39,24 @@ export const Answering: React.FC<Props> = (props) => {
   const { game } = props;
   const q = game.question;
   if (!q) return null;
-  const family = typeInfo(q.type).family;
+  const { ask, score } = modeOf(q);
   let body: React.ReactNode;
-  if (family === "choice" || family === "multi" || family === "poll") body = <Choice {...props} />;
-  else if (family === "tier") body = <Tiers {...props} />;
-  else if (family === "typed") body = <Typed {...props} />;
-  else if (family === "order") body = <Order {...props} />;
-  else if (family === "number") body = <Estimate {...props} />;
-  else if (family === "match") body = <Pairs {...props} />;
-  else if (family === "draw") body = <DrawAnswer {...props} />;
-  else if (family === "telephone") body = <TelephoneTurn {...props} />;
+  if (ask === "pick" || ask === "pick-many") body = <Choice {...props} />;
+  else if (ask === "rank") body = <Tiers {...props} />;
+  else if (ask === "type-in") body = <Typed {...props} />;
+  else if (ask === "order") body = <Order {...props} />;
+  else if (ask === "number") body = <Estimate {...props} />;
+  else if (ask === "match") body = <Pairs {...props} />;
+  else if (ask === "draw") body = <DrawAnswer {...props} />;
+  else if (ask === "chain") body = <TelephoneTurn {...props} />;
+  else if (score === "secret") body = <SecretWord {...props}><Written {...props} /></SecretWord>;
   else body = <Written {...props} />;
-  const drawing = family === "draw" || family === "telephone";
+  const drawing = ask === "draw" || ask === "chain";
   return (
     <div className={`jqzz-answering${drawing ? " drawing" : ""}`}>
       <p className={`jqzz-play-prompt jqzz-holo sheen${drawing ? " small" : ""}`}>{q.text}</p>
-      {family === "poll" && <p className="jqzz-play-note">points if you side with the most</p>}
+      {score === "crowd" && <p className="jqzz-play-note">{ask === "number" ? "points for being closest to the room's average" : "points if you side with the most"}</p>}
+      {score === "none" && (ask === "pick" || ask === "pick-many" || ask === "rank") && <p className="jqzz-play-note">no points on this one</p>}
       <QuestionImage src={q.imageUrl} ownerId={game.authorId} viewerId={props.me} />
       {body}
     </div>
@@ -63,7 +65,7 @@ export const Answering: React.FC<Props> = (props) => {
 
 const Choice: React.FC<Props> = ({ game, mine, submit, remember }) => {
   const q = game.question!;
-  const multiple = q.type === "PREWRITTEN_MULTIPLE";
+  const multiple = modeOf(q).ask === "pick-many";
   const [picked, setPicked] = useState<number[]>(mine.picks ?? []);
   const sent = mine.picks ?? [];
   const same = sent.length === picked.length && sent.every((id) => picked.includes(id));
@@ -201,7 +203,8 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
   const entries = game.reveal?.entries ?? [];
   const isMine = (e: { text?: string; image?: string }) =>
     e.image ? !!mine.drawing && e.image === mine.drawing : !!mine.text && e.text === mine.text;
-  const drawn = typeInfo(game.question?.type).family === "draw";
+  const { ask, score } = modeOf(game.question);
+  const drawn = ask === "draw";
 
   if (game.interaction === "vote") {
     const others = entries.filter((e) => !isMine(e));
@@ -228,7 +231,7 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
   }
 
   if (game.interaction === "guess") {
-    if (game.question?.type === "DRAW_GUESS") {
+    if (score === "secret") {
       return <GuessWords game={game} entries={entries.filter((e) => !isMine(e))} mine={mine} vote={vote} remember={remember} />;
     }
     return <Guessing game={game} me={me} mine={mine} entries={entries.filter((e) => !isMine(e))} vote={vote} remember={remember} />;
@@ -291,7 +294,7 @@ const Guessing: React.FC<{
       <p className="jqzz-play-prompt small">who wrote each one?</p>
       {entries.map((e) => (
         <div key={e.key} className="jqzz-guess">
-          <p className="jqzz-guess-text">“{e.text}”</p>
+          {e.image ? <EntryFace game={game} e={e} /> : <p className="jqzz-guess-text">“{e.text}”</p>}
           <div className="jqzz-guess-names">
             {authors.map((id) => (
               <button

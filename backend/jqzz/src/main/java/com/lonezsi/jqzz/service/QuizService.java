@@ -118,6 +118,7 @@ public class QuizService {
         question.setElaborationImageUrl(source.getElaborationImageUrl());
         question.setType(source.getType());
         question.setOptions(source.getOptions());
+        question.setMode(source.getMode());
         question.setUserId(source.getUserId());
 
         List<Answer> answers = new ArrayList<>();

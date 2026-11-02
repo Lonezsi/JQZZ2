@@ -4,7 +4,7 @@
  */
 import { parseScript } from "./scriptParser";
 import { quizToScript } from "./scriptSerializer";
-import { QUESTION_TYPE_IDS, parseOptions } from "./questionTypes";
+import { ASKS, SCORES, modeOf, parseOptions } from "./questionTypes";
 import { GAME_MODES } from "../modes";
 import { parseSettings } from "./settings";
 import type { Action, Question } from "../types";
@@ -27,6 +27,7 @@ function shape(questions: Question[], actions: Action[]) {
   return {
     questions: questions.map((q) => ({
       type: q.type,
+      mode: q.mode,
       text: q.text,
       elaboration: q.elaborationText || "",
       options: q.options ?? "",
@@ -75,6 +76,7 @@ ShowAnswers(Q2, time: 20)
 a note`,
 );
 check("v1: old type names map", v1.questions.map((q) => q.type).join() === "PREWRITTEN_SINGLE,USER_GENERATED_VOTE");
+check("v1: and say what they are", v1.questions.map((q) => q.mode).join() === "pick/right,write/votes", v1.questions.map((q) => q.mode));
 check("v1: settings group opens and closes", v1.actions.filter((a) => a.phase === "SETTING").length === 2);
 
 // ─── every new type ────────────────────────────────────────────────────
@@ -167,10 +169,64 @@ check("speed: a setting", parseSettings(v2.actions[0].preview).speed === true, v
 
 // ─── friendly writing ─────────────────────────────────────────────────
 const written = quizToScript(quizOf(v1.actions));
-check("writes the friendly names", written.includes('type: "single"') && written.includes('type: "write-vote"'), written);
+check("writes ask and score", written.includes('ask: "pick", score: "right"') && written.includes('ask: "write", score: "votes"'), written);
 const extras = quizToScript(quizOf(v2.actions));
 check("writes numbers bare and words quoted", extras.includes('unit: "m"') && extras.includes("max: 10000"), extras);
 check("writes the match key", extras.includes('match: "Au"'), extras);
+
+// ─── v3: any pair an ask takes ─────────────────────────────────────────
+const v3 = roundTrip(
+  "v3 pairs",
+  `NewQuestion Q1 (
+  ask: "draw", score: "authors",
+  prompt: "Draw your pet",
+)
+NewQuestion Q2 (
+  ask: "write", score: "secret",
+  prompt: "Describe it without saying it",
+  answers: [ { text: "volcano", value: 100 } ],
+)
+NewQuestion Q3 (
+  ask: "number", score: "crowd",
+  prompt: "How many hours of sleep is enough?",
+  min: 0, max: 14,
+)
+NewQuestion Q4 (
+  ask: "pick", score: "none",
+  prompt: "Tea or coffee?",
+  answers: [ { text: "Tea", value: 0 }, { text: "Coffee", value: 0 } ],
+)
+NewQuestion Q5 (
+  type: "draw-vote",
+  score: "knockout",
+  prompt: "a shorthand, with its score changed",
+)
+NewQuestion Q6 (
+  ask: "rank",
+  prompt: "no score said: the first it takes",
+)
+ShowQuestion(Q1, time: 60)
+ShowQuestion(Q2, time: 60)
+ShowQuestion(Q3, time: 20)
+ShowQuestion(Q4, time: 10)
+ShowQuestion(Q5, time: 60)
+ShowQuestion(Q6, time: 60)`,
+);
+const modes = v3.questions.map((q) => q.mode).join();
+check("v3: every pair reads", modes === "draw/authors,write/secret,number/crowd,pick/none,draw/knockout,rank/crowd", modes);
+check("v3: a pair without a preset keeps the nearest stored type", v3.questions[0].type === "DRAW", v3.questions[0].type);
+check("v3: a pair with one gets it", v3.questions[4].type === "DRAW_BATTLE", v3.questions[4].type);
+check("v3: modeOf reads it back", modeOf(v3.questions[1]).score === "secret");
+
+const wrongPair = parseScript(`NewQuestion Q1 (
+  ask: "draw", score: "right",
+  prompt: "x",
+)`, []);
+check("a pair the ask can't take is named", wrongPair.errors.join().includes("draw can't score right"), wrongPair.errors);
+const wrongAsk = parseScript(`NewQuestion Q1 (
+  ask: "dance",
+)`, []);
+check("an unknown ask lists the right ones", wrongAsk.errors.join().includes("ask is one of pick"), wrongAsk.errors);
 
 // ─── what it says when something's wrong ──────────────────────────────
 const bad = parseScript(
@@ -197,9 +253,10 @@ for (const mode of GAME_MODES) {
   check(`mode ${mode.id}: has a name, an about and a player count`, !!mode.name && !!mode.about && !!mode.players, mode);
   check(`mode ${mode.id}: has questions`, mode.questions > 0);
 }
-const covered = new Set(GAME_MODES.flatMap((m) => m.types));
-const missing = QUESTION_TYPE_IDS.filter((t) => !covered.has(t) && t !== "TIERLIST" && t !== "USER_GENERATED" && t !== "DRAW");
-check("the modes play every new type", missing.length === 0, missing);
+const asks = new Set(GAME_MODES.flatMap((m) => m.modes.map((x) => x.ask)));
+const scores = new Set(GAME_MODES.flatMap((m) => m.modes.map((x) => x.score)));
+check("the modes use every ask", ASKS.every((a) => asks.has(a.id)), ASKS.filter((a) => !asks.has(a.id)).map((a) => a.id));
+check("the modes use every score", SCORES.every((x) => scores.has(x.id)), SCORES.filter((x) => !scores.has(x.id)).map((x) => x.id));
 
 console.log(`${passed} passed, ${failed} failed`);
 // a failure fails the run (scripts/check-script.mjs runs this under Node)

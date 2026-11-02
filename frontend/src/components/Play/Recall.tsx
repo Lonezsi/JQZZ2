@@ -391,7 +391,8 @@ export const NumberReveal: React.FC<{ game: GameState; me?: string }> = ({ game,
     <div className="jqzz-number-reveal">
       {right != null && (
         <p className="jqzz-number-right OEF">
-          {plain(right)}
+          {r.average && <span className="jqzz-annot">the room's average</span>}
+          {plain(Math.round(right * 100) / 100)}
           <small>{unit}</small>
         </p>
       )}

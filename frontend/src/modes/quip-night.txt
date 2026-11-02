@@ -1,25 +1,25 @@
-# Quip night · JQzz Script v2
+# Quip night · JQzz Script v3
 # about: Everyone answers the same prompt, then votes for the funniest. The last one is a knockout.
 # players: 3+
 
 NewQuestion Q1 (
-  type: "write-vote",
+  ask: "write", score: "votes",
   prompt: "The worst thing to say on a first date",
 )
 NewQuestion Q2 (
-  type: "write-vote",
+  ask: "write", score: "votes",
   prompt: "A terrible name for a cat",
 )
 NewQuestion Q3 (
-  type: "write-vote",
+  ask: "write", score: "votes",
   prompt: "What the dog is actually thinking",
 )
 NewQuestion Q4 (
-  type: "write-vote",
+  ask: "write", score: "votes",
   prompt: "The real reason the dinosaurs died out",
 )
 NewQuestion Q5 (
-  type: "knockout",
+  ask: "write", score: "knockout",
   prompt: "A new national holiday, and how everyone celebrates it",
 )
 

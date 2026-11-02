@@ -187,6 +187,20 @@
   font-size: var(--fs-small);
   color: var(--text-3);
 }
+/* no points column: ranked items, a show of hands */
+.jqzz-answer-head.plain,
+.jqzz-answer-row.plain {
+  grid-template-columns: 30px 1fr 26px;
+}
+.jqzz-mode-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.jqzz-mode-picker .jqzz-panel-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
 /* pairs: both halves side by side */
 .jqzz-answer-head.pairs,
 .jqzz-answer-row.pairs {

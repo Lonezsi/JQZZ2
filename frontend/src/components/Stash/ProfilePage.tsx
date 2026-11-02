@@ -6,7 +6,7 @@ import { errorMessage } from "../../services/api";
 import { profileService, stashService } from "../../services/stashService";
 import type { FriendPerson } from "../../services/friendService";
 import type { Profile, StashItem } from "../../types/stash";
-import { QUESTION_TYPE_LABEL, typeLabel } from "../../utils/questionInfo";
+import { typeIcon, typeLabel } from "../../utils/questionInfo";
 import { plural, when } from "../../utils/format";
 import { readContent } from "../../utils/stashContent";
 import { PlayFrame } from "../Play/PlayCommon";
@@ -329,8 +329,8 @@ const Stats: React.FC<{ profile: Profile }> = ({ profile }) => {
               const per = Math.round(t.points / t.questions);
               return (
                 <li key={t.type} title={`${t.points} points over ${plural(t.questions, "question")}`}>
-                  <Glyph name={t.type} size={13} />
-                  <span className="jqzz-best-name">{QUESTION_TYPE_LABEL[t.type] ?? typeLabel(t.type)}</span>
+                  <Glyph name={typeIcon(t.type)} size={13} />
+                  <span className="jqzz-best-name">{typeLabel(t.type)}</span>
                   <span className="jqzz-best-bar">
                     <span style={{ width: `${(per / top) * 100}%` }} />
                   </span>
