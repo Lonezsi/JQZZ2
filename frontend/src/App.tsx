@@ -25,6 +25,8 @@ const PlayScreen = lazy(() => import("./components/Play/PlayScreen").then((m) =>
 const JoinScreen = lazy(() => import("./components/Play/JoinScreen").then((m) => ({ default: m.JoinScreen })));
 const HistoryPage = lazy(() => import("./components/Stash/HistoryPage").then((m) => ({ default: m.HistoryPage })));
 const ProfilePage = lazy(() => import("./components/Stash/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+/* a bare sheet to try the brushes on, while working on them */
+const Sketch = import.meta.env.DEV ? lazy(() => import("./draw/Sketch")) : null;
 
 function App() {
   const route = useHashRoute();
@@ -54,6 +56,7 @@ function page(where?: string, a?: string, b?: string, c?: string) {
     return <ProfilePage tab="stash" add={{ kind: b, ref: decodeURIComponent(c) }} />;
   }
   if (where === "stash") return <ProfilePage tab="stash" sub={a} />;
+  if (where === "draw" && Sketch) return <Sketch />;
   return <Dashboard />;
 }
 
