@@ -117,6 +117,7 @@ public class QuizService {
         question.setElaborationText(source.getElaborationText());
         question.setElaborationImageUrl(source.getElaborationImageUrl());
         question.setType(source.getType());
+        question.setOptions(source.getOptions());
         question.setUserId(source.getUserId());
 
         List<Answer> answers = new ArrayList<>();
@@ -127,6 +128,7 @@ public class QuizService {
                 answer.setQuestion(question);
                 answer.setText(a.getText());
                 answer.setValue(a.getValue());
+                answer.setMatch(a.getMatch());
                 answer.setImageUrl(a.getImageUrl());
                 answer.setUserId(a.getUserId());
                 answers.add(answer);

@@ -87,7 +87,7 @@ public class StashService {
      * type, its steps, and its answer slots. Stash items of kind TYPE hold
      * {"name", "questionType", "answers": [{text, value}], "steps": [{phase, time, preview}]}.
      */
-    static final List<Map<String, Object>> DEFAULT_TYPES = List.of(
+    public static final List<Map<String, Object>> DEFAULT_TYPES = List.of(
             type("Full MC question", "PREWRITTEN_SINGLE", 4,
                     step("WAITING", 8, "Pre-question buffer"), step("QUESTION", 30, "Multiple-choice question"),
                     step("ANSWER", 12, "Answer reveal"), step("RESULT", 10, "Leaderboard update")),
@@ -106,7 +106,30 @@ public class StashService {
                     step("RESULT", 15, "Group tier comparison")),
             type("Lightning round", "PREWRITTEN_SINGLE", 4,
                     step("WAITING", 3, "Quick buffer"), step("QUESTION", 10, "Fast question"),
-                    step("ANSWER", 5, "Answer reveal")));
+                    step("ANSWER", 5, "Answer reveal")),
+            type("Type it", "TYPED", blanks(2, 100),
+                    step("WAITING", 5, "Get ready"), step("QUESTION", 25, "Type the answer"),
+                    step("ANSWER", 10, "What everyone typed")),
+            type("Put in order", "ORDER", blanks(4, 50),
+                    step("WAITING", 5, "Get ready"), step("QUESTION", 40, "Drag into order"),
+                    step("ANSWER", 12, "The right order")),
+            type("Estimate", "NUMBER", blanks(1, 1000),
+                    step("WAITING", 5, "Get ready"), step("QUESTION", 25, "Guess the number"),
+                    step("ANSWER", 12, "Who came closest")),
+            type("Match pairs", "MATCH", blanks(4, 100),
+                    step("WAITING", 5, "Get ready"), step("QUESTION", 45, "Pair them up"),
+                    step("ANSWER", 12, "The pairs")),
+            type("Poll", "POLL", blanks(3, 100),
+                    step("QUESTION", 20, "Everyone votes"), step("ANSWER", 10, "What the room thinks")),
+            type("Draw + vote", "DRAW_VOTE", 0,
+                    step("WAITING", 5, "Get ready"), step("QUESTION", 90, "Everyone draws"),
+                    step("ANSWER", 30, "Vote for the best"), step("RESULT", 10, "Leaderboard update")),
+            type("Draw + guess", "DRAW_GUESS", blanks(4, 100),
+                    step("WAITING", 5, "Get ready"), step("QUESTION", 80, "Draw your secret word"),
+                    step("ANSWER", 60, "Guess the drawings"), step("RESULT", 10, "Leaderboard update")),
+            type("Telephone", "TELEPHONE", 0,
+                    step("QUESTION", 300, "Write, draw, describe, pass it on"),
+                    step("ANSWER", 120, "The chains")));
 
     /**
      * full: your types are thrown away and the defaults put back.
@@ -220,6 +243,13 @@ public class StashService {
         s.put("time", time);
         s.put("preview", preview);
         return s;
+    }
+
+    /** empty answer slots, each worth the same */
+    private static List<Map<String, Object>> blanks(int n, int value) {
+        List<Map<String, Object>> answers = new ArrayList<>();
+        for (int i = 0; i < n; i++) answers.add(answer("", value));
+        return answers;
     }
 
     private static Map<String, Object> answer(String text, int value) {
@@ -425,11 +455,13 @@ public class StashService {
                 qm.put("imageUrl", GameEngine.absolute(q.getImageUrl(), quiz.getAuthorId()));
                 qm.put("elaborationText", q.getElaborationText());
                 qm.put("elaborationImageUrl", GameEngine.absolute(q.getElaborationImageUrl(), quiz.getAuthorId()));
+                if (q.getOptions() != null && !q.getOptions().isBlank()) qm.put("options", q.getOptions());
                 List<Map<String, Object>> answers = new ArrayList<>();
                 for (Answer ans : q.getAnswers()) {
                     Map<String, Object> am = new LinkedHashMap<>();
                     am.put("text", ans.getText());
                     am.put("value", ans.getValue());
+                    if (ans.getMatch() != null) am.put("match", ans.getMatch());
                     am.put("imageUrl", GameEngine.absolute(ans.getImageUrl(), quiz.getAuthorId()));
                     answers.add(am);
                 }
@@ -472,6 +504,7 @@ public class StashService {
             question.setImageUrl(str(q.get("imageUrl")));
             question.setElaborationText(str(q.get("elaborationText")));
             question.setElaborationImageUrl(str(q.get("elaborationImageUrl")));
+            question.setOptions(str(q.get("options")));
             try {
                 question.setType(QuestionType.valueOf(str(q.get("type"))));
             } catch (RuntimeException e) {
@@ -482,6 +515,7 @@ public class StashService {
                 Answer answer = new Answer();
                 answer.setText(str(a.get("text")));
                 answer.setValue(a.get("value") instanceof Number n ? n.intValue() : 0);
+                answer.setMatch(str(a.get("match")));
                 answer.setImageUrl(str(a.get("imageUrl")));
                 answers.add(answer);
             }

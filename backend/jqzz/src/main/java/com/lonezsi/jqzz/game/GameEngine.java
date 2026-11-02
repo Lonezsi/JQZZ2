@@ -27,7 +27,10 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 
 import com.lonezsi.jqzz.model.Action;
+import com.lonezsi.jqzz.model.Drawing;
 import com.lonezsi.jqzz.model.GameRecord;
+import com.lonezsi.jqzz.model.QuestionType;
+import com.lonezsi.jqzz.repository.DrawingRepository;
 import com.lonezsi.jqzz.repository.GameRecordRepository;
 import tools.jackson.databind.json.JsonMapper;
 import com.lonezsi.jqzz.model.Answer;
@@ -100,6 +103,14 @@ public class GameEngine {
     @Autowired(required = false)
     void setNotifications(NotificationService notifications) {
         this.notifications = notifications;
+    }
+
+    /** where a finished game's drawings are kept; optional like the notifications */
+    private DrawingRepository drawings;
+
+    @Autowired(required = false)
+    void setDrawings(DrawingRepository drawings) {
+        this.drawings = drawings;
     }
 
     @PreDestroy
@@ -355,8 +366,62 @@ public class GameEngine {
 
     public Map<String, Object> submit(String code, String userId, List<Long> picks, String text,
             Map<Long, String> tiers) {
+        return submit(code, userId, picks, text, tiers, null);
+    }
+
+    public Map<String, Object> submit(String code, String userId, List<Long> picks, String text,
+            Map<Long, String> tiers, Map<Long, String> pairs) {
         Game game = find(code);
-        return change(game, g -> g.submit(userId, picks, text, tiers, now(), online(game)));
+        return change(game, g -> g.submit(userId, picks, text, tiers, pairs, now(), online(game)));
+    }
+
+    /**
+     * A drawing, as the image file the drawing frame exports (PNG, WebP or
+     * JPEG). What it is comes from the file itself, not from what it says.
+     */
+    public Map<String, Object> draw(String code, String userId, byte[] image) {
+        String type = imageType(image);
+        if (type == null) throw bad("That isn't a drawing");
+        Game game = find(code);
+        String[] id = new String[1];
+        Map<String, Object> view = change(game, g -> id[0] = g.draw(userId, image, type, now(), online(game)));
+        Map<String, Object> out = new LinkedHashMap<>(view);
+        out.put("drawing", id[0]);
+        return out;
+    }
+
+    /** a drawing from a game still in memory, or null */
+    public Game.Art art(String code, String id) {
+        Game game = code == null ? null : games.get(code.trim().toUpperCase());
+        if (game == null) return null;
+        synchronized (game) {
+            return game.art(id);
+        }
+    }
+
+    /** a drawing kept with a finished game's history, or null */
+    public Drawing keptDrawing(Long recordId, String key) {
+        if (drawings == null || recordId == null || key == null) return null;
+        return drawings.findFirstByRecordIdAndArtKey(recordId, key).orElse(null);
+    }
+
+    /** What only this player sees right now: their secret word, what they're handed. */
+    public Map<String, Object> task(String code, String userId) {
+        Game game = find(code);
+        synchronized (game) {
+            return game.task(userId);
+        }
+    }
+
+    /** "image/png", "image/webp" or "image/jpeg" by the file's first bytes; null for anything else */
+    static String imageType(byte[] b) {
+        if (b == null || b.length < 12) return null;
+        if ((b[0] & 0xff) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') return "image/png";
+        if (b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F' && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return "image/webp";
+        }
+        if ((b[0] & 0xff) == 0xff && (b[1] & 0xff) == 0xd8) return "image/jpeg";
+        return null;
     }
 
     public Map<String, Object> vote(String code, String userId, String choice, Integer match,
@@ -467,6 +532,7 @@ public class GameEngine {
      */
     private boolean record(Game game) {
         GameRecord record;
+        Map<String, Game.Art> art;
         synchronized (game) {
             if (game.status() != Game.Status.FINISHED || game.recorded) return false;
             game.recorded = true;
@@ -489,9 +555,11 @@ public class GameEngine {
                 last = p.score;
                 record.getPlayers().add(new PlayerResult(p.id, p.name, p.score, rank));
             }
+            art = game.keptArt();
         }
         try {
             GameRecord saved = records.save(record);
+            keepDrawings(game, saved.getId(), art);
             synchronized (game) {
                 game.recordId = saved.getId();
                 game.version++;
@@ -502,6 +570,17 @@ public class GameEngine {
         } catch (RuntimeException e) {
             System.err.println("game " + game.code() + ": could not save its history: " + e);
             return false;
+        }
+    }
+
+    private void keepDrawings(Game game, Long recordId, Map<String, Game.Art> art) {
+        if (drawings == null || recordId == null) return;
+        for (Map.Entry<String, Game.Art> e : art.entrySet()) {
+            try {
+                drawings.save(new Drawing(recordId, e.getKey(), e.getValue().contentType(), e.getValue().bytes()));
+            } catch (RuntimeException ex) {
+                System.err.println("game " + game.code() + ": could not keep a drawing: " + ex);
+            }
         }
     }
 
@@ -531,11 +610,13 @@ public class GameEngine {
                 qm.put("imageUrl", absolute(q.imageUrl(), game.authorId));
                 qm.put("elaborationText", q.elaborationText());
                 qm.put("elaborationImageUrl", absolute(q.elaborationImageUrl(), game.authorId));
+                if (!q.options().isEmpty()) qm.put("options", formatOptions(q.options()));
                 List<Map<String, Object>> answers = new ArrayList<>();
                 for (Game.AnswerSnap a : q.answers()) {
                     Map<String, Object> am = new LinkedHashMap<>();
                     am.put("text", a.text());
                     am.put("value", a.value());
+                    if (a.match() != null) am.put("match", a.match());
                     am.put("imageUrl", absolute(a.imageUrl(), game.authorId));
                     answers.add(am);
                 }
@@ -706,11 +787,37 @@ public class GameEngine {
         List<Game.AnswerSnap> answers = new ArrayList<>();
         for (Answer ans : q.getAnswers()) {
             long id = ans.getId() != null ? ans.getId() : spare[0]--;
-            answers.add(new Game.AnswerSnap(id, ans.getText(), ans.getImageUrl(), ans.getValue()));
+            answers.add(new Game.AnswerSnap(id, ans.getText(), ans.getImageUrl(), ans.getValue(), ans.getMatch()));
         }
-        if (settings.mix) Collections.shuffle(answers, random);
+        // an order question's answers are the right order: the game shuffles what it shows instead
+        if (settings.mix && q.getType() != QuestionType.ORDER) Collections.shuffle(answers, random);
         return new Game.QuestionSnap(q.getId(), q.getText(), q.getImageUrl(), q.getType(),
-                q.getElaborationText(), q.getElaborationImageUrl(), answers, settings.weight());
+                q.getElaborationText(), q.getElaborationImageUrl(), answers, settings.weight(),
+                parseOptions(q.getOptions()), settings.speed);
+    }
+
+    /** "unit=m, min=0" (values URL-encoded, as the script writes them) -> {unit: m, min: 0} */
+    static Map<String, String> parseOptions(String text) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (text == null || text.isBlank()) return out;
+        for (String part : text.split(",")) {
+            int i = part.indexOf('=');
+            if (i <= 0) continue;
+            String key = part.substring(0, i).trim().toLowerCase();
+            try {
+                out.put(key, java.net.URLDecoder.decode(part.substring(i + 1).trim(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (IllegalArgumentException e) {
+                out.put(key, part.substring(i + 1).trim());
+            }
+        }
+        return out;
+    }
+
+    static String formatOptions(Map<String, String> options) {
+        List<String> parts = new ArrayList<>();
+        options.forEach((k, v) -> parts.add(k + "=" + java.net.URLEncoder.encode(v, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20")));
+        return String.join(", ", parts);
     }
 
     /** What a SETTING block can switch, e.g. "shuffle=on, points=2". */
@@ -720,6 +827,7 @@ public class GameEngine {
         boolean grade = true;
         int points = 100;
         boolean lateJoin = true;
+        boolean speed;
 
         void apply(String text) {
             if (text == null) return;
@@ -734,6 +842,7 @@ public class GameEngine {
                     case "grade" -> grade = on;
                     case "points" -> points = percent(value);
                     case "latejoin" -> lateJoin = on;
+                    case "speed" -> speed = on;
                     default -> { /* unknown: ignored, so older servers survive newer quizzes */ }
                 }
             }

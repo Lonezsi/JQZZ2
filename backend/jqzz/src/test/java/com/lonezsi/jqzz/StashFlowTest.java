@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import com.jayway.jsonpath.JsonPath;
 import com.lonezsi.jqzz.model.ImageVisibility;
 import com.lonezsi.jqzz.service.ImageService;
+import com.lonezsi.jqzz.service.StashService;
 
 /**
  * A game played over the real HTTP API ends up in the history of everyone in
@@ -24,6 +25,8 @@ import com.lonezsi.jqzz.service.ImageService;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class StashFlowTest {
+
+    private static final int DEFAULTS = StashService.DEFAULT_TYPES.size();
 
     @Value("${local.server.port}")
     private int port;
@@ -118,12 +121,12 @@ class StashFlowTest {
 
         // everyone starts with the default question types; resetting brings them back
         List<Number> types = JsonPath.read(stash, "$.items[?(@.kind == 'TYPE')].id");
-        assertThat(types).hasSize(6);
+        assertThat(types).hasSize(DEFAULTS);
         send("DELETE", "/stash/" + types.get(0).longValue(), bob, null);
         assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"add\"}").body(), "$"))
-                .hasSize(6);
+                .hasSize(DEFAULTS);
         assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"add\"}").body(), "$"))
-                .hasSize(6);
+                .hasSize(DEFAULTS);
         // a question from the game, kept as a shape: its type and steps, no words
         String shape = send("POST", "/stash/as-type", bob,
                 "{\"recordId\": %d, \"questionKey\": %d, \"title\": \"river style\"}".formatted(recordId, firstKey)).body();
@@ -133,7 +136,7 @@ class StashFlowTest {
         assertThat(send("PATCH", "/stash/" + shapeId, bob, "{\"payload\": \"{\\\"steps\\\": []}\"}").statusCode())
                 .isEqualTo(400);
         assertThat(JsonPath.<List<Object>>read(send("POST", "/stash/types/reset", bob, "{\"mode\": \"full\"}").body(), "$"))
-                .hasSize(6);
+                .hasSize(DEFAULTS);
         // straight from the editor
         String fromEditor = send("POST", "/stash/types", bob,
                 "{\"name\": \"quick pick\", \"questionType\": \"TIERLIST\", \"answers\": [], \"steps\": [{\"phase\": \"QUESTION\", \"time\": 20}]}").body();

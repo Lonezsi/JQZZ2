@@ -3,12 +3,20 @@ package com.lonezsi.jqzz.game;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.lonezsi.jqzz.service.StashService;
 
@@ -23,7 +31,10 @@ import com.lonezsi.jqzz.service.StashService;
  * POST /play/{code}/start|pause|resume|skip|end|restart  {userId}  host only
  * POST /play/{code}/kick          {userId, playerId}     host only
  * POST /play/{code}/invite        {userId, playerId}     host only: playerId gets a notification
- * POST /play/{code}/submit        {userId, picks|text|tiers}
+ * POST /play/{code}/submit        {userId, picks|text|tiers|pairs}
+ * POST /play/{code}/draw          the image itself (PNG/WebP/JPEG), X-User-Id: who drew it
+ * GET  /play/{code}/task          X-User-Id: what only you see now (secret word, what you're handed)
+ * GET  /play/{code}/art/{id}      a drawing from the game
  * POST /play/{code}/vote          {userId, choice, match | guesses}
  * POST /play/{code}/leave         {userId}
  * POST /play/{code}/hurry         {userId}               done: nudge the host to move on
@@ -129,7 +140,32 @@ public class PlayController {
 
     @PostMapping("/{code}/submit")
     public Map<String, Object> submit(@PathVariable String code, @RequestBody PlayRequest r) {
-        return engine.submit(code, r.userId, r.picks, r.text, r.tiers);
+        return engine.submit(code, r.userId, r.picks, r.text, r.tiers, r.pairs);
+    }
+
+    /** the body is the drawing, sent as the file it is; who drew it rides in a header, not the address */
+    @PostMapping(value = "/{code}/draw", consumes = { "image/png", "image/webp", "image/jpeg", "application/octet-stream" })
+    public Map<String, Object> draw(@PathVariable String code,
+            @RequestHeader(value = "X-User-Id", required = false) String userId, @RequestBody byte[] image) {
+        return engine.draw(code, userId, image);
+    }
+
+    @GetMapping("/{code}/task")
+    public Map<String, Object> task(@PathVariable String code,
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        return engine.task(code, userId);
+    }
+
+    /** ids are random and a drawing never changes under one, so it can be kept a long time */
+    @GetMapping("/{code}/art/{id}")
+    public ResponseEntity<byte[]> art(@PathVariable String code, @PathVariable String id) {
+        Game.Art a = engine.art(code, id);
+        if (a == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such drawing");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(a.contentType()))
+                .cacheControl(CacheControl.maxAge(1, TimeUnit.DAYS).cachePrivate().immutable())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(a.bytes());
     }
 
     @PostMapping("/{code}/vote")
@@ -152,6 +188,7 @@ public class PlayController {
         public List<Long> picks;
         public String text;
         public Map<Long, String> tiers;
+        public Map<Long, String> pairs;
         public String choice;
         public Integer match;
         public Map<String, String> guesses;

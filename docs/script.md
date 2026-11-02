@@ -55,7 +55,7 @@ of steps; steps of the same question are its phases.
 | `answers` | list of answers, below | what the type says they mean |
 | `unit` | string, e.g. `"m"` | `number` |
 | `min`, `max` | numbers | `number`: the ends of the slider |
-| `rounds` | number | `telephone`: how many hand-ons |
+| `rounds` | number | `telephone`: how many turns, the first write included (default: one per player, 3 to 8) |
 
 Strings are double quoted with JSON escapes (`"say \"hi\""`). Numbers are
 plain (`100`, `-3`, `2.5`). A trailing comma after a field is fine.
@@ -103,8 +103,10 @@ Where the voting, guessing or battling happens:
 
 - `write-vote`, `who-wrote`, `knockout`, `draw-vote`, `draw-guess`,
   `draw-knockout`: during `ShowAnswers`, so give it time.
-- `telephone`: the hand-ons all happen during `ShowQuestion`, its time split
-  evenly between `rounds`; `ShowAnswers` shows the chains.
+- `telephone`: the turns all happen during `ShowQuestion`, its time split
+  between them, drawing turns getting twice what writing turns get;
+  `ShowAnswers` shows the chains. Someone who joins after it started watches.
+  Alone, you hand it on to yourself.
 
 ## Settings
 

@@ -61,6 +61,27 @@ class QuizPersistenceTest {
             .isEqualTo(JsonPath.read(saved, "$.actions[1].question.id"));
     }
 
+    /** script v2's new types keep what the script said: their options and their pairs */
+    @Test
+    void newTypesKeepTheirOptionsAndPairs() throws Exception {
+        long quizId = createQuiz();
+        String match = """
+            {"id": 21, "text": "Element to symbol", "type": "MATCH", "options": "unit=m%20s, min=0",
+             "answers": [{"id": 22, "text": "Gold", "match": "Au", "value": 100},
+                         {"id": 23, "text": "Iron", "match": "Fe", "value": 100}]}
+            """;
+        String body = """
+            {"name": "Pairs", "actions": [{"id": 20, "phase": "QUESTION", "time": 30, "question": %s}]}
+            """.formatted(match);
+        assertThat(send("PUT", "/quizzes/" + quizId, body).statusCode()).isEqualTo(200);
+
+        String saved = send("GET", "/quizzes/" + quizId, null).body();
+        assertThat(JsonPath.<String>read(saved, "$.actions[0].question.type")).isEqualTo("MATCH");
+        assertThat(JsonPath.<String>read(saved, "$.actions[0].question.options")).isEqualTo("unit=m%20s, min=0");
+        assertThat(JsonPath.<List<String>>read(saved, "$.actions[0].question.answers[*].match"))
+            .containsExactly("Au", "Fe");
+    }
+
     @Test
     void secondSaveReplacesContentInsteadOfDuplicating() throws Exception {
         long quizId = createQuiz();

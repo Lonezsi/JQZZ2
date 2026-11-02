@@ -28,6 +28,10 @@ public class Answer {
     @Column(name = "answer_value")
     private int value;
 
+    /** the other half of a pair (MATCH questions); MATCH is a word in SQL, hence the column name */
+    @Column(name = "match_text", length = 1000)
+    private String match;
+
     private String imageUrl;
 
     private String userId; // for USER_GENERATED types, to track who created this answer
@@ -40,6 +44,9 @@ public class Answer {
 
     public int getValue(){return value;}
     public void setValue(int value){this.value=value;}
+
+    public String getMatch(){return match;}
+    public void setMatch(String match){this.match=match;}
 
     public String getImageUrl(){return imageUrl;}
     public void setImageUrl(String imageUrl){this.imageUrl=imageUrl;}

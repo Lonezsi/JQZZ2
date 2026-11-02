@@ -43,6 +43,10 @@ public class Question {
 
     private QuestionType type;
 
+    /** what some types need besides answers, as the script writes it: "unit=m, min=0, max=100" */
+    @Column(length = 500)
+    private String options;
+
     private String userId; // for user generated content, store the author's userId
 
     @OneToMany(mappedBy="question", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -76,6 +80,9 @@ public class Question {
 
     public QuestionType getType(){return type;}
     public void setType(QuestionType type){this.type=type;}
+
+    public String getOptions(){return options;}
+    public void setOptions(String options){this.options=options;}
 
     // --- Logic to compute results based on type ---
     

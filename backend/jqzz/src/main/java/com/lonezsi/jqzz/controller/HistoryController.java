@@ -5,7 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.lonezsi.jqzz.game.GameEngine;
+import com.lonezsi.jqzz.model.Drawing;
 import com.lonezsi.jqzz.model.GameRecord;
 import com.lonezsi.jqzz.model.PlayerResult;
 import com.lonezsi.jqzz.repository.GameRecordRepository;
@@ -27,10 +34,28 @@ public class HistoryController {
 
     private final GameRecordRepository records;
     private final JsonMapper json;
+    private final GameEngine engine;
 
-    public HistoryController(GameRecordRepository records, JsonMapper json) {
+    public HistoryController(GameRecordRepository records, JsonMapper json, GameEngine engine) {
         this.records = records;
         this.json = json;
+        this.engine = engine;
+    }
+
+    /**
+     * A drawing from a game in the history. Its key is random and only in the
+     * record's content, which only the people in the game can read; an image
+     * tag can't send the X-User-Id header, so the key is what keeps it.
+     */
+    @GetMapping("/{id}/drawing/{key}")
+    public ResponseEntity<byte[]> drawing(@PathVariable Long id, @PathVariable String key) {
+        Drawing d = engine.keptDrawing(id, key);
+        if (d == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such drawing");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(d.getContentType()))
+                .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePrivate().immutable())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(d.getData());
     }
 
     @GetMapping
