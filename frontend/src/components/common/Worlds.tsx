@@ -5,6 +5,7 @@ import { registerWorldItem, useShownSpace, type Place } from "../../hooks/useSpa
 const PARTS: Record<Place, { ring?: boolean; halo?: boolean; moons?: number }> = {
   loading: {},
   game: {},
+  front: {},
   editor: {},
   history: { ring: true },
   stash: { moons: 2 },

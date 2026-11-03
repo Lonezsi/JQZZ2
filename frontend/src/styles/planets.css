@@ -106,7 +106,19 @@
     0 0 18px rgba(200, 190, 255, 0.18);
 }
 
-/* ─── loading: the original planet, as the defaults above draw it ─── */
+/* ─── loading: far below, small and dim ─── */
+.planet[data-kind="loading"] {
+  --size: min(20vmin, 190px);
+  --right: 14vw;
+  --bottom: 22vh;
+  --rim: #9fb4dc;
+  --body: radial-gradient(circle at 70% 24%, color-mix(in srgb, var(--bg) 66%, #3b4a70) 0, var(--bg) 72%);
+  --glow:
+    0 0 0 1px rgba(170, 190, 230, 0.14),
+    0 0 70px rgba(110, 140, 210, 0.14);
+}
+
+/* ─── the front page: the original planet, as the defaults above draw it ─── */
 
 /* ─── in a game: an ember, cratered ─── */
 .planet[data-kind="game"] {

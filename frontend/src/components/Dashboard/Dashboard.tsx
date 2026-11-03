@@ -124,7 +124,8 @@ export const Dashboard: React.FC = () => {
     ? (quiz?.actions.find((a) => a.id === firstSelectedId) ?? null)
     : null;
   const multipleSelected = selectedActionIdsArray.length > 1;
-  useSpace("editor", selectedAction?.phase ?? "IDLE");
+  // the front page is where you land; opening a quiz moves you to the editor
+  useSpace(quiz ? "editor" : "front", selectedAction?.phase ?? "IDLE");
 
   const handleStart = useCallback(() => {
     if (!quiz) {

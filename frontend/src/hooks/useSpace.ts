@@ -16,6 +16,8 @@ import { useLayoutEffect, useSyncExternalStore } from "react";
 export const PLACES = {
   loading: { alt: 0, col: 0, tint: "rgba(84, 108, 160, 0.17)" },
   game: { alt: 1, col: 0, tint: "rgba(176, 68, 124, 0.13)" },
+  // the front page, with no quiz open: just left of the editor, so opening one slides across
+  front: { alt: 2, col: -1, tint: "rgba(120, 92, 214, 0.1)" },
   editor: { alt: 2, col: 0, tint: "rgba(66, 102, 214, 0.14)" },
   history: { alt: 3, col: 0, tint: "rgba(62, 170, 158, 0.12)" },
   stash: { alt: 3, col: 1, tint: "rgba(216, 148, 66, 0.12)" },
