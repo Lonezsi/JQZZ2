@@ -1,0 +1,1238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Font Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" />
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/paper@0.12.17/dist/paper-core.min.js"></script>
+<style>
+  :root {
+    --bg: #07060c;
+    --panel: #110e1a;
+    --raised: #1a1626;
+    --line: rgba(226, 219, 255, 0.1);
+    --line-strong: rgba(226, 219, 255, 0.2);
+    --text: #f8f5fd;
+    --text-2: #b9b2cc;
+    --text-3: #7d7690;
+    --accent: #b9a6ff;
+    --warm: #f2a989;
+    --metric: rgba(185, 166, 255, 0.35);
+    --font-ui: "Albert Sans", system-ui, sans-serif;
+    --font-data: "Spline Sans Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #ebe7e0;
+      --panel: #f5f2ec;
+      --raised: #fffdf9;
+      --line: rgba(30, 20, 60, 0.1);
+      --line-strong: rgba(30, 20, 60, 0.2);
+      --text: #1b1626;
+      --text-2: #4c4560;
+      --text-3: #7a7389;
+      --accent: #4a2fbf;
+      --warm: #a0482a;
+      --metric: rgba(74, 47, 191, 0.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font-ui); }
+  .layout { display: grid; grid-template-columns: 320px 1fr; min-height: 100vh; }
+  aside {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    padding: 24px 20px 48px; border-right: 1px solid var(--line); background: var(--panel);
+  }
+  h1 { margin: 0 0 2px; font-size: 20px; }
+  .annot { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+  details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--text-3); font-size: 11px; transition: rotate 0.15s; }
+  details[open] summary::before { rotate: 90deg; }
+  summary .annot { flex: 1; }
+  summary input { accent-color: var(--accent); }
+  .body { padding-top: 10px; }
+  .slider { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin-bottom: 10px; }
+  .slider label { color: var(--text-2); }
+  .slider output { font-family: var(--font-data); font-size: 12px; color: var(--accent); }
+  .slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+  .note { color: var(--text-3); font-size: 12px; margin: 0 0 10px; }
+  .field { display: grid; gap: 4px; margin-bottom: 10px; color: var(--text-2); }
+  .field input {
+    font: 14px var(--font-data); padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--line-strong); background: var(--raised); color: var(--text);
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button, .check {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line-strong); background: var(--raised); color: var(--text); cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--bg); border-color: transparent; font-weight: 600; }
+  .check { display: inline-flex; align-items: center; gap: 6px; }
+  textarea {
+    width: 100%; min-height: 64px; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--line-strong); background: var(--raised); color: var(--text);
+    font: 14px/1.4 var(--font-ui); resize: vertical;
+  }
+  main { padding: 24px 32px 64px; min-width: 0; }
+  .preview { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 16px 20px; overflow-x: auto; }
+  .preview svg { display: block; }
+  .grid-head { display: flex; align-items: baseline; gap: 16px; margin: 32px 0 12px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 6px; }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: transparent; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--cell, 96px), 1fr)); gap: 8px; }
+  .cell {
+    position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    padding: 6px 6px 4px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .cell:hover { border-color: var(--line-strong); }
+  .cell.on { border-color: var(--accent); }
+  .cell.edited::after {
+    content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--warm);
+  }
+  .cell svg { display: block; width: 100%; height: auto; }
+  .cell .meta { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 10px; color: var(--text-3); }
+  .glyph { fill: var(--text); }
+  .glyph.stroked { stroke: var(--text); stroke-linejoin: round; }
+  .ghost { fill: none; stroke: var(--warm); stroke-width: 1.5; vector-effect: non-scaling-stroke; opacity: 0.6; }
+  .metric { stroke: var(--metric); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .metric.base { stroke: var(--warm); opacity: 0.5; }
+  .hide-metrics .metric { display: none; }
+  .hide-ghost .ghost { display: none; }
+  .detail {
+    display: none; grid-template-columns: minmax(280px, 520px) 1fr; gap: 24px; margin-top: 24px;
+    padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel);
+  }
+  .detail.open { display: grid; align-items: start; }
+  .detail svg { width: 100%; height: auto; max-height: 440px; }
+  .pt { fill: var(--accent); }
+  .pt.off { fill: none; stroke: var(--warm); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .handle { stroke: var(--text-3); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-family: var(--font-data); font-size: 12px; }
+  .detail dt { color: var(--text-3); }
+  .cell .x {
+    position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; padding: 0;
+    border-radius: 50%; font-size: 12px; line-height: 1; opacity: 0; transition: opacity 0.15s;
+  }
+  .cell:hover .x, .cell.del .x { opacity: 1; }
+  .cell.del { border-color: #e5484d; }
+  .cell.del svg { opacity: 0.35; }
+  .cell.del .x { background: #e5484d; color: #fff; border-color: transparent; }
+  .cell.noted .meta span:first-child::after { content: " ✎"; color: var(--accent); }
+  .notebox { grid-column: 1 / -1; display: grid; gap: 8px; }
+  .notebox textarea { min-height: 48px; }
+  .notes-list { font-family: var(--font-data); font-size: 12px; white-space: pre-wrap; min-height: 64px; }
+  .notes-items { display: grid; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
+  .notes-items li {
+    display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--text-2);
+    padding: 4px 8px; border-radius: 8px; background: var(--raised);
+  }
+  .notes-items li b { font-family: var(--font-data); color: var(--text); font-weight: 500; }
+  .notes-items li span { flex: 1; }
+  .notes-items li button { padding: 0 6px; border: none; background: none; color: var(--text-3); }
+  .status { margin-top: 8px; color: var(--text-3); font-size: 12px; min-height: 18px; }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
+    main { padding: 16px; }
+    .detail { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h1>Font Lab</h1>
+    <div class="annot" id="font-name">loading…</div>
+
+    <details open>
+      <summary><span class="annot">shape</span></summary>
+      <div class="body" id="g-shape"></div>
+    </details>
+    <details>
+      <summary><span class="annot">structure</span></summary>
+      <div class="body" id="g-structure">
+        <p class="note">near-vertical and near-horizontal edges straightened, and every point on a grid</p>
+      </div>
+    </details>
+    <details open>
+      <summary><span class="annot">symbols, drawn with a pen</span><input type="checkbox" id="on-symbols" checked title="on" /></summary>
+      <div class="body" id="g-symbols">
+        <p class="note">symbols that weren't in the font's style are redrawn with a broad nib, the way blackletter is written. orange outlines show the old ones.</p>
+      </div>
+    </details>
+    <details open>
+      <summary><span class="annot">stars for dots</span><input type="checkbox" id="on-dots" checked title="on" /></summary>
+      <div class="body" id="g-dots"></div>
+    </details>
+    <details open>
+      <summary><span class="annot">star in the o</span><input type="checkbox" id="on-ostar" checked title="on" /></summary>
+      <div class="body" id="g-ostar"></div>
+    </details>
+    <details open>
+      <summary><span class="annot">star crossbar on f and t</span><input type="checkbox" id="on-crossbar" checked title="on" /></summary>
+      <div class="body" id="g-crossbar">
+        <p class="note">the crossbar is cut off and a star takes its place on the stem</p>
+      </div>
+    </details>
+    <details open>
+      <summary><span class="annot">tails</span><input type="checkbox" id="on-tails" checked title="on" /></summary>
+      <div class="body" id="g-tails">
+        <p class="note">the swash under the baseline swapped for a straight stem and an angular pen hook</p>
+      </div>
+    </details>
+    <details open>
+      <summary><span class="annot">redrawn letters</span><input type="checkbox" id="on-letters" checked title="on" /></summary>
+      <div class="body" id="g-letters">
+        <p class="note">drawn with the same pen as the symbols, textura style: straight stems, broken corners</p>
+      </div>
+    </details>
+    <details>
+      <summary><span class="annot">open tops</span><input type="checkbox" id="on-open" checked title="on" /></summary>
+      <div class="body" id="g-open"></div>
+    </details>
+    <details>
+      <summary><span class="annot">parentheses</span><input type="checkbox" id="on-parens" checked title="on" /></summary>
+      <div class="body" id="g-parens"></div>
+    </details>
+    <details>
+      <summary><span class="annot">numbers</span><input type="checkbox" id="on-digits" checked title="on" /></summary>
+      <div class="body" id="g-digits"></div>
+    </details>
+    <details>
+      <summary><span class="annot">view</span></summary>
+      <div class="body" id="g-view">
+        <div class="row" style="margin-bottom: 10px">
+          <label class="check"><input id="metrics" type="checkbox" checked /> metrics</label>
+          <label class="check"><input id="ghost" type="checkbox" checked /> old outline</label>
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary><span class="annot">preview text</span></summary>
+      <div class="body">
+        <textarea id="text">Joe Quizz with all the juestions for your janswers!
+(fifty-two) is it? 0123456789 · 1:00 ; vow
+&lt;a@b.c&gt; #3 + 4 = 7 × 2 ÷ 1 § ¶ © ® ™ 50% [ok] {yes} ~ “quoted” — done…</textarea>
+      </div>
+    </details>
+
+    <div class="row" style="margin-top: 16px">
+      <button id="reset">reset everything</button>
+      <button id="export" class="primary">export .otf</button>
+    </div>
+    <div class="status" id="status"></div>
+
+    <details open id="notes-box">
+      <summary><span class="annot" id="notes-title">notes for claude</span></summary>
+      <div class="body">
+        <p class="note">notes and deletes you mark on glyphs land here. copy it and paste it to me.</p>
+        <ul class="notes-items" id="notes-items"></ul>
+        <div class="row">
+          <button id="notes-copy" class="primary">copy</button>
+          <button id="notes-clear">clear</button>
+        </div>
+      </div>
+    </details>
+  </aside>
+
+  <main>
+    <section class="preview" id="preview" aria-label="Preview"></section>
+    <section class="detail" id="detail" aria-label="Glyph detail"></section>
+    <div class="grid-head">
+      <div class="tabs" id="tabs">
+        <button data-f="all" aria-pressed="true">all</button>
+        <button data-f="edited" aria-pressed="false">changed</button>
+        <button data-f="letters" aria-pressed="false">letters</button>
+        <button data-f="digits" aria-pressed="false">numbers</button>
+        <button data-f="symbols" aria-pressed="false">symbols</button>
+      </div>
+      <span class="annot" id="count"></span>
+      <span class="annot">click a glyph for its points</span>
+    </div>
+    <section class="grid" id="grid"></section>
+  </main>
+</div>
+
+<script>
+const FONT_URL = "../../frontend/public/OldEnglishFive.ttf";
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+
+// ─── the controls ──────────────────────────────────────────────────
+// [group, id, label, min, max, step, default, unit]
+const SLIDERS = [
+  ["shape", "width", "width", 50, 160, 1, 100, "%"],
+  ["shape", "height", "height", 50, 160, 1, 100, "%"],
+  ["shape", "slant", "slant", -20, 30, 0.5, 0, "°"],
+  ["shape", "spacing", "spacing", -200, 400, 5, 0, ""],
+  ["shape", "weight", "weight (preview only)", 0, 60, 1, 0, ""],
+  ["structure", "straighten", "straighten within", 0, 20, 0.5, 0, "°"],
+  ["structure", "gridSnap", "snap to grid", 0, 60, 2, 0, "u"],
+  ["symbols", "nib", "nib width", 40, 220, 2, 170, "u"],
+  ["symbols", "nibAngle", "nib angle", 0, 90, 1, 38, "°"],
+  ["symbols", "symSide", "side space", 0, 160, 2, 50, "u"],
+  ["dots", "dotStar", "star size", 60, 200, 1, 125, "%"],
+  ["dots", "starFat", "star fatness", 40, 200, 1, 100, "%"],
+  ["dots", "starTurn", "star turn", 0, 45, 1, 0, "°"],
+  ["ostar", "oStar", "star size", 60, 400, 2, 170, "u"],
+  ["ostar", "oGap", "gap", 0, 80, 1, 26, "u"],
+  ["ostar", "oY", "height", -150, 150, 2, 0, "u"],
+  ["crossbar", "barStar", "star size", 60, 300, 2, 170, "u"],
+  ["crossbar", "barY", "height", -150, 150, 2, 0, "u"],
+  ["crossbar", "barGap", "gap", 0, 80, 1, 22, "u"],
+  ["tails", "tailDepth", "depth", 120, 340, 2, 250, "u"],
+  ["tails", "tailReach", "reach", 0, 400, 2, 220, "u"],
+  ["tails", "tailNib", "nib", 50, 130, 1, 85, "%"],
+  ["letters", "letterNib", "nib", 60, 140, 1, 100, "%"],
+  ["letters", "letterSide", "side space", 0, 140, 2, 44, "u"],
+  ["symbols", "dollarScale", "$ size (from s)", 90, 160, 1, 128, "%"],
+  ["open", "openCut", "opening", 0, 160, 2, 100, "%"],
+  ["open", "spurCut", "cut above x-height", 0, 200, 2, 20, "u"],
+  ["parens", "parenBow", "bow", 80, 400, 2, 210, "u"],
+  ["parens", "parenThick", "thickness", 30, 160, 2, 76, "u"],
+  ["digits", "digitSide", "side space", 0, 160, 2, 54, "u"],
+  ["view", "size", "glyph size", 48, 220, 4, 96, "px"],
+];
+const TEXTS = [
+  ["open", "openList", "which glyphs", "vwy"],
+  ["tails", "tailList", "which glyphs", "yj"],
+  ["letters", "letterList", "which glyphs", "dpqyYVTEG"],
+];
+const TOGGLES = ["symbols", "dots", "ostar", "crossbar", "tails", "letters", "open", "parens", "digits"];
+
+for (const [group, id, label, min, max, step, value, unit] of SLIDERS) {
+  const div = document.createElement("div");
+  div.className = "slider";
+  div.innerHTML = `<label for="${id}">${label}</label><output id="${id}-out"></output>
+    <input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-unit="${unit}" />`;
+  $(`g-${group}`).appendChild(div);
+}
+for (const [group, id, label, value] of TEXTS) {
+  const div = document.createElement("label");
+  div.className = "field";
+  div.innerHTML = `${label}<input id="${id}" value="${value}" />`;
+  $(`g-${group}`).appendChild(div);
+}
+
+const settings = () => {
+  const s = {};
+  for (const [, id] of SLIDERS) s[id] = Number($(id).value);
+  for (const [, id] of TEXTS) s[id] = $(id).value;
+  for (const t of TOGGLES) s[`on_${t}`] = $(`on-${t}`).checked;
+  return s;
+};
+
+let font = null;
+let glyphs = []; // [{glyph, code}]
+let picked = null;
+let filter = "all";
+let M = {}; // metrics
+
+// ─── outlines: opentype commands <-> paper.js ─────────────────────────
+paper.setup(document.createElement("canvas"));
+
+const clone = (cmds) => cmds.map((c) => ({ ...c }));
+function dOf(cmds) {
+  return cmds
+    .map((c) => {
+      switch (c.type) {
+        case "M": return `M${c.x} ${c.y}`;
+        case "L": return `L${c.x} ${c.y}`;
+        case "Q": return `Q${c.x1} ${c.y1} ${c.x} ${c.y}`;
+        case "C": return `C${c.x1} ${c.y1} ${c.x2} ${c.y2} ${c.x} ${c.y}`;
+        case "Z": return "Z";
+      }
+      return "";
+    })
+    .join("");
+}
+const toPaper = (cmds) => new paper.CompoundPath({ pathData: dOf(cmds), insert: false, fillRule: "nonzero" });
+function fromPaper(item) {
+  const paths = item.className === "CompoundPath" ? item.children : [item];
+  const out = [];
+  for (const p of paths) {
+    const segs = p.segments;
+    if (!segs || segs.length < 2) continue;
+    out.push({ type: "M", x: segs[0].point.x, y: segs[0].point.y });
+    const curve = (a, b) => {
+      if (a.handleOut.isZero() && b.handleIn.isZero()) out.push({ type: "L", x: b.point.x, y: b.point.y });
+      else
+        out.push({
+          type: "C",
+          x1: a.point.x + a.handleOut.x, y1: a.point.y + a.handleOut.y,
+          x2: b.point.x + b.handleIn.x, y2: b.point.y + b.handleIn.y,
+          x: b.point.x, y: b.point.y,
+        });
+    };
+    for (let i = 1; i < segs.length; i++) curve(segs[i - 1], segs[i]);
+    if (p.closed) curve(segs[segs.length - 1], segs[0]);
+    out.push({ type: "Z" });
+  }
+  return out;
+}
+/** union of outlines, overlaps merged, holes kept */
+function unite(items) {
+  let acc = null;
+  for (const it of items) {
+    if (!it || it.isEmpty()) continue;
+    acc = acc ? acc.unite(it, { insert: false }) : it;
+  }
+  return acc ?? new paper.CompoundPath({ insert: false });
+}
+
+function contours(cmds) {
+  const out = [];
+  let cur = null;
+  for (const c of cmds) {
+    if (c.type === "M") { cur = []; out.push(cur); }
+    if (cur) cur.push(c);
+  }
+  return out;
+}
+function bbox(cmds) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const c of cmds) for (const [kx, ky] of [["x", "y"], ["x1", "y1"], ["x2", "y2"]]) {
+    if (c[kx] === undefined) continue;
+    x0 = Math.min(x0, c[kx]); x1 = Math.max(x1, c[kx]);
+    y0 = Math.min(y0, c[ky]); y1 = Math.max(y1, c[ky]);
+  }
+  return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+}
+const inside = (a, b) => a.x0 >= b.x0 && a.x1 <= b.x1 && a.y0 >= b.y0 && a.y1 <= b.y1 && (a.w < b.w || a.h < b.h);
+function mapCmds(cmds, f) {
+  return cmds.map((c) => {
+    const n = { type: c.type };
+    if (c.x !== undefined) [n.x, n.y] = f(c.x, c.y);
+    if (c.x1 !== undefined) [n.x1, n.y1] = f(c.x1, c.y1);
+    if (c.x2 !== undefined) [n.x2, n.y2] = f(c.x2, c.y2);
+    return n;
+  });
+}
+
+// ─── the star: the front page's four points, concave between them ───
+// its 24-unit path: M12 0 C12.6 7.2 16.8 11.4 24 12 ... (y up here, it's symmetric)
+function star(cx, cy, r, s) {
+  const k = r / 12;
+  const fat = s.starFat / 100;
+  const turn = (s.starTurn * Math.PI) / 180;
+  const P = (x, y, control) => {
+    let dx = (x - 12) * k, dy = (12 - y) * k;
+    if (control) { dx *= fat; dy *= fat; }
+    const c = Math.cos(turn), sn = Math.sin(turn);
+    return [cx + dx * c - dy * sn, cy + dx * sn + dy * c];
+  };
+  const C = (x1, y1, x2, y2, x, y) => {
+    const [a, b] = P(x1, y1, true), [c, d] = P(x2, y2, true), [e, f] = P(x, y);
+    return { type: "C", x1: a, y1: b, x2: c, y2: d, x: e, y: f };
+  };
+  const [mx, my] = P(12, 0);
+  return [
+    { type: "M", x: mx, y: my },
+    C(12.6, 7.2, 16.8, 11.4, 24, 12),
+    C(16.8, 12.6, 12.6, 16.8, 12, 24),
+    C(11.4, 16.8, 7.2, 12.6, 0, 12),
+    C(7.2, 11.4, 11.4, 7.2, 12, 0),
+    { type: "Z" },
+  ];
+}
+const starPaper = (cx, cy, r, s) => toPaper(star(cx, cy, r, s));
+/**
+ * A star grown by `gap` all round. Its outline is walked and pushed out
+ * along the normal (right along the concave sides), and a scaled-up star
+ * covers the points, where an offset alone would cut the corner.
+ */
+function starGrown(cx, cy, r, gap, s) {
+  const base = starPaper(cx, cy, r, s);
+  if (gap <= 0) return base;
+  const path = base.className === "CompoundPath" ? base.children[0] : base;
+  const N = 320;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const at = (path.length * i) / N;
+    const p = path.getPointAt(at);
+    let n = path.getNormalAt(at).multiply(gap);
+    if (path.contains(p.add(n.normalize(2)))) n = n.multiply(-1);
+    pts.push(p.add(n));
+  }
+  const ring = new paper.Path({ segments: pts, closed: true, insert: false });
+  return ring.unite(starPaper(cx, cy, r + gap, s), { insert: false });
+}
+
+// ─── the pen: a broad flat nib, held at an angle, drawn along strokes ──
+/** a polyline drawn with the nib: one parallelogram per segment, united */
+function penStroke(pts, s, closed = false, nibScale = 1) {
+  const a = (s.nibAngle * Math.PI) / 180;
+  const nx = (Math.cos(a) * s.nib * nibScale) / 2;
+  const ny = (Math.sin(a) * s.nib * nibScale) / 2;
+  const list = closed ? [...pts, pts[0]] : pts;
+  const parts = [];
+  for (let i = 1; i < list.length; i++) {
+    const [x0, y0] = list[i - 1], [x1, y1] = list[i];
+    parts.push(
+      new paper.Path({
+        segments: [[x0 - nx, y0 - ny], [x0 + nx, y0 + ny], [x1 + nx, y1 + ny], [x1 - nx, y1 - ny]],
+        closed: true,
+        insert: false,
+      }),
+    );
+  }
+  return unite(parts);
+}
+/** points round an ellipse, broken into straight sides like blackletter bowls */
+function ring(cx, cy, rx, ry, sides = 8, from = 0, to = 360, tilt = 22.5) {
+  const pts = [];
+  const steps = Math.round((sides * (to - from)) / 360);
+  for (let i = 0; i <= steps; i++) {
+    const a = ((from + ((to - from) * i) / steps + tilt) * Math.PI) / 180;
+    pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  if (to - from >= 360) pts.pop();
+  return pts;
+}
+/** one of the font's own letters, scaled and moved, as paper */
+function letter(ch, scale, x, y) {
+  const g = font.charToGlyph(ch);
+  const cmds = mapCmds(g.path.commands, (px, py) => [x + px * scale, y + py * scale]);
+  return toPaper(cmds);
+}
+function letterCentred(ch, scale, cx, cy) {
+  const g = font.charToGlyph(ch);
+  const b = bbox(g.path.commands);
+  return letter(ch, scale, cx - b.cx * scale, cy - b.cy * scale);
+}
+
+// every symbol that gets redrawn: its strokes, stars and borrowed letters.
+// Coordinates in font units, y up, baseline 0; M holds the font's heights.
+function symbolDefs() {
+  const { xh, cap, axis, desc } = M;
+  const st = (s) => (pts, closed, k) => penStroke(pts, s, closed, k);
+  const mirrorX = (pts, w) => pts.map(([x, y]) => [w - x, y]);
+  const lt = [[220, 600], [20, axis], [220, 100]];
+  const small = [[190, 500], [20, axis], [190, 200]];
+  const brace = [[230, cap], [110, cap - 70], [110, axis + 90], [0, axis], [110, axis - 90], [110, desc + 70], [230, desc]];
+  const bracket = [[200, cap], [20, cap], [20, desc], [200, desc]];
+  return {
+    "-": (s) => [st(s)([[0, axis], [260, axis]])],
+    "­": (s) => [st(s)([[0, axis], [260, axis]])],
+    "–": (s) => [st(s)([[0, axis], [500, axis]])],
+    "—": (s) => [st(s)([[0, axis], [1000, axis]])],
+    "_": (s) => [st(s)([[0, desc + 40], [560, desc + 40]])],
+    "+": (s) => [st(s)([[0, axis], [460, axis]]), st(s)([[230, axis - 230], [230, axis + 230]])],
+    "±": (s) => [st(s)([[0, axis + 80], [460, axis + 80]]), st(s)([[230, axis - 120], [230, axis + 300]]), st(s)([[0, -10], [460, -10]])],
+    "=": (s) => [st(s)([[0, axis - 110], [460, axis - 110]]), st(s)([[0, axis + 110], [460, axis + 110]])],
+    "×": (s) => [st(s)([[40, axis - 190], [420, axis + 190]]), st(s)([[40, axis + 190], [420, axis - 190]])],
+    "÷": (s) => [st(s)([[0, axis], [460, axis]]), starPaper(230, axis + 230, 70 * (s.dotStar / 100), s), starPaper(230, axis - 230, 70 * (s.dotStar / 100), s)],
+    "<": (s) => [st(s)(lt)],
+    ">": (s) => [st(s)(mirrorX(lt, 220))],
+    "‹": (s) => [st(s)(small)],
+    "›": (s) => [st(s)(mirrorX(small, 190))],
+    "«": (s) => [st(s)(small), st(s)(small.map(([x, y]) => [x + 190, y]))],
+    "»": (s) => [st(s)(mirrorX(small, 190)), st(s)(mirrorX(small, 190).map(([x, y]) => [x + 190, y]))],
+    "/": (s) => [st(s)([[0, desc + 60], [430, cap]])],
+    "\\": (s) => [st(s)([[0, cap], [430, desc + 60]])],
+    "|": (s) => [st(s)([[0, desc], [0, cap]])],
+    "¦": (s) => [st(s)([[0, desc], [0, axis - 60]]), st(s)([[0, axis + 60], [0, cap]])],
+    "[": (s) => [st(s)(bracket)],
+    "]": (s) => [st(s)(mirrorX(bracket, 220))],
+    "{": (s) => [st(s)(brace)],
+    "}": (s) => [st(s)(mirrorX(brace, 230))],
+    "^": (s) => [st(s)([[0, cap - 260], [200, cap], [400, cap - 260]])],
+    "~": (s) => [st(s)([[0, axis - 40], [130, axis + 60], [290, axis - 60], [420, axis + 40]])],
+    "˜": (s) => [st(s)([[0, cap - 100], [110, cap - 20], [240, cap - 120], [350, cap - 40]])],
+    "`": (s) => [st(s)([[0, cap], [150, cap - 150]])],
+    "´": (s) => [st(s)([[0, cap - 150], [150, cap]])],
+    "¨": (s) => [starPaper(0, xh + 160, 80 * (s.dotStar / 100), s), starPaper(250, xh + 160, 80 * (s.dotStar / 100), s)],
+    "¯": (s) => [st(s)([[0, xh + 170], [360, xh + 170]])],
+    "¸": (s) => [st(s)([[120, 20], [150, -60], [240, -130], [90, -210]], false, 0.7)],
+    "°": (s) => [st(s)(ring(150, cap - 140, 120, 140, 6, 0, 360, 0), true, 0.6)],
+    "*": (s) => [starPaper(230, cap - 230, 230, s)],
+    "•": (s) => [starPaper(180, axis, 150, s)],
+    "·": (s) => [starPaper(90, axis, 80 * (s.dotStar / 100), s)],
+    "…": (s) => {
+      const r = 85 * (s.dotStar / 100);
+      return [starPaper(r, r, r, s), starPaper(r * 4, r, r, s), starPaper(r * 7, r, r, s)];
+    },
+    "#": (s) => [
+      st(s)([[150, -10], [250, xh + 40]]), st(s)([[400, -10], [500, xh + 40]]),
+      st(s)([[30, 220], [620, 220]]), st(s)([[60, 470], [650, 470]]),
+    ],
+    "%": (s) => [
+      st(s)(ring(140, cap - 190, 120, 170, 6, 0, 360, 0), true, 0.65),
+      st(s)(ring(520, 170, 120, 170, 6, 0, 360, 0), true, 0.65),
+      st(s)([[60, -20], [600, cap + 10]]),
+    ],
+    "‰": (s) => [
+      st(s)(ring(140, cap - 190, 120, 170, 6, 0, 360, 0), true, 0.65),
+      st(s)(ring(520, 170, 120, 170, 6, 0, 360, 0), true, 0.65),
+      st(s)(ring(820, 170, 120, 170, 6, 0, 360, 0), true, 0.65),
+      st(s)([[60, -20], [600, cap + 10]]),
+    ],
+    "@": (s) => [st(s)(ring(430, axis + 60, 430, 470, 8, -60, 290), false, 0.7), letterCentred("a", 0.72, 430, axis + 40)],
+    "©": (s) => [st(s)(ring(470, cap / 2, 450, 480, 8), true, 0.6), letterCentred("C", 0.5, 470, cap / 2)],
+    "®": (s) => [st(s)(ring(470, cap / 2, 450, 480, 8), true, 0.6), letterCentred("R", 0.5, 470, cap / 2)],
+    "™": (s) => [letter("T", 0.42, 0, cap * 0.55), letter("M", 0.42, font.charToGlyph("T").advanceWidth * 0.42, cap * 0.55)],
+    "§": (s) => [letterCentred("s", 0.9, 250, axis + 260), letterCentred("s", 0.9, 250, axis - 140)],
+    "¶": (s) => [
+      st(s)([[260, cap], [260, desc + 60]]), st(s)([[440, cap], [440, desc + 60]]),
+      st(s)([[260, cap], [100, cap - 60], [60, cap - 230], [120, cap - 380], [260, cap - 420]], false, 1.6),
+    ],
+    // the font's own dagger stays; the pen's one is the latin cross, new to the font
+    "✝": (s) => [st(s)([[200, cap + 20], [200, desc + 40]]), st(s)([[0, cap - 260], [400, cap - 260]])],
+    "‡": (s) => [st(s)([[200, cap + 20], [200, desc + 40]]), st(s)([[0, cap - 260], [400, cap - 260]]), st(s)([[0, 200], [400, 200]])],
+    "¬": (s) => [st(s)([[0, axis + 90], [460, axis + 90], [460, axis - 140]])],
+    "$": (s) => {
+      const k = s.dollarScale / 100;
+      const b = bbox(font.charToGlyph("s").path.commands);
+      const cx = b.cx * k;
+      return [letter("s", k, 0, -b.y0 * k), st(s)([[cx, b.h * k + 120], [cx, -120]], false, 0.42)];
+    },
+    "‛": () => [mirrored("’")],
+    "‟": () => [mirrored("”")],
+  };
+}
+// letters redrawn to fit the font: built from its own parts where it has
+// them (the o, the l stem, the C), and with curved pen strokes where it
+// doesn't, given the thin entry curls and inner hairlines its capitals have.
+
+/** a smooth line through the points (Catmull-Rom), as many short segments */
+function smooth(pts, steps = 10) {
+  if (pts.length < 3) return pts;
+  const P = [pts[0], ...pts, pts[pts.length - 1]];
+  const out = [];
+  for (let i = 1; i < P.length - 2; i++) {
+    const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+    for (let t = 0; t < steps; t++) {
+      const u = t / steps, u2 = u * u, u3 = u2 * u;
+      const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u2 + (-a + 3 * b - 3 * c + d) * u3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+/** one of the font's letters moved by (dx, dy), or turned half round about (ax, ay) */
+function part(ch, { dx = 0, dy = 0, turn = false, ax = 0, ay = 0 } = {}) {
+  const g = font.charToGlyph(ch);
+  return toPaper(mapCmds(g.path.commands, (x, y) => (turn ? [ax - x, ay - y] : [x + dx, y + dy])));
+}
+
+function letterDefs() {
+  const { xh, cap } = M;
+  const st = (s) => (pts, k = 1) => penStroke(pts, s, false, k * (s.letterNib / 100));
+  const curve = (s) => (pts, k = 1) => penStroke(smooth(pts), s, false, k * (s.letterNib / 100));
+  // the font's capitals are wide and heavy: the drawn ones are stretched out
+  // and their main strokes drawn with a fuller nib to sit next to them
+  const capCurve = (s) => (pts, k = 1) =>
+    penStroke(smooth(pts.map(([x, y]) => [x * 1.22, y])), s, false, k * (k >= 1 ? 1.12 : 1) * (s.letterNib / 100));
+  // the l's stem sits at x 114-256; the o's stems at 87-224 and 372-510.
+  // Turned half round (x' = ax - x, y' = ay - y) the l's foot becomes a
+  // head at the x-height and its head a foot down in the descender.
+  const lUnder = (stemLeft) => part("l", { turn: true, ax: stemLeft + 256, ay: xh - 17 });
+  return {
+    d: () => [part("o"), part("l", { dx: 258 })],
+    p: () => [part("o"), lUnder(87)],
+    q: () => [part("o"), lUnder(372)],
+    // the font's u (right stem at x 416-554) without its right foot, that
+    // stem carried straight down into an angular hook
+    y: (s) => {
+      const u = part("u").subtract(
+        new paper.Path.Rectangle({ from: [440, -60], to: [700, 130], insert: false }),
+        { insert: false },
+      );
+      const sx = 485;
+      return [u, st(s)([[sx, 160], [sx, -170], [sx - 120, -285], [sx - 270, -245]], 1.02)];
+    },
+    // the C is a thin outer sweep round a thick inner stem (x 313-451)
+    E: (s) => [
+      part("C"),
+      st(s)([[430, cap * 0.5], [700, cap * 0.5 + 30]], 0.5),
+      st(s)([[690, cap * 0.5 + 110], [700, cap * 0.5 - 60]], 0.5),
+    ],
+    G: (s) => [
+      part("C"),
+      curve(s)([[560, 470], [720, 500], [760, 380], [740, 160], [680, 40]], 0.9),
+      st(s)([[560, 470], [700, 470]], 0.45),
+    ],
+    T: (s) => [
+      capCurve(s)([[70, cap - 170], [150, cap - 50], [320, cap - 10], [500, cap - 70], [660, cap - 10], [800, cap - 80]]),
+      capCurve(s)([[70, cap - 170], [30, cap - 280], [90, cap - 360]], 0.35),
+      capCurve(s)([[470, cap - 60], [450, cap * 0.55], [460, 160], [380, 20], [240, 0], [160, 60]]),
+      capCurve(s)([[560, cap - 190], [570, cap * 0.5], [560, 220]], 0.3),
+    ],
+    V: (s) => [
+      capCurve(s)([[60, cap - 130], [160, cap - 10], [260, cap - 100], [270, cap * 0.5], [290, 170], [430, 0]]),
+      capCurve(s)([[60, cap - 130], [10, cap - 250], [70, cap - 330]], 0.35),
+      capCurve(s)([[430, 0], [600, 130], [680, 420], [680, cap - 170], [770, cap - 40]]),
+      capCurve(s)([[560, 230], [580, cap * 0.5], [580, cap - 260]], 0.3),
+    ],
+    Y: (s) => [
+      capCurve(s)([[60, cap - 130], [160, cap - 10], [260, cap - 100], [270, cap * 0.55], [300, 290], [460, 170], [640, 230]]),
+      capCurve(s)([[60, cap - 130], [10, cap - 250], [70, cap - 330]], 0.35),
+      capCurve(s)([[770, cap - 40], [680, cap - 170], [680, 120], [640, -160], [500, -290], [320, -250]]),
+      capCurve(s)([[570, 360], [580, cap * 0.55], [580, cap - 260]], 0.3),
+    ],
+  };
+}
+let LETTERS = {};
+
+function mirrored(ch) {
+  const g = font.charToGlyph(ch);
+  return toPaper(mapCmds(g.path.commands, (x, y) => [g.advanceWidth - x, y]));
+}
+
+// ─── per-glyph edits ────────────────────────────────────────────────
+function straighten(cmds, deg) {
+  if (!deg) return cmds;
+  const t = Math.tan((deg * Math.PI) / 180);
+  let px = 0, py = 0;
+  return cmds.map((c) => {
+    const n = { ...c };
+    if (c.type === "L") {
+      const dx = c.x - px, dy = c.y - py;
+      if (Math.abs(dx) <= Math.abs(dy) * t) n.x = px;
+      else if (Math.abs(dy) <= Math.abs(dx) * t) n.y = py;
+    }
+    if (n.x !== undefined) { px = n.x; py = n.y; }
+    return n;
+  });
+}
+function snap(cmds, g) {
+  if (!g) return cmds;
+  const r = (v) => Math.round(v / g) * g;
+  return mapCmds(cmds, (x, y) => [r(x), r(y)]);
+}
+
+/** dots: small, round, separate pieces that don't hold a hole */
+function dotContours(cs0) {
+  const cs = cs0.map((c) => ({ c, b: bbox(c) }));
+  return cs.filter(({ b }, i) => {
+    if (b.w > 270 || b.h > 270) return false;
+    const ratio = Math.max(b.w, b.h) / Math.max(1, Math.min(b.w, b.h));
+    if (ratio > 1.55) return false;
+    // not a hole in something, and holding no hole of its own
+    if (cs.some((o, j) => j !== i && inside(b, o.b))) return false;
+    if (cs.some((o, j) => j !== i && inside(o.b, b))) return false;
+    return true;
+  });
+}
+
+function parenOutline(ch, s, adv) {
+  const top = 1014, bottom = -224;
+  const H = (top - bottom) / 2, cy = (top + bottom) / 2;
+  const sag = s.parenBow, t = s.parenThick;
+  const R = (H * H + sag * sag) / (2 * sag);
+  const cx = R; // the outer edge's leftmost point at x = 0
+  const theta = Math.asin(Math.min(1, H / R));
+  const L = R * 2.2;
+  const dir = (a) => [cx + Math.cos(a) * L, cy + Math.sin(a) * L];
+  const ringShape = new paper.Path.Circle({ center: [cx, cy], radius: R, insert: false }).subtract(
+    new paper.Path.Circle({ center: [cx, cy], radius: R - t, insert: false }),
+    { insert: false },
+  );
+  const wedge = new paper.Path({
+    segments: [[cx, cy], dir(Math.PI - theta), dir(Math.PI), dir(Math.PI + theta)],
+    closed: true,
+    insert: false,
+  });
+  let shape = ringShape.intersect(wedge, { insert: false });
+  if (ch === ")") shape.scale(-1, 1, new paper.Point(sag / 2, cy));
+  // centred in its advance
+  const b = shape.bounds;
+  shape.translate(new paper.Point((adv - b.width) / 2 - b.left, 0));
+  return shape;
+}
+
+const isDigit = (ch) => ch >= "0" && ch <= "9";
+
+/** where a horizontal line at y crosses the outline, left to right */
+function crossings(item, y) {
+  const line = new paper.Path.Line({ from: [-4000, y], to: [6000, y], insert: false });
+  return item
+    .getIntersections(line)
+    .map((c) => c.point.x)
+    .sort((a, b) => a - b)
+    .filter((x, i, xs) => i === 0 || x - xs[i - 1] > 0.5);
+}
+/** the stems a line at y passes through, as [left, right] pairs */
+function stemsAt(item, y) {
+  const xs = crossings(item, y);
+  const out = [];
+  for (let i = 0; i + 1 < xs.length; i += 2) out.push([xs[i], xs[i + 1]]);
+  return out;
+}
+
+// ─── notes for claude: kept in this browser, copied out as one string ──
+const NOTES_KEY = "font-lab-notes";
+let notes = []; // [{code, kind: "note" | "delete", text}]
+try {
+  notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+} catch {
+  notes = [];
+}
+const saveNotes = () => {
+  try {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  } catch {
+    /* fine: they stay for this visit */
+  }
+};
+const label = (code) => `${String.fromCodePoint(code)} (U+${code.toString(16).toUpperCase().padStart(4, "0")})`;
+const isDeleted = (code) => notes.some((n) => n.code === code && n.kind === "delete");
+const hasNote = (code) => notes.some((n) => n.code === code && n.kind === "note");
+function notesText() {
+  return notes.map((n) => (n.kind === "delete" ? `${label(n.code)}: delete this` : `${label(n.code)}: ${n.text}`)).join(String.fromCharCode(10));
+}
+function renderNotes() {
+  $("notes-title").textContent = notes.length ? `notes for claude · ${notes.length}` : "notes for claude";
+  $("notes-items").innerHTML = notes
+    .map((n, i) => `<li><b>${label(n.code)}</b><span>${n.kind === "delete" ? "delete this" : escapeHtml(n.text)}</span><button data-n="${i}" aria-label="Remove">×</button></li>`)
+    .join("");
+}
+const escapeHtml = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function toggleDelete(code) {
+  if (isDeleted(code)) notes = notes.filter((n) => !(n.code === code && n.kind === "delete"));
+  else notes.push({ code, kind: "delete" });
+  saveNotes();
+  renderNotes();
+  renderGrid();
+  renderDetail();
+}
+function addNote(code, text) {
+  if (!text.trim()) return;
+  notes.push({ code, kind: "note", text: text.trim() });
+  saveNotes();
+  renderNotes();
+  renderGrid();
+}
+
+let cache = new Map();
+let cacheKey = "";
+
+/**
+ * A character with every edit applied: { commands, advance, edited }.
+ * Keyed by character, not glyph: the font shares one placeholder glyph
+ * between several characters (± ‡ ¯ ...), and each gets its own shape here.
+ */
+function edit(glyph, s, code = glyph.unicode) {
+  const key = code ?? `g${glyph.index}`;
+  if (cache.has(key)) return cache.get(key);
+  const ch = code !== undefined ? String.fromCodePoint(code) : "";
+  let cmds = clone(glyph.path.commands);
+  let adv = glyph.advanceWidth || 0;
+  let edited = false;
+  let item = null; // paper, once anything needs shapes
+
+  cmds = snap(straighten(cmds, s.straighten), s.gridSnap);
+  if (s.straighten || s.gridSnap) edited = true;
+
+  const defs = s.on_symbols ? SYMBOLS : {};
+  if (defs[ch]) {
+    item = unite(defs[ch](s));
+    const b = item.bounds;
+    item.translate(new paper.Point(s.symSide - b.left, 0));
+    adv = Math.round(b.width + s.symSide * 2);
+    edited = true;
+  } else if (s.on_letters && ch && s.letterList.includes(ch) && LETTERS[ch]) {
+    item = unite(LETTERS[ch](s));
+    const b = item.bounds;
+    item.translate(new paper.Point(s.letterSide - b.left, 0));
+    adv = Math.round(b.width + s.letterSide * 2);
+    edited = true;
+  } else if (s.on_parens && (ch === "(" || ch === ")")) {
+    item = parenOutline(ch, s, adv);
+    edited = true;
+  } else {
+    if (s.on_dots) {
+      const all = contours(cmds);
+      const dots = dotContours(all);
+      if (dots.length) {
+        const keep = all.filter((c) => !dots.some((d) => d.c === c)).flat();
+        const body = toPaper(keep);
+        // i and j: the star sits straight over the middle of the stem
+        const stem = "ij".includes(ch) ? stemsAt(body, M.xh * 0.5)[0] : null;
+        const stars = dots.map(({ b }) =>
+          starPaper(stem ? (stem[0] + stem[1]) / 2 : b.cx, b.cy, (Math.max(b.w, b.h) / 2) * (s.dotStar / 100), s),
+        );
+        item = unite([body, ...stars]);
+        edited = true;
+      }
+    }
+    if (s.on_open && ch && s.openList.includes(ch)) {
+      let base = item ?? toPaper(cmds);
+      const cs = contours(cmds).map((c) => bbox(c));
+      const all = bbox(cmds);
+      // everything above the x-height (the spur) goes
+      const keepBox = new paper.Path.Rectangle({
+        from: [all.x0 - 50, all.y0 - 50], to: [all.x1 + 50, M.xh + s.spurCut], insert: false,
+      });
+      base = base.intersect(keepBox, { insert: false });
+      // and the top of each counter is cut open
+      for (const h of cs.filter((b) => cs.some((o) => o !== b && inside(b, o)))) {
+        const w = (h.w * s.openCut) / 100;
+        const slot = new paper.Path.Rectangle({
+          from: [h.cx - w / 2, h.y1 - 40], to: [h.cx + w / 2, M.xh + s.spurCut + 60], insert: false,
+        });
+        base = base.subtract(slot, { insert: false });
+      }
+      item = base;
+      edited = true;
+    }
+    if (s.on_ostar && (ch === "o" || ch === "ö")) {
+      const base = item ?? toPaper(cmds);
+      const hole = contours(cmds).map((c) => bbox(c)).find((b, i, all) => all.some((o) => o !== b && inside(b, o)));
+      if (hole) {
+        const cx = hole.cx, cy = hole.cy + s.oY;
+        item = unite([base.subtract(starGrown(cx, cy, s.oStar, s.oGap, s), { insert: false }), starPaper(cx, cy, s.oStar, s)]);
+        edited = true;
+      }
+    }
+    if (s.on_crossbar && (ch === "f" || ch === "t")) {
+      let base = item ?? toPaper(cmds);
+      const stem = stemsAt(base, 260)[0];
+      if (stem) {
+        // the bar: rows near the x-height that reach well past the stem
+        const rows = [];
+        for (let y = 360; y <= M.xh + 60; y += 4) {
+          const xs = crossings(base, y);
+          if (xs.length && xs[xs.length - 1] - xs[0] > stem[1] - stem[0] + 50) rows.push(y);
+        }
+        if (rows.length) {
+          const b0 = rows[0] - 8, b1 = rows[rows.length - 1] + 8;
+          for (const [x0, x1] of [[-600, stem[0] - 1], [stem[1] + 1, 1600]]) {
+            base = base.subtract(new paper.Path.Rectangle({ from: [x0, b0], to: [x1, b1], insert: false }), { insert: false });
+          }
+          // cut into the stem with a gap, like the o's, so it reads as a star and not a cross
+          const cx = (stem[0] + stem[1]) / 2, cy = (b0 + b1) / 2 + s.barY;
+          base = unite([base.subtract(starGrown(cx, cy, s.barStar, s.barGap, s), { insert: false }), starPaper(cx, cy, s.barStar, s)]);
+        }
+      }
+      item = base;
+      edited = true;
+    }
+    if (s.on_tails && ch && s.tailList.includes(ch)) {
+      let base = item ?? toPaper(cmds);
+      // the stem that goes down: the rightmost one a little above the baseline
+      const stems = stemsAt(base, 160);
+      const stem = stems[stems.length - 1];
+      if (stem) {
+        const sx = (stem[0] + stem[1]) / 2;
+        base = base.intersect(new paper.Path.Rectangle({ from: [-600, -10], to: [1600, 2000], insert: false }), { insert: false });
+        const d = s.tailDepth, r = s.tailReach;
+        const hook = penStroke([[sx, 120], [sx, -d * 0.55], [sx - r * 0.45, -d], [sx - r, -d * 0.82]], s, false, s.tailNib / 100);
+        base = unite([base, hook]);
+      }
+      item = base;
+      edited = true;
+    }
+  }
+  if (item) cmds = fromPaper(item);
+
+  // shape sliders, then even gaps for the numbers
+  const sx = s.width / 100, sy = s.height / 100, sh = Math.tan((s.slant * Math.PI) / 180);
+  cmds = mapCmds(cmds, (x, y) => [x * sx + y * sy * sh, y * sy]);
+  adv = Math.max(0, Math.round(adv * sx + s.spacing));
+  if (s.width !== 100 || s.height !== 100 || s.slant || s.spacing) edited = true;
+  if (s.on_digits && isDigit(ch)) {
+    const b = bbox(cmds);
+    cmds = mapCmds(cmds, (x, y) => [x - b.x0 + s.digitSide, y]);
+    adv = Math.round(b.w + s.digitSide * 2);
+    edited = true;
+  }
+  const out = { commands: cmds, advance: adv, edited };
+  cache.set(key, out);
+  return out;
+}
+
+let SYMBOLS = {};
+
+// ─── drawing ─────────────────────────────────────────────────────────
+function toD(commands) {
+  const f = (n) => Math.round(n * 10) / 10;
+  return commands
+    .map((c) => {
+      switch (c.type) {
+        case "M": return `M${f(c.x)} ${f(-c.y)}`;
+        case "L": return `L${f(c.x)} ${f(-c.y)}`;
+        case "Q": return `Q${f(c.x1)} ${f(-c.y1)} ${f(c.x)} ${f(-c.y)}`;
+        case "C": return `C${f(c.x1)} ${f(-c.y1)} ${f(c.x2)} ${f(-c.y2)} ${f(c.x)} ${f(-c.y)}`;
+        case "Z": return "Z";
+      }
+      return "";
+    })
+    .join("");
+}
+const metricsLines = (x0, x1, sy) =>
+  [M.asc, M.desc, M.cap, M.xh]
+    .map((y) => `<line class="metric" x1="${x0}" x2="${x1}" y1="${-y * sy}" y2="${-y * sy}" />`)
+    .join("") + `<line class="metric base" x1="${x0}" x2="${x1}" y1="0" y2="0" />`;
+
+function glyphSVG(glyph, s, marks = "", code) {
+  const e = edit(glyph, s, code);
+  const sy = s.height / 100;
+  const top = M.asc * Math.max(1, sy);
+  const bottom = -M.desc * Math.max(1, sy);
+  const pad = font.unitsPerEm * 0.08;
+  const w = Math.max(font.unitsPerEm * 1.1, e.advance + pad * 2);
+  const dx = (w - e.advance) / 2;
+  const cls = s.weight > 0 ? `class="glyph stroked" stroke-width="${s.weight}"` : `class="glyph"`;
+  const ghost = e.edited ? `<path class="ghost" d="${toD(glyph.path.commands)}" transform="translate(${(e.advance - (glyph.advanceWidth || 0)) / 2} 0)" />` : "";
+  return `<svg xmlns="${NS}" viewBox="0 ${-top - pad} ${w} ${top + bottom + pad * 2}" aria-hidden="true">${metricsLines(0, w, sy)}<line class="metric" x1="${dx}" x2="${dx}" y1="${-top}" y2="${bottom}" /><line class="metric" x1="${dx + e.advance}" x2="${dx + e.advance}" y1="${-top}" y2="${bottom}" /><g transform="translate(${dx} 0)">${ghost}<path ${cls} d="${toD(e.commands)}" />${marks}</g></svg>`;
+}
+
+function kind(code) {
+  const ch = String.fromCodePoint(code);
+  if (/\p{L}/u.test(ch)) return "letters";
+  if (/\p{N}/u.test(ch)) return "digits";
+  return "symbols";
+}
+
+function renderGrid() {
+  const s = settings();
+  $("grid").style.setProperty("--cell", `${s.size}px`);
+  const shown = glyphs
+    .map((g, i) => ({ ...g, i }))
+    .filter(({ glyph, code }) => filter === "all" || (filter === "edited" ? edit(glyph, s, code).edited : kind(code) === filter));
+  $("count").textContent = `${shown.length} of ${glyphs.length} characters`;
+  $("grid").innerHTML = shown
+    .map(({ glyph, code, i }) => {
+      const ch = String.fromCodePoint(code);
+      const e = edit(glyph, s, code);
+      return `<div class="cell${picked === i ? " on" : ""}${e.edited ? " edited" : ""}${isDeleted(code) ? " del" : ""}${hasNote(code) ? " noted" : ""}" data-i="${i}" title="${glyph.name || ""}"><button class="x" data-del="${code}" aria-label="Mark ${ch} for deletion" title="delete this">✕</button>${glyphSVG(glyph, s, "", code)}<div class="meta"><span>${ch.trim() ? ch : "␣"}</span><span>U+${code.toString(16).toUpperCase().padStart(4, "0")}</span></div></div>`;
+    })
+    .join("");
+}
+
+function renderPreview() {
+  const s = settings();
+  const lines = $("text").value.split("\n");
+  const sy = s.height / 100;
+  const lineH = (M.asc - M.desc) * sy * 1.1;
+  let maxW = 0;
+  const paths = [];
+  lines.forEach((line, li) => {
+    let x = 0;
+    const y = M.asc * sy + li * lineH;
+    let prev = null;
+    for (const ch of line) {
+      const g = font.charToGlyph(ch);
+      if (prev) x += font.getKerningValue(prev, g) * (s.width / 100);
+      const e = edit(g, s, ch.codePointAt(0));
+      paths.push(`<path transform="translate(${x} ${y})" d="${toD(e.commands)}" />`);
+      x += e.advance;
+      prev = g;
+    }
+    maxW = Math.max(maxW, x);
+  });
+  const h = lineH * lines.length;
+  const cls = s.weight > 0 ? `class="glyph stroked" stroke-width="${s.weight}"` : `class="glyph"`;
+  const px = 0.05;
+  $("preview").innerHTML = `<svg xmlns="${NS}" style="max-width:100%;height:auto" width="${Math.ceil(maxW * px)}" height="${Math.ceil(h * px)}" viewBox="0 0 ${Math.ceil(maxW)} ${Math.ceil(h)}"><g ${cls}>${paths.join("")}</g></svg>`;
+}
+
+function renderDetail() {
+  const el = $("detail");
+  if (picked === null) { el.classList.remove("open"); return; }
+  const { glyph, code } = glyphs[picked];
+  const s = settings();
+  const e = edit(glyph, s, code);
+  const r = font.unitsPerEm / 140;
+  const marks = [];
+  let last = [0, 0];
+  for (const c of e.commands) {
+    if (c.type === "Q")
+      marks.push(`<line class="handle" x1="${last[0]}" y1="${-last[1]}" x2="${c.x1}" y2="${-c.y1}" /><line class="handle" x1="${c.x1}" y1="${-c.y1}" x2="${c.x}" y2="${-c.y}" /><circle class="pt off" cx="${c.x1}" cy="${-c.y1}" r="${r}" />`);
+    if (c.type === "C")
+      marks.push(`<line class="handle" x1="${last[0]}" y1="${-last[1]}" x2="${c.x1}" y2="${-c.y1}" /><line class="handle" x1="${c.x2}" y1="${-c.y2}" x2="${c.x}" y2="${-c.y}" /><circle class="pt off" cx="${c.x1}" cy="${-c.y1}" r="${r}" /><circle class="pt off" cx="${c.x2}" cy="${-c.y2}" r="${r}" />`);
+    if (c.x !== undefined) { marks.push(`<circle class="pt" cx="${c.x}" cy="${-c.y}" r="${r}" />`); last = [c.x, c.y]; }
+  }
+  el.innerHTML = `<div>${glyphSVG(glyph, s, marks.join(""), code)}</div><dl>
+    <dt>char</dt><dd>${String.fromCodePoint(code)} · U+${code.toString(16).toUpperCase().padStart(4, "0")}</dd>
+    <dt>name</dt><dd>${glyph.name || "-"}</dd>
+    <dt>advance</dt><dd>${glyph.advanceWidth} → ${e.advance}</dd>
+    <dt>contours</dt><dd>${e.commands.filter((c) => c.type === "M").length}</dd>
+    <dt>points</dt><dd>${e.commands.filter((c) => c.x !== undefined).length}</dd>
+    <dt>changed</dt><dd>${e.edited ? "yes" : "no"}</dd>
+  </dl>
+  <div class="notebox">
+    <textarea id="note-text" placeholder="a note on ${escapeHtml(String.fromCodePoint(code))} for claude"></textarea>
+    <div class="row">
+      <button id="note-add" class="primary">add note</button>
+      <button id="note-del">${isDeleted(code) ? "keep this after all" : "delete this"}</button>
+    </div>
+  </div>`;
+  $("note-add").onclick = () => {
+    addNote(code, $("note-text").value);
+    $("note-text").value = "";
+  };
+  $("note-del").onclick = () => toggleDelete(code);
+  el.classList.add("open");
+}
+
+let queued = false;
+function renderAll() {
+  for (const [, id] of SLIDERS) $(`${id}-out`).textContent = `${$(id).value}${$(id).dataset.unit}`;
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => {
+    queued = false;
+    const s = settings();
+    const key = JSON.stringify({ ...s, size: 0, weight: 0 });
+    if (key !== cacheKey) { cache = new Map(); cacheKey = key; }
+    try {
+      renderPreview();
+      renderGrid();
+      renderDetail();
+      $("status").textContent = "";
+    } catch (err) {
+      console.error(err);
+      $("status").textContent = `something broke: ${err.message}`;
+    }
+  });
+}
+
+/** a new font with everything baked in (weight isn't, yet) */
+function exportFont() {
+  const s = settings();
+  // .notdef first, then one glyph per character (shared ones split apart),
+  // minus whatever was marked "delete this"
+  const notdef = font.glyphs.get(0);
+  const out = [new opentype.Glyph({ name: ".notdef", advanceWidth: notdef.advanceWidth, path: notdef.path })];
+  for (const { glyph, code } of glyphs) {
+    if (isDeleted(code)) continue;
+    const e = edit(glyph, s, code);
+    const path = new opentype.Path();
+    path.commands = mapCmds(e.commands, (x, y) => [Math.round(x), Math.round(y)]);
+    const name = `uni${code.toString(16).toUpperCase().padStart(4, "0")}`;
+    out.push(new opentype.Glyph({ name, unicode: code, unicodes: [code], advanceWidth: e.advance, path }));
+  }
+  const family = `${font.names.fontFamily?.en || "Font"} Lab`;
+  const made = new opentype.Font({
+    familyName: family,
+    styleName: "Regular",
+    unitsPerEm: font.unitsPerEm,
+    ascender: Math.round(font.ascender * (s.height / 100)),
+    descender: Math.round(font.descender * (s.height / 100)),
+    glyphs: out,
+  });
+  made.download(`${family.replace(/\s+/g, "")}.otf`);
+  $("status").textContent = s.weight > 0 ? "exported. weight isn't in it yet (preview only)." : "exported.";
+}
+
+// ─── wiring ──────────────────────────────────────────────────────────
+document.querySelectorAll("aside input, aside textarea").forEach((el) => {
+  if (el.id === "text") el.addEventListener("input", renderPreview);
+  else el.addEventListener("input", renderAll);
+});
+$("metrics").addEventListener("change", (e) => document.body.classList.toggle("hide-metrics", !e.target.checked));
+$("ghost").addEventListener("change", (e) => document.body.classList.toggle("hide-ghost", !e.target.checked));
+$("reset").addEventListener("click", () => {
+  for (const [, id, , , , , value] of SLIDERS) $(id).value = value;
+  for (const [, id, , value] of TEXTS) $(id).value = value;
+  for (const t of TOGGLES) $(`on-${t}`).checked = true;
+  renderAll();
+});
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  filter = b.dataset.f;
+  $("tabs").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  renderGrid();
+});
+$("grid").addEventListener("click", (e) => {
+  const x = e.target.closest(".x");
+  if (x) {
+    toggleDelete(Number(x.dataset.del));
+    return;
+  }
+  const cell = e.target.closest(".cell");
+  if (!cell) return;
+  const i = Number(cell.dataset.i);
+  picked = picked === i ? null : i;
+  renderGrid();
+  renderDetail();
+});
+$("export").addEventListener("click", exportFont);
+$("notes-items").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-n]");
+  if (!b) return;
+  notes.splice(Number(b.dataset.n), 1);
+  saveNotes();
+  renderNotes();
+  renderGrid();
+});
+$("notes-copy").addEventListener("click", async () => {
+  const text = notesText();
+  try {
+    await navigator.clipboard.writeText(text);
+    $("notes-copy").textContent = "copied";
+  } catch {
+    // no clipboard access: select it so ctrl c works
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    $("notes-copy").textContent = "copied";
+  }
+  setTimeout(() => ($("notes-copy").textContent = "copy"), 1400);
+});
+$("notes-clear").addEventListener("click", () => {
+  notes = [];
+  saveNotes();
+  renderNotes();
+  renderGrid();
+  renderDetail();
+});
+renderNotes();
+
+fetch(FONT_URL)
+  .then((r) => {
+    if (!r.ok) throw new Error(`${r.status} loading ${FONT_URL}`);
+    return r.arrayBuffer();
+  })
+  .then((buf) => {
+    font = opentype.parse(buf);
+    const top = (ch) => bbox(font.charToGlyph(ch).path.commands).y1;
+    M = { asc: font.ascender, desc: font.descender, xh: top("x"), cap: top("H"), axis: Math.round(top("x") / 2) };
+    SYMBOLS = symbolDefs();
+    LETTERS = letterDefs();
+    const seen = new Set();
+    for (let i = 0; i < font.glyphs.length; i++) {
+      const g = font.glyphs.get(i);
+      for (const code of g.unicodes || []) {
+        // control characters and private-use leftovers have no business here
+        if (seen.has(code) || code < 0x20 || (code >= 0x7f && code < 0xa0) || (code >= 0xe000 && code <= 0xf8ff)) continue;
+        seen.add(code);
+        glyphs.push({ glyph: g, code });
+      }
+    }
+    // characters the pen draws that the font never had
+    for (const ch of Object.keys(SYMBOLS)) {
+      const code = ch.codePointAt(0);
+      if (!seen.has(code)) {
+        seen.add(code);
+        glyphs.push({ glyph: font.glyphs.get(0), code });
+      }
+    }
+    glyphs.sort((a, b) => a.code - b.code);
+    const name = font.names.fullName?.en || font.names.fontFamily?.en || "font";
+    $("font-name").textContent = `${name} · ${font.unitsPerEm} upm · x-height ${M.xh} · caps ${M.cap}`;
+    renderAll();
+  })
+  .catch((err) => {
+    console.error(err);
+    $("font-name").textContent = "couldn't load the font";
+    $("status").textContent = String(err);
+  });
+</script>
+</body>
+</html>
