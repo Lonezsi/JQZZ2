@@ -392,10 +392,10 @@ const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends; query
           <div>
             <dt>
               <Glyph name="PRIVATE" size={14} />
-              your id
+              login key
             </dt>
             <dd>
-              <SecretId id={profile.user.id} />
+              <SecretId id={user?.loginKey ?? ""} />
               <span className="jqzz-annot">type it on another device to be you there</span>
             </dd>
           </div>

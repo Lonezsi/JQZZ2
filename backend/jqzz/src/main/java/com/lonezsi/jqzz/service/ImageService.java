@@ -64,7 +64,8 @@ public class ImageService {
      * Resolve a reference string to an image ID (or URL). The reference can be:
      * - "handle" (public)
      * - ":handle" (current user's private/semi-private)
-     * - "username:handle" (other user's private/semi-private)
+     * - "ownerhandle:handle" (other user's private/semi-private; older
+     *   references have the owner's id there, which still works)
      * Returns the image ID or null if not found/accessible.
      */
     public Optional<Long> resolveReference(String ref, String currentUserId) {
@@ -73,7 +74,7 @@ public class ImageService {
         String[] parts = ref.split(":", 2);
         if (parts.length == 2) {
             // username:handle
-            String username = parts[0];
+            String username = Handles.owner(parts[0]);
             String handle = parts[1];
             if (username.isEmpty()) {
                 // ":handle" case – current user

@@ -18,7 +18,7 @@ export const SecretId: React.FC<{ id: string }> = ({ id }) => {
     });
   return (
     <span className="jqzz-secret">
-      <code className={shown ? undefined : "hidden"} aria-label={shown ? undefined : "your id, hidden"}>
+      <code className={shown ? undefined : "hidden"} aria-label={shown ? undefined : "your login key, hidden"}>
         {shown ? id : "•".repeat(id.length)}
       </code>
       <button

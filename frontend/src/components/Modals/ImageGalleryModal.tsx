@@ -8,6 +8,8 @@ interface Image {
   handle: string;
   ownerId: string | null;
   visibility: string;
+  /** "handle", or "ownerhandle:handle": how others reach it */
+  reference: string;
 }
 
 interface ImageGalleryModalProps {
@@ -51,7 +53,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
   const toRef = (img: Image): string => {
     if (img.ownerId == null) return img.handle; // public
     if (img.ownerId === user?.id) return `:${img.handle}`; // self
-    return `${img.ownerId}:${img.handle}`; // other user
+    return img.reference; // other user, by their handle
   };
 
   const filtered = images.filter((img) => {

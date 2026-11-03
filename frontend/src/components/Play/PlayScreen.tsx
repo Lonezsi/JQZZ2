@@ -208,11 +208,6 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
       </main>
 
       {running && <Doodle code={code} me={me} canDraw={done} />}
-      {player && game.status !== "FINISHED" && (
-        <div className="jqzz-quit-dock">
-          <LeaveButton onLeave={leave} busy={leaving} quit />
-        </div>
-      )}
       {game.status === "PAUSED" && <div className="jqzz-paused OEF">paused</div>}
       {error && (
         <button className="jqzz-play-error" onClick={() => setError(null)}>
@@ -378,10 +373,10 @@ const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }
 };
 
 /** Leaving for good takes your score with it, so it asks once. */
-const LeaveButton: React.FC<{ onLeave: () => void; busy: boolean; quit?: boolean }> = ({ onLeave, busy, quit }) => (
+const LeaveButton: React.FC<{ onLeave: () => void; busy: boolean }> = ({ onLeave, busy }) => (
   <ConfirmButton
-    label={quit ? "quit game" : "leave"}
-    armedLabel={quit ? "quit? your score goes" : "leave? score goes"}
+    label="leave"
+    armedLabel="leave? score goes"
     busyLabel="leaving..."
     busy={busy}
     title="leave the game for good: your score goes with you"

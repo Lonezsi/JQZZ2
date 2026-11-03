@@ -56,7 +56,7 @@ export const GameModes: React.FC = () => {
     <section className="jqzz-modes" aria-label="Game modes">
       <div className="jqzz-modes-head">
         <span className="jqzz-annot">game modes</span>
-        <p>ready to play. host one as it is, or open it and make it yours.</p>
+        <p>ready to play. host one as it is, or open it and change it. either way a copy goes in your quizzes.</p>
       </div>
       <div className="jqzz-modes-grid">
         {GAME_MODES.map((m, i) => (
@@ -73,6 +73,9 @@ export const GameModes: React.FC = () => {
             <span className="jqzz-annot">
               {m.players} players · about {m.minutes} min · {m.questions} {m.questions === 1 ? "question" : "questions"}
             </span>
+            {quizzes.some((q) => q.name === m.name && q.authorId === user?.id) && (
+              <span className="jqzz-annot">yours already, in your quizzes</span>
+            )}
             <div className="jqzz-mode-actions">
               <button className="jqzz-toolbar-btn run" onClick={() => host(m)} disabled={busy !== null}>
                 {busy === m.id ? "one sec..." : "host it"}

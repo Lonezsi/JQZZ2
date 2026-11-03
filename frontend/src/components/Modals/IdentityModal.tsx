@@ -112,7 +112,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
     setError(null);
     try {
       const res = await userService.googleLogin(credential);
-      onSave(await login(res.data.id));
+      onSave(await login(res.data.loginKey ?? ""));
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -139,7 +139,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
     } catch (err) {
       setError(
         axios.isAxiosError(err) && err.response?.status === 404
-          ? "no user with that id."
+          ? "no account has that login key."
           : `couldn't log in: ${errorMessage(err)}`,
       );
     } finally {
@@ -180,7 +180,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
 
   const card = (
     <div
-      className={`jqzz-modal jqzz-holo${inline ? " inline" : ""}`}
+      className={`jqzz-modal jqzz-holo jqzz-identity-card${inline ? " inline" : ""}`}
       data-state={inline ? "open" : state}
       role={inline ? "region" : "dialog"}
       aria-modal={inline ? undefined : true}
@@ -242,7 +242,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
             {showLogin ? (
               <>
                 <label className="jqzz-field-label" htmlFor="jqzz-login-id">
-                  user id
+                  login key
                 </label>
                 <div className="jqzz-modal-inline">
                   <input
@@ -250,7 +250,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                     className="jqzz-modal-input mono"
                     type={peek ? "text" : "password"}
                     autoComplete="off"
-                    placeholder="your id from another browser"
+                    placeholder="the login key from your other browser"
                     value={loginId}
                     autoFocus
                     onChange={(e) => setLoginId(e.target.value)}
@@ -304,7 +304,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                 {current && (
                   <>
                     <label className="jqzz-field-label" htmlFor="jqzz-handle">
-                      handle
+                      handle <span className="jqzz-optional">your @, made for you</span>
                     </label>
                     <input
                       id="jqzz-handle"
@@ -365,12 +365,12 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                       )}
                     </div>
                     <div className="jqzz-field-label">
-                      your id{" "}
+                      login key{" "}
                       <span className="jqzz-optional">
-                        log in with it somewhere else
+                        how you get this account on another device. keep it to yourself
                       </span>
                     </div>
-                    <SecretId id={current.id} />
+                    <SecretId id={current.loginKey ?? ""} />
                     {googleOn && (
                       <>
                         <div className="jqzz-field-label">google</div>

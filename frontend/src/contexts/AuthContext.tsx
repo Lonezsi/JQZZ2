@@ -9,12 +9,14 @@ import React, {
 import axios from "axios";
 import type { User } from "../types";
 import { userService } from "../services/userService";
+import { KEY_STORE } from "../services/api";
 import { guestName } from "../utils/guestName";
 import { Atmosphere } from "../components/common/Atmosphere";
 
 interface AuthContextType {
   user: User | null;
-  login: (id: string) => Promise<User>;
+  /** with a login key */
+  login: (key: string) => Promise<User>;
   register: (name: string) => Promise<User>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
@@ -41,27 +43,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [unreachable, setUnreachable] = useState(false);
   const initializing = useRef(false);
 
-  const login = useCallback(async (id: string): Promise<User> => {
-    const res = await userService.login({ id });
-    setUser(res.data);
-    localStorage.setItem("userId", res.data.id);
-    return res.data;
+  // the account as the server sent it to its owner: its key goes in this browser only
+  const signedIn = useCallback((u: User): User => {
+    // the old stored id goes only once a key has come to replace it
+    if (u.loginKey) {
+      localStorage.setItem(KEY_STORE, u.loginKey);
+      localStorage.removeItem("userId");
+    }
+    setUser(u);
+    return u;
   }, []);
 
+  const login = useCallback(
+    async (key: string): Promise<User> => signedIn((await userService.login({ key })).data),
+    [signedIn],
+  );
+
   const register = useCallback(
-    async (name: string): Promise<User> => {
-      const res = await userService.register({ name });
-      const user = await login(res.data.id);
-      return user;
-    },
-    [login],
+    async (name: string): Promise<User> => signedIn((await userService.register({ name })).data),
+    [signedIn],
   );
 
   const logout = useCallback(async () => {
     if (user) {
       await userService.logout(user.id);
       setUser(null);
-      localStorage.removeItem("userId");
+      localStorage.removeItem(KEY_STORE);
     }
   }, [user]);
 
@@ -72,13 +79,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Keep the stored identity unless the server says it no longer exists:
     // a backend that is down or restarting must not cost the user their account.
     const restore = async (attempt: number) => {
-      const stored = localStorage.getItem("userId");
+      const key = localStorage.getItem(KEY_STORE);
+      // from before login keys: this browser only knows the account's id, and
+      // trades it for a key once
+      const legacyId = localStorage.getItem("userId");
       try {
-        if (stored) {
+        if (key || legacyId) {
           try {
-            await login(stored);
+            if (key) await login(key);
+            else signedIn((await userService.login({ id: legacyId! })).data);
           } catch (err) {
-            if (!axios.isAxiosError(err) || err.response?.status !== 404) throw err;
+            const gone = axios.isAxiosError(err) && (err.response?.status === 404 || err.response?.status === 401);
+            if (!gone) throw err;
+            localStorage.removeItem(KEY_STORE);
             localStorage.removeItem("userId");
             await register(guestName());
           }
@@ -94,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
     restore(0);
-  }, [login, register]);
+  }, [login, register, signedIn]);
 
   const updateUser = useCallback((data: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...data } : null));

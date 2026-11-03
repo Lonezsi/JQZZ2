@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ImageVisibility } from "../../types";
 import { Glide } from "../common/Glide";
+import { useAuth } from "../../contexts/AuthContext";
 
 /* Small pieces the stash and history pages share. */
 
 const VISIBILITY: { value: ImageVisibility; label: string; title: string }[] = [
   { value: "PRIVATE", label: "only me", title: "nobody else can reach it" },
-  { value: "SEMI_PRIVATE", label: "shared", title: "anyone with your id and its name can reach it" },
+  { value: "SEMI_PRIVATE", label: "shared", title: "anyone with your handle and its name can reach it" },
   { value: "PUBLIC", label: "public", title: "anyone can reach it by its name alone" },
 ];
 
@@ -33,11 +34,14 @@ export const RefChip: React.FC<{ reference: string; me: string; label?: string }
   me,
   label = "id",
 }) => {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  // your own items read as ":handle" to you, the way you'd type them in a quiz
-  const shown = reference.startsWith(`${me}:`) ? reference.slice(me.length) : reference;
+  // your own items read as ":name" to you, the way you'd type them in a quiz
+  // (others see "yourhandle:name"; older ones may still carry your id)
+  const own = [user?.handle, me].find((p) => p && reference.startsWith(`${p}:`));
+  const shown = own ? reference.slice(own.length) : reference;
   return (
     <button
       type="button"

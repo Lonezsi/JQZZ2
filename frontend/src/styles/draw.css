@@ -1,40 +1,65 @@
 /* ─── the drawing frame (src/draw) ─────────────────────────────────────
-   The sheet is paper in both themes; the controls around it follow the app. */
+   The sheet is paper in both themes; the controls around it follow the app.
+   A bar of actions on top, the sheet in its window, the brushes and their
+   settings under it. On a phone the frame is exactly as tall as the room it
+   has (--draw-h, set by fit.ts); held sideways the brushes go down the side. */
 
 .jqzz-draw {
+  position: relative;
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "bar" "view" "tools" "tune";
+  gap: 8px;
   width: 100%;
   min-width: 0;
+  height: var(--draw-h, clamp(480px, 82vh, 880px));
 }
 
-.jqzz-draw-sheet {
+/* the window the sheet sits in: it can be moved, turned and zoomed in here */
+.jqzz-draw-window {
+  grid-area: view;
   position: relative;
-  width: 100%;
-  max-width: calc(62vh * 4 / 3);
-  margin-inline: auto;
-  aspect-ratio: 4 / 3;
-  border-radius: var(--radius-lg);
+  min-height: 0;
   overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--line);
+  /* every touch here is the drawing's: the page doesn't scroll, bounce or zoom */
+  touch-action: none;
+  overscroll-behavior: none;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.jqzz-draw.tool .jqzz-draw-window {
+  cursor: crosshair;
+}
+
+/* sized and moved from DrawingFrame: it just fits the window at 100% */
+.jqzz-draw-sheet {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
   background: #fbfaf7;
   box-shadow:
     0 0 0 1px var(--line),
-    0 1px 0 rgba(255, 255, 255, 0.08) inset,
-    0 24px 48px -24px rgba(0, 0, 0, 0.65);
+    0 18px 40px -20px rgba(0, 0, 0, 0.65);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+/* back to straight, or to the whole sheet */
+.jqzz-draw-sheet.settle {
+  transition: transform var(--dur-2) var(--ease);
 }
 
 .jqzz-draw-canvas {
   display: block;
   width: 100%;
   height: 100%;
-  touch-action: none;
-  cursor: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-.jqzz-draw-sheet.tool .jqzz-draw-canvas {
-  cursor: crosshair;
 }
 
 /* the brush's outline under the pointer: dark and light rings, seen on any colour */
@@ -52,7 +77,7 @@
 .jqzz-draw-cursor.on {
   opacity: 1;
 }
-.jqzz-draw-sheet.tool .jqzz-draw-cursor {
+.jqzz-draw.tool .jqzz-draw-cursor {
   display: none;
 }
 
@@ -66,17 +91,176 @@
   pointer-events: none;
 }
 
+/* ─── over the window: the zoom, what's been sent, the layers ─── */
+
+.jqzz-draw-over {
+  grid-area: view;
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+  pointer-events: none;
+}
+.jqzz-draw-over > * {
+  pointer-events: auto;
+}
+
+.jqzz-draw-zoom {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  color: var(--text-2);
+  font-family: var(--font-data);
+  font-size: var(--fs-annot);
+  cursor: pointer;
+  transition: opacity var(--dur-1) var(--ease);
+}
+.jqzz-draw-zoom.home {
+  opacity: 0.5;
+}
+.jqzz-draw-zoom:hover {
+  opacity: 1;
+  color: var(--text);
+}
+
+.jqzz-draw-status {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 120px);
+  overflow: hidden;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none !important;
+}
+
+.jqzz-draw-pop {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: min(360px, calc(100% - 16px));
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 48px -18px rgba(0, 0, 0, 0.7);
+}
+.jqzz-draw-pop .jqzz-draw-layers {
+  border-color: var(--line-strong);
+  background: var(--surface-solid);
+}
+
+/* ─── the bar: undo, redo, clear, mirror, paper, layers, send ─── */
+
+.jqzz-draw-bar {
+  grid-area: bar;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  touch-action: manipulation;
+}
+.jqzz-draw-gap {
+  flex: 1;
+}
+.jqzz-draw-bar .jqzz-draw-send {
+  flex: none;
+  margin-left: 6px;
+}
+
+.jqzz-draw-act {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+.jqzz-draw-act:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--raised-hover);
+}
+.jqzz-draw-act:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.jqzz-draw-act.on {
+  color: var(--text);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.jqzz-draw-paper {
+  position: relative;
+}
+.jqzz-draw-papers {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--z-menu);
+  display: grid;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-solid);
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+}
+.jqzz-draw-papers button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  cursor: pointer;
+}
+.jqzz-draw-papers button:hover,
+.jqzz-draw-papers button.on {
+  color: var(--text);
+  background: var(--raised-hover);
+}
+.jqzz-draw-paper-chip {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+
 /* ─── tools ─── */
 
 .jqzz-draw-tools {
+  grid-area: tools;
   display: flex;
   gap: 4px;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--sunken);
+  touch-action: manipulation;
 }
 .jqzz-draw-tools::-webkit-scrollbar {
   display: none;
@@ -124,30 +308,38 @@
 }
 .jqzz-draw-tool:focus-visible,
 .jqzz-draw-act:focus-visible,
-.jqzz-draw-swatch:focus-visible {
+.jqzz-draw-swatch:focus-visible,
+.jqzz-draw-zoom:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* ─── size, opacity, and a stroke made by the real brush ─── */
+/* ─── colour, size, opacity, and a stroke made by the real brush ─── */
 
 .jqzz-draw-tune {
-  display: grid;
-  grid-template-columns: minmax(120px, 180px) 1fr;
+  grid-area: tune;
+  display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  touch-action: manipulation;
 }
 
 .jqzz-draw-preview {
-  width: 100%;
+  order: 1;
+  flex: none;
+  width: 160px;
   aspect-ratio: 360 / 96;
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 1px var(--line);
 }
 
 .jqzz-draw-sliders {
+  order: 2;
+  flex: 0 1 300px;
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .jqzz-draw-slider {
@@ -160,6 +352,7 @@
 }
 .jqzz-draw-slider input {
   width: 100%;
+  min-width: 0;
   accent-color: var(--accent);
 }
 .jqzz-draw-slider output {
@@ -170,12 +363,21 @@
 }
 
 .jqzz-draw-hint {
+  order: 2;
+  flex: 0 1 300px;
   margin: 0;
   font-size: var(--fs-small);
   color: var(--text-2);
 }
 
-/* ─── colours ─── */
+/* ─── colours: in a row on a big screen, behind the current one on a phone ─── */
+
+.jqzz-draw-color {
+  order: 3;
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 .jqzz-draw-colors {
   display: flex;
@@ -185,8 +387,9 @@
 
 .jqzz-draw-swatch {
   position: relative;
-  width: 28px;
-  height: 28px;
+  flex: none;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -206,9 +409,12 @@
     0 0 0 4px var(--accent);
 }
 .jqzz-draw-swatch.recent {
-  width: 22px;
-  height: 22px;
-  margin-block: 3px;
+  width: 20px;
+  height: 20px;
+  margin-block: 2px;
+}
+.jqzz-draw-swatch.current {
+  display: none;
 }
 /* any colour: the current one, ringed with every hue */
 .jqzz-draw-swatch.custom {
@@ -218,8 +424,8 @@
 }
 .jqzz-draw-swatch.custom::after {
   content: "";
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--swatch);
   box-shadow: 0 0 0 2px var(--bg);
@@ -233,101 +439,40 @@
   cursor: pointer;
 }
 
-/* ─── undo, redo, clear, mirror, paper, send ─── */
+/* ─── a phone, or any short screen: everything docked and compact ─── */
 
-.jqzz-draw-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+@media (max-width: 720px), (max-height: 520px) {
+  .jqzz-draw {
+    gap: 6px;
+    height: var(--draw-h, 100svh);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 
-.jqzz-draw-act {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--raised);
-  color: var(--text-2);
-  cursor: pointer;
-  transition:
-    background var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease);
-}
-.jqzz-draw-act:hover:not(:disabled) {
-  color: var(--text);
-  background: var(--raised-hover);
-}
-.jqzz-draw-act:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.jqzz-draw-act.on {
-  color: var(--text);
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-}
+  .jqzz-draw-bar {
+    gap: 2px;
+  }
+  .jqzz-draw-act {
+    width: 34px;
+    height: 34px;
+  }
+  .jqzz-draw-bar .jqzz-play-btn {
+    min-height: 34px;
+    padding: 4px 14px;
+    font-size: var(--fs-small);
+  }
 
-.jqzz-draw-paper {
-  position: relative;
-}
-.jqzz-draw-papers {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  z-index: var(--z-menu);
-  display: grid;
-  min-width: 160px;
-  padding: 4px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-lg);
-  background: var(--surface-solid);
-  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.6);
-}
-.jqzz-draw-papers button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--text-2);
-  font: inherit;
-  font-size: var(--fs-small);
-  text-align: left;
-  cursor: pointer;
-}
-.jqzz-draw-papers button:hover,
-.jqzz-draw-papers button.on {
-  color: var(--text);
-  background: var(--raised-hover);
-}
-.jqzz-draw-paper-chip {
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-xs);
-  box-shadow: 0 0 0 1px var(--line-strong);
-}
-
-.jqzz-draw-send {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-}
-
-@media (max-width: 520px) {
-  /* every tool in sight: two rows of six, icons only */
+  /* every brush in sight: one row, icons only */
   .jqzz-draw-tools {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 2px;
+    padding: 2px;
+    overflow: visible;
   }
   .jqzz-draw-tool {
     justify-content: center;
+    height: 38px;
+    min-width: 0;
     padding: 0;
   }
   .jqzz-draw-tool.on {
@@ -336,22 +481,114 @@
   .jqzz-draw-tool-name {
     display: none;
   }
+
   .jqzz-draw-tune {
-    grid-template-columns: 1fr;
+    gap: 10px;
   }
   .jqzz-draw-preview {
-    max-width: 240px;
+    display: none;
   }
-  .jqzz-draw-swatch {
-    width: 30px;
-    height: 30px;
+  .jqzz-draw-color {
+    order: 0;
+    flex: none;
+  }
+  .jqzz-draw-swatch.current {
+    display: block;
+    width: 34px;
+    height: 34px;
+  }
+  .jqzz-draw-swatch.current.open {
+    box-shadow:
+      0 0 0 2px var(--bg),
+      0 0 0 4px var(--accent);
+  }
+  .jqzz-draw-colors {
+    display: none;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    z-index: var(--z-menu);
+    grid-template-columns: repeat(6, 32px);
+    place-items: center;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-xl);
+    background: var(--surface-solid);
+    box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  }
+  .jqzz-draw-colors.open {
+    display: grid;
+  }
+  .jqzz-draw-colors .jqzz-draw-swatch {
+    width: 32px;
+    height: 32px;
+  }
+  .jqzz-draw-colors .jqzz-draw-swatch.recent {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+  }
+
+  .jqzz-draw-sliders {
+    flex: 1;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .jqzz-draw-slider {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "name out" "range range";
+    gap: 0 4px;
+    font-size: var(--fs-annot);
+  }
+  .jqzz-draw-slider span {
+    grid-area: name;
+  }
+  .jqzz-draw-slider input {
+    grid-area: range;
+    height: 20px;
+    margin: 0;
+  }
+  .jqzz-draw-slider output {
+    grid-area: out;
+  }
+  .jqzz-draw-hint {
+    flex: 1;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: var(--fs-annot);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* held sideways: the brushes down the left, the bar and the settings side by side on top */
+@media (max-height: 520px) and (orientation: landscape) {
+  .jqzz-draw {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "tools bar tune" "tools view view";
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+  }
+  .jqzz-draw-tools {
+    grid-template-columns: repeat(2, 36px);
+    grid-auto-rows: 36px;
+    align-content: start;
+  }
+  .jqzz-draw-tool {
+    height: 36px;
+  }
+  .jqzz-draw-colors {
+    top: calc(100% + 8px);
+    bottom: auto;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .jqzz-draw-tool,
   .jqzz-draw-tool-name,
-  .jqzz-draw-swatch {
+  .jqzz-draw-swatch,
+  .jqzz-draw-sheet.settle {
     transition: none;
   }
 }

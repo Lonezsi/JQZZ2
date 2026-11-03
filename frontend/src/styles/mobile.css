@@ -19,7 +19,6 @@
   /* keycaps advertise shortcuts nobody can press (:root, because index.css
      declares .jqzz-keys after its imports and would otherwise win) */
   :root .jqzz-keys,
-  .jqzz-welcome-hint,
   .jqzz-palette-footer {
     display: none;
   }
@@ -337,41 +336,6 @@
   }
   .jqzz-add-tray .jqzz-tray-grid {
     padding: 0 12px 12px;
-  }
-
-  /* Welcome */
-  .jqzz-welcome-root {
-    padding: 16px 16px 32px;
-  }
-  .jqzz-welcome-burst {
-    width: 100%;
-    height: 300px;
-  }
-  .jqzz-welcome-logo {
-    width: 140px;
-    height: 140px;
-  }
-  .jqzz-welcome-subtitle {
-    font-size: 16px;
-  }
-  .jqzz-welcome-actions {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .jqzz-welcome-actions .jqzz-toolbar-btn {
-    min-height: 44px;
-  }
-  .jqzz-welcome-features {
-    margin-top: 32px;
-    grid-template-columns: 1fr;
-  }
-  .jqzz-feature {
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-    padding: 16px 4px 16px;
-  }
-  .jqzz-feature:last-child {
-    border-bottom: none;
   }
 
   /* Dialogs: closer to the edges, under the top of the screen */

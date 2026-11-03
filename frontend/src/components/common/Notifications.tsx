@@ -27,7 +27,19 @@ export const Notifications: React.FC = () => {
   const { user } = useAuth();
   const route = useHashRoute();
   const { unread, read, readAll } = useNotifications();
-  const [collapsed, setCollapsed] = useState(false);
+  // cards say their piece, then tuck under the bell instead of sitting on
+  // the editor; a new one coming in brings them back out. The bell toggles
+  // them by hand, which holds until the next new one.
+  const newestId = unread[0]?.id;
+  const [tuckedAt, setTuckedAt] = useState<typeof newestId | null>(null);
+  const [byHand, setByHand] = useState<{ at: typeof newestId; collapsed: boolean } | null>(null);
+  useEffect(() => {
+    if (newestId == null) return;
+    const t = window.setTimeout(() => setTuckedAt(newestId), 9000);
+    return () => window.clearTimeout(t);
+  }, [newestId]);
+  const collapsed = byHand && byHand.at === newestId ? byHand.collapsed : tuckedAt === newestId;
+  const setCollapsed = (f: (c: boolean) => boolean) => setByHand({ at: newestId, collapsed: f(collapsed) });
 
   // what's on screen: the newest unread, plus any still sliding away
   const latest = unread.slice(0, MAX_SHOWN);
@@ -190,7 +202,7 @@ export const NotificationCard: React.FC<{ n: AppNotification; onRead: () => void
             go("/me/you");
           }}
         >
-          keep it
+          tie to google
         </button>
       );
     }

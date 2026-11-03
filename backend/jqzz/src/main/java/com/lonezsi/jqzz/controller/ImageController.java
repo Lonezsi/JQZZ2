@@ -6,18 +6,21 @@ import java.util.Optional;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.lonezsi.jqzz.config.LoginKeyFilter;
 import com.lonezsi.jqzz.model.Image;
 import com.lonezsi.jqzz.model.ImageVisibility;
 import com.lonezsi.jqzz.service.ImageService;
@@ -28,6 +31,10 @@ public class ImageController {
 
     private final ImageService imageService;
 
+    /** set by Spring from jqzz.auth.enforce-login-key; off for a controller built by hand in a unit test */
+    @org.springframework.beans.factory.annotation.Value("${jqzz.auth.enforce-login-key:true}")
+    private boolean enforced;
+
     public ImageController(ImageService imageService) {
         this.imageService = imageService;
     }
@@ -37,8 +44,13 @@ public class ImageController {
             @RequestParam("handle") String handle,
             @RequestParam(value = "ownerId", required = false) String ownerId,
             @RequestParam("visibility") String visibility,
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @RequestParam("file") MultipartFile file,
+            @RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) throws IOException {
 
+        // a multipart form's fields are past the login key filter: check the owner here
+        if (enforced && ownerId != null && !ownerId.equals(me)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("that isn't your account");
+        }
         if (ownerId == null && !visibility.equalsIgnoreCase("PUBLIC")) {
             return ResponseEntity.badRequest().body("Owner ID required for non-public images");
         }

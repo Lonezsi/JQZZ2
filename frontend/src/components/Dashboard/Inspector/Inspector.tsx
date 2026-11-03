@@ -85,6 +85,15 @@ export const Inspector: React.FC<InspectorProps> = ({
   const idx = quiz?.actions.findIndex((a) => a.id === action.id) ?? -1;
   const start = quiz ? (actionStartTimes(quiz.actions).get(action.id) ?? 0) : 0;
   const total = quiz?.actions.length ?? 0;
+  // where this phase sits: which phase of which question
+  const questionIds: number[] = [];
+  quiz?.actions.forEach((a) => {
+    if (a.question && !questionIds.includes(a.question.id)) questionIds.push(a.question.id);
+  });
+  const own = action.question ? (quiz?.actions.filter((a) => a.question?.id === action.question!.id) ?? []) : [];
+  const where = action.question
+    ? `Q${questionIds.indexOf(action.question.id) + 1} · phase ${own.findIndex((a) => a.id === action.id) + 1} of ${own.length}`
+    : `${String(idx + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
 
   return (
     <aside
@@ -108,8 +117,7 @@ export const Inspector: React.FC<InspectorProps> = ({
           </span>
           {!multipleSelected && idx >= 0 && (
             <span className="jqzz-annot">
-              {String(idx + 1).padStart(2, "0")} / {String(total).padStart(2, "0")} · t+
-              {formatTimecode(start)}
+              {where} · at {formatTimecode(start)}
             </span>
           )}
         </div>

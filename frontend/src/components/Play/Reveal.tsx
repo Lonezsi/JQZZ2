@@ -67,9 +67,10 @@ const ChoiceReveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mi
             <AnswerPicture src={a.imageUrl} game={game} />
             <span className="jqzz-tile-letter">{right ? "✓" : tileLetter(i)}</span>
             <span className="jqzz-tile-text">{a.text || "..."}</span>
+            {/* how many picked it, and what it was worth (before any speed bonus) */}
             <span className="jqzz-tile-count">
-              {n}
-              {a.value ? <small> · {a.value} pts</small> : null}
+              {n} <small>picked</small>
+              {a.value ? <small> · worth {a.value}</small> : null}
             </span>
           </div>
         );

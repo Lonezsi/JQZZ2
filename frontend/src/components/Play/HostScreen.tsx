@@ -29,7 +29,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
           <span className="jqzz-annot">{error ?? "loading the game..."}</span>
           {error && (
             <button className="jqzz-play-btn" onClick={() => go("/")}>
-              back to the editor
+              back
             </button>
           )}
         </div>
@@ -64,7 +64,8 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
         {live && (
           <div className="jqzz-play-controls">
             <span className="jqzz-annot">
-              step {game.index + 1}/{game.total}
+              {game.questionNumber ? `Q${game.questionNumber} of ${game.questionCount}` : `${game.index + 1}/${game.total}`}
+              {game.phase ? ` · ${game.phase.toLowerCase()}` : ""}
             </span>
             {game.status === "PAUSED" ? (
               <button className="jqzz-play-btn" onClick={() => run(playService.resume)}>
@@ -79,16 +80,16 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
               key={`skip-${(game.hurry ?? []).length}`}
               className={`jqzz-play-btn${(game.hurry ?? []).length ? " nudged" : ""}`}
               onClick={() => run(playService.skip)}
-              title="next step now"
+              title="next phase now"
             >
               ▶▶ skip
             </button>
-            <button
-              className="jqzz-play-btn danger"
-              onClick={() => confirm("end the game now? scores so far stand.") && run(playService.end)}
-            >
-              ■ end
-            </button>
+            <ConfirmButton
+              label="■ end"
+              armedLabel="end it for everyone?"
+              title="end the game now: scores so far stand"
+              onConfirm={() => run(playService.end)}
+            />
           </div>
         )}
       </header>
@@ -110,7 +111,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
                 play again
               </button>
               <button className="jqzz-play-btn" onClick={() => go("/")}>
-                back to the editor
+                done
               </button>
             </div>
             {game.recordId != null && <SaveFromGame recordId={game.recordId} me={me} folded />}
@@ -120,16 +121,6 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
 
       {live && <Doodle code={code} me={me} canDraw={false} onTrail={saw} />}
       {live && <WhileTheyWait game={game} me={me} drawers={drawers} onSkip={() => run(playService.skip)} />}
-      {live && (
-        <div className="jqzz-quit-dock">
-          <ConfirmButton
-            label="end game"
-            armedLabel="end it for everyone?"
-            title="end the game now: scores so far stand"
-            onConfirm={() => run(playService.end)}
-          />
-        </div>
-      )}
       {game.status === "PAUSED" && <div className="jqzz-paused OEF">paused</div>}
       {error && (
         <button className="jqzz-play-error" onClick={() => setError(null)}>

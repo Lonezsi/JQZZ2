@@ -68,6 +68,8 @@ export interface User {
   online: boolean;
   /** tied to a Google account: it can be signed into anywhere, not just this browser */
   googleLinked?: boolean;
+  /** only ever sent to the account itself: what logs it in */
+  loginKey?: string;
 }
 
 export interface SnippetStep {
@@ -113,7 +115,10 @@ export interface RegisterRequest {
 }
 
 export interface LoginRequest {
-  id: string;
+  /** the account's login key */
+  key?: string;
+  /** an account from before login keys, once: it's given one */
+  id?: string;
 }
 
 export interface LogoutRequest {

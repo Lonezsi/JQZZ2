@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
+import { plural } from "../../../utils/format";
 import { useDragAutoScroll } from "../../../hooks/useDragAutoScroll";
 import { Toolbar } from "./Toolbar";
 import { LoadingSkeleton, VisualMode } from "./VisualMode/VisualMode";
@@ -144,11 +145,11 @@ export const Main: React.FC<MainProps> = ({
             <span className="jqzz-annot jqzz-note-tl">
               {quizCode(quiz.id)}
               <br />
-              {questionCount(quiz)} questions
+              {plural(questionCount(quiz), "question")}
             </span>
             <span className="jqzz-annot jqzz-note-vert">
-              quiz log : {quizCode(quiz.id)} — Σt {formatTimecode(quizRuntime(quiz))} —{" "}
-              {actions.length} actions
+              {quizCode(quiz.id)} · runs {formatTimecode(quizRuntime(quiz))} ·{" "}
+              {plural(questionCount(quiz), "question")} · {plural(actions.length, "phase")}
             </span>
             <span className={`jqzz-annot jqzz-note-tr${hasSelection ? " on" : ""}`}>
               {hasSelection ? `${pad(selectedIdx[0] + 1)} / ${pad(actions.length)}` : ""}
@@ -156,8 +157,8 @@ export const Main: React.FC<MainProps> = ({
             <span className={`jqzz-annot jqzz-note-bl${hasSelection ? " on" : ""}`}>
               {hasSelection && (
                 <>
-                  ( t+{formatTimecode(windowStart)} )
-                  <br />↓<br />( t+{formatTimecode(windowEnd)} )
+                  ( from {formatTimecode(windowStart)} )
+                  <br />↓<br />( to {formatTimecode(windowEnd)} )
                 </>
               )}
             </span>

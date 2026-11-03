@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DitherBlobs } from "./DitherBlobs";
+import { Clouds } from "./Clouds";
+import { tickClouds } from "./dither";
 import { effectsChoice, onEffectsChange } from "../../utils/theme";
 
 const PHASES = ["IDLE", "WAITING", "QUESTION", "ANSWER", "ELABORATION", "RESULT"];
@@ -7,7 +9,7 @@ const BASE = import.meta.env.BASE_URL;
 
 /**
  * Everything behind the UI, back to front: paper/ink, phase light,
- * dithered blobs, the blended lens textures, then grain.
+ * dithered blobs and clouds, the blended lens textures, then grain.
  */
 export const Atmosphere: React.FC = () => {
   useMovingLights();
@@ -18,7 +20,10 @@ export const Atmosphere: React.FC = () => {
       {PHASES.map((p) => (
         <span key={p} className={`phase phase-${p}`} />
       ))}
+      {/* the lit planet: furthest back, the dots and clouds pass in front */}
+      <span className="planet" />
       <DitherBlobs />
+      <Clouds />
       <Texture className="tex-floor" src={`${BASE}bg.webp`} filter={() => "contrast(0.5)"} />
       <Texture
         className="tex-lens-a"
@@ -122,8 +127,9 @@ const Texture: React.FC<{ className: string; src: string; filter: (scale: number
    toward the pointer, each at its own depth, so it reads as space rather
    than a slide. On a phone they follow how it's tilted instead.
 
-   This runs as one small loop writing transforms straight onto the three
-   lights, rather than CSS animations plus a variable on the root: a root
+   The planet leans too, and everything rises slower than the page as it
+   scrolls (below). This runs as one small loop writing transforms straight
+   onto the lights, rather than CSS animations plus a variable on the root: a root
    variable made the browser recheck every element's style on every frame,
    and a 60fps drift made it re-mix the whole blended background just as
    often. Drifting a few pixels a second needs 15 frames a second; catching
@@ -137,13 +143,52 @@ interface Light {
   to: [number, number, number];
   /** seconds for one way */
   period: number;
+  /** how far it rises as the page scrolls, as a share of the scroll */
+  scroll: number;
 }
 
 const LIGHTS: Record<string, Light> = {
-  phase: { lean: [70, 50], from: [-4, 2, 1], to: [5, -3, 1.12], period: 26 },
-  warm: { lean: [-90, -60], from: [3, 0, 1.05], to: [-6, -5, 0.95], period: 31 },
-  shadow: { lean: [40, -30], from: [0, -2, 0.96], to: [6, 4, 1.08], period: 37 },
+  phase: { lean: [70, 50], from: [-4, 2, 1], to: [5, -3, 1.12], period: 26, scroll: 0.06 },
+  warm: { lean: [-90, -60], from: [3, 0, 1.05], to: [-6, -5, 0.95], period: 31, scroll: 0.1 },
+  shadow: { lean: [40, -30], from: [0, -2, 0.96], to: [6, 4, 1.08], period: 37, scroll: 0.08 },
+  // far back: it doesn't drift, only leans a little and rises slowly with the page
+  // way back from the camera: further than the furthest cloud, so it barely moves
+  planet: { lean: [8, 5], from: [0, 0, 1], to: [0, 0, 1], period: 1, scroll: 0.02 },
 };
+
+/* ─── scrolling ──────────────────────────────────────────────────────
+   Whatever is scrolling the page (the window, .jqzz-body, a page's own
+   container) the background rises with it, slower the further back it is.
+   Only scrollers about the window's height count: a list scrolling inside a
+   panel isn't the page moving. Read at frame time, so the listener does
+   nothing but note which element it is and wake the loop. */
+const scroll = { el: null as Element | null, until: 0 };
+let wakeLights: (() => void) | null = null;
+
+const onScroll = (e: Event) => {
+  const t = e.target;
+  const el = t === document || t === window ? document.scrollingElement : (t as Element);
+  if (!el || !(el instanceof Element)) return;
+  if (el !== document.scrollingElement && el.clientHeight < window.innerHeight * 0.6) return;
+  scroll.el = el;
+  scroll.until = performance.now() + 250;
+  wakeLights?.();
+};
+// a new page starts at the top, whatever was scrolled before
+const onRoute = () => {
+  scroll.el = null;
+  wakeLights?.();
+};
+
+function scrollY(): number {
+  const el = scroll.el;
+  if (!el) return 0;
+  if (!el.isConnected) {
+    scroll.el = null;
+    return 0;
+  }
+  return el.scrollTop;
+}
 const BURST_LEAN: [number, number] = [24, 18];
 
 let users = 0;
@@ -168,17 +213,30 @@ function startLights(): () => void {
   // only to skip most of them; the frame itself still lands on a refresh
   const next = (ms: number) => {
     timer = window.setTimeout(() => {
+      timer = 0;
       raf = requestAnimationFrame(frame);
     }, ms);
   };
+  // scrolling: every refresh, so the background keeps up with the content
+  const wake = () => {
+    if (!timer) return; // a frame is already on its way
+    window.clearTimeout(timer);
+    timer = 0;
+    raf = requestAnimationFrame(frame);
+  };
+  wakeLights = wake;
   const frame = (now: number) => {
     const settling = Math.abs(target.x - lean.x) + Math.abs(target.y - lean.y) > 0.002;
-    next(settling ? 33 : 66);
+    const scrolling = now < scroll.until;
+    if (scrolling) raf = requestAnimationFrame(frame);
+    else next(settling ? 33 : 66);
     const gap = last ? now - last : 66;
     last = now;
     if (now - foundAt > 1000) {
       lights = Array.from(
-        document.querySelectorAll<HTMLElement>(".jqzz-aura > .phase, .jqzz-aura > .warm, .jqzz-aura > .shadow"),
+        document.querySelectorAll<HTMLElement>(
+          ".jqzz-aura > .phase, .jqzz-aura > .warm, .jqzz-aura > .shadow, .jqzz-aura > .planet",
+        ),
       );
       bursts = Array.from(document.querySelectorAll<HTMLElement>(".jqzz-welcome-burst"));
       foundAt = now;
@@ -191,6 +249,7 @@ function startLights(): () => void {
     // one clock for the page: stopped and started again, the drift carries on
     // from where time says it is, instead of jumping back to its start
     const secs = (now - EPOCH) / 1000;
+    const sy = scrollY();
     lights.forEach((el) => {
       const light = LIGHTS[el.classList[0]];
       if (!light) return;
@@ -200,19 +259,31 @@ function startLights(): () => void {
       const ty = light.from[1] + (light.to[1] - light.from[1]) * p;
       const s = light.from[2] + (light.to[2] - light.from[2]) * p;
       el.style.transform =
-        `translate3d(${(lean.x * light.lean[0]).toFixed(1)}px, ${(lean.y * light.lean[1]).toFixed(1)}px, 0) ` +
+        `translate3d(${(lean.x * light.lean[0]).toFixed(1)}px, ${(lean.y * light.lean[1] - sy * light.scroll).toFixed(1)}px, 0) ` +
         `translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%) scale(${s.toFixed(4)})`;
     });
     bursts.forEach((el) => {
       el.style.translate = `${(lean.x * BURST_LEAN[0]).toFixed(1)}px ${(lean.y * BURST_LEAN[1]).toFixed(1)}px`;
     });
+    // the clouds ride the same clock; they redraw only when one moves a whole cell
+    tickClouds(secs, lean.x, lean.y, sy, scrolling, now);
   };
   raf = requestAnimationFrame(frame);
   const stopListening = listen();
+  document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+  window.addEventListener("hashchange", onRoute);
+  window.addEventListener("popstate", onRoute);
   return () => {
     window.clearTimeout(timer);
     cancelAnimationFrame(raf);
     stopListening();
+    wakeLights = null;
+    document.removeEventListener("scroll", onScroll, { capture: true });
+    window.removeEventListener("hashchange", onRoute);
+    window.removeEventListener("popstate", onRoute);
+    // stopped (effects turned down): everything back where it stands still
+    lights.forEach((el) => (el.style.transform = ""));
+    tickClouds((performance.now() - EPOCH) / 1000, 0, 0, 0, false, performance.now());
   };
 }
 

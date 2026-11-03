@@ -192,7 +192,7 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
                     icon="TYPE"
                     label="save as type"
                     done="type saved"
-                    title="its type and steps, without the words, for new questions"
+                    title="its type and phases, without the words, for new questions"
                     run={() =>
                       stashService.asType(
                         me,

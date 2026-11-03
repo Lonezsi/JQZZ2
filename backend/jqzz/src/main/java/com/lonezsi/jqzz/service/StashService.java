@@ -398,14 +398,15 @@ public class StashService {
 
     /**
      * The image rules, for stash items: "handle" is public, ":handle" is your own,
-     * "owner:handle" is someone else's and only reachable when it isn't private.
+     * "ownerhandle:handle" is someone else's and only reachable when it isn't
+     * private (older references have the owner's id there, which still works).
      */
     @Transactional(readOnly = true)
     public Optional<StashItem> resolve(StashKind kind, String ref, String userId) {
         if (kind == null || ref == null || ref.isBlank()) return Optional.empty();
         String[] parts = ref.trim().split(":", 2);
         if (parts.length == 1) return stash.findByKindAndHandleAndOwnerIdIsNull(kind, parts[0]);
-        String owner = parts[0].isEmpty() ? userId : parts[0];
+        String owner = parts[0].isEmpty() ? userId : Handles.owner(parts[0]);
         return stash.findByKindAndOwnerIdAndHandle(kind, owner, parts[1])
                 .filter(item -> item.getVisibility() != ImageVisibility.PRIVATE || owner.equals(userId));
     }

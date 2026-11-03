@@ -41,6 +41,10 @@ class StashFlowTest {
         String alice = register("Alice");
         String bob = register("Bob");
         String carol = register("Carol");
+        // shared references name people by handle: an id logs you in, so it never shows in one
+        String aliceAt = handleOf(alice);
+        String bobAt = handleOf(bob);
+        String carolAt = handleOf(carol);
         images.uploadImage("river", alice, ImageVisibility.SEMI_PRIVATE,
                 new MockMultipartFile("file", "river.png", "image/png", new byte[] {1, 2, 3}));
 
@@ -97,10 +101,10 @@ class StashFlowTest {
         String saved = send("POST", "/stash/from-game", bob, "{\"recordId\": %d}".formatted(recordId)).body();
         assertThat(JsonPath.<List<String>>read(saved, "$[*].kind")).containsExactly("QUIZ", "IMAGE");
         assertThat(JsonPath.<String>read(saved, "$[0].handle")).isEqualTo("rivers_of_the_world");
-        assertThat(JsonPath.<String>read(saved, "$[0].reference")).isEqualTo(bob + ":rivers_of_the_world");
+        assertThat(JsonPath.<String>read(saved, "$[0].reference")).isEqualTo(bobAt + ":rivers_of_the_world");
         assertThat(JsonPath.<String>read(saved, "$[0].visibility")).isEqualTo("PRIVATE");
         assertThat(JsonPath.<String>read(saved, "$[1].handle")).isEqualTo("river");
-        assertThat(JsonPath.<String>read(saved, "$[1].title")).isEqualTo(alice + ":river");
+        assertThat(JsonPath.<String>read(saved, "$[1].title")).isEqualTo(aliceAt + ":river");
         long quizItem = id(saved, "$[0].id");
         // the author's own picture is already theirs, so it doesn't come along for them
         assertThat(JsonPath.<List<String>>read(
@@ -144,11 +148,13 @@ class StashFlowTest {
         assertThat(JsonPath.<String>read(fromEditor, "$.payload")).contains("TIERLIST");
         assertThat(send("POST", "/stash/types", bob, "{\"name\": \"empty\", \"steps\": []}").statusCode()).isEqualTo(400);
 
-        // private: only bob. semi-private: anyone with bob's id. public: by handle alone.
+        // private: only bob. semi-private: anyone with bob's handle. public: by name alone.
         String ref = "/stash/resolve?kind=QUIZ&ref=";
-        assertThat(send("GET", ref + bob + ":rivers_of_the_world", carol, null).statusCode()).isEqualTo(404);
+        assertThat(send("GET", ref + bobAt + ":rivers_of_the_world", carol, null).statusCode()).isEqualTo(404);
         assertThat(send("GET", ref + ":rivers_of_the_world", bob, null).statusCode()).isEqualTo(200);
         send("PATCH", "/stash/" + quizItem, bob, "{\"visibility\": \"SEMI_PRIVATE\"}");
+        assertThat(send("GET", ref + bobAt + ":rivers_of_the_world", carol, null).statusCode()).isEqualTo(200);
+        // references written before handles carried the id; those still reach it
         assertThat(send("GET", ref + bob + ":rivers_of_the_world", carol, null).statusCode()).isEqualTo(200);
         String made = send("PATCH", "/stash/" + quizItem, bob, "{\"visibility\": \"PUBLIC\"}").body();
         assertThat(JsonPath.<String>read(made, "$.reference")).isEqualTo("rivers_of_the_world");
@@ -158,7 +164,7 @@ class StashFlowTest {
         String copy = send("POST", "/stash/from-ref", carol,
                 "{\"kind\": \"QUIZ\", \"ref\": \"rivers_of_the_world\"}").body();
         long copyId = id(copy, "$.id");
-        assertThat(JsonPath.<String>read(copy, "$.reference")).isEqualTo(carol + ":rivers_of_the_world");
+        assertThat(JsonPath.<String>read(copy, "$.reference")).isEqualTo(carolAt + ":rivers_of_the_world");
         assertThat(send("PATCH", "/stash/" + copyId, carol, "{\"visibility\": \"PUBLIC\"}").statusCode()).isEqualTo(409);
         assertThat(send("PATCH", "/stash/" + copyId, carol, "{\"handle\": \"bad name!\"}").statusCode()).isEqualTo(400);
         assertThat(send("DELETE", "/stash/" + quizItem, carol, null).statusCode()).isEqualTo(403);
@@ -169,7 +175,7 @@ class StashFlowTest {
         assertThat(JsonPath.<String>read(reloaded, "$.authorId")).isEqualTo(carol);
         assertThat(JsonPath.<List<String>>read(reloaded, "$.actions[*].phase"))
                 .containsExactly("QUESTION", "ANSWER", "QUESTION");
-        assertThat(JsonPath.<String>read(reloaded, "$.actions[0].question.imageUrl")).isEqualTo(alice + ":river");
+        assertThat(JsonPath.<String>read(reloaded, "$.actions[0].question.imageUrl")).isEqualTo(aliceAt + ":river");
         assertThat(JsonPath.<Object>read(reloaded, "$.actions[0].question.id"))
                 .isEqualTo(JsonPath.read(reloaded, "$.actions[1].question.id"));
 
@@ -219,6 +225,10 @@ class StashFlowTest {
 
     private String register(String name) throws Exception {
         return JsonPath.read(send("POST", "/users/register", null, "{\"name\": \"%s\"}".formatted(name)).body(), "$.id");
+    }
+
+    private String handleOf(String userId) throws Exception {
+        return JsonPath.read(send("GET", "/users/" + userId, null, null).body(), "$.handle");
     }
 
     private static long id(String json, String path) {

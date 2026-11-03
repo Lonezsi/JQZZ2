@@ -1458,3 +1458,61 @@ a.jqzz-board-name:hover {
   align-items: stretch;
   text-align: left;
 }
+
+/* ─── filter chips: "all" plus one per kind, under the profile's search ── */
+.jqzz-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.jqzz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.jqzz-chip svg {
+  color: var(--text-3);
+  transition: color var(--dur-1) var(--ease);
+}
+.jqzz-chip:hover {
+  border-color: var(--line-strong);
+  background: var(--raised-hover);
+  color: var(--text);
+}
+.jqzz-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.jqzz-chip-count {
+  min-width: 16px;
+  font-family: var(--font-data);
+  font-size: var(--fs-annot);
+  color: var(--text-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.jqzz-chip[aria-pressed="true"] {
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.jqzz-chip[aria-pressed="true"] svg,
+.jqzz-chip[aria-pressed="true"] .jqzz-chip-count {
+  color: var(--on-accent);
+}
+.jqzz-chip[aria-pressed="true"]:hover {
+  background: color-mix(in srgb, var(--accent-fill) 88%, var(--text));
+}

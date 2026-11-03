@@ -13,7 +13,7 @@ import { useAuth } from "./AuthContext";
 import type { Quiz, Question, Action, EditorMode, RenderItem } from "../types";
 import { buildRenderItems } from "../utils/buildRenderItems";
 import { quizService } from "../services/quizService";
-import { API_BASE_URL, errorMessage } from "../services/api";
+import { API_BASE_URL, errorMessage, keyHeader } from "../services/api";
 import { convertToBackendQuiz } from "../utils/quizConverter";
 import { parseScript } from "../utils/scriptParser";
 
@@ -120,11 +120,17 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     handleParsed,
   } = useQuizMutations(activeQuizId, setQuizzes, authorId);
 
+  // named after whoever makes it: "Velour Moth's quiz", then "... quiz 2"
   const newQuiz = useCallback(async () => {
-    const id = await createQuiz();
+    const who = (user?.name ?? "").replace(/\s*\(guest\)\s*$/i, "").trim();
+    const base = who ? `${who}'s quiz` : "new quiz";
+    const taken = new Set(quizzes.filter((q) => q.authorId === authorId).map((q) => q.name));
+    let name = base;
+    for (let n = 2; taken.has(name); n++) name = `${base} ${n}`;
+    const id = await createQuiz(name);
     if (id) setActiveQuizId(id);
     return id;
-  }, [createQuiz]);
+  }, [createQuiz, user?.name, quizzes, authorId]);
 
   const importScript = useCallback(
     async (name: string, script: string) => {
@@ -280,7 +286,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!isDirty(persisted.current, q)) continue;
         fetch(`${API_BASE_URL}/quizzes/${q.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...keyHeader() },
           body: JSON.stringify(convertToBackendQuiz(q)),
           keepalive: true,
         }).catch(() => {});

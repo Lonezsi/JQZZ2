@@ -12,7 +12,7 @@ import { typeLabel } from "../../utils/questionInfo";
 import { contentToActions, readContent, readType } from "../../utils/stashContent";
 import type { TypeShape } from "../../types/stash";
 import type { Phase } from "../../types";
-import { Toggles } from "../common/Toggles";
+import { FilterChips } from "./FilterChips";
 import { hits } from "../../utils/search";
 import { Glyph } from "../common/Glyph";
 import { Select } from "../common/Select";
@@ -41,16 +41,17 @@ function itemText(item: StashItem) {
 
 /**
  * Everything you saved: whole quizzes, single questions, types, pictures. Each
- * has an id like the image library's: ":name" for you, "yourid:name" for
+ * has an id like the image library's: ":name" for you, "yourhandle:name" for
  * others when shared, just "name" once public. Lives on your profile, under
  * "stash".
  *
- * The four kinds switch on and off on their own; none on shows them all, each
- * in its section. The profile's search filters them, and while you search it
- * also finds public ones from everyone, and someone's "id:name" to copy in.
+ * The profile's search looks through it as you type; filter chips under it
+ * narrow it to some kinds (none picked shows them all, each in its section).
+ * While you search it also finds public ones from everyone, and someone's
+ * "handle:name" to copy in.
  *
  * tab: from the address, a kind to start with (#/me/stash/quizzes)
- * add: arrived through a share link, #/stash/add/quiz/theirid:name
+ * add: arrived through a share link, #/stash/add/quiz/theirhandle:name
  */
 export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: string }; query?: string }> = ({
   tab: fromRoute,
@@ -62,13 +63,6 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
   const addKind = add ? KINDS[add.kind] : undefined;
   const startWith = SECTIONS.find((s) => s.tab === fromRoute)?.kind ?? addKind;
   const [on, setOn] = useState<Set<StashKind>>(() => new Set(startWith ? [startWith] : []));
-  const toggle = (k: string) =>
-    setOn((prev) => {
-      const next = new Set(prev);
-      if (next.has(k as StashKind)) next.delete(k as StashKind);
-      else next.add(k as StashKind);
-      return next;
-    });
   const shown = SECTIONS.filter((s) => on.size === 0 || on.has(s.kind));
 
   const [data, setData] = useState<StashList | null>(null);
@@ -131,30 +125,33 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
   useEffect(() => {
     if (data && me) setTypesCache(me, data.items.filter((i) => i.kind === "TYPE"));
   }, [data, me]);
-  const counts = useMemo(() => {
-    const c: Record<StashKind, number> = { QUIZ: 0, QUESTION: 0, TYPE: 0, IMAGE: data?.images.length ?? 0 };
-    data?.items.forEach((i) => c[i.kind]++);
-    return c;
-  }, [data]);
-
   const of = (kind: StashKind) =>
     data?.items.filter((i) => i.kind === kind && hits(query, ...itemText(i))) ?? [];
+  const uploads = data?.images.filter((img) => hits(query, img.handle, img.reference)) ?? [];
+  // what each chip would show, so the counts follow the search
+  const counts = useMemo(() => {
+    const c: Record<StashKind, number> = { QUIZ: 0, QUESTION: 0, TYPE: 0, IMAGE: 0 };
+    if (!data) return c;
+    data.items.forEach((i) => hits(query, ...itemText(i)) && c[i.kind]++);
+    data.images.forEach((img) => hits(query, img.handle, img.reference) && c.IMAGE++);
+    return c;
+  }, [data, query]);
+
   const searching = query.trim().length > 0;
   const several = shown.length > 1;
 
   return (
     <div className="jqzz-shelf-body-wrap">
-      <Toggles
-        className="jqzz-shelf-tabs"
-        label="What to show: none on shows everything"
+      <FilterChips
+        label="Show"
         on={on}
-        onToggle={toggle}
+        onChange={setOn}
+        total={data ? Object.values(counts).reduce((a, b) => a + b, 0) : undefined}
         options={SECTIONS.map((s) => ({
           key: s.kind,
           label: s.label,
           icon: s.icon,
-          title: on.has(s.kind) ? `hide ${s.label}` : `show ${s.label}`,
-          extra: <span className="jqzz-annot">{counts[s.kind]}</span>,
+          count: data ? counts[s.kind] : undefined,
         }))}
       />
 
@@ -175,7 +172,7 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
           const items = of(s.kind);
           const head = several && (
             <h2 className="jqzz-shelf-head jqzz-annot">
-              {s.label} · {s.kind === "IMAGE" ? items.length + data.images.filter((img) => hits(query, img.handle, img.reference)).length : items.length}
+              {s.label} · {counts[s.kind]}
             </h2>
           );
           if (s.kind === "TYPE") {
@@ -191,7 +188,7 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
               <section key={s.kind} className="jqzz-shelf-section" aria-label={s.label}>
                 {head}
                 <ImagesTab
-                  images={data.images.filter((img) => hits(query, img.handle, img.reference))}
+                  images={uploads}
                   saved={items}
                   me={me}
                   put={put}
@@ -308,7 +305,7 @@ const FromEveryone: React.FC<{ query: string; kinds: StashKind[]; me: string; on
   );
 };
 
-/** Searching for someone's "id:name": copy it in, as whichever kind it is. */
+/** Searching for someone's "handle:name": copy it in, as whichever kind it is. */
 const CopyByRef: React.FC<{ query: string; kinds: StashKind[]; me: string; onAdded: (item: StashItem) => void }> = ({
   query,
   kinds,
@@ -516,7 +513,7 @@ const StashRow: React.FC<{
           <button
             className="jqzz-play-btn small ghost"
             disabled={c.busy}
-            title="keep its type and steps, without the words, for new questions"
+            title="keep its type and phases, without the words, for new questions"
             onClick={() =>
               c.run(
                 stashService
@@ -823,14 +820,14 @@ const TypeCard: React.FC<{
               min={1}
               value={s.time}
               onChange={(e) => setStep(i, { time: Math.max(1, Number(e.target.value) || 1) })}
-              aria-label={`Seconds for step ${i + 1}`}
+              aria-label={`Seconds for phase ${i + 1}`}
             />
             <span className="jqzz-annot">s</span>
             <button
               className="jqzz-icon-btn"
               onClick={() => set({ steps: draft.steps.filter((_, j) => j !== i) })}
               disabled={draft.steps.length <= 1}
-              aria-label={`Remove step ${i + 1}`}
+              aria-label={`Remove phase ${i + 1}`}
             >
               <Glyph name="CLOSE" size={12} />
             </button>
@@ -848,7 +845,7 @@ const TypeCard: React.FC<{
           onClick={() => set({ steps: [...draft.steps, { phase: "RESULT", time: 10, preview: "" }] })}
         >
           <Glyph name="ADD" size={12} />
-          step
+          phase
         </button>
         <span className="jqzz-annot">{total}s</span>
         <span className="jqzz-type-save">

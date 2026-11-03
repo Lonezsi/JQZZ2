@@ -32,6 +32,7 @@ import com.lonezsi.jqzz.model.GameRecord;
 import com.lonezsi.jqzz.model.QuestionType;
 import com.lonezsi.jqzz.repository.DrawingRepository;
 import com.lonezsi.jqzz.repository.GameRecordRepository;
+import com.lonezsi.jqzz.service.Handles;
 import tools.jackson.databind.json.JsonMapper;
 import com.lonezsi.jqzz.model.Answer;
 import com.lonezsi.jqzz.model.Phase;
@@ -635,10 +636,10 @@ public class GameEngine {
         return content;
     }
 
-    /** ":handle" means the author's picture; spell that out so it survives being copied. */
+    /** ":handle" means the author's picture; spell that out (by their handle) so it survives being copied. */
     public static String absolute(String ref, String authorId) {
         if (ref == null || ref.isBlank()) return ref;
-        if (ref.startsWith(":") && authorId != null) return authorId + ref;
+        if (ref.startsWith(":") && authorId != null) return Handles.of(authorId) + ref;
         return ref;
     }
 

@@ -3,6 +3,7 @@ package com.lonezsi.jqzz.model;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.lonezsi.jqzz.service.Handles;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -89,6 +90,6 @@ public class Image {
     public String getUploadedBy() { return uploadedBy; }
     public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
 
-    /** How to reach it: the handle when public, "owner:handle" otherwise (":handle" for the owner). */
-    public String getReference() { return ownerId == null ? handle : ownerId + ":" + handle; }
+    /** How to reach it: the handle when public, "ownerhandle:handle" otherwise (":handle" for the owner). */
+    public String getReference() { return ownerId == null ? handle : Handles.of(ownerId) + ":" + handle; }
 }

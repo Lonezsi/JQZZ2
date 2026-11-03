@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useQuiz } from "../../contexts/QuizContext";
 import { useDragAndDrop } from "../../hooks/useDragAndDrop";
@@ -44,6 +44,13 @@ export const Dashboard: React.FC = () => {
     handleParsed,
     quiz,
   } = useQuiz();
+
+  // the list is yours: other people's quizzes only reach you through a link
+  // or the stash, and stay listed while one of them is open
+  const mine = useMemo(
+    () => quizzes.filter((q) => q.authorId === user?.id || q.id === activeQuizId),
+    [quizzes, user?.id, activeQuizId],
+  );
 
   const dropSnippet = useCallback(
     (snippetId: string, at?: number) => {
@@ -199,7 +206,7 @@ export const Dashboard: React.FC = () => {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           onExecute={handleCommand}
-          quizzes={quizzes}
+          quizzes={mine}
           onOpenQuiz={(id) => {
             setActiveQuizId(id);
             clearSelectedActions();
@@ -224,7 +231,7 @@ export const Dashboard: React.FC = () => {
           open={navOpen}
           identity={user}
           onIdentityClick={() => setIdentityOpen(true)}
-          quizzes={quizzes}
+          quizzes={mine}
           activeQuizId={activeQuizId}
           onSelectQuiz={(id) => {
             setActiveQuizId(id);

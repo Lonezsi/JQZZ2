@@ -1,5 +1,6 @@
 package com.lonezsi.jqzz.controller;
 
+import com.lonezsi.jqzz.config.LoginKeyFilter;
 import com.lonezsi.jqzz.model.Quiz;
 import com.lonezsi.jqzz.service.QuizService;
 
@@ -22,9 +23,13 @@ public class QuizController {
 
     private final JsonMapper json;
 
-    public QuizController(QuizService quizService, JsonMapper json) {
+    private final boolean enforced;
+
+    public QuizController(QuizService quizService, JsonMapper json,
+                          @org.springframework.beans.factory.annotation.Value("${jqzz.auth.enforce-login-key:true}") boolean enforced) {
         this.json = json;
         this.quizService = quizService;
+        this.enforced = enforced;
     }
 
     @GetMapping
@@ -57,7 +62,13 @@ public class QuizController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Quiz> update(@PathVariable Long id, @RequestBody Quiz quiz) {
+    public ResponseEntity<Quiz> update(@PathVariable Long id, @RequestBody Quiz quiz,
+                                       @RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
+        // only whoever made it saves over it (its login key proved who that is)
+        String author = quizService.findById(id).map(Quiz::getAuthorId).orElse(null);
+        if (enforced && author != null && !author.equals(me)) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        }
         return quizService.update(id, quiz)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

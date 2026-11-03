@@ -43,7 +43,7 @@ export const AddTypeButton: React.FC<{ question: Question; actions: Action[] }> 
       className={`jqzz-add-type is-${state}`}
       onClick={save}
       disabled={state === "busy"}
-      title="keep this question's type and steps in your stash, to add more like it"
+      title="keep this question's type and phases in your stash, to add more like it"
     >
       <Glyph name={state === "done" ? "CHECK" : "TYPE"} size={12} />
       {state === "busy" ? "saving..." : state === "done" ? "type saved" : state === "error" ? "try again" : "add type"}

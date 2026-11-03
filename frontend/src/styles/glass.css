@@ -31,6 +31,45 @@
   background: radial-gradient(closest-side, var(--aura-c), transparent);
   opacity: var(--aura-opacity);
 }
+/* a planet lit from behind its top right, far behind everything, on every
+   page like the clouds. Its slight lean with the pointer is the lights'
+   loop's (Atmosphere.tsx) */
+.jqzz-aura .planet {
+  width: min(42vmin, 400px);
+  aspect-ratio: 1;
+  right: 6vw;
+  bottom: 9vh;
+  background: radial-gradient(
+    circle at 68% 26%,
+    color-mix(in srgb, var(--bg) 55%, #4a3488) 0,
+    color-mix(in srgb, var(--bg) 82%, #241a44) 46%,
+    var(--bg) 78%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 236, 244, 0.18),
+    12px -18px 60px rgba(255, 160, 195, 0.22),
+    -30px 40px 160px rgba(140, 110, 255, 0.22);
+}
+/* the lit edge: a bright crescent and a softer, wider one round it */
+.jqzz-aura .planet::before,
+.jqzz-aura .planet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  -webkit-mask: conic-gradient(from -40deg, transparent 0, #000 50deg, #000 120deg, transparent 175deg);
+  mask: conic-gradient(from -40deg, transparent 0, #000 50deg, #000 120deg, transparent 175deg);
+}
+.jqzz-aura .planet::before {
+  box-shadow:
+    inset -2px 2px 0 rgba(255, 240, 246, 0.95),
+    inset -10px 10px 26px -6px rgba(255, 170, 205, 0.55);
+}
+.jqzz-aura .planet::after {
+  inset: -14px;
+  box-shadow: 0 0 34px 6px rgba(255, 175, 210, 0.45);
+  filter: blur(2px);
+}
 .jqzz-aura .phase {
   width: 70vmax;
   height: 70vmax;
@@ -72,6 +111,50 @@
   /* loud at the right edge, quiet over the reading column */
   -webkit-mask: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.22) 30%, rgba(0, 0, 0, 0.4) 62%, rgba(0, 0, 0, 0.7) 85%);
   mask: linear-gradient(90deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.22) 30%, rgba(0, 0, 0, 0.4) 62%, rgba(0, 0, 0, 0.7) 85%);
+}
+
+/* dithered clouds (Clouds.tsx): the same cell grid as the blobs, three inks
+   printed through the same matrix. Quiet over the reading column (thinned in
+   the canvas itself), stronger at the sides and along the top. */
+:root {
+  --cloud-light: #f1e4cc;
+  --cloud-mid: #64798c;
+  --cloud-shadow: #262d55;
+  --clouds-opacity: 0.2;
+  --clouds-blend: normal;
+}
+:root[data-theme="light"] {
+  --cloud-light: #fbf3e6;
+  --cloud-mid: #8c9aa8;
+  --cloud-shadow: #3a4268;
+  --clouds-opacity: 0.18;
+  --clouds-blend: multiply;
+}
+@media (prefers-contrast: more) {
+  :root {
+    --clouds-opacity: 0.1;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --clouds-opacity: 0.08;
+  }
+}
+.jqzz-clouds {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  opacity: var(--clouds-opacity);
+  mix-blend-mode: var(--clouds-blend);
+}
+/* the dense parts: the same cells, but scaled up smoothly */
+.jqzz-clouds.soft {
+  image-rendering: auto;
+}
+:root[data-effects="reduced"] .jqzz-clouds {
+  display: none;
 }
 
 /* the original blended textures: paper floor + two lens scans */

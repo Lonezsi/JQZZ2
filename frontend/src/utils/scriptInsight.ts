@@ -164,7 +164,7 @@ export function analyze(text: string, caret: number | null = null): InsightLine[
       const n = shows.get(def[4]) ?? 0;
       if (q) {
         const d = describe(modeOf(q));
-        setHint(n ? `${d.label} · shown in ${n} ${n === 1 ? "step" : "steps"}` : `${d.label} · never shown: add a Show line for it`, n ? "info" : "warn");
+        setHint(n ? `${d.label} · shown in ${n} ${n === 1 ? "phase" : "phases"}` : `${d.label} · never shown: add a Show line for it`, n ? "info" : "warn");
       }
       return;
     }

@@ -44,6 +44,18 @@ public class User {
     public Boolean getGuestNoticed(){return guestNoticed;}
     public void setGuestNoticed(Boolean guestNoticed){this.guestNoticed=guestNoticed;}
 
+    /**
+     * The secret that logs this account in. The id is public (it's in the
+     * people list, on quizzes and in games), so it can't be what proves who
+     * you are; only the account's owner is ever sent this.
+     */
+    @JsonIgnore
+    @Column(unique = true)
+    private String loginKey;
+
+    public String getLoginKey(){return loginKey;}
+    public void setLoginKey(String loginKey){this.loginKey=loginKey;}
+
     /** has been given the default question types in their stash, once */
     @JsonIgnore
     private Boolean typesSeeded;

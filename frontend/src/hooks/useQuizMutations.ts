@@ -140,10 +140,10 @@ export const useQuizMutations = (
     [updateQuiz],
   );
 
-  const newQuiz = useCallback(async () => {
+  const newQuiz = useCallback(async (name = "untitled quiz") => {
     try {
       const response = await quizService.create({
-        name: "untitled quiz",
+        name,
         authorId,
         actions: [],
       });

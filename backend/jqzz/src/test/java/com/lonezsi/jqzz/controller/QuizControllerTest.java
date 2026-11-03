@@ -41,7 +41,7 @@ class QuizControllerTest {
 
     @BeforeEach
     void setUp() {
-        quizController = new QuizController(quizService, JsonMapper.builder().build());
+        quizController = new QuizController(quizService, JsonMapper.builder().build(), false);
         mockMvc = MockMvcBuilders.standaloneSetup(quizController).build();
     }
 

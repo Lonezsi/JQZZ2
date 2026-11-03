@@ -118,6 +118,30 @@ export const PRESETS: Preset[] = [
   { script: "telephone", aliases: ["gartic"], type: "TELEPHONE", mode: m("chain", "none"), label: "telephone", icon: "TELEPHONE", blurb: "write, then draw what you're handed, then describe the drawing, and on" },
 ];
 
+/**
+ * Every kind of question, sorted by the one thing a new person can answer
+ * without reading about all of them: what kind of question is it. The add
+ * tray opens on these four and shows the kinds only inside the one picked.
+ */
+export type FamilyId = "quiz" | "opinion" | "write" | "draw";
+export interface Family {
+  id: FamilyId;
+  label: string;
+  blurb: string;
+  icon: string;
+}
+export const FAMILIES: Family[] = [
+  { id: "quiz", label: "has a right answer", blurb: "a quiz question: whoever gets it right scores", icon: "ANSWER" },
+  { id: "opinion", label: "asks what people think", blurb: "polls, rankings, guessing the room", icon: "POLL" },
+  { id: "write", label: "everyone writes", blurb: "they write, then vote, guess who or battle", icon: "USER_GENERATED" },
+  { id: "draw", label: "everyone draws", blurb: "they draw, then vote, guess or pass it on", icon: "DRAW" },
+];
+export function familyOf(mode: Mode): FamilyId {
+  if (mode.ask === "draw" || mode.ask === "chain") return "draw";
+  if (mode.ask === "write") return "write";
+  return mode.score === "right" ? "quiz" : "opinion";
+}
+
 const ASK = new Map(ASKS.map((a) => [a.id, a]));
 const SCORE = new Map(SCORES.map((s) => [s.id, s]));
 export const askInfo = (id: string | null | undefined): AskInfo => ASK.get(id as Ask) ?? ASKS[0];

@@ -12,6 +12,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
+import com.lonezsi.jqzz.service.Handles;
+
 /**
  * Something saved to a stash: a quiz, a question, or an image.
  *
@@ -95,8 +97,8 @@ public class StashItem {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    /** How others reach it: the handle when public, "owner:handle" otherwise (":handle" for the owner). */
+    /** How others reach it: the handle when public, "ownerhandle:handle" otherwise (":handle" for the owner). */
     public String getReference() {
-        return ownerId == null ? handle : ownerId + ":" + handle;
+        return ownerId == null ? handle : Handles.of(ownerId) + ":" + handle;
     }
 }

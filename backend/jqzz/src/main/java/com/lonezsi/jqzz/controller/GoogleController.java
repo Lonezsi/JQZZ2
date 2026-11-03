@@ -21,6 +21,8 @@ import com.lonezsi.jqzz.service.GoogleAuth;
 import com.lonezsi.jqzz.service.NotificationService;
 import com.lonezsi.jqzz.util.IdGenerator;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 /**
  * Tying an account to Google, so it isn't only reachable from the browser it
  * was made in.
@@ -55,7 +57,7 @@ public class GoogleController {
     /** Signed in with Google: the account tied to it, or a fresh one made from it. */
     @PostMapping("/google/login")
     @Transactional
-    public Map<String, Object> login(@RequestBody Map<String, String> body) {
+    public Map<String, Object> login(@RequestBody Map<String, String> body, HttpServletResponse response) {
         GoogleAuth.Account account = google.verify(body.get("credential"));
         User user = users.findByGoogleSub(account.sub()).orElse(null);
         boolean fresh = user == null;
@@ -70,9 +72,11 @@ public class GoogleController {
             user.setProfilePictureUrl(account.picture());
         }
         user.setOnline(true);
+        if (user.getLoginKey() == null) user.setLoginKey(IdGenerator.loginKey());
         User saved = users.save(user);
         messaging.convertAndSend("/topic/users",
                 (Object) Map.of("event", fresh ? "user_registered" : "user_logged_in", "user", saved));
+        UserController.keyCookie(response, saved.getLoginKey());
         return UserController.self(saved);
     }
 

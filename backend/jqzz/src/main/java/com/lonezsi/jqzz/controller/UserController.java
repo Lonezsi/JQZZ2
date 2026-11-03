@@ -2,7 +2,9 @@ package com.lonezsi.jqzz.controller;
 
 import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.servlet.http.HttpServletResponse;
+
+import com.lonezsi.jqzz.config.LoginKeyFilter;
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
 import com.lonezsi.jqzz.util.IdGenerator;
@@ -33,7 +38,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public Map<String, Object> register(@RequestBody RegisterRequest request) {
+    public Map<String, Object> register(@RequestBody RegisterRequest request, HttpServletResponse response) {
 
         String id = IdGenerator.generateId();
 
@@ -59,6 +64,7 @@ public class UserController {
         user.setName(request.getName());
         user.setHandle(handle);
         user.setOnline(true);
+        user.setLoginKey(IdGenerator.loginKey());
 
         User saved = userRepository.save(user);
 
@@ -67,22 +73,39 @@ public class UserController {
             (Object) Map.of("event", "user_registered", "user", saved)
         );
 
+        keyCookie(response, saved.getLoginKey());
         return self(saved);
     }
 
+    /**
+     * Logging in takes the login key. Accounts made before there were keys
+     * have none yet: the first login by their id gets one made, and from then
+     * on only the key works. (The browser that made the account still holds
+     * its id, so that's who gets there first.)
+     */
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
-        return userRepository.findById(request.getId())
-                .map(user -> {
-                    user.setOnline(true);
-                    User saved = userRepository.save(user);
-                    messaging.convertAndSend(
-                        "/topic/users",
-                        (Object) Map.of("event", "user_logged_in", "user", saved)
-                    );
-                    return ResponseEntity.ok(self(saved));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request, HttpServletResponse response) {
+        User user;
+        if (request.getKey() != null && !request.getKey().isBlank()) {
+            user = userRepository.findByLoginKey(request.getKey().trim()).orElse(null);
+        } else if (request.getId() != null) {
+            user = userRepository.findById(request.getId()).orElse(null);
+            if (user != null && user.getLoginKey() != null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "log in with your login key");
+            }
+            if (user != null) user.setLoginKey(IdGenerator.loginKey());
+        } else {
+            user = null;
+        }
+        if (user == null) return ResponseEntity.notFound().build();
+        user.setOnline(true);
+        User saved = userRepository.save(user);
+        messaging.convertAndSend(
+            "/topic/users",
+            (Object) Map.of("event", "user_logged_in", "user", saved)
+        );
+        keyCookie(response, saved.getLoginKey());
+        return ResponseEntity.ok(self(saved));
     }
 
     @PostMapping("/logout")
@@ -211,7 +234,24 @@ public class UserController {
         m.put("profilePictureUrl", u.getProfilePictureUrl());
         m.put("online", u.isOnline());
         m.put("googleLinked", u.isGoogleLinked());
+        m.put("loginKey", u.getLoginKey());
         return m;
+    }
+
+    /**
+     * The key as a cookie too, for the requests that can't carry a header:
+     * pictures in &lt;img&gt; tags. Script can't read it, and other sites can't
+     * make a browser send it with anything but a plain GET.
+     */
+    static void keyCookie(HttpServletResponse response, String key) {
+        if (key == null) return;
+        ResponseCookie cookie = ResponseCookie.from(LoginKeyFilter.COOKIE, key)
+                .httpOnly(true)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(java.time.Duration.ofDays(400))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private static String sanitizeHandle(String raw) {
@@ -254,7 +294,17 @@ public class UserController {
     }
 
     public static class LoginRequest {
+        private String key;
+        /** only for accounts from before login keys, once (see login) */
         private String id;
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
 
         public String getId() {
             return id;

@@ -1,6 +1,7 @@
 import React from "react";
 import type { Quiz } from "../../../types";
-import { formatTimecode, quizCode, quizRuntime } from "../../../utils/timecode";
+import { formatTimecode, questionCount, quizCode, quizRuntime } from "../../../utils/timecode";
+import { plural } from "../../../utils/format";
 import { matchQuiz } from "../../../utils/quizSearch";
 import { Keys } from "../../common/Keys";
 import { DeleteQuizButton } from "../../common/DeleteQuizButton";
@@ -72,7 +73,7 @@ export const QuizList: React.FC<QuizListProps> = ({
             title={
               active
                 ? undefined
-                : `${quizCode(q.id)} · ${q.actions.length} actions · ${formatTimecode(quizRuntime(q))}`
+                : `${quizCode(q.id)} · ${plural(questionCount(q), "question")} · ${formatTimecode(quizRuntime(q))}`
             }
             onClick={() => onSelectQuiz(q.id)}
             // pointing at it (or tabbing to it) starts loading it in full
@@ -102,7 +103,7 @@ export const QuizList: React.FC<QuizListProps> = ({
             {/* details only for the open quiz; others show them as a tooltip */}
             <span className="jqzz-quiz-meta-wrap">
               <span className="jqzz-annot jqzz-quiz-meta">
-                {quizCode(q.id)} · {q.actions.length} act · {formatTimecode(quizRuntime(q))}
+                {quizCode(q.id)} · {plural(questionCount(q), "question")} · {formatTimecode(quizRuntime(q))}
               </span>
             </span>
           </button>

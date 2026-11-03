@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { plural } from "../../../../utils/format";
 import type { Quiz, Question, Action } from "../../../../types";
 import { quizToScript } from "../../../../utils/scriptSerializer";
 import { parseScript } from "../../../../utils/scriptParser";
@@ -216,8 +217,8 @@ ShowResult(${q}, time: 10)
         />
       </div>
       <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
-        jqzz script v3 · {text.split("\n").length} lines · {summary.questions} questions ·{" "}
-        {summary.actions} actions
+        jqzz script v3 · {plural(text.split("\n").length, "line")} · {plural(summary.questions, "question")} ·{" "}
+        {plural(summary.actions, "phase")}
       </div>
     </div>
   );

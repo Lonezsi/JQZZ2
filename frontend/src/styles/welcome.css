@@ -1,156 +1,542 @@
-/* Welcome: a poster. One burst of light, a lot of air, notes in the margins. */
+/* Welcome: the first screen is a poster, everything else waits under it. */
+/* the poster runs edge to edge: the body keeps no padding of its own here */
+.jqzz-body:has(.jqzz-welcome-root) {
+  padding: 0;
+}
 .jqzz-welcome-root {
   position: relative;
   min-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 64px 32px;
+  padding-bottom: 32px;
+}
+.jqzz-welcome-root > :not(.jqzz-poster) {
+  width: calc(100% - 64px);
+}
+@container (max-width: 700px) {
+  .jqzz-welcome-root > :not(.jqzz-poster) {
+    width: calc(100% - 32px);
+  }
 }
 
-.jqzz-welcome-notes {
+/* ─── the poster ─────────────────────────────────────────────────────
+   Laid out on the posters it comes from: positions are fractions of the
+   poster, sizes are their pixel sizes in a 920px-tall print (--u). */
+.jqzz-poster {
+  --h: var(--poster-h, calc(100dvh - 64px));
+  --u: calc(var(--h) / 920);
+  --star-x: 50%;
+  --star-y: 73.5%;
+  position: relative;
+  width: 100%;
+  height: var(--h);
+  min-height: 520px;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: var(--text);
+  isolation: isolate;
+}
+.jqzz-poster > * {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
 }
-.jqzz-welcome-notes > * {
-  position: absolute;
+
+/* the corners */
+.p-num {
+  top: calc(var(--u) * 17);
+  font-size: calc(var(--u) * 36);
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
-.w-tl {
-  top: 4px;
-  left: 4px;
-  line-height: 1.5;
+.p-tl {
+  left: 2.4%;
 }
-.w-vert-l {
-  top: 220px;
-  left: 2px;
+.p-tr {
+  right: 2.4%;
+}
+.p-title {
+  top: calc(var(--u) * 22);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: calc(var(--u) * 20);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* three falling dots under the title */
+.p-dots {
+  top: calc(var(--u) * 62);
+  left: calc(50% - 2px);
+  width: 4px;
+  height: calc(var(--u) * 30);
+  background:
+    radial-gradient(circle, var(--text) 2.4px, transparent 2.6px) 50% 0 / 4px 6px no-repeat,
+    radial-gradient(circle, var(--text) 1.6px, transparent 1.8px) 50% 50% / 4px 6px no-repeat,
+    radial-gradient(circle, var(--text) 1.1px, transparent 1.3px) 50% 100% / 4px 6px no-repeat;
+}
+
+/* the margins */
+.jqzz-poster .jqzz-annot {
+  font-size: max(10px, calc(var(--u) * 11));
+  line-height: 1.7;
+  color: var(--text-2);
+}
+.p-coords {
+  top: 19.9%;
+  left: 2.7%;
+  white-space: pre;
+}
+.p-plus {
+  width: calc(var(--u) * 15);
+  height: calc(var(--u) * 15);
+  margin: calc(var(--u) * -7.5) 0 0 calc(var(--u) * -7.5);
+  background:
+    linear-gradient(var(--text-2), var(--text-2)) center / 1px 100% no-repeat,
+    linear-gradient(var(--text-2), var(--text-2)) center / 100% 1px no-repeat;
+}
+.p-plus-l {
+  top: 28.9%;
+  left: 16.3%;
+}
+.p-plus-r {
+  top: 45.6%;
+  left: 94.7%;
+}
+/* five hairlines, image 1's left column */
+.p-lines {
+  top: 31.3%;
+  left: 14.1%;
+  width: 4.5%;
+  height: 22.5%;
+  background: repeating-linear-gradient(90deg, var(--text-2) 0 1px, transparent 1px 25%);
+  opacity: 0.7;
+}
+.p-vert-l,
+.p-vert-r {
   writing-mode: vertical-rl;
   white-space: nowrap;
-  transform: rotate(180deg);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.p-vert-l {
+  top: 38%;
+  left: 3.4%;
+  rotate: 180deg;
+}
+.p-vert-r {
+  top: 12.8%;
+  right: 4.4%;
+}
+.p-dotline {
+  width: 2px;
+  background: radial-gradient(circle, var(--text-3) 0.9px, transparent 1.1px) 0 0 / 2px 8px repeat-y;
+}
+.p-dl-1 {
+  top: 19.8%;
+  left: 78.5%;
+  height: 11.2%;
+}
+.p-dl-2 {
+  top: 62%;
+  left: 94.8%;
+  height: 16%;
+}
+.p-bl,
+.p-br {
+  bottom: 3.5%;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+.p-bl {
+  left: 2.4%;
+}
+.p-br {
+  right: 2.4%;
+  text-align: right;
+}
+.p-br-dots {
+  letter-spacing: 0.3em;
 }
 
-/* Hero */
-.jqzz-welcome-hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding-top: 12px;
-  max-width: 720px;
+/* the axis, its two end dots, and the arcs through the star */
+.p-axis {
+  left: var(--star-x);
+  top: 42.4%;
+  bottom: 4%;
+  width: 1px;
+  background: color-mix(in srgb, var(--text) 55%, transparent);
+  transform-origin: 50% 100%;
 }
-.jqzz-welcome-burst {
+.p-axis::before,
+.p-axis::after {
+  content: "";
   position: absolute;
-  top: -30px;
-  left: 50%;
-  width: 520px;
-  height: 420px;
-  transform: translateX(-50%);
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text);
+}
+.p-axis::before {
+  top: -3px;
+}
+.p-axis::after {
+  bottom: -3px;
+}
+.p-arc {
+  border: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  border-radius: 50%;
+  -webkit-mask: linear-gradient(#000 30%, transparent 62%);
+  mask: linear-gradient(#000 30%, transparent 62%);
+}
+.p-arc-1 {
+  left: 12%;
+  top: 57.5%;
+  width: 70%;
+  height: 60%;
+}
+.p-arc-2 {
+  left: 30%;
+  top: 73.5%;
+  width: 50%;
+  height: 40%;
+  rotate: -4deg;
+}
+
+/* the star: a four-point flare and the light around it */
+.p-star {
+  left: var(--star-x);
+  top: var(--star-y);
+  width: 0;
+  height: 0;
+  z-index: 2;
+}
+.p-star-core,
+.p-star-trail {
+  position: absolute;
   pointer-events: none;
 }
-.jqzz-welcome-burst::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(closest-side at 42% 46%, var(--phase-QUESTION), transparent),
-    radial-gradient(closest-side at 64% 60%, var(--warm), transparent 80%);
-  opacity: 0.55;
+/* the flare's canvas, centred on the star: its arms reach the poster's edges */
+.p-star-core {
+  left: 0;
+  top: 0;
+  width: 110cqw;
+  height: calc(var(--u) * 760);
+  margin: calc(var(--u) * -380) 0 0 -55cqw;
+  mix-blend-mode: screen;
 }
-.jqzz-welcome-burst::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background-image: var(--grain);
-  opacity: var(--grain-opacity);
-  mix-blend-mode: var(--grain-blend);
-  -webkit-mask: radial-gradient(closest-side, #000, transparent);
-  mask: radial-gradient(closest-side, #000, transparent);
-}
-.jqzz-welcome-dots {
-  inset: 10% 6% 0 30%;
-  opacity: 0.55;
-}
-.jqzz-welcome-axis {
-  position: absolute;
-  left: 50%;
-  top: -10px;
-  bottom: -40px;
-  width: 1px;
-  background: linear-gradient(transparent, var(--text-3) 20%, var(--text-3) 80%, transparent);
-}
-.jqzz-welcome-orbit {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 34%;
-  height: 120%;
-  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
-  border-radius: 50%;
-  -webkit-mask: linear-gradient(#000 40%, transparent 70%);
-  mask: linear-gradient(#000 40%, transparent 70%);
-}
-.jqzz-welcome-logo {
-  position: relative;
-  width: 210px;
-  height: 210px;
-  background: var(--text);
-  -webkit-mask: url("/icon-white.png") center / contain no-repeat;
-  mask: url("/icon-white.png") center / contain no-repeat;
-}
-.jqzz-welcome-subtitle {
-  position: relative;
-  margin-top: 24px;
-  font-size: 17px;
-  line-height: 1.5;
-  color: var(--text);
-  max-width: 46ch;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-strong);
-}
-.jqzz-welcome-actions {
-  position: relative;
-  display: flex;
-  gap: 8px;
-  margin-top: 24px;
-}
-.jqzz-welcome-actions .jqzz-toolbar-btn {
-  min-height: 38px;
-  padding: 6px 24px;
-  font-size: var(--fs-body);
-}
-.jqzz-welcome-hint {
-  position: relative;
-  margin-top: 12px;
+.p-star-trail {
+  left: -1px;
+  top: 0;
+  width: 3px;
+  height: calc(var(--h) * 0.5);
+  background: linear-gradient(rgba(255, 230, 240, 0.9), transparent);
+  transform-origin: 50% 0;
+  opacity: 0;
 }
 
-/* What it is: four notes, the author's own words */
+/* image 3's grid and its two rounded corners */
+.jqzz-poster-grid {
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.jqzz-poster-grid > span {
+  position: absolute;
+  background: var(--line);
+}
+.gv {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.gh {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+.g1 {
+  left: 10.3%;
+}
+.g2 {
+  left: 58.2%;
+}
+.g3 {
+  left: 90.4%;
+}
+.h1 {
+  top: 17.5%;
+}
+.h2 {
+  top: 83.2%;
+}
+.jqzz-poster-grid > .corner {
+  width: calc(var(--u) * 60);
+  height: calc(var(--u) * 60);
+  background: none;
+  border: 1px solid var(--line-strong);
+}
+.c1 {
+  left: calc(58.2% - var(--u) * 60);
+  top: 17.5%;
+  border-width: 0 1px 1px 0 !important;
+  border-bottom-right-radius: calc(var(--u) * 60);
+  translate: 0 -100%;
+}
+.c2 {
+  left: 58.2%;
+  top: 17.5%;
+  border-width: 1px 0 0 1px !important;
+  border-top-left-radius: calc(var(--u) * 60);
+}
+/* image 3's lockup: a decorative word, then a heavy one, the tagline off to the right */
+.p-lockup {
+  left: 20%;
+  top: 35%;
+  margin: 0;
+  width: 48%;
+  line-height: 1;
+  z-index: 1;
+}
+.p-lockup > span {
+  display: block;
+}
+.p-word-a {
+  font-size: calc(var(--u) * 104);
+  line-height: 0.95;
+  font-weight: normal;
+}
+.p-word-b {
+  margin-left: 19%;
+  font-family: var(--font-ui);
+  font-size: calc(var(--u) * 104);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+.p-spark {
+  position: absolute;
+  width: calc(var(--u) * 22);
+  height: calc(var(--u) * 22);
+  background: color-mix(in srgb, var(--accent) 60%, #fff);
+  -webkit-mask: var(--star) center / contain no-repeat;
+  mask: var(--star) center / contain no-repeat;
+}
+.p-spark-a {
+  left: calc(var(--u) * -14);
+  top: calc(var(--u) * 22);
+}
+.p-spark-b {
+  left: 79%;
+  top: calc(var(--u) * 58);
+  width: calc(var(--u) * 28);
+  height: calc(var(--u) * 28);
+}
+.p-tagline {
+  left: 58.2%;
+  top: 59%;
+  width: 31.8%;
+  margin: 0;
+  font-size: calc(var(--u) * 18);
+  line-height: 1.6;
+  color: var(--text);
+  z-index: 1;
+}
+.p-tagline > span {
+  display: block;
+}
+.p-tagline > span + span {
+  text-align: right;
+}
+.p-tagline em {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  font-size: 1.15em;
+}
+.p-actions {
+  right: 9.6%;
+  top: 67%;
+  display: flex;
+  gap: 8px;
+  z-index: 3;
+}
+.p-actions .jqzz-toolbar-btn {
+  min-height: 36px;
+  padding: 6px 16px;
+}
+
+/* ─── arriving: the star shoots up the axis, then the rest slides in ─── */
+.jqzz-poster .p-axis {
+  animation: axisDraw 900ms var(--ease) backwards;
+}
+@keyframes axisDraw {
+  from {
+    transform: scaleY(0);
+  }
+}
+.p-star {
+  animation: starRise 900ms cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+@keyframes starRise {
+  from {
+    translate: 0 calc(var(--h) * 0.4);
+    opacity: 0.6;
+  }
+}
+.p-star-trail {
+  animation: trailFade 1100ms ease-out backwards;
+}
+@keyframes trailFade {
+  0% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scaleY(0.1);
+  }
+}
+/* on arrival the arms shoot out sideways, then it breathes a little */
+.p-star-core {
+  animation:
+    flare 1100ms var(--ease) 700ms backwards,
+    twinkle 4s var(--ease-in-out) 1.8s infinite alternate;
+}
+@keyframes flare {
+  from {
+    transform: scale(0.08, 0.3);
+    opacity: 0.4;
+  }
+  35% {
+    opacity: 1;
+  }
+}
+@keyframes twinkle {
+  to {
+    transform: scale(0.94, 0.97);
+    opacity: 0.88;
+  }
+}
+.from-l,
+.from-r,
+.from-top,
+.p-arc,
+.jqzz-poster-grid,
+.p-spark {
+  animation: fromSide 900ms var(--ease) backwards;
+  animation-delay: calc(900ms + var(--d, 0ms));
+}
+.from-l {
+  --dx: -48px;
+}
+.from-r {
+  --dx: 48px;
+}
+.from-top {
+  --dy: -16px;
+}
+@keyframes fromSide {
+  from {
+    opacity: 0;
+    translate: var(--dx, 0) var(--dy, 0);
+  }
+}
+.p-tl, .p-tr, .p-title { --d: 0ms; }
+.p-word-a { --d: 60ms; }
+.p-word-b { --d: 140ms; }
+.p-tagline { --d: 120ms; }
+.p-actions { --d: 220ms; }
+.p-coords, .p-vert-r { --d: 200ms; }
+.p-lines, .p-plus, .p-dotline { --d: 280ms; }
+.p-vert-l, .p-bl, .p-br { --d: 340ms; }
+.p-spark { --d: 700ms; }
+.jqzz-poster-grid { --d: 100ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-poster *,
+  .jqzz-poster *::before,
+  .jqzz-poster *::after {
+    animation: none !important;
+  }
+}
+
+/* narrow and portrait: the same poster, the lockup and tagline given the width */
+@container (max-width: 700px) {
+  .jqzz-poster {
+    --u: calc(min(var(--h), 900px) / 920);
+  }
+  .p-lockup {
+    left: 8%;
+    top: 30%;
+    width: 84%;
+  }
+  .p-word-a {
+    font-size: calc(var(--u) * 76);
+  }
+  .p-word-b {
+    font-size: calc(var(--u) * 78);
+  }
+  .p-tagline {
+    left: 10%;
+    top: 47%;
+    width: 80%;
+  }
+  .p-actions {
+    left: 10%;
+    right: 10%;
+    top: 55%;
+    flex-wrap: wrap;
+  }
+  .p-actions .jqzz-toolbar-btn {
+    min-height: 44px;
+  }
+  .p-lines,
+  .p-plus-l,
+  .p-dl-1,
+  .p-arc-2,
+  .p-vert-r,
+  .p-plus-r,
+  .c1,
+  .c2 {
+    display: none;
+  }
+  .p-coords {
+    top: 13%;
+  }
+  .p-vert-l {
+    top: 64%;
+  }
+}
+
+/* ─── under the poster: what it is, in four quiet notes ─── */
 .jqzz-welcome-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px 32px;
   width: 100%;
   max-width: 1040px;
-  margin-top: 64px;
-  border-top: 1px solid var(--line-strong);
+  margin-top: 48px;
 }
 .jqzz-feature {
-  padding: 16px 24px 24px;
-  border-right: 1px solid var(--line);
-}
-.jqzz-feature:last-child {
-  border-right: none;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 .jqzz-feature h3 {
-  margin: 6px 0 8px;
-  font-size: var(--fs-title);
+  margin: 4px 0 6px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text);
 }
 .jqzz-feature p {
-  color: var(--text-2);
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--fs-small);
   line-height: 1.6;
 }
 
@@ -193,8 +579,6 @@
   border-radius: var(--radius-xl);
   background: var(--surface);
   text-align: left;
-  animation: snippetIn var(--dur-3) var(--ease) backwards;
-  animation-delay: calc(var(--i, 0) * 40ms);
   transition: border-color var(--dur-1) var(--ease);
 }
 .jqzz-mode:hover {

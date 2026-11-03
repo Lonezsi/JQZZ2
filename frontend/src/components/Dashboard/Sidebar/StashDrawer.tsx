@@ -206,7 +206,7 @@ export const StashDrawer: React.FC<{ me: string; quizId: number }> = ({ me, quiz
                 <span
                   className="jqzz-stash-pic"
                   draggable
-                  title={`${p.name}: drag onto a step`}
+                  title={`${p.name}: drag onto a phase`}
                   onDragStart={(e) => {
                     e.dataTransfer.setData(DRAG_IMAGE_KEY, p.ref);
                     e.dataTransfer.effectAllowed = "copy";

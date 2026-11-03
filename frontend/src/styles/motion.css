@@ -427,76 +427,6 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   pointer-events: none;
 }
 
-/* ─── the front page: the mark floats, the orbit turns, things arrive ── */
-.jqzz-welcome-logo {
-  animation: logoIn 1s var(--ease-pop) backwards;
-  filter:
-    drop-shadow(-1.5px 0 rgba(255, 92, 140, 0.45))
-    drop-shadow(1.5px 0 rgba(90, 170, 255, 0.45));
-}
-@keyframes logoIn {
-  from {
-    opacity: 0;
-    transform: scale(0.7) rotate(-6deg);
-    filter: blur(12px);
-  }
-}
-.jqzz-welcome-burst::before {
-  animation: burstBreathe 9s var(--ease-in-out) infinite alternate;
-}
-@keyframes burstBreathe {
-  from { transform: scale(0.94) rotate(-4deg); opacity: 0.45; }
-  to { transform: scale(1.06) rotate(4deg); opacity: 0.65; }
-}
-.jqzz-welcome-orbit {
-  animation: orbitTurn 40s linear infinite;
-}
-@keyframes orbitTurn {
-  to { transform: rotate(360deg); }
-}
-.jqzz-welcome-dots {
-  animation: dotsDrift 18s var(--ease-in-out) infinite alternate;
-}
-@keyframes dotsDrift {
-  to { transform: translate(18px, -12px); }
-}
-.jqzz-welcome-subtitle,
-.jqzz-welcome-actions,
-.jqzz-welcome-hint {
-  animation: snippetIn 700ms var(--ease) backwards;
-}
-.jqzz-welcome-subtitle { animation-delay: 350ms; }
-.jqzz-welcome-actions { animation-delay: 500ms; }
-.jqzz-welcome-hint { animation-delay: 650ms; }
-.jqzz-feature {
-  position: relative;
-  animation: snippetIn 700ms var(--ease) backwards;
-  transition: transform var(--dur-2) var(--ease), background var(--dur-2) var(--ease);
-}
-.jqzz-feature:nth-child(1) { animation-delay: 750ms; }
-.jqzz-feature:nth-child(2) { animation-delay: 850ms; }
-.jqzz-feature:nth-child(3) { animation-delay: 950ms; }
-.jqzz-feature:nth-child(4) { animation-delay: 1050ms; }
-.jqzz-feature::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -1px;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--warm));
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform var(--dur-3) var(--ease);
-}
-.jqzz-feature:hover {
-  transform: translateY(-4px);
-  background: color-mix(in srgb, var(--raised) 60%, transparent);
-}
-.jqzz-feature:hover::before {
-  transform: scaleX(1);
-}
-
 /* the folded "save to your stash" sits under the buttons, its own size */
 .jqzz-stage-final > .jqzz-play-btn,
 .jqzz-phone-final > .jqzz-play-btn {
@@ -687,42 +617,131 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: min(440px, calc(100vw - 32px));
+  width: min(500px, calc(100vw - 32px));
 }
+/* a ticket: the code on a stub, a perforation, the quiz on the rest */
 .jqzz-return-card {
+  --stub: 112px;
+  position: relative;
+  display: flex;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-solid) 94%, transparent);
+  box-shadow:
+    inset 0 0 0 1px var(--line-strong),
+    0 18px 40px -20px rgba(0, 0, 0, 0.85);
+  /* the two half-circle bites where the stub tears off */
+  -webkit-mask:
+    radial-gradient(circle 7px at var(--stub) 0, transparent 6.5px, #000 7px) top / 100% 51% no-repeat,
+    radial-gradient(circle 7px at var(--stub) 100%, transparent 6.5px, #000 7px) bottom / 100% 51% no-repeat;
+  mask:
+    radial-gradient(circle 7px at var(--stub) 0, transparent 6.5px, #000 7px) top / 100% 51% no-repeat,
+    radial-gradient(circle 7px at var(--stub) 100%, transparent 6.5px, #000 7px) bottom / 100% 51% no-repeat;
+  animation: ticketIn 520ms var(--ease) backwards;
+  transition: translate var(--dur-2) var(--ease);
+}
+@keyframes ticketIn {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+    rotate: -1.5deg;
+  }
+}
+.jqzz-return-card:hover {
+  translate: 0 -2px;
+}
+.jqzz-return-go {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+}
+.jqzz-return-stub {
+  width: var(--stub);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 12px 12px 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
-  box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.8), 0 0 30px -14px var(--accent);
-  animation: popIn var(--dur-3) var(--ease-pop) backwards;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px 8px;
+  background: var(--accent-soft);
+  border-right: 1.5px dashed color-mix(in srgb, var(--text) 30%, transparent);
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent);
+  letter-spacing: 0;
 }
-.jqzz-return-dot {
-  width: 9px;
-  height: 9px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 0 0 var(--ok);
-  animation: liveDot 1.8s var(--ease-in-out) infinite;
+.jqzz-return-stub span {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
 }
-@keyframes liveDot {
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+.jqzz-return-card.paused .jqzz-return-stub {
+  background: color-mix(in srgb, var(--warm) 14%, transparent);
+  color: var(--warm);
 }
 .jqzz-return-text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 12px 10px 16px;
 }
 .jqzz-return-text b {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-family: var(--font-title);
+  font-weight: normal;
+  font-size: 19px;
+  line-height: 1.15;
+}
+.jqzz-return-arrow {
+  align-self: center;
+  padding-right: 8px;
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: translate var(--dur-2) var(--ease);
+}
+.jqzz-return-go:hover .jqzz-return-arrow,
+.jqzz-return-go:focus-visible .jqzz-return-arrow {
+  translate: 4px 0;
+}
+.jqzz-return-go:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
+}
+.jqzz-return-hide {
+  align-self: flex-start;
+  width: 28px;
+  height: 28px;
+  margin: 4px 4px 0 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+}
+.jqzz-return-hide:hover {
+  color: var(--text);
+  background: var(--raised);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jqzz-return-card {
+    animation: none;
+  }
 }
 
 /* ─── controls on the glass: edges of light, not grey lines ───────────
@@ -2042,6 +2061,12 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 .jqzz-inbox > * {
   pointer-events: auto;
 }
+/* out of the way while you edit a question or a dialog is open: the bell keeps the count */
+body:has(.jqzz-canvas.has-inspector) .jqzz-inbox-slot,
+body:has(.jqzz-canvas.has-inspector) .jqzz-inbox-more,
+body:has(.jqzz-modal-overlay) .jqzz-inbox {
+  display: none;
+}
 /* the bell: a small glass pill heading the stack */
 .jqzz-inbox-bell {
   display: inline-flex;
@@ -2570,22 +2595,6 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   animation: fadeIn 600ms var(--ease) 900ms backwards;
 }
 
-/* quit, within reach at the bottom while a game is on */
-.jqzz-quit-dock {
-  position: fixed;
-  left: 14px;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-  z-index: 15;
-}
-.jqzz-quit-dock .jqzz-play-btn {
-  background: color-mix(in srgb, var(--surface-solid) 85%, transparent);
-}
-
-/* the phone keeps room at the bottom for the quit button */
-.jqzz-phone {
-  padding-bottom: 80px;
-}
-
 /* ─── settings, on your profile ──────────────────────────────────── */
 .jqzz-settings {
   display: flex;
@@ -2717,10 +2726,6 @@ button.jqzz-tile:hover .jqzz-tile-letter {
     animation: none;
   }
 }
-/* a way back to another game sits at the bottom too: quit goes above it */
-body:has(.jqzz-return) .jqzz-quit-dock {
-  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
-}
 /* and the page itself keeps room under its end, so nothing stays stuck behind them */
 body:has(.jqzz-return) .jqzz-play-frame {
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
@@ -2790,39 +2795,41 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   letter-spacing: -0.015em;
 }
 
-/* the identity card's own row: icons, and the words slide out when you point */
+/* the identity card's own row: each icon says what it is (icons alone left
+   people guessing which one logs you out) */
 .jqzz-modal-row.secondary {
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 4px;
+}
+/* a little wider than other dialogs, so that row stays one row */
+.jqzz-modal.jqzz-identity-card {
+  container-type: inline-size;
+}
+.jqzz-modal.jqzz-identity-card:not(.inline) {
+  width: 440px;
 }
 .jqzz-slide-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 6px;
   padding-inline: 8px;
 }
 .jqzz-slide-btn svg {
   flex-shrink: 0;
 }
 .jqzz-slide-btn-label {
-  display: inline-block;
-  max-width: 0;
-  overflow: hidden;
   white-space: nowrap;
-  opacity: 0;
-  transition:
-    max-width 320ms var(--ease),
-    opacity 220ms var(--ease),
-    margin-left 320ms var(--ease);
+  font-size: var(--fs-small);
 }
-.jqzz-slide-btn:hover .jqzz-slide-btn-label,
-.jqzz-slide-btn:focus-visible .jqzz-slide-btn-label {
-  max-width: 140px;
-  margin-left: 6px;
-  opacity: 1;
+/* too narrow for all four words: icons only, the tooltip still names them */
+@container (max-width: 380px) {
+  .jqzz-slide-btn-label {
+    display: none;
+  }
 }
 
-/* your id: hidden like a password until you ask */
+/* the login key: hidden like a password until you ask */
 .jqzz-secret {
   display: flex;
   align-items: center;
@@ -2891,11 +2898,6 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 .jqzz-google-btn svg {
   flex-shrink: 0;
 }
-@media (prefers-reduced-motion: reduce) {
-  .jqzz-slide-btn-label {
-    transition: none;
-  }
-}
 
 /* the generated avatars' initial follows the lettering setting too */
 .jqzz-genav-letter {
@@ -2937,8 +2939,7 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
 :root[data-effects="reduced"] .jqzz-dither,
 :root[data-effects="reduced"] .jqzz-imperfections,
 :root[data-effects="reduced"] .jqzz-holo-dust,
-:root[data-effects="reduced"] .jqzz-holo-dots,
-:root[data-effects="reduced"] .jqzz-welcome-burst::after {
+:root[data-effects="reduced"] .jqzz-holo-dots {
   display: none;
 }
 :root[data-effects="reduced"] .jqzz-holo::before {

@@ -13,6 +13,15 @@ public class IdGenerator {
         return sb.toString();
     }
 
+    private static final java.security.SecureRandom SECURE = new java.security.SecureRandom();
+
+    /** a login key: long and from a secure source, unlike ids, which are only names */
+    public static String loginKey() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 32; i++) sb.append(CHARS.charAt(SECURE.nextInt(CHARS.length())));
+        return sb.toString();
+    }
+
     public static String generateId() {
         return random(10); // internal ID
     }

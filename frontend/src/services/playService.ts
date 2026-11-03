@@ -24,6 +24,8 @@ export const playService = {
     post("/play/practice", { userId, ...from }),
   /** the same quiz as a finished game, everyone from it invited */
   rematch: (userId: string, recordId: number) => post("/play/rematch", { userId, recordId }),
+  /** how many games are under way right now, anyone's */
+  live: () => api.get<{ live: number }>("/play/live").then((r) => r.data.live),
   state: (code: string) => api.get<GameState>(`/play/${code}`).then((r) => r.data),
   /** games you host or play that haven't finished */
   mine: (userId: string) => api.get<MyGame[]>("/play/mine", { params: { userId } }).then((r) => r.data),

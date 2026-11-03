@@ -1,14 +1,24 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import { BRUSHES, brushOf, type ToolId } from "./brushes";
 import { Painter, type Sample } from "./painter";
 import { PAPERS } from "./paper";
 import { ActionIcon, ToolIcon } from "./icons";
 import { LayersPanel } from "./LayersPanel";
+import { HOME, isHome, keepInReach, snapAngle, toSheet, twoFingers, viewLabel, zoomAt, type Pt, type View } from "./view";
+import { useFitHeight } from "./fit";
 
 /*
  * The drawing frame: a sheet of paper and a box of tools. Everything here
  * is the controls; the marks themselves are made by the Painter.
+ *
+ * On a phone it's laid out like a drawing app: a bar of actions on top, the
+ * sheet in a window under it, the brushes and their settings docked below
+ * (or down the side, held sideways). One finger or a pen draws; two fingers
+ * move, turn and zoom the sheet in the window.
  */
+
+/** the popovers: one open at a time */
+type Pop = "colors" | "paper" | "layers" | null;
 
 /** the sheet, in its own pixels; it's scaled to fit the screen */
 export const SHEET_W = 1200;
@@ -76,7 +86,11 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   { keepAs, start, onSend, sendLabel = "send", dueAt, serverNow },
   ref,
 ) {
-  const viewRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<HTMLButtonElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const painter = useRef<Painter | null>(null);
@@ -88,8 +102,8 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const [tools, setTools] = useState<ToolSettings>(kept.current.tools);
   const [recent, setRecent] = useState<string[]>(kept.current.recent);
   const [mirror, setMirror] = useState(false);
-  const [papers, setPapers] = useState(false);
-  const [layersOpen, setLayersOpen] = useState(false);
+  const [pop, setPop] = useState<Pop>(null);
+  const toggle = (which: Exclude<Pop, null>) => setPop((open) => (open === which ? null : which));
   const [, setTick] = useState(0);
   const [sentAt, setSentAt] = useState(-1);
   const [sending, setSending] = useState(false);
@@ -102,7 +116,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   // ─── the painter ───────────────────────────────────────────────
 
   useEffect(() => {
-    const p = new Painter(viewRef.current!, { width: SHEET_W, height: SHEET_H, paper: kept.current.paper });
+    const p = new Painter(canvasRef.current!, { width: SHEET_W, height: SHEET_H, paper: kept.current.paper });
     painter.current = p;
     p.onChange = () => setTick((t) => t + 1);
     p.onPick = (hex) => {
@@ -213,24 +227,123 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
 
   // ─── the pen ───────────────────────────────────────────────────
 
+  // ─── the view: where the sheet sits in its window ─────────────
+
+  /** the sheet's size when it just fits the window, and the window's */
+  const fitted = useRef({ fit: 1, w: 0, h: 0, vw: 0, vh: 0 });
+  const view = useRef<View>(HOME);
+
+  const apply = useCallback((next: View, settle = false) => {
+    const f = fitted.current;
+    const v = keepInReach(next, f.w, f.h, f.vw, f.vh);
+    view.current = v;
+    const s = sheetRef.current;
+    if (s) {
+      s.classList.toggle("settle", settle);
+      s.style.transform = `translate(${v.x}px, ${v.y}px) rotate(${v.angle}rad) scale(${v.scale})`;
+    }
+    const z = zoomRef.current;
+    if (z) {
+      z.textContent = viewLabel(v);
+      z.classList.toggle("home", isHome(v));
+    }
+  }, []);
+
+  /** after a gesture: nearly straight goes straight, nearly 100% goes 100% */
+  const settle = useCallback(() => {
+    const v = view.current;
+    const angle = snapAngle(v.angle);
+    const scale = angle === 0 && Math.abs(v.scale - 1) < 0.04 ? 1 : v.scale;
+    if (angle !== v.angle || scale !== v.scale) apply({ ...v, angle, scale }, true);
+  }, [apply]);
+
+  const resetView = useCallback(() => apply(HOME, true), [apply]);
+
+  // the sheet fits the window, and keeps fitting it as the window changes
+  useLayoutEffect(() => {
+    const win = windowRef.current!;
+    const sheet = sheetRef.current!;
+    const measure = () => {
+      const vw = win.clientWidth;
+      const vh = win.clientHeight;
+      const pad = vw < 520 ? 8 : 16;
+      const fit = Math.max(0.01, Math.min((vw - pad * 2) / SHEET_W, (vh - pad * 2) / SHEET_H));
+      const w = SHEET_W * fit;
+      const h = SHEET_H * fit;
+      fitted.current = { fit, w, h, vw, vh };
+      sheet.style.width = `${w}px`;
+      sheet.style.height = `${h}px`;
+      sheet.style.marginLeft = `${-w / 2}px`;
+      sheet.style.marginTop = `${-h / 2}px`;
+      apply(view.current);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(win);
+    return () => ro.disconnect();
+  }, [apply]);
+
+  // a wheel with ctrl (or a trackpad pinch) zooms; zoomed in, the wheel moves the sheet.
+  // and the page under the sheet never scrolls, bounces or zooms itself
+  useEffect(() => {
+    const win = windowRef.current!;
+    const onWheel = (e: WheelEvent) => {
+      const r = win.getBoundingClientRect();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1;
+      const v = view.current;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const at = { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 };
+        const step = Math.max(-0.25, Math.min(0.25, -e.deltaY * unit * 0.01));
+        apply(zoomAt(v, at, Math.exp(step)));
+      } else if (v.scale > 1.01) {
+        e.preventDefault();
+        apply({ ...v, x: v.x - e.deltaX * unit, y: v.y - e.deltaY * unit });
+      }
+    };
+    const stop = (e: Event) => e.preventDefault();
+    win.addEventListener("wheel", onWheel, { passive: false });
+    win.addEventListener("touchmove", stop, { passive: false });
+    win.addEventListener("gesturestart", stop);
+    return () => {
+      win.removeEventListener("wheel", onWheel);
+      win.removeEventListener("touchmove", stop);
+      win.removeEventListener("gesturestart", stop);
+    };
+  }, [apply]);
+
+  // ─── the pen, and fingers ──────────────────────────────────────
+
   const box = useRef<DOMRect | null>(null);
   const active = useRef<number | null>(null);
   const penSeen = useRef(false);
-  const touches = useRef(new Map<number, { x: number; y: number; t: number }>());
-  const gesture = useRef<{ at: number; moved: boolean } | null>(null);
+  const touches = useRef(new Map<number, { x: number; y: number; sx: number; sy: number; t: number }>());
+  const gesture = useRef<{ at: number; moved: boolean; most: number; ids: number[]; a0: Pt; b0: Pt; start: View } | null>(null);
+  const pan = useRef<{ id: number; x: number; y: number; start: View } | null>(null);
+  /** a tap that only closed a popover: it doesn't draw too */
+  const swallow = useRef<number | null>(null);
+
+  /** a point on the screen, from the middle of the window */
+  const local = (x: number, y: number): Pt => {
+    const r = box.current!;
+    return { x: x - r.left - r.width / 2, y: y - r.top - r.height / 2 };
+  };
 
   const sample = (e: PointerEvent | React.PointerEvent, r: DOMRect): Sample => {
     const pen = e.pointerType === "pen";
+    const v = view.current;
     // altitude: how far the pen leans away from upright
     const tx = (e.tiltX ?? 0) * (Math.PI / 180);
     const ty = (e.tiltY ?? 0) * (Math.PI / 180);
     const lean = Math.min(1, Math.hypot(Math.tan(tx), Math.tan(ty)) / 2.2);
+    const at = toSheet(v, { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 }, fitted.current.fit, SHEET_W, SHEET_H);
     return {
-      x: ((e.clientX - r.left) / r.width) * SHEET_W,
-      y: ((e.clientY - r.top) / r.height) * SHEET_H,
+      x: at.x,
+      y: at.y,
       pressure: pen ? (e.pressure > 0 ? e.pressure : 0.5) : -1,
       tilt: pen ? lean : 0,
-      tiltAngle: Math.atan2(Math.tan(ty), Math.tan(tx)),
+      // the lean is seen on the screen; the sheet may be turned under it
+      tiltAngle: Math.atan2(Math.tan(ty), Math.tan(tx)) - v.angle,
       t: e.timeStamp,
     };
   };
@@ -241,51 +354,111 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     // a finger covers its own spot: no outline under it
     c.classList.toggle("on", e.pointerType !== "touch");
     const r = active.current === null ? e.currentTarget.getBoundingClientRect() : box.current!;
-    const scale = r.width / SHEET_W;
+    const scale = fitted.current.fit * view.current.scale;
     const d = Math.max(4, (brush.kind === "tool" ? 10 / scale : size) * scale);
     c.style.width = c.style.height = `${d}px`;
     c.style.transform = `translate(${e.clientX - r.left - d / 2}px, ${e.clientY - r.top - d / 2}px)`;
   };
 
-  const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const capture = (e: React.PointerEvent<HTMLElement>) => {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* a pointer the browser doesn't know (a synthetic one): carry on without capture */
+    }
+  };
+
+  /** the fingers on the sheet changed: the gesture carries on from where they are now */
+  const regrip = () => {
+    const g = gesture.current;
+    if (!g) return;
+    g.ids = [...touches.current.keys()].slice(0, 2);
+    g.start = view.current;
+    if (g.ids.length < 2) return;
+    const [a, b] = g.ids.map((id) => touches.current.get(id)!);
+    g.a0 = local(a.x, a.y);
+    g.b0 = local(b.x, b.y);
+  };
+
+  const down = (e: React.PointerEvent<HTMLDivElement>) => {
     const p = painter.current;
     if (!p) return;
+    if (swallow.current === e.pointerId) {
+      swallow.current = null;
+      return;
+    }
+    box.current = e.currentTarget.getBoundingClientRect();
+    if (e.pointerType === "mouse" && e.button === 1) {
+      // the middle button drags the sheet around
+      e.preventDefault();
+      capture(e);
+      pan.current = { id: e.pointerId, x: e.clientX, y: e.clientY, start: view.current };
+      return;
+    }
     if (e.pointerType === "mouse" && e.button !== 0) return;
     if (e.pointerType === "pen") penSeen.current = true;
-    // a hand resting on the screen while a pen draws isn't drawing
-    if (e.pointerType === "touch" && penSeen.current) return;
     if (e.pointerType === "touch") {
-      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.timeStamp });
-      const first = [...touches.current.values()][0];
-      if (touches.current.size === 2 && e.timeStamp - first.t < 250) {
-        // two fingers together: a gesture, not a stroke. A quick tap of two undoes.
-        p.cancel();
-        active.current = null;
-        gesture.current = { at: e.timeStamp, moved: false };
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: e.timeStamp });
+      capture(e);
+      const g = gesture.current;
+      if (g) {
+        g.most = Math.max(g.most, touches.current.size);
+        regrip();
         return;
       }
-      if (touches.current.size > 1) return;
+      const n = touches.current.size;
+      const first = [...touches.current.values()][0];
+      // two fingers together: a gesture, not a stroke. With a pen about, fingers only ever
+      // move the sheet (but not while the pen is down).
+      if (n >= 2 && (penSeen.current ? active.current === null : e.timeStamp - first.t < 250)) {
+        p.cancel();
+        active.current = null;
+        gesture.current = { at: e.timeStamp, moved: false, most: n, ids: [], a0: { x: 0, y: 0 }, b0: { x: 0, y: 0 }, start: view.current };
+        regrip();
+        return;
+      }
+      // a hand resting on the screen while a pen draws isn't drawing
+      if (n > 1 || penSeen.current) return;
     }
     if (active.current !== null) return;
-    box.current = e.currentTarget.getBoundingClientRect();
     const at = sample(e, box.current);
     if (e.altKey && brush.kind !== "tool") {
       setColor(p.pick(at.x, at.y));
       return;
     }
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      /* a pointer the browser doesn't know (a synthetic one): draw without capture */
-    }
+    // filling or picking off the edge of the sheet does nothing
+    if (brush.kind === "tool" && (at.x < 0 || at.y < 0 || at.x >= SHEET_W || at.y >= SHEET_H)) return;
+    capture(e);
     active.current = e.pointerId;
     p.begin(at);
   };
 
-  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const move = (e: React.PointerEvent<HTMLDivElement>) => {
     moveCursor(e);
+    const pn = pan.current;
+    if (pn && pn.id === e.pointerId) {
+      apply({ ...pn.start, x: pn.start.x + e.clientX - pn.x, y: pn.start.y + e.clientY - pn.y });
+      return;
+    }
     const t = touches.current.get(e.pointerId);
-    if (t && gesture.current && Math.hypot(e.clientX - t.x, e.clientY - t.y) > 12) gesture.current.moved = true;
+    if (t) {
+      t.x = e.clientX;
+      t.y = e.clientY;
+    }
+    const g = gesture.current;
+    if (t && g) {
+      if (!g.moved) {
+        // still maybe a tap: the sheet stays put until a finger really moves
+        if (Math.hypot(t.x - t.sx, t.y - t.sy) <= 12) return;
+        g.moved = true;
+        regrip();
+      }
+      if (g.ids.length === 2 && g.ids.includes(e.pointerId)) {
+        const [a, b] = g.ids.map((id) => touches.current.get(id)!);
+        apply(twoFingers(g.start, g.a0, g.b0, local(a.x, a.y), local(b.x, b.y)));
+      }
+      return;
+    }
     if (e.pointerId !== active.current || !box.current) return;
     const native = e.nativeEvent;
     const events = native.getCoalescedEvents?.() ?? [];
@@ -293,20 +466,37 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     painter.current?.move((events.length ? events : [native]).map((ev) => sample(ev, r)));
   };
 
-  const up = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    touches.current.delete(e.pointerId);
+  /** a finger lifted: the end of a gesture is a tap (two undo, three redo) or the sheet settling */
+  const lift = (e: React.PointerEvent<HTMLDivElement>, tapped: boolean) => {
+    if (!touches.current.delete(e.pointerId)) return false;
     const g = gesture.current;
-    if (g && touches.current.size === 0) {
-      gesture.current = null;
-      if (!g.moved && e.timeStamp - g.at < 350) painter.current?.undo();
+    if (!g) return false;
+    if (touches.current.size > 0) {
+      regrip();
+      return true;
     }
+    gesture.current = null;
+    if (tapped && !g.moved && e.timeStamp - g.at < 350) {
+      if (g.most >= 3) painter.current?.redo();
+      else painter.current?.undo();
+    } else settle();
+    return true;
+  };
+
+  const up = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (pan.current?.id === e.pointerId) {
+      pan.current = null;
+      return;
+    }
+    if (lift(e, true)) return;
     if (e.pointerId !== active.current) return;
     active.current = null;
     painter.current?.end();
   };
 
-  const cancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    touches.current.delete(e.pointerId);
+  const cancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (pan.current?.id === e.pointerId) pan.current = null;
+    if (lift(e, false)) return;
     if (e.pointerId !== active.current) return;
     active.current = null;
     painter.current?.end();
@@ -322,7 +512,23 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     if (brushOf(tool).kind === "tool" && tool === "pick") setTool(lastBrush.current);
     if (tool === "eraser" || tool === "smudge") setTool(lastBrush.current === "eraser" ? "pencil" : lastBrush.current);
     if (custom) setRecent((r) => [hex, ...r.filter((c) => c !== hex)].slice(0, 6));
+    else setPop((open) => (open === "colors" ? null : open));
   };
+
+  // a tap anywhere outside the open popover (or its button) closes it
+  useEffect(() => {
+    if (!pop) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (t?.closest?.(`[data-pop="${pop}"]`)) return;
+      setPop(null);
+      if (t && windowRef.current?.contains(t)) swallow.current = e.pointerId;
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [pop]);
+
+  useFitHeight(frameRef);
 
   // keys: a letter per tool, [ and ] for size, the usual undo
   useEffect(() => {
@@ -344,6 +550,14 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
         return;
       }
       if (mod || e.altKey) return;
+      if (e.key === "0") {
+        resetView();
+        return;
+      }
+      if (e.key === "Escape") {
+        setPop(null);
+        return;
+      }
       if (e.key === "[" || e.key === "]") {
         const b = brushOf(tool);
         const step = Math.max(1, Math.round(size * 0.15));
@@ -356,7 +570,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tool, size, opacity]);
+  }, [tool, size, opacity, resetView]);
 
   // ─── the preview: a sample stroke, made by the real brush ─────
 
@@ -395,23 +609,103 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const p = painter.current;
   const status = sending ? "sending..." : problem ? problem : sentAt >= 0 && !unsent ? "sent" : sentAt >= 0 ? "changed since you sent it" : null;
 
+  const swatch = (c: string, recentOne = false) => (
+    <button
+      key={recentOne ? `r${c}` : c}
+      className={`jqzz-draw-swatch${recentOne ? " recent" : ""}${color.toLowerCase() === c ? " on" : ""}`}
+      style={{ "--swatch": c } as React.CSSProperties}
+      onClick={() => choose(c)}
+      aria-label={recentOne ? `recent ${c}` : c}
+      aria-pressed={color.toLowerCase() === c}
+    />
+  );
+
   return (
-    <div className="jqzz-draw">
-      <div className={`jqzz-draw-sheet${brush.kind === "tool" ? " tool" : ""}`}>
-        <canvas
-          ref={viewRef}
-          className="jqzz-draw-canvas"
-          onPointerDown={down}
-          onPointerMove={move}
-          onPointerUp={up}
-          onPointerCancel={cancel}
-          onPointerLeave={() => cursorRef.current?.classList.remove("on")}
-          onPointerEnter={() => cursorRef.current?.classList.add("on")}
-          onContextMenu={(e) => e.preventDefault()}
-          aria-label="drawing sheet"
-        />
+    <div ref={frameRef} className={`jqzz-draw${brush.kind === "tool" ? " tool" : ""}`}>
+      <div className="jqzz-draw-bar" role="toolbar" aria-label="actions">
+        <button className="jqzz-draw-act" onClick={() => p?.undo()} disabled={!p?.canUndo} title="undo (Ctrl+Z, or tap with two fingers)">
+          <ActionIcon name="undo" />
+        </button>
+        <button className="jqzz-draw-act" onClick={() => p?.redo()} disabled={!p?.canRedo} title="redo (Ctrl+Shift+Z, or tap with three fingers)">
+          <ActionIcon name="redo" />
+        </button>
+        <span className="jqzz-draw-gap" />
+        <button className="jqzz-draw-act" onClick={() => p?.clear()} disabled={!p || p.isEmpty} title="clear this layer">
+          <ActionIcon name="clear" />
+        </button>
+        <button className={`jqzz-draw-act${mirror ? " on" : ""}`} onClick={() => setMirror((m) => !m)} aria-pressed={mirror} title="mirror: draw both halves at once">
+          <ActionIcon name="mirror" />
+        </button>
+        <div className="jqzz-draw-paper" data-pop="paper">
+          <button className={`jqzz-draw-act${pop === "paper" ? " on" : ""}`} onClick={() => toggle("paper")} aria-expanded={pop === "paper"} title="paper">
+            <ActionIcon name="paper" />
+          </button>
+          {pop === "paper" && (
+            <div className="jqzz-draw-papers" role="menu">
+              {PAPERS.map((pp) => (
+                <button
+                  key={pp.id}
+                  role="menuitemradio"
+                  aria-checked={paper === pp.id}
+                  className={paper === pp.id ? "on" : ""}
+                  onClick={() => {
+                    setPaper(pp.id);
+                    setPop(null);
+                  }}
+                >
+                  <span className="jqzz-draw-paper-chip" style={{ background: pp.color }} />
+                  {pp.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          className={`jqzz-draw-act with-count${pop === "layers" ? " on" : ""}`}
+          onClick={() => toggle("layers")}
+          aria-expanded={pop === "layers"}
+          data-pop="layers"
+          title="layers"
+        >
+          <ActionIcon name="layers" />
+          {p && p.layers.length > 1 && <span className="jqzz-draw-count">{p.layers.length}</span>}
+        </button>
+        {onSend && (
+          <button className="jqzz-play-btn primary jqzz-draw-send" disabled={!p || p.isEmpty || sending || !unsent} onClick={send}>
+            {sentAt >= 0 && unsent ? "send again" : sendLabel}
+          </button>
+        )}
+      </div>
+
+      <div
+        ref={windowRef}
+        className="jqzz-draw-window"
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={cancel}
+        onPointerLeave={() => cursorRef.current?.classList.remove("on")}
+        onPointerEnter={() => cursorRef.current?.classList.add("on")}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <div ref={sheetRef} className="jqzz-draw-sheet">
+          <canvas ref={canvasRef} className="jqzz-draw-canvas" aria-label="drawing sheet" />
+          {mirror && <div className="jqzz-draw-axis" aria-hidden="true" />}
+        </div>
         <div ref={cursorRef} className="jqzz-draw-cursor" aria-hidden="true" />
-        {mirror && <div className="jqzz-draw-axis" aria-hidden="true" />}
+      </div>
+
+      {/* over the window, but not part of it: taps here never draw */}
+      <div className="jqzz-draw-over">
+        <button ref={zoomRef} className="jqzz-draw-zoom home" onClick={resetView} title="back to the whole sheet (0)">
+          100%
+        </button>
+        {status && <span className="jqzz-draw-status jqzz-annot">{status}</span>}
+        {pop === "layers" && p && (
+          <div className="jqzz-draw-pop" data-pop="layers">
+            <LayersPanel painter={p} revision={p.revision} />
+          </div>
+        )}
       </div>
 
       <div className="jqzz-draw-tools" role="toolbar" aria-label="tools">
@@ -430,6 +724,23 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       </div>
 
       <div className="jqzz-draw-tune">
+        <div className="jqzz-draw-color" data-pop="colors">
+          <button
+            className={`jqzz-draw-swatch current${pop === "colors" ? " open" : ""}`}
+            style={{ "--swatch": color } as React.CSSProperties}
+            onClick={() => toggle("colors")}
+            aria-expanded={pop === "colors"}
+            aria-label="colours"
+            title="colours"
+          />
+          <div className={`jqzz-draw-colors${pop === "colors" ? " open" : ""}`} role="group" aria-label="colours">
+            {PALETTE.map((c) => swatch(c))}
+            {recent.map((c) => swatch(c, true))}
+            <label className="jqzz-draw-swatch custom" title="any colour" style={{ "--swatch": color } as React.CSSProperties}>
+              <input type="color" value={color} onChange={(e) => choose(e.target.value, true)} aria-label="any colour" />
+            </label>
+          </div>
+        </div>
         <canvas ref={previewRef} className="jqzz-draw-preview" aria-hidden="true" />
         {brush.kind !== "tool" ? (
           <div className="jqzz-draw-sliders">
@@ -462,88 +773,6 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
           </p>
         )}
       </div>
-
-      <div className="jqzz-draw-colors" role="group" aria-label="colours">
-        {PALETTE.map((c) => (
-          <button
-            key={c}
-            className={`jqzz-draw-swatch${color.toLowerCase() === c ? " on" : ""}`}
-            style={{ "--swatch": c } as React.CSSProperties}
-            onClick={() => choose(c)}
-            aria-label={c}
-            aria-pressed={color.toLowerCase() === c}
-          />
-        ))}
-        {recent.map((c) => (
-          <button
-            key={`r${c}`}
-            className={`jqzz-draw-swatch recent${color.toLowerCase() === c ? " on" : ""}`}
-            style={{ "--swatch": c } as React.CSSProperties}
-            onClick={() => choose(c)}
-            aria-label={`recent ${c}`}
-          />
-        ))}
-        <label className="jqzz-draw-swatch custom" title="any colour" style={{ "--swatch": color } as React.CSSProperties}>
-          <input type="color" value={color} onChange={(e) => choose(e.target.value, true)} aria-label="any colour" />
-        </label>
-      </div>
-
-      <div className="jqzz-draw-actions">
-        <button className="jqzz-draw-act" onClick={() => p?.undo()} disabled={!p?.canUndo} title="undo (Ctrl+Z, or tap with two fingers)">
-          <ActionIcon name="undo" />
-        </button>
-        <button className="jqzz-draw-act" onClick={() => p?.redo()} disabled={!p?.canRedo} title="redo (Ctrl+Shift+Z)">
-          <ActionIcon name="redo" />
-        </button>
-        <button className="jqzz-draw-act" onClick={() => p?.clear()} disabled={!p || p.isEmpty} title="clear this layer">
-          <ActionIcon name="clear" />
-        </button>
-        <button
-          className={`jqzz-draw-act with-count${layersOpen ? " on" : ""}`}
-          onClick={() => setLayersOpen((o) => !o)}
-          aria-expanded={layersOpen}
-          title="layers"
-        >
-          <ActionIcon name="layers" />
-          {p && p.layers.length > 1 && <span className="jqzz-draw-count">{p.layers.length}</span>}
-        </button>
-        <button className={`jqzz-draw-act${mirror ? " on" : ""}`} onClick={() => setMirror((m) => !m)} aria-pressed={mirror} title="mirror: draw both halves at once">
-          <ActionIcon name="mirror" />
-        </button>
-        <div className="jqzz-draw-paper">
-          <button className={`jqzz-draw-act${papers ? " on" : ""}`} onClick={() => setPapers((o) => !o)} aria-expanded={papers} title="paper">
-            <ActionIcon name="paper" />
-          </button>
-          {papers && (
-            <div className="jqzz-draw-papers" role="menu">
-              {PAPERS.map((pp) => (
-                <button
-                  key={pp.id}
-                  role="menuitemradio"
-                  aria-checked={paper === pp.id}
-                  className={paper === pp.id ? "on" : ""}
-                  onClick={() => {
-                    setPaper(pp.id);
-                    setPapers(false);
-                  }}
-                >
-                  <span className="jqzz-draw-paper-chip" style={{ background: pp.color }} />
-                  {pp.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {onSend && (
-          <div className="jqzz-draw-send">
-            {status && <span className="jqzz-annot">{status}</span>}
-            <button className="jqzz-play-btn primary" disabled={!p || p.isEmpty || sending || !unsent} onClick={send}>
-              {sentAt >= 0 && unsent ? "send again" : sendLabel}
-            </button>
-          </div>
-        )}
-      </div>
-      {layersOpen && p && <LayersPanel painter={p} revision={p.revision} />}
     </div>
   );
 });

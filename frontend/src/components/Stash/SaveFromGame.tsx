@@ -100,7 +100,7 @@ export const SaveFromGame: React.FC<{
                 <button
                   className="jqzz-play-btn small ghost"
                   disabled={busy !== null || saved.has(`t${q.key}`)}
-                  title="its type and steps, without the words"
+                  title="its type and phases, without the words"
                   onClick={() => {
                     const k = `t${q.key}`;
                     setBusy(k);

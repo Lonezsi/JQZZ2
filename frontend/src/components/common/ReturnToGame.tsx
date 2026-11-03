@@ -42,23 +42,31 @@ export const ReturnToGame: React.FC = () => {
   return (
     <div className="jqzz-return" role="status">
       {shown.map((g) => (
-        <div key={g.code} className="jqzz-return-card">
-          <span className="jqzz-return-dot" aria-hidden="true" />
-          <span className="jqzz-return-text">
-            <span className="jqzz-annot">
-              {g.role === "host" ? "you're hosting" : "you're playing"} · {g.code}
-              {g.status === "PAUSED" && " · paused"}
-            </span>
-            <b>{g.quizName}</b>
-          </span>
+        // a ticket back in: the join code on its stub, the quiz on the rest
+        <div key={g.code} className={`jqzz-return-card${g.status === "PAUSED" ? " paused" : ""}`}>
           <button
-            className="jqzz-play-btn small primary"
+            className="jqzz-return-go"
             onClick={() => go(`/${g.role === "host" ? "host" : "play"}/${g.code}`)}
+            aria-label={`Back to ${g.quizName}, game ${g.code}`}
           >
-            back to it
+            <span className="jqzz-return-stub" aria-hidden="true">
+              {g.code.split("").map((c, i) => (
+                <span key={i}>{c}</span>
+              ))}
+            </span>
+            <span className="jqzz-return-text">
+              <span className="jqzz-annot">
+                {g.role === "host" ? "you're hosting" : "you're playing"}
+                {g.status === "PAUSED" ? ", paused" : ""}
+              </span>
+              <b>{g.quizName}</b>
+            </span>
+            <span className="jqzz-return-arrow" aria-hidden="true">
+              back in →
+            </span>
           </button>
           <button
-            className="jqzz-icon-btn"
+            className="jqzz-return-hide"
             aria-label="Hide this until next time"
             title="hide"
             onClick={() => setHidden((h) => new Set(h).add(g.code))}
