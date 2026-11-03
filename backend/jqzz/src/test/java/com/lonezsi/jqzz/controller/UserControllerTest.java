@@ -2,6 +2,7 @@ package com.lonezsi.jqzz.controller;
 
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.LoginKeys;
 import com.lonezsi.jqzz.util.IdGenerator;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,9 @@ class UserControllerTest {
     @Mock
     private SimpMessagingTemplate messaging;
 
+    @Mock
+    private LoginKeys keys;
+
     @InjectMocks
     private UserController userController;
 
@@ -42,6 +46,7 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+        lenient().when(keys.issue(any())).thenReturn("a-fresh-login-key");
     }
 
     @Test

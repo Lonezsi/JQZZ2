@@ -16,8 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.lonezsi.jqzz.model.User;
-import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.LoginKeys;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
@@ -53,12 +52,12 @@ public class LoginKeyFilter extends OncePerRequestFilter {
     /** /users/{x} that aren't an account */
     private static final Set<String> USER_ROUTES = Set.of("register", "login", "logout", "google");
 
-    private final UserRepository users;
+    private final LoginKeys keys;
     private final boolean enforced;
     private final JsonMapper json = JsonMapper.builder().build();
 
-    public LoginKeyFilter(UserRepository users, @Value("${jqzz.auth.enforce-login-key:true}") boolean enforced) {
-        this.users = users;
+    public LoginKeyFilter(LoginKeys keys, @Value("${jqzz.auth.enforce-login-key:true}") boolean enforced) {
+        this.keys = keys;
         this.enforced = enforced;
     }
 
@@ -79,7 +78,7 @@ public class LoginKeyFilter extends OncePerRequestFilter {
         String key = request.getHeader(HEADER);
         // the cookie only counts for reading: another site can make a browser send it on a POST
         if ((key == null || key.isBlank()) && reading) key = cookie(request);
-        String me = key == null || key.isBlank() ? null : users.findByLoginKey(key).map(User::getId).orElse(null);
+        String me = keys.owner(key).orElse(null);
         if (me != null) request.setAttribute(USER, me);
         // the admin panel acts on other people's things by design; AdminController checks it's the admin
         if (request.getRequestURI().startsWith("/admin/")) {

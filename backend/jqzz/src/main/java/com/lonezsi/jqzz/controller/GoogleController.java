@@ -18,6 +18,7 @@ import com.lonezsi.jqzz.model.Notification;
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
 import com.lonezsi.jqzz.service.GoogleAuth;
+import com.lonezsi.jqzz.service.LoginKeys;
 import com.lonezsi.jqzz.service.NotificationService;
 import com.lonezsi.jqzz.util.IdGenerator;
 
@@ -40,13 +41,15 @@ public class GoogleController {
     private final UserRepository users;
     private final NotificationService notifications;
     private final SimpMessagingTemplate messaging;
+    private final LoginKeys keys;
 
     public GoogleController(GoogleAuth google, UserRepository users, NotificationService notifications,
-            SimpMessagingTemplate messaging) {
+            SimpMessagingTemplate messaging, LoginKeys keys) {
         this.google = google;
         this.users = users;
         this.notifications = notifications;
         this.messaging = messaging;
+        this.keys = keys;
     }
 
     @GetMapping("/google/config")
@@ -72,12 +75,13 @@ public class GoogleController {
             user.setProfilePictureUrl(account.picture());
         }
         user.setOnline(true);
-        if (user.getLoginKey() == null) user.setLoginKey(IdGenerator.loginKey());
         User saved = users.save(user);
+        // a key of its own for this browser: the others stay signed in
+        String key = keys.issue(saved.getId());
         messaging.convertAndSend("/topic/users",
                 (Object) Map.of("event", fresh ? "user_registered" : "user_logged_in", "user", saved));
-        UserController.keyCookie(response, saved.getLoginKey());
-        return UserController.self(saved);
+        UserController.keyCookie(response, key);
+        return UserController.self(saved, key);
     }
 
     /** This account, tied to the Google account that just signed in. */

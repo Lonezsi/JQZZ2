@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpServletResponse;
 
 import com.lonezsi.jqzz.config.LoginKeyFilter;
+import com.lonezsi.jqzz.service.LoginKeys;
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
 import com.lonezsi.jqzz.util.IdGenerator;
@@ -31,10 +32,12 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messaging;
+    private final LoginKeys keys;
 
-    public UserController(UserRepository userRepository, SimpMessagingTemplate messaging) {
+    public UserController(UserRepository userRepository, SimpMessagingTemplate messaging, LoginKeys keys) {
         this.userRepository = userRepository;
         this.messaging = messaging;
+        this.keys = keys;
     }
 
     @PostMapping("/register")
@@ -64,17 +67,17 @@ public class UserController {
         user.setName(request.getName());
         user.setHandle(handle);
         user.setOnline(true);
-        user.setLoginKey(IdGenerator.loginKey());
 
         User saved = userRepository.save(user);
+        String key = keys.issue(saved.getId());
 
         messaging.convertAndSend(
             "/topic/users",
             (Object) Map.of("event", "user_registered", "user", saved)
         );
 
-        keyCookie(response, saved.getLoginKey());
-        return self(saved);
+        keyCookie(response, key);
+        return self(saved, key);
     }
 
     /**
@@ -86,14 +89,16 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         User user;
+        String key = null;
         if (request.getKey() != null && !request.getKey().isBlank()) {
-            user = userRepository.findByLoginKey(request.getKey().trim()).orElse(null);
+            key = request.getKey().trim();
+            user = keys.owner(key).flatMap(userRepository::findById).orElse(null);
         } else if (request.getId() != null) {
             user = userRepository.findById(request.getId()).orElse(null);
-            if (user != null && user.getLoginKey() != null) {
+            if (user != null && keys.has(user.getId())) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "log in with your login key");
             }
-            if (user != null) user.setLoginKey(IdGenerator.loginKey());
+            if (user != null) key = keys.issue(user.getId());
         } else {
             user = null;
         }
@@ -106,8 +111,8 @@ public class UserController {
                 (Object) Map.of("event", "user_logged_in", "user", saved)
             );
         }
-        keyCookie(response, saved.getLoginKey());
-        return ResponseEntity.ok(self(saved));
+        keyCookie(response, key);
+        return ResponseEntity.ok(self(saved, key));
     }
 
     @PostMapping("/logout")
@@ -204,6 +209,7 @@ public class UserController {
             return ResponseEntity.notFound().build();
         }
         userRepository.deleteById(id);
+        keys.forget(id);
         messaging.convertAndSend(
             "/topic/users",
             (Object) Map.of("event", "user_deleted", "user", Map.of("id", id))
@@ -225,11 +231,17 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    static Map<String, Object> self(User u) {
+        return self(u, null);
+    }
+
     /**
      * The account as its owner sees it: the public record plus the email, which
-     * nobody else is sent.
+     * nobody else is sent. The login key only when there is one to hand over:
+     * the server keeps its hash, so it can repeat a key it was just given, or
+     * one it just made, and never any other.
      */
-    static Map<String, Object> self(User u) {
+    static Map<String, Object> self(User u, String key) {
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("id", u.getId());
         m.put("handle", u.getHandle());
@@ -238,7 +250,7 @@ public class UserController {
         m.put("profilePictureUrl", u.getProfilePictureUrl());
         m.put("online", u.isOnline());
         m.put("googleLinked", u.isGoogleLinked());
-        m.put("loginKey", u.getLoginKey());
+        if (key != null) m.put("loginKey", key);
         if (u.isAdmin()) m.put("admin", true);
         return m;
     }

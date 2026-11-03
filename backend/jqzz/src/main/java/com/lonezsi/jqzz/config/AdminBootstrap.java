@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.LoginKeys;
 import com.lonezsi.jqzz.util.AdminSecret;
 import com.lonezsi.jqzz.util.IdGenerator;
 
@@ -32,13 +33,15 @@ class AdminBootstrap implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(AdminBootstrap.class);
 
     private final UserRepository users;
+    private final LoginKeys keys;
     private final boolean enabled;
     private final Path dir;
 
-    AdminBootstrap(UserRepository users,
+    AdminBootstrap(UserRepository users, LoginKeys keys,
             @Value("${jqzz.admin.bootstrap:true}") boolean enabled,
             @Value("${jqzz.admin.dir:./data}") String dir) {
         this.users = users;
+        this.keys = keys;
         this.enabled = enabled;
         this.dir = Path.of(dir);
     }
@@ -57,11 +60,10 @@ class AdminBootstrap implements ApplicationRunner {
             admin.setName("Admin");
             admin.setAdmin(true);
         }
-        String key = IdGenerator.loginKey();
         String answer = AdminSecret.answer();
-        admin.setLoginKey(key);
         admin.setAdminAnswer(AdminSecret.hash(answer));
         users.save(admin);
+        String key = keys.replaceAll(admin.getId());
 
         Files.createDirectories(dir);
         Path file = dir.resolve("ADMIN-CREDENTIALS.txt");

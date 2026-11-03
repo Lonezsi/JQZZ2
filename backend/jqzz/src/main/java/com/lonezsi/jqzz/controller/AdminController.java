@@ -44,10 +44,10 @@ import com.lonezsi.jqzz.repository.ImageRepository;
 import com.lonezsi.jqzz.repository.QuizRepository;
 import com.lonezsi.jqzz.repository.StashItemRepository;
 import com.lonezsi.jqzz.repository.UserRepository;
+import com.lonezsi.jqzz.service.LoginKeys;
 import com.lonezsi.jqzz.service.NotificationService;
 import com.lonezsi.jqzz.service.QuizService;
 import com.lonezsi.jqzz.util.AdminSecret;
-import com.lonezsi.jqzz.util.IdGenerator;
 
 /**
  * The admin panel's API: everything, everyone's. Two locks in front of it. The
@@ -75,6 +75,7 @@ public class AdminController {
     private final NotificationService notifications;
     private final GameEngine engine;
     private final SimpMessagingTemplate messaging;
+    private final LoginKeys keys;
 
     private final SecureRandom random = new SecureRandom();
     /** token -> when it stops working */
@@ -84,7 +85,7 @@ public class AdminController {
 
     public AdminController(UserRepository users, QuizService quizzes, QuizRepository quizRepo, GameRecordRepository records,
             DrawingRepository drawings, ImageRepository images, StashItemRepository stash,
-            NotificationService notifications, GameEngine engine, SimpMessagingTemplate messaging) {
+            NotificationService notifications, GameEngine engine, SimpMessagingTemplate messaging, LoginKeys keys) {
         this.users = users;
         this.quizzes = quizzes;
         this.quizRepo = quizRepo;
@@ -95,6 +96,7 @@ public class AdminController {
         this.notifications = notifications;
         this.engine = engine;
         this.messaging = messaging;
+        this.keys = keys;
     }
 
     // ─── the two locks ─────────────────────────────────────────────────
@@ -199,7 +201,7 @@ public class AdminController {
             m.put("profilePictureUrl", u.getProfilePictureUrl());
             m.put("online", u.isOnline());
             m.put("googleLinked", u.isGoogleLinked());
-            m.put("hasKey", u.getLoginKey() != null);
+            m.put("hasKey", keys.has(u.getId()));
             m.put("quizzes", made.getOrDefault(u.getId(), 0));
             out.add(m);
         }
@@ -244,10 +246,8 @@ public class AdminController {
     public Map<String, Object> newKey(@RequestAttribute(value = LoginKeyFilter.USER, required = false) String me,
             @RequestHeader(value = TOKEN, required = false) String token, @PathVariable String id) {
         unlocked(me, token);
-        User u = person(id);
-        u.setLoginKey(IdGenerator.loginKey());
-        users.save(u);
-        return Map.of("loginKey", u.getLoginKey());
+        person(id);
+        return Map.of("loginKey", keys.replaceAll(id));
     }
 
     @DeleteMapping("/users/{id}")
@@ -256,6 +256,7 @@ public class AdminController {
         unlocked(me, token);
         person(id);
         users.deleteById(id);
+        keys.forget(id);
         messaging.convertAndSend("/topic/users", (Object) Map.of("event", "user_deleted", "user", Map.of("id", id)));
         return ResponseEntity.noContent().build();
     }

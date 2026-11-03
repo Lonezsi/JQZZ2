@@ -11,6 +11,5 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     java.util.Optional<User> findByGoogleSub(String googleSub);
     User findByHandle(String handle);
-    java.util.Optional<User> findByLoginKey(String loginKey);
     java.util.Optional<User> findFirstByAdminTrue();
 }

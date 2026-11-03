@@ -45,9 +45,9 @@ public class User {
     public void setGuestNoticed(Boolean guestNoticed){this.guestNoticed=guestNoticed;}
 
     /**
-     * The secret that logs this account in. The id is public (it's in the
-     * people list, on quizzes and in games), so it can't be what proves who
-     * you are; only the account's owner is ever sent this.
+     * Where an older version kept the login key, in the clear. Read once at
+     * startup, moved into login_key as a hash (see service.LoginKeys), and
+     * emptied; nothing writes it any more.
      */
     @JsonIgnore
     @Column(unique = true)
