@@ -498,6 +498,14 @@
 :root[data-star="landed"] .jqzz-main:has(.jqzz-poster.launching) > .jqzz-toolbar {
   animation: toolbarArrive 1200ms var(--ease) 2600ms backwards;
 }
+/* the page's scrollbar is part of what arrives last: there but clear till
+   then, so it takes its room all along and nothing moves when it shows */
+.jqzz-body:has(> .jqzz-welcome-root > .jqzz-poster.launching) {
+  transition: scrollbar-color 900ms var(--ease);
+}
+:root[data-star] .jqzz-body:has(> .jqzz-welcome-root > .jqzz-poster.launching) {
+  scrollbar-color: transparent transparent;
+}
 @keyframes toolbarArrive {
   from {
     opacity: 0;
