@@ -191,7 +191,9 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
 
       <GameModes />
 
-      <footer className="jqzz-welcome-footer">stop reading bro im not shakespeare.</footer>
+      <footer className="jqzz-welcome-footer">
+        stop reading bro im not shakespeare. <a href="/foyer/privacy">privacy</a>
+      </footer>
     </div>
   );
 };

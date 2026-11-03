@@ -627,3 +627,15 @@ select.jqzz-modal-input option {
   height: 100%;
   object-fit: cover;
 }
+
+/* under the login key: where to read what's kept */
+.jqzz-privacy-link {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-3);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.jqzz-privacy-link:hover {
+  color: var(--accent);
+}

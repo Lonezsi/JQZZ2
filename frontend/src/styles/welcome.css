@@ -545,6 +545,13 @@
   color: var(--text-3);
   font-size: var(--fs-small);
 }
+.jqzz-welcome-footer a {
+  margin-left: 8px;
+  color: var(--text-2);
+}
+.jqzz-welcome-footer a:hover {
+  color: var(--accent);
+}
 
 /* ─── game modes: ready-made quizzes, one per way of playing ─── */
 .jqzz-modes {
