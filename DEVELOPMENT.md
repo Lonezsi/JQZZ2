@@ -168,6 +168,31 @@ docker-compose build frontend
 
 ---
 
+## The Admin Account
+
+The first time the backend starts without one, it makes an admin account and
+writes its two secrets to `data/ADMIN-CREDENTIALS.txt` (next to the database,
+never to the log):
+
+1. a login key, which logs in like any other account's;
+2. the answer to "name of your first pet": 24 random characters with symbols.
+   Only a salted PBKDF2 hash of it is kept.
+
+Read the file, keep both in a password manager, delete the file. The admin
+account is left out of every people list and presence broadcast.
+
+Logged in as the admin, the identity card has an "admin panel" link to
+`#/admin`. It asks the pet question; the right answer gives this browser tab a
+token for two hours (five wrong answers lock it for fifteen minutes). Behind
+it: everyone's accounts (rename, new login key, delete), quizzes (edit the
+script, rename, change author, delete), games under way (start, pause, skip,
+end, kick), history, pictures, stash, and a notification to everyone. Every
+`/admin/*` route answers 404 to anyone but the admin account.
+
+Lost the secrets? Put an empty file named `ADMIN-RESET` in `data/` and
+restart: both are made again and the file is written again. Tests turn the
+bootstrap off (`jqzz.admin.bootstrap=false`); `jqzz.admin.dir` moves the files.
+
 ## Testing
 
 ### Backend Tests

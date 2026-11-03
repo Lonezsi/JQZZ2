@@ -9,7 +9,14 @@ const words = (n: AppNotification) => [
   n.from?.name,
   n.from?.handle,
   n.payload.quizName,
-  n.kind === "INVITE" ? "invite game" : n.kind.startsWith("FRIEND") ? "friend request" : "guest account google",
+  n.payload.text,
+  n.kind === "INVITE"
+    ? "invite game"
+    : n.kind.startsWith("FRIEND")
+      ? "friend request"
+      : n.kind === "ANNOUNCEMENT"
+        ? "announcement"
+        : "guest account google",
 ];
 
 /** Every notification, read or not: the bell's long memory, on your profile. */

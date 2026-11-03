@@ -341,6 +341,47 @@ public class GameEngine {
         return n;
     }
 
+    // ─── the admin panel ───────────────────────────────────────────────
+
+    /** Every game the server holds, finished ones included, newest first. */
+    public List<Map<String, Object>> everyGame() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Game game : games.values()) {
+            synchronized (game) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("code", game.code());
+                m.put("quizName", game.quizName);
+                m.put("hostId", game.hostId());
+                m.put("status", game.status().name());
+                m.put("touchedAt", game.touchedAt());
+                List<Map<String, Object>> players = new ArrayList<>();
+                for (Game.Player p : game.players.values()) {
+                    players.add(Map.of("id", p.id, "name", p.name == null ? "" : p.name));
+                }
+                m.put("players", players);
+                out.add(m);
+            }
+        }
+        out.sort((a, b) -> Long.compare((long) b.get("touchedAt"), (long) a.get("touchedAt")));
+        return out;
+    }
+
+    /** A host's control, used by the admin on any game. */
+    public Map<String, Object> force(String code, String action, String playerId) {
+        Game game = find(code);
+        long now = now();
+        return change(game, switch (action) {
+            case "start" -> g -> g.start(now);
+            case "pause" -> g -> g.pause(now);
+            case "resume" -> g -> g.resume(now);
+            case "skip" -> g -> g.skip(now);
+            case "end" -> g -> g.end(now);
+            case "restart" -> g -> g.restart(now);
+            case "kick" -> g -> g.kick(playerId, now);
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such control: " + action);
+        });
+    }
+
     /** Games you're hosting or playing that haven't finished: the way back to them. */
     public List<Map<String, Object>> mine(String userId) {
         List<Map<String, Object>> out = new ArrayList<>();

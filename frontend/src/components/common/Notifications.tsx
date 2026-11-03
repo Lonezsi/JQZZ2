@@ -230,6 +230,12 @@ export const NotificationCard: React.FC<{ n: AppNotification; onRead: () => void
         </button>
       );
     }
+  } else if (n.kind === "ANNOUNCEMENT") {
+    text = (
+      <>
+        <b>from JQZZ:</b> {n.payload.text}
+      </>
+    );
   } else {
     text = <>something new</>;
   }

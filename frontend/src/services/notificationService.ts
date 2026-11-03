@@ -12,7 +12,7 @@ export interface AppNotification {
   /** null once they've deleted themselves */
   from: FriendPerson | null;
   /** an invite: the game's code and quiz; rematch when it's the same quiz again */
-  payload: { code?: string; quizName?: string; rematch?: boolean };
+  payload: { code?: string; quizName?: string; rematch?: boolean; text?: string };
   createdAt: string | null;
   read: boolean;
 }

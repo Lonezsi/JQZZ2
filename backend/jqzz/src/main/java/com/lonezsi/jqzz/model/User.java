@@ -63,6 +63,19 @@ public class User {
     public Boolean getTypesSeeded(){return typesSeeded;}
     public void setTypesSeeded(Boolean typesSeeded){this.typesSeeded=typesSeeded;}
 
+    /** the one account that can open the admin panel; never listed with the others */
+    @JsonIgnore
+    private Boolean admin;
+
+    /** the hashed answer to its second question (see AdminSecret) */
+    @JsonIgnore
+    private String adminAnswer;
+
+    public boolean isAdmin(){return Boolean.TRUE.equals(admin);}
+    public void setAdmin(Boolean admin){this.admin=admin;}
+    public String getAdminAnswer(){return adminAnswer;}
+    public void setAdminAnswer(String adminAnswer){this.adminAnswer=adminAnswer;}
+
     // constructors, getters, setters unchanged
     public User() {}
 

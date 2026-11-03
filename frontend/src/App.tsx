@@ -15,6 +15,7 @@ import { useNavShortcuts } from "./hooks/useNavShortcuts";
    #/history/ID        one finished game
    #/stash/add/KIND/REF  a share link: copies the item into your stash
    #/stash, #/history  older links, now your profile's tabs
+   #/admin[/TAB]       the admin panel, for the admin account only
    anything else the editor
 
    Each page is its own download, fetched when it's first shown: a phone
@@ -24,6 +25,7 @@ const HostScreen = lazy(() => import("./components/Play/HostScreen").then((m) =>
 const PlayScreen = lazy(() => import("./components/Play/PlayScreen").then((m) => ({ default: m.PlayScreen })));
 const JoinScreen = lazy(() => import("./components/Play/JoinScreen").then((m) => ({ default: m.JoinScreen })));
 const HistoryPage = lazy(() => import("./components/Stash/HistoryPage").then((m) => ({ default: m.HistoryPage })));
+const AdminPage = lazy(() => import("./components/Admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const ProfilePage = lazy(() => import("./components/Stash/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 /* a bare sheet to try the brushes on, while working on them */
 const Sketch = import.meta.env.DEV ? lazy(() => import("./draw/Sketch")) : null;
@@ -57,6 +59,7 @@ function page(where?: string, a?: string, b?: string, c?: string) {
     return <ProfilePage tab="stash" add={{ kind: b, ref: decodeURIComponent(c) }} />;
   }
   if (where === "stash") return <ProfilePage tab="stash" sub={a} />;
+  if (where === "admin") return <AdminPage tab={a} />;
   if (where === "draw" && Sketch) return <Sketch />;
   return <Dashboard />;
 }

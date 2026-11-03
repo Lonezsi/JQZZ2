@@ -27,6 +27,8 @@ public class Notification {
     /** your first finished game on an account only this browser can get back into */
     public static final String GUEST_ACCOUNT = "GUEST_ACCOUNT";
     public static final String INVITE = "INVITE";
+    /** a message from the admin to everyone; payload {text} */
+    public static final String ANNOUNCEMENT = "ANNOUNCEMENT";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,0 +1,142 @@
+/* The admin panel: the profile's shelf and rows, with forms opened inside a
+   row. Nothing new in look; only how the pieces sit. */
+
+.jqzz-admin-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.jqzz-admin-title {
+  flex: 1;
+  margin: 0;
+}
+.jqzz-admin-glance {
+  margin: 0;
+}
+
+/* seven sections: on a narrow screen only the open one keeps its word */
+@media (max-width: 760px) {
+  .jqzz-admin-tabs .jqzz-glide-label,
+  .jqzz-admin-tabs .jqzz-annot {
+    display: none;
+  }
+  .jqzz-admin-tabs > [aria-current="page"] .jqzz-glide-label {
+    display: inline;
+  }
+}
+
+.jqzz-admin-door,
+.jqzz-admin-announce {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+  margin: 24px auto 0;
+}
+.jqzz-admin-announce {
+  max-width: 560px;
+  margin-top: 8px;
+}
+.jqzz-admin-door .jqzz-play-btn,
+.jqzz-admin-announce .jqzz-play-btn {
+  align-self: flex-end;
+}
+.jqzz-admin-door .jqzz-play-note,
+.jqzz-admin-announce .jqzz-play-note {
+  margin: 0;
+  text-align: left;
+}
+.jqzz-play-note.good {
+  color: var(--ok);
+}
+
+/* what opens inside a row takes its whole width */
+.jqzz-admin-form,
+.jqzz-admin-key,
+.jqzz-admin-script,
+.jqzz-admin-msg {
+  flex-basis: 100%;
+  margin: 0;
+}
+.jqzz-admin-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.jqzz-admin-form label {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jqzz-admin-key {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.jqzz-admin-script {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jqzz-admin-textarea {
+  min-height: 320px;
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  resize: vertical;
+  tab-size: 2;
+}
+ul.jqzz-admin-msg {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.jqzz-admin-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.jqzz-admin-kick {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+.jqzz-admin-kick:hover:not(:disabled) {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.jqzz-admin-kick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.jqzz-admin-kick:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.jqzz-admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin-top: 8px;
+  text-decoration: none;
+}
+
+/* rows keep their buttons on the same line while there's room */
+.jqzz-admin .jqzz-shelf-actions {
+  flex-basis: auto;
+  margin-left: auto;
+}

@@ -100,10 +100,12 @@ public class UserController {
         if (user == null) return ResponseEntity.notFound().build();
         user.setOnline(true);
         User saved = userRepository.save(user);
-        messaging.convertAndSend(
-            "/topic/users",
-            (Object) Map.of("event", "user_logged_in", "user", saved)
-        );
+        if (!saved.isAdmin()) {
+            messaging.convertAndSend(
+                "/topic/users",
+                (Object) Map.of("event", "user_logged_in", "user", saved)
+            );
+        }
         keyCookie(response, saved.getLoginKey());
         return ResponseEntity.ok(self(saved));
     }
@@ -211,12 +213,14 @@ public class UserController {
 
     @GetMapping
     public Iterable<User> getAll() {
-        return userRepository.findAll();
+        // the admin account isn't one of the people
+        return userRepository.findAll().stream().filter(u -> !u.isAdmin()).toList();
     }
 
     @GetMapping("/{userId}")
     public ResponseEntity<User> getOne(@PathVariable String userId) {
         return userRepository.findById(userId)
+                .filter(u -> !u.isAdmin())
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -235,6 +239,7 @@ public class UserController {
         m.put("online", u.isOnline());
         m.put("googleLinked", u.isGoogleLinked());
         m.put("loginKey", u.getLoginKey());
+        if (u.isAdmin()) m.put("admin", true);
         return m;
     }
 

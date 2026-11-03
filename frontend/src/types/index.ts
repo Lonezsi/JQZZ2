@@ -70,6 +70,8 @@ export interface User {
   googleLinked?: boolean;
   /** only ever sent to the account itself: what logs it in */
   loginKey?: string;
+  /** the admin account, which can open #/admin */
+  admin?: boolean;
 }
 
 export interface SnippetStep {

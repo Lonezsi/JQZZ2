@@ -371,6 +371,11 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                       </span>
                     </div>
                     <SecretId id={current.loginKey ?? ""} />
+                    {current.admin && (
+                      <a className="jqzz-modal-btn ghost jqzz-admin-link" href="#/admin" onClick={onClose}>
+                        <Glyph name="SETTINGS" size={13} /> admin panel
+                      </a>
+                    )}
                     {googleOn && (
                       <>
                         <div className="jqzz-field-label">google</div>

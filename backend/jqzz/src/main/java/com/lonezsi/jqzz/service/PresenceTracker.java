@@ -169,6 +169,7 @@ public class PresenceTracker {
             if (user.isOnline() == online) return;
             user.setOnline(online);
             User saved = userRepository.save(user);
+            if (saved.isAdmin()) return;
             messaging.convertAndSend(
                 "/topic/users",
                 (Object) Map.of("event", online ? "user_logged_in" : "user_logged_out", "user", saved)

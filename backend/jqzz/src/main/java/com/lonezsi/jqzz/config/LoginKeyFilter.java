@@ -81,6 +81,11 @@ public class LoginKeyFilter extends OncePerRequestFilter {
         if ((key == null || key.isBlank()) && reading) key = cookie(request);
         String me = key == null || key.isBlank() ? null : users.findByLoginKey(key).map(User::getId).orElse(null);
         if (me != null) request.setAttribute(USER, me);
+        // the admin panel acts on other people's things by design; AdminController checks it's the admin
+        if (request.getRequestURI().startsWith("/admin/")) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         HttpServletRequest req = request;
         Set<String> claimed = new LinkedHashSet<>();
