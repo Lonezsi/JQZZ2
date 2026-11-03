@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { registerWorldItem, useShownSpace, type Place } from "../../hooks/useSpace";
+import { PLACES, registerWorldItem, useShownSpace, type Place } from "../../hooks/useSpace";
 
 /** what a planet is made of besides its ball: a ring, rings of signal, moons */
 const PARTS: Record<Place, { ring?: boolean; halo?: boolean; moons?: number }> = {
@@ -18,7 +18,7 @@ const PARTS: Record<Place, { ring?: boolean; halo?: boolean; moons?: number }> =
 };
 
 /** how long the planet you left stays in the sky: past the end of the camera's flight */
-const LINGER_MS = 3600;
+const LINGER_MS = 4800;
 
 /**
  * The planets in the sky: the one of the place you're in and, for a moment
@@ -37,18 +37,19 @@ export const Worlds: React.FC = () => {
   return (
     <>
       {here.map((p) => (
-        <World key={p} place={p} current={p === place} />
+        <World key={p} place={p} current={p === place} sameSpot={PLACES[p].alt === PLACES[place].alt && PLACES[p].col === PLACES[place].col} />
       ))}
     </>
   );
 };
 
-const World: React.FC<{ place: Place; current: boolean }> = ({ place, current }) => {
+/** sameSpot: the planet you left hangs where the new one does, so it fades out instead of sliding away */
+const World: React.FC<{ place: Place; current: boolean; sameSpot: boolean }> = ({ place, current, sameSpot }) => {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => (ref.current ? registerWorldItem(ref.current, place) : undefined), [place]);
   const parts = PARTS[place];
   return (
-    <div ref={ref} className={`world-item${current ? "" : " leaving"}`}>
+    <div ref={ref} className={`world-item${current ? "" : sameSpot ? " leaving fade" : " leaving"}`}>
       <div className="planet" data-kind={place}>
         {parts.ring && <span className="ring back" />}
         <span className="orb" />

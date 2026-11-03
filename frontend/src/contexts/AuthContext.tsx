@@ -35,12 +35,23 @@ export const AuthContext = createContext<AuthContextType>({
   updateUser: () => {},
 });
 
+/** how long the first load stays on the loading planet at the least, in ms since the page began loading */
+const BOOT_MIN_MS = 1000;
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [unreachable, setUnreachable] = useState(false);
+  // the site waits on the loading planet for BOOT_MIN_MS from when the page began to load,
+  // or for however long it took to load, whichever is more
+  const [held, setHeld] = useState(() => performance.now() < BOOT_MIN_MS);
+  useEffect(() => {
+    if (!held) return;
+    const t = window.setTimeout(() => setHeld(false), Math.max(0, BOOT_MIN_MS - performance.now()));
+    return () => window.clearTimeout(t);
+  }, [held]);
   const initializing = useRef(false);
 
   // the account as the server sent it to its owner: its key goes in this browser only
@@ -113,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser((prev) => (prev ? { ...prev, ...data } : null));
   }, []);
 
-  if (loading) {
+  if (loading || held) {
     return (
       <div className="jqzz-app">
         <InSpace place="loading" />

@@ -14,7 +14,8 @@ import { useLayoutEffect, useSyncExternalStore } from "react";
  * colour the place washes the sky with.
  */
 export const PLACES = {
-  loading: { alt: 0, col: 0, tint: "rgba(84, 108, 160, 0.17)" },
+  // only the first load: way below the front page, where the site waits until it's ready
+  loading: { alt: -1.5, col: 0, tint: "rgba(84, 108, 160, 0.17)" },
   game: { alt: 1, col: 0, tint: "rgba(176, 68, 124, 0.13)" },
   // the front page, with no quiz open: just left of the editor, so opening one slides across
   front: { alt: 2, col: -1, tint: "rgba(120, 92, 214, 0.1)" },
@@ -34,9 +35,29 @@ export type Place = keyof typeof PLACES;
 interface Shown {
   place: Place;
   phase: string;
+  /** counts the launches: the first move off the loading planet, which is the only one */
+  launch: number;
 }
 
-let shown: Shown = { place: "loading", phase: "IDLE" };
+let shown: Shown = { place: "loading", phase: "IDLE", launch: 0 };
+let launched = false;
+
+/** how the camera should fly when the place changes: wait this long, then take about this long */
+interface Flight {
+  delay: number;
+  ms: number;
+}
+
+/** how long a page took to load last time, by place: a flight to it lasts about that long */
+const loadTimes: Partial<Record<Place, number>> = {};
+export const recordLoad = (place: Place, ms: number) => {
+  loadTimes[place] = ms;
+};
+/** a page that has to load is flown to as slowly as it takes to load, between a snap and a long way round */
+export const loadFlightMs = (place: Place) => Math.min(3500, Math.max(600, loadTimes[place] ?? 800));
+
+/** the star shoots up first and the camera follows it: it waits for the star to get going */
+const LAUNCH: Flight = { delay: 0.45, ms: 3100 };
 const listeners = new Set<() => void>();
 
 export const shownSpace = () => shown;
@@ -46,9 +67,20 @@ export const subscribeSpace = (l: () => void) => {
   return () => void listeners.delete(l);
 };
 
-export function setSpace(place: Place, phase: string) {
+export function setSpace(place: Place, phase: string, flightMs?: number) {
   if (shown.place === place && shown.phase === phase) return;
-  shown = { place, phase };
+  const prev = shown;
+  let launch = prev.launch;
+  let flight: Flight | null = flightMs ? { delay: 0, ms: flightMs } : null;
+  if (!launched && prev.place === "loading" && place !== "loading") {
+    // the first time the site goes anywhere: up from the loading planet, behind a star
+    launched = true;
+    launch++;
+    flight = LAUNCH;
+  }
+  shown = { place, phase, launch };
+  const moves = PLACES[place].alt !== PLACES[prev.place].alt || PLACES[place].col !== PLACES[prev.place].col;
+  if (moves && flight) camera.flight = flight;
   listeners.forEach((l) => l());
 }
 
@@ -74,6 +106,10 @@ export const camera = {
   smoothTime: 0.5,
   toAlt: PLACES.loading.alt as number,
   toCol: PLACES.loading.col as number,
+  /** how the next flight goes, if it isn't the usual one; taken when the flight starts */
+  flight: null as Flight | null,
+  /** seconds still to wait before the flight starts */
+  delay: 0,
 };
 
 /** one axis, one frame: critically damped, so it eases out and in and keeps its speed when the goal moves */
@@ -92,8 +128,18 @@ export function stepCamera(dt: number, alt: number, col: number): boolean {
   if (alt !== camera.toAlt || col !== camera.toCol) {
     camera.toAlt = alt;
     camera.toCol = col;
-    // a longer way takes a little longer, not proportionally so
-    camera.smoothTime = 0.42 + 0.1 * Math.min(Math.max(Math.abs(alt - camera.x), Math.abs(col - camera.c)), 4);
+    const planned = camera.flight;
+    camera.flight = null;
+    camera.delay = planned?.delay ?? 0;
+    // a spring is within a hundredth of its goal after about 3.3 times its smooth time
+    camera.smoothTime = planned
+      ? planned.ms / 3300
+      : // a longer way takes a little longer, not proportionally so
+        0.42 + 0.1 * Math.min(Math.max(Math.abs(alt - camera.x), Math.abs(col - camera.c)), 4);
+  }
+  if (camera.delay > 0) {
+    camera.delay -= dt;
+    return true;
   }
   const [x, v] = spring(camera.x, camera.v, alt, camera.smoothTime, dt);
   const [c, cv] = spring(camera.c, camera.cv, col, camera.smoothTime, dt);

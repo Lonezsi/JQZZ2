@@ -243,7 +243,7 @@ function startLights(): () => void {
     last = now;
     // the camera flies toward the page's place; every frame while it does
     const there = PLACES[shownSpace().place];
-    const flying = stepCamera(Math.min(gap, 50) / 1000, there.alt, there.col);
+    const flying = stepCamera(Math.min(gap, 120) / 1000, there.alt, there.col);
     const scrolling = now < scroll.until || flying;
     if (scrolling) raf = requestAnimationFrame(frame);
     else next(settling ? 33 : 66);

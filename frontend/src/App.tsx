@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Loading } from "./components/common/Loading";
+import type { Place } from "./hooks/useSpace";
 import { Notifications } from "./components/common/Notifications";
 import { ReturnToGame } from "./components/common/ReturnToGame";
 import { Tooltip } from "./components/common/Tooltip";
@@ -39,12 +40,27 @@ function App() {
   return (
     <>
       {/* the shared background stays up while a page's code is on its way, with a small spinner if it takes a moment */}
-      <Suspense fallback={<Loading page />}>{page(where, a, b, c)}</Suspense>
+      <Suspense fallback={<Loading page place={routePlace(where, a, b)} />}>{page(where, a, b, c)}</Suspense>
       <Notifications />
       <ReturnToGame />
       <Tooltip />
     </>
   );
+}
+
+const SELF_TABS = ["history", "stash", "notifications", "you", "settings"];
+const OTHER_TABS = ["history", "shelf", "friends"];
+
+/** which place the page for a route lives in, known before its code has loaded */
+function routePlace(where?: string, a?: string, b?: string): Place | undefined {
+  if (where === "host" || where === "play" || where === "join") return "game";
+  if (where === "me") return (SELF_TABS.includes(a ?? "") ? a : "history") as Place;
+  if (where === "u") return (OTHER_TABS.includes(b ?? "") ? b : "history") as Place;
+  if (where === "history") return "history";
+  if (where === "stash") return "stash";
+  if (where === "admin") return "admin";
+  if (where === "draw") return undefined;
+  return "front";
 }
 
 function page(where?: string, a?: string, b?: string, c?: string) {
