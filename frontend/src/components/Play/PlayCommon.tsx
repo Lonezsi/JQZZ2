@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { GamePlayer, GameState } from "../../types/play";
 import { Avatar, resolveImage } from "../common/Avatar";
-import { Atmosphere } from "../common/Atmosphere";
+import { useAuraPhase } from "../../hooks/useAuraPhase";
 import { useSecondsLeft } from "../../hooks/useGame";
 import { typeLabel } from "../../utils/questionInfo";
 import { useAuth } from "../../contexts/AuthContext";
@@ -43,11 +43,18 @@ export const PlayFrame: React.FC<{ phase?: string; children: React.ReactNode }> 
   phase,
   children,
 }) => (
-  <div className="jqzz-app jqzz-play" data-phase={phase ?? "IDLE"}>
-    <Atmosphere />
-    <div className="jqzz-play-frame">{children}</div>
-  </div>
+  <PhasedFrame phase={phase ?? "IDLE"}>{children}</PhasedFrame>
 );
+
+/** the frame, which tells the shared background what phase it is in */
+const PhasedFrame: React.FC<{ phase: string; children: React.ReactNode }> = ({ phase, children }) => {
+  useAuraPhase(phase);
+  return (
+    <div className="jqzz-app jqzz-play" data-phase={phase}>
+      <div className="jqzz-play-frame">{children}</div>
+    </div>
+  );
+};
 
 /** A ring that empties as the step runs out, with the seconds in the middle. */
 export const Countdown: React.FC<{

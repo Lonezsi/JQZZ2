@@ -11,7 +11,6 @@ import type { User } from "../types";
 import { userService } from "../services/userService";
 import { KEY_STORE } from "../services/api";
 import { guestName } from "../utils/guestName";
-import { Atmosphere } from "../components/common/Atmosphere";
 
 interface AuthContextType {
   user: User | null;
@@ -116,7 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   if (loading) {
     return (
       <div className="jqzz-app">
-        <Atmosphere />
         <div className="jqzz-status-screen" role="status">
           <span className="jqzz-annot">{unreachable ? "server · down" : "server · connecting"}</span>
           <p>

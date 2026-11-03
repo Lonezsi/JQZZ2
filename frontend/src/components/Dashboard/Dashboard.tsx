@@ -9,7 +9,8 @@ import { Inspector } from "./Inspector/Inspector";
 import { CommandPalette } from "../Modals/CommandPalette";
 import { IdentityModal } from "../Modals/IdentityModal";
 import { quizService } from "../../services/quizService";
-import { Atmosphere, Imperfections } from "../common/Atmosphere";
+import { Imperfections } from "../common/Atmosphere";
+import { useAuraPhase } from "../../hooks/useAuraPhase";
 import { usePresence } from "../../hooks/usePresence";
 import { useSwipeDrawer } from "../../hooks/useSwipeDrawer";
 import { playService } from "../../services/playService";
@@ -123,6 +124,7 @@ export const Dashboard: React.FC = () => {
     ? (quiz?.actions.find((a) => a.id === firstSelectedId) ?? null)
     : null;
   const multipleSelected = selectedActionIdsArray.length > 1;
+  useAuraPhase(selectedAction?.phase ?? "IDLE");
 
   const handleStart = useCallback(() => {
     if (!quiz) {
@@ -200,7 +202,6 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="jqzz-app" data-phase={selectedAction?.phase ?? "IDLE"}>
-      <Atmosphere />
       <div className="jqzz-dash">
         <CommandPalette
           open={paletteOpen}

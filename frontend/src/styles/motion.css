@@ -2917,11 +2917,10 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   transition: stroke var(--dur-2) var(--ease);
 }
 
-/* while a page's code is loading: the app's background, nothing else */
+/* while a page's code is loading: the shared background shows through, nothing else */
 .jqzz-page-loading {
   position: fixed;
   inset: 0;
-  background: var(--bg);
 }
 
 /* ─── reduce effects: the setting for slower machines ─────────────────
