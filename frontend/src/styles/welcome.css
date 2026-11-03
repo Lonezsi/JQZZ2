@@ -458,6 +458,32 @@
 .p-spark { --d: 700ms; }
 .jqzz-poster-grid { --d: 100ms; }
 
+/* ─── the first load: the camera climbs to the star ──────────────────
+   The star the camera flies at is drawn on the background while it nears
+   (components/common/LaunchStar.tsx); the poster's own is hidden until that
+   one lands on it, then takes over. The rest of the poster arrives with the
+   camera. --launch-t is the time already gone when the poster mounted. */
+.jqzz-poster.launching .p-star {
+  opacity: 0;
+  transition: opacity 400ms var(--ease);
+  animation: none;
+}
+:root[data-star="landed"] .jqzz-poster.launching .p-star {
+  opacity: 1;
+}
+.jqzz-poster.launching .p-star-trail {
+  animation: none;
+}
+.jqzz-poster.launching .p-star-core {
+  animation: twinkle 4s var(--ease-in-out) calc(4200ms + var(--launch-t)) infinite alternate;
+}
+.jqzz-poster.launching .p-axis {
+  animation: axisDraw 1200ms var(--ease) calc(2400ms + var(--launch-t)) backwards;
+}
+.jqzz-poster.launching :is(.from-l, .from-r, .from-top, .p-arc, .jqzz-poster-grid, .p-spark) {
+  animation-delay: calc(2500ms + var(--d, 0ms) + var(--launch-t));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .jqzz-poster *,
   .jqzz-poster *::before,

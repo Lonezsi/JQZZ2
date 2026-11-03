@@ -374,107 +374,16 @@
   box-shadow: 0 0 18px rgba(255, 130, 60, 0.6);
 }
 
-/* ─── the star: shoots up from the loading planet, the camera follows it ───
-   Timed against the camera's launch (hooks/useSpace.ts): it waits 0.45s, then
-   takes about 3.1s. The star is up first, hangs high while the world rushes
-   down past it, then settles on the front page's planet and goes out. */
-.jqzz-star {
+/* the front page's star, seen from below on the first load (LaunchStar.tsx) */
+.jqzz-launch-star {
   position: fixed;
-  left: 88vw;
-  top: 0;
-  z-index: 0;
-  width: 0;
-  height: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  will-change: transform, opacity;
-  animation: starFlight 3.7s linear both;
+  mix-blend-mode: screen;
+  transition: opacity 400ms ease;
 }
-.jqzz-star .head {
-  position: absolute;
-  left: -4px;
-  top: -4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff8e6;
-  box-shadow:
-    0 0 10px 3px rgba(255, 238, 196, 0.95),
-    0 0 42px 14px rgba(255, 200, 120, 0.45);
-}
-.jqzz-star .head::before,
-.jqzz-star .head::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  background: linear-gradient(90deg, transparent, rgba(255, 244, 214, 0.9), transparent);
-}
-.jqzz-star .head::before {
-  width: 56px;
-  height: 1px;
-  translate: -50% -50%;
-}
-.jqzz-star .head::after {
-  width: 1px;
-  height: 56px;
-  translate: -50% -50%;
-  background: linear-gradient(180deg, transparent, rgba(255, 244, 214, 0.9), transparent);
-}
-.jqzz-star .trail {
-  position: absolute;
-  left: -1px;
-  top: 0;
-  width: 2px;
-  height: 38vh;
-  transform-origin: 50% 0;
-  background: linear-gradient(to bottom, rgba(255, 240, 205, 0.9), rgba(255, 200, 130, 0.35) 40%, transparent);
-  animation: starTrail 3.7s linear both;
-}
-@keyframes starFlight {
-  0% {
-    transform: translateY(62vh) scale(0.5);
-    opacity: 0;
-    animation-timing-function: ease-out;
-  }
-  4% {
-    opacity: 1;
-    animation-timing-function: cubic-bezier(0.55, 0, 0.15, 1);
-  }
-  22% {
-    transform: translateY(24vh) scale(1);
-    opacity: 1;
-    animation-timing-function: linear;
-  }
-  78% {
-    transform: translateY(24vh) scale(1);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  100% {
-    transform: translateY(56vh) scale(0.5);
-    opacity: 0;
-  }
-}
-@keyframes starTrail {
-  0% {
-    transform: scaleY(0.1);
-  }
-  10% {
-    transform: scaleY(1.1);
-  }
-  22% {
-    transform: scaleY(0.9);
-  }
-  45% {
-    transform: scaleY(1.5);
-  }
-  78% {
-    transform: scaleY(0.7);
-  }
-  100% {
-    transform: scaleY(0);
-  }
-}
-:root[data-effects="reduced"] .jqzz-star {
-  display: none;
+.jqzz-launch-star.gone {
+  opacity: 0;
 }

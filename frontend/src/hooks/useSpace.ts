@@ -14,8 +14,8 @@ import { useLayoutEffect, useSyncExternalStore } from "react";
  * colour the place washes the sky with.
  */
 export const PLACES = {
-  // only the first load: way below the front page, where the site waits until it's ready
-  loading: { alt: -1.5, col: 0, tint: "rgba(84, 108, 160, 0.17)" },
+  // only the first load: way below the front page, straight under it, where the site waits until it's ready
+  loading: { alt: -1.5, col: -1, tint: "rgba(84, 108, 160, 0.17)" },
   game: { alt: 1, col: 0, tint: "rgba(176, 68, 124, 0.13)" },
   // the front page, with no quiz open: just left of the editor, so opening one slides across
   front: { alt: 2, col: -1, tint: "rgba(120, 92, 214, 0.1)" },
@@ -35,17 +35,21 @@ export type Place = keyof typeof PLACES;
 interface Shown {
   place: Place;
   phase: string;
-  /** counts the launches: the first move off the loading planet, which is the only one */
-  launch: number;
 }
 
-let shown: Shown = { place: "loading", phase: "IDLE", launch: 0 };
+let shown: Shown = { place: "loading", phase: "IDLE" };
 let launched = false;
+let launchedAt = -Infinity;
+
+/** how long ago the launch was, in ms; the front page's star, mounting late, joins it where it's got to */
+export const sinceLaunch = () => performance.now() - launchedAt;
 
 /** how the camera should fly when the place changes: wait this long, then take about this long */
 interface Flight {
   delay: number;
   ms: number;
+  /** straight up: the planets don't lean sideways on the way */
+  straight?: boolean;
 }
 
 /** how long a page took to load last time, by place: a flight to it lasts about that long */
@@ -56,8 +60,8 @@ export const recordLoad = (place: Place, ms: number) => {
 /** a page that has to load is flown to as slowly as it takes to load, between a snap and a long way round */
 export const loadFlightMs = (place: Place) => Math.min(3500, Math.max(600, loadTimes[place] ?? 800));
 
-/** the star shoots up first and the camera follows it: it waits for the star to get going */
-const LAUNCH: Flight = { delay: 0.45, ms: 3100 };
+/** the poster's star shoots up first and the camera follows it: it waits for the star to get going */
+const LAUNCH: Flight = { delay: 0.45, ms: 3100, straight: true };
 const listeners = new Set<() => void>();
 
 export const shownSpace = () => shown;
@@ -70,15 +74,14 @@ export const subscribeSpace = (l: () => void) => {
 export function setSpace(place: Place, phase: string, flightMs?: number) {
   if (shown.place === place && shown.phase === phase) return;
   const prev = shown;
-  let launch = prev.launch;
   let flight: Flight | null = flightMs ? { delay: 0, ms: flightMs } : null;
   if (!launched && prev.place === "loading" && place !== "loading") {
-    // the first time the site goes anywhere: up from the loading planet, behind a star
+    // the first time the site goes anywhere: up from the loading planet, behind the front page's star
     launched = true;
-    launch++;
+    launchedAt = performance.now();
     flight = LAUNCH;
   }
-  shown = { place, phase, launch };
+  shown = { place, phase };
   const moves = PLACES[place].alt !== PLACES[prev.place].alt || PLACES[place].col !== PLACES[prev.place].col;
   if (moves && flight) camera.flight = flight;
   listeners.forEach((l) => l());
@@ -110,6 +113,8 @@ export const camera = {
   flight: null as Flight | null,
   /** seconds still to wait before the flight starts */
   delay: 0,
+  /** how much a climb leans sideways: none on a straight flight */
+  lean: 1,
 };
 
 /** one axis, one frame: critically damped, so it eases out and in and keeps its speed when the goal moves */
@@ -131,6 +136,7 @@ export function stepCamera(dt: number, alt: number, col: number): boolean {
     const planned = camera.flight;
     camera.flight = null;
     camera.delay = planned?.delay ?? 0;
+    camera.lean = planned?.straight ? 0 : 1;
     // a spring is within a hundredth of its goal after about 3.3 times its smooth time
     camera.smoothTime = planned
       ? planned.ms / 3300
@@ -170,6 +176,9 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/** whether the camera travels at all (it doesn't with effects turned down or less motion asked for) */
+export const inMotion = () => motion;
+
 export function setMotion(on: boolean) {
   motion = on;
   if (!on) worldItems.forEach(placeItem);
@@ -187,7 +196,7 @@ export function placeItem(it: WorldItem) {
   // the place you're going to is visible from a long way off; the one you left goes at once
   const o = shown.place === it.place ? 1 - smooth(0.5, 2.4, d) : 1 - smooth(0.3, 1.5, d);
   // a screen along is a screen along; a climb leans a little sideways too
-  const x = -dc * window.innerWidth * TRAVEL - dy * 0.05 * window.innerWidth;
+  const x = -dc * window.innerWidth * TRAVEL - dy * 0.05 * camera.lean * window.innerWidth;
   it.el.style.transform = `translate3d(${x.toFixed(1)}px, ${(dy * window.innerHeight * TRAVEL).toFixed(1)}px, 0)`;
   it.el.style.opacity = o.toFixed(3);
 }
