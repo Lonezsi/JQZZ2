@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { camera, inMotion, PLACES, shownSpace, sinceLaunch } from "../../hooks/useSpace";
 import { paintStar } from "../Dashboard/Welcome/starPaint";
 
@@ -8,12 +8,19 @@ const clamp = (x: number) => Math.min(1, Math.max(0, x));
  * The front page's star, seen from the loading planet: while the site loads
  * it's a small line of light at the top of the sky. When the camera climbs,
  * it comes down toward where it lives on the poster and grows as we near it,
- * the line opening into the whole star; on arrival it hands over to the
- * poster's own (Welcome, .launching) and goes. Drawn only while it changes.
+ * the line opening into the whole star. On arrival it stays put, right on the
+ * poster's own, which grows out of it (welcome.css), so the star only seems
+ * to shine harder; then this one fades away under it. Drawn only while it
+ * changes. :root[data-star] says how far it's got: "flying", "landed".
  */
 export const LaunchStar: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
   const [gone, setGone] = useState(false);
+  // the poster's star and the sidebar wait for it (welcome.css, sidebar.css)
+  useLayoutEffect(() => {
+    document.documentElement.dataset.star = "flying";
+    return () => void delete document.documentElement.dataset.star;
+  }, []);
   const [over, setOver] = useState(false);
 
   useEffect(() => {
@@ -24,18 +31,33 @@ export const LaunchStar: React.FC = () => {
     let raf = 0;
     let drawn = "";
     let landed = false;
+    let finished = false;
+    const land = () => {
+      if (landed) return;
+      landed = true;
+      document.documentElement.dataset.star = "landed";
+      window.setTimeout(() => setGone(true), 1500);
+      // done: nothing waits on it any more, and nothing is drawn
+      window.setTimeout(() => {
+        finished = true;
+        cancelAnimationFrame(raf);
+        window.clearInterval(backstop);
+        delete document.documentElement.dataset.star;
+        setOver(true);
+      }, 3600);
+    };
+    // in a tab nobody's looking at there are no frames: the page mustn't wait on them
+    const backstop = window.setInterval(() => shownSpace().place !== "loading" && sinceLaunch() > 7000 && land(), 1000);
     const frame = () => {
+      if (finished) return;
       raf = requestAnimationFrame(frame);
       const { place } = shownSpace();
       const to = PLACES[place === "loading" ? "front" : place].alt;
       // how far up we are: none while loading; with the camera still, there at once
-      const near = place === "loading" ? 0 : inMotion() ? clamp((camera.x - from) / (to - from)) : 1;
-      if (!landed && place !== "loading" && (near > 0.985 || sinceLaunch() > 6000)) {
-        landed = true;
-        document.documentElement.dataset.star = "landed";
-        setGone(true);
-        window.setTimeout(() => setOver(true), 450);
-      }
+      let near = place === "loading" ? 0 : inMotion() ? clamp((camera.x - from) / (to - from)) : 1;
+      // landed when the camera has all but stopped; from then on it sits exactly on the poster's
+      if (place !== "loading" && (near > 0.998 || sinceLaunch() > 6000)) land();
+      if (landed) near = 1;
 
       // where it lives: the poster's star, once the poster is there
       const W = window.innerWidth;
@@ -73,7 +95,10 @@ export const LaunchStar: React.FC = () => {
       paintStar(ctx, tx * k, y * k, H * zoom * k, V * Math.max(zoom, 0.22) * k, ((V * 2) / 760) * zoom * k, k, near, false);
     };
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearInterval(backstop);
+    };
   }, []);
 
   if (over) return null;

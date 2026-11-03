@@ -461,15 +461,18 @@
 /* ─── the first load: the camera climbs to the star ──────────────────
    The star the camera flies at is drawn on the background while it nears
    (components/common/LaunchStar.tsx); the poster's own is hidden until that
-   one lands on it, then takes over. The rest of the poster arrives with the
+   one lands on it, then grows out of it. The rest of the poster arrives with the
    camera. --launch-t is the time already gone when the poster mounted. */
 .jqzz-poster.launching .p-star {
-  opacity: 0;
-  transition: opacity 400ms var(--ease);
   animation: none;
+  /* it grows out of the landed star's centre, on top of it: the star shines harder */
+  transition:
+    opacity 900ms ease-out,
+    scale 1500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-:root[data-star="landed"] .jqzz-poster.launching .p-star {
-  opacity: 1;
+:root[data-star="flying"] .jqzz-poster.launching .p-star {
+  opacity: 0;
+  scale: 0.35;
 }
 .jqzz-poster.launching .p-star-trail {
   animation: none;

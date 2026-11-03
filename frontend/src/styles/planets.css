@@ -382,7 +382,8 @@
   height: 100%;
   pointer-events: none;
   mix-blend-mode: screen;
-  transition: opacity 400ms ease;
+  /* it goes only once the poster's star has grown over it, and slowly */
+  transition: opacity 1600ms ease-in-out;
 }
 .jqzz-launch-star.gone {
   opacity: 0;
