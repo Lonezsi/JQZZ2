@@ -2917,10 +2917,42 @@ body:has(.jqzz-return-card + .jqzz-return-card) .jqzz-play-frame {
   transition: stroke var(--dur-2) var(--ease);
 }
 
-/* while a page's code is loading: the shared background shows through, nothing else */
-.jqzz-page-loading {
+/* ─── loading: a small spinner, and only if it takes a moment ─────────
+   Fades in after 250ms, so a load that's quick never shows it. While a
+   page's code is loading it sits over the shared background, centred. */
+.jqzz-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 0;
+  color: var(--text-2);
+  animation: loadingIn var(--dur-2) var(--ease) 250ms backwards;
+}
+.jqzz-loading.page {
   position: fixed;
   inset: 0;
+  z-index: 1;
+  padding: 0;
+}
+.jqzz-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes loadingIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ─── reduce effects: the setting for slower machines ─────────────────

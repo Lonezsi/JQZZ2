@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { Loading } from "./components/common/Loading";
 import { Notifications } from "./components/common/Notifications";
 import { ReturnToGame } from "./components/common/ReturnToGame";
 import { Tooltip } from "./components/common/Tooltip";
@@ -37,8 +38,8 @@ function App() {
   const [, where, a, b, c] = route.split("/");
   return (
     <>
-      {/* the page's own background stands in for the moment its code is on its way */}
-      <Suspense fallback={<div className="jqzz-page-loading" aria-busy="true" />}>{page(where, a, b, c)}</Suspense>
+      {/* the shared background stays up while a page's code is on its way, with a small spinner if it takes a moment */}
+      <Suspense fallback={<Loading page />}>{page(where, a, b, c)}</Suspense>
       <Notifications />
       <ReturnToGame />
       <Tooltip />

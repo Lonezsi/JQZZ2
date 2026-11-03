@@ -14,6 +14,7 @@ import { BackButton } from "../common/BackButton";
 import { Confetti } from "../common/Confetti";
 import { InvitePeople } from "./InvitePeople";
 import { Glyph } from "../common/Glyph";
+import { Loading } from "../common/Loading";
 
 /** The big screen: what the room looks at while the host runs the game. */
 export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
@@ -26,7 +27,7 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
     return (
       <PlayFrame>
         <div className="jqzz-play-center">
-          <span className="jqzz-annot">{error ?? "loading the game..."}</span>
+          {error ? <span className="jqzz-annot">{error}</span> : <Loading label="loading the game" />}
           {error && (
             <button className="jqzz-play-btn" onClick={() => go("/")}>
               back

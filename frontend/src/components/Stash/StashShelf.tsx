@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { Loading } from "../common/Loading";
 import { useQuiz } from "../../contexts/QuizContext";
 import { go } from "../../hooks/useHashRoute";
 import { errorMessage } from "../../services/api";
@@ -161,7 +162,7 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
         </p>
       )}
       {error && <p className="jqzz-play-note bad">{error}</p>}
-      {!data && !error && <p className="jqzz-annot jqzz-shelf-empty">loading...</p>}
+      {!data && !error && <Loading label="loading your stash" />}
 
       {data && searching && query.includes(":") && (
         <CopyByRef query={query.trim()} kinds={shown.map((s) => s.kind).filter((k) => k !== "TYPE")} me={me} onAdded={put} />

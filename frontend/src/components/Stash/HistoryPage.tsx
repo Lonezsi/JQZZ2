@@ -8,6 +8,7 @@ import type { HistoryRecord, HistorySummary, QuestionResult, StashedQuestion } f
 import { PlayFrame } from "../Play/PlayCommon";
 import { BackButton } from "../common/BackButton";
 import { Glyph } from "../common/Glyph";
+import { Loading } from "../common/Loading";
 import { plural, when } from "../../utils/format";
 import { typeIcon, typeLabel } from "../../utils/questionInfo";
 
@@ -102,7 +103,7 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
         </header>
         <main className="jqzz-shelf">
           {error && <p className="jqzz-play-note bad">{error}</p>}
-          {!record && !error && <p className="jqzz-annot jqzz-shelf-empty">loading...</p>}
+          {!record && !error && <Loading label="loading the game" />}
           {record && (
             <div className="jqzz-game">
               <h1 className="jqzz-stage-title OEF jqzz-chroma">{record.quizName || "untitled quiz"}</h1>

@@ -116,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return (
       <div className="jqzz-app">
         <div className="jqzz-status-screen" role="status">
+          {!unreachable && <span className="jqzz-spinner" aria-hidden="true" />}
           <span className="jqzz-annot">{unreachable ? "server · down" : "server · connecting"}</span>
           <p>
             {unreachable

@@ -22,6 +22,7 @@ import { PlayFrame } from "../Play/PlayCommon";
 import { BackButton } from "../common/BackButton";
 import { Glide } from "../common/Glide";
 import { Glyph } from "../common/Glyph";
+import { Loading } from "../common/Loading";
 import { SecretId } from "../common/SecretId";
 import axios from "axios";
 
@@ -262,7 +263,7 @@ const Rows: React.FC<{
   children: React.ReactNode;
 }> = ({ items, shown, error, empty, children }) => {
   if (error) return <p className="jqzz-play-note bad">{error}</p>;
-  if (!items) return <p className="jqzz-shelf-empty">loading</p>;
+  if (!items) return <Loading />;
   if (!shown) return <p className="jqzz-shelf-empty">{items.length ? "nothing matches that." : empty}</p>;
   return <ul className="jqzz-shelf-list">{children}</ul>;
 };
