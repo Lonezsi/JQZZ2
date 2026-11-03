@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DitherBlobs } from "./DitherBlobs";
 import { Clouds } from "./Clouds";
+import { Worlds } from "./Worlds";
+import { PLACES, camera, placeItem, setMotion, shownSpace, stepCamera, subscribeSpace, worldItems } from "../../hooks/useSpace";
 import { tickClouds } from "./dither";
 import { effectsChoice, onEffectsChange } from "../../utils/theme";
 
@@ -20,8 +22,10 @@ export const Atmosphere: React.FC = () => {
       {PHASES.map((p) => (
         <span key={p} className={`phase phase-${p}`} />
       ))}
-      {/* the lit planet: furthest back, the dots and clouds pass in front */}
-      <span className="planet" />
+      {/* each place washes the sky its own colour */}
+      <span className="tint" />
+      {/* the planets of the place you're in and the one you left: furthest back, the dots and clouds pass in front */}
+      <Worlds />
       <DitherBlobs />
       <Clouds />
       <Texture className="tex-floor" src={`${BASE}bg.webp`} filter={() => "contrast(0.5)"} />
@@ -190,6 +194,8 @@ function scrollY(): number {
   return el.scrollTop;
 }
 const BURST_LEAN: [number, number] = [24, 18];
+/** screens of scroll a cloud sees per screen the camera climbs (it then moves by its depth's share of that) */
+const CLOUD_CLIMB = 4;
 
 let users = 0;
 const EPOCH = performance.now();
@@ -208,6 +214,11 @@ function startLights(): () => void {
   let lights: HTMLElement[] = [];
   let bursts: HTMLElement[] = [];
   let foundAt = -Infinity;
+  // the camera starts where the page is, so the loop starting isn't a journey
+  camera.x = camera.toAlt = PLACES[shownSpace().place].alt;
+  camera.c = camera.toCol = PLACES[shownSpace().place].col;
+  camera.v = camera.cv = 0;
+  setMotion(true);
 
   // woken by a timer at the rate it needs, rather than on every screen refresh
   // only to skip most of them; the frame itself still lands on a refresh
@@ -225,17 +236,22 @@ function startLights(): () => void {
     raf = requestAnimationFrame(frame);
   };
   wakeLights = wake;
+  const offSpace = subscribeSpace(wake);
   const frame = (now: number) => {
     const settling = Math.abs(target.x - lean.x) + Math.abs(target.y - lean.y) > 0.002;
-    const scrolling = now < scroll.until;
-    if (scrolling) raf = requestAnimationFrame(frame);
-    else next(settling ? 33 : 66);
     const gap = last ? now - last : 66;
     last = now;
+    // the camera flies toward the page's place; every frame while it does
+    const there = PLACES[shownSpace().place];
+    const flying = stepCamera(Math.min(gap, 50) / 1000, there.alt, there.col);
+    const scrolling = now < scroll.until || flying;
+    if (scrolling) raf = requestAnimationFrame(frame);
+    else next(settling ? 33 : 66);
+    if (flying) worldItems.forEach(placeItem);
     if (now - foundAt > 1000) {
       lights = Array.from(
         document.querySelectorAll<HTMLElement>(
-          ".jqzz-aura > .phase, .jqzz-aura > .warm, .jqzz-aura > .shadow, .jqzz-aura > .planet",
+          ".jqzz-aura > .phase, .jqzz-aura > .warm, .jqzz-aura > .shadow, .jqzz-aura .planet",
         ),
       );
       bursts = Array.from(document.querySelectorAll<HTMLElement>(".jqzz-welcome-burst"));
@@ -259,14 +275,15 @@ function startLights(): () => void {
       const ty = light.from[1] + (light.to[1] - light.from[1]) * p;
       const s = light.from[2] + (light.to[2] - light.from[2]) * p;
       el.style.transform =
-        `translate3d(${(lean.x * light.lean[0]).toFixed(1)}px, ${(lean.y * light.lean[1] - sy * light.scroll).toFixed(1)}px, 0) ` +
+        `translate3d(${(lean.x * light.lean[0] - camera.cv * window.innerWidth * light.scroll * 0.8).toFixed(1)}px, ${(lean.y * light.lean[1] - sy * light.scroll + camera.v * window.innerHeight * light.scroll * 0.8).toFixed(1)}px, 0) ` +
         `translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%) scale(${s.toFixed(4)})`;
     });
     bursts.forEach((el) => {
       el.style.translate = `${(lean.x * BURST_LEAN[0]).toFixed(1)}px ${(lean.y * BURST_LEAN[1]).toFixed(1)}px`;
     });
     // the clouds ride the same clock; they redraw only when one moves a whole cell
-    tickClouds(secs, lean.x, lean.y, sy, scrolling, now);
+    // flying up is like scrolling up: the nearer the cloud, the further it falls past
+    tickClouds(secs, lean.x, lean.y, sy - camera.x * window.innerHeight * CLOUD_CLIMB, scrolling, now, -camera.c * window.innerWidth * CLOUD_CLIMB);
   };
   raf = requestAnimationFrame(frame);
   const stopListening = listen();
@@ -278,6 +295,8 @@ function startLights(): () => void {
     cancelAnimationFrame(raf);
     stopListening();
     wakeLights = null;
+    offSpace();
+    setMotion(false);
     document.removeEventListener("scroll", onScroll, { capture: true });
     window.removeEventListener("hashchange", onRoute);
     window.removeEventListener("popstate", onRoute);

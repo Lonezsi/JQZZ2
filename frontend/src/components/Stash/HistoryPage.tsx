@@ -95,7 +95,7 @@ export const HistoryPage: React.FC<{ id: string }> = ({ id }) => {
   };
 
   return (
-    <PlayFrame phase="ANSWER">
+    <PlayFrame phase="ANSWER" space="history">
       <div className="jqzz-space jqzz-space-history">
         <header className="jqzz-play-bar compact">
           <BackButton to="/me/history" title="all your games" />

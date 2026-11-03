@@ -1,0 +1,363 @@
+/* The planets (components/common/Worlds.tsx): one per place, so you can tell
+   where you are. Each is a ball (.orb) lit from its top right, and what it has
+   besides: a ring (.ring, a back half behind the ball and a front half over
+   it), rings of signal (.halo), moons. Positioned by the camera
+   (hooks/useSpace.ts); .planet itself leans with the pointer (Atmosphere.tsx).
+   Colours mix with --bg, so the light theme gets paler planets, not dark ones. */
+
+.jqzz-aura .world-item {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.jqzz-aura .planet {
+  --size: min(42vmin, 400px);
+  --right: 6vw;
+  --bottom: 9vh;
+  --rim: #ffb0cf;
+  --body: radial-gradient(
+    circle at 68% 26%,
+    color-mix(in srgb, var(--bg) 55%, #4a3488) 0,
+    color-mix(in srgb, var(--bg) 82%, #241a44) 46%,
+    var(--bg) 78%
+  );
+  --glow:
+    0 0 0 1px rgba(255, 236, 244, 0.18), 12px -18px 60px rgba(255, 160, 195, 0.22),
+    -30px 40px 160px rgba(140, 110, 255, 0.22);
+  --ring: rgba(255, 214, 235, 0.3);
+  position: absolute;
+  width: var(--size);
+  aspect-ratio: 1;
+  right: var(--right);
+  bottom: var(--bottom);
+  /* a planet arrives and leaves by fading too, besides where the camera puts it */
+  transition: opacity 1.1s var(--ease-in-out);
+  animation: planetIn 1.1s var(--ease-in-out) backwards;
+}
+.jqzz-aura .world-item.leaving .planet {
+  opacity: 0;
+}
+@keyframes planetIn {
+  from {
+    opacity: 0;
+  }
+}
+.jqzz-aura .planet > * {
+  position: absolute;
+  border-radius: 50%;
+}
+
+/* the ball, and its lit edge: a bright crescent and a softer, wider one round it */
+.jqzz-aura .planet .orb {
+  inset: 0;
+  background: var(--body);
+  box-shadow: var(--glow);
+}
+.jqzz-aura .planet .orb::before,
+.jqzz-aura .planet .orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  -webkit-mask: conic-gradient(from -40deg, transparent 0, #000 50deg, #000 120deg, transparent 175deg);
+  mask: conic-gradient(from -40deg, transparent 0, #000 50deg, #000 120deg, transparent 175deg);
+}
+.jqzz-aura .planet .orb::before {
+  box-shadow:
+    inset -2px 2px 0 color-mix(in srgb, var(--rim) 30%, white),
+    inset -10px 10px 26px -6px color-mix(in srgb, var(--rim) 60%, transparent);
+}
+.jqzz-aura .planet .orb::after {
+  inset: -14px;
+  box-shadow: 0 0 34px 6px color-mix(in srgb, var(--rim) 50%, transparent);
+  filter: blur(2px);
+}
+
+/* a ring round the ball: the back half is under it, the front half over it */
+.jqzz-aura .planet .ring {
+  left: -42%;
+  right: -42%;
+  top: 33%;
+  bottom: 33%;
+  border: var(--ring-w, 6px) var(--ring-style, solid) var(--ring);
+  transform: rotate(var(--tilt, -16deg));
+}
+.jqzz-aura .planet .ring.front {
+  clip-path: inset(50% 0 0 0);
+}
+
+/* rings of signal */
+.jqzz-aura .planet .halo {
+  inset: 0;
+  box-shadow:
+    0 0 0 14px color-mix(in srgb, var(--rim) 14%, transparent),
+    0 0 0 34px color-mix(in srgb, var(--rim) 9%, transparent),
+    0 0 0 60px color-mix(in srgb, var(--rim) 5%, transparent);
+}
+
+.jqzz-aura .planet .moon {
+  width: var(--m, 9%);
+  aspect-ratio: 1;
+  background: radial-gradient(circle at 70% 28%, var(--moon-hi, #e9dcf5), var(--moon-lo, #46406a) 72%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 0 18px rgba(200, 190, 255, 0.18);
+}
+
+/* ─── loading: far below, small and dim ─── */
+.planet[data-kind="loading"] {
+  --size: min(20vmin, 190px);
+  --right: 14vw;
+  --bottom: 22vh;
+  --rim: #9fb4dc;
+  --body: radial-gradient(circle at 70% 24%, color-mix(in srgb, var(--bg) 66%, #3b4a70) 0, var(--bg) 72%);
+  --glow:
+    0 0 0 1px rgba(170, 190, 230, 0.14),
+    0 0 70px rgba(110, 140, 210, 0.14);
+}
+
+/* ─── in a game: an ember, cratered ─── */
+.planet[data-kind="game"] {
+  --size: min(38vmin, 360px);
+  --right: 8vw;
+  --bottom: 10vh;
+  --rim: #ff9a6b;
+  --body:
+    radial-gradient(circle at 30% 62%, rgba(0, 0, 0, 0.3) 0 5%, transparent 5.6%),
+    radial-gradient(circle at 54% 42%, rgba(0, 0, 0, 0.26) 0 7.5%, transparent 8.1%),
+    radial-gradient(circle at 72% 72%, rgba(0, 0, 0, 0.28) 0 4%, transparent 4.6%),
+    radial-gradient(circle at 36% 30%, rgba(0, 0, 0, 0.2) 0 3%, transparent 3.6%),
+    radial-gradient(
+      circle at 68% 26%,
+      color-mix(in srgb, var(--bg) 48%, #8a3326) 0,
+      color-mix(in srgb, var(--bg) 78%, #3d1228) 50%,
+      var(--bg) 82%
+    );
+  --glow:
+    0 0 0 1px rgba(255, 190, 150, 0.2), 12px -18px 60px rgba(255, 130, 90, 0.22),
+    -30px 40px 150px rgba(200, 60, 120, 0.2);
+}
+
+/* ─── the editor: a wireframe, seen from its pole ─── */
+.planet[data-kind="editor"] {
+  --size: min(44vmin, 430px);
+  --right: 5vw;
+  --bottom: 8vh;
+  --rim: #7fd0ff;
+  --body:
+    repeating-radial-gradient(circle at 50% 50%, rgba(130, 190, 255, 0.2) 0 1px, transparent 1px 26px),
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(130, 190, 255, 0.16) 0 0.7deg, transparent 0.7deg 15deg),
+    radial-gradient(
+      circle at 68% 26%,
+      color-mix(in srgb, var(--bg) 52%, #2a5ec8) 0,
+      color-mix(in srgb, var(--bg) 82%, #14285a) 50%,
+      var(--bg) 80%
+    );
+  --glow:
+    0 0 0 1px rgba(160, 215, 255, 0.2), 12px -18px 60px rgba(110, 190, 255, 0.2),
+    -30px 40px 160px rgba(70, 110, 255, 0.22);
+}
+
+/* ─── profile, history: an ice giant with a ring ─── */
+.planet[data-kind="history"] {
+  --size: min(36vmin, 340px);
+  --right: 12vw;
+  --bottom: 14vh;
+  --ring-w: 7px;
+}
+
+/* ─── stash: a banded gas giant with two moons ─── */
+.planet[data-kind="stash"] {
+  --size: min(46vmin, 440px);
+  --right: 4vw;
+  --bottom: 6vh;
+  --rim: #ffc98a;
+  --body:
+    repeating-linear-gradient(
+      -8deg,
+      rgba(255, 214, 160, 0.2) 0 5%,
+      rgba(110, 56, 22, 0.24) 5% 9.5%,
+      rgba(255, 178, 100, 0.13) 9.5% 15%
+    ),
+    radial-gradient(
+      circle at 68% 26%,
+      color-mix(in srgb, var(--bg) 46%, #b8703a) 0,
+      color-mix(in srgb, var(--bg) 78%, #4a2412) 50%,
+      var(--bg) 82%
+    );
+  --glow:
+    0 0 0 1px rgba(255, 220, 170, 0.2), 12px -18px 60px rgba(255, 170, 90, 0.2),
+    -30px 40px 150px rgba(190, 90, 40, 0.2);
+  --moon-hi: #f6e2c4;
+  --moon-lo: #5a4030;
+}
+.planet[data-kind="stash"] .m1 {
+  --m: 8%;
+  left: -12%;
+  top: 22%;
+}
+.planet[data-kind="stash"] .m2 {
+  --m: 5%;
+  left: -4%;
+  top: 6%;
+}
+
+/* ─── their shelf: a pearl with a scatter of small moons ─── */
+.planet[data-kind="shelf"] {
+  --size: min(34vmin, 320px);
+  --right: 12vw;
+  --bottom: 12vh;
+  --rim: #ffe3ee;
+  --body: radial-gradient(
+    circle at 68% 26%,
+    color-mix(in srgb, var(--bg) 40%, #d9b8d4) 0,
+    color-mix(in srgb, var(--bg) 74%, #6a4a72) 50%,
+    var(--bg) 80%
+  );
+  --glow:
+    0 0 0 1px rgba(255, 235, 245, 0.22), 12px -18px 60px rgba(255, 190, 225, 0.2),
+    -30px 40px 150px rgba(190, 130, 210, 0.2);
+  --moon-hi: #fff4fa;
+  --moon-lo: #8a6a92;
+}
+.planet[data-kind="shelf"] .m1 {
+  --m: 5%;
+  left: -10%;
+  top: 10%;
+}
+.planet[data-kind="shelf"] .m2 {
+  --m: 3.5%;
+  left: -16%;
+  top: 34%;
+}
+.planet[data-kind="shelf"] .m3 {
+  --m: 4.5%;
+  left: -6%;
+  top: 62%;
+}
+.planet[data-kind="shelf"] .m4 {
+  --m: 3%;
+  left: 12%;
+  top: -10%;
+}
+
+/* ─── notifications: small and bright, sending out rings ─── */
+.planet[data-kind="notifications"] {
+  --size: min(24vmin, 230px);
+  --right: 16vw;
+  --bottom: 20vh;
+  --rim: #a6e6ff;
+  --body: radial-gradient(
+    circle at 68% 26%,
+    color-mix(in srgb, var(--bg) 30%, #9fe0ff) 0,
+    color-mix(in srgb, var(--bg) 70%, #2a6c9a) 52%,
+    var(--bg) 84%
+  );
+  --glow:
+    0 0 0 1px rgba(190, 235, 255, 0.3),
+    0 0 80px rgba(120, 210, 255, 0.28);
+}
+
+/* ─── about you: oceans, land and swirled cloud, with a moon ─── */
+.planet[data-kind="you"] {
+  --size: min(40vmin, 380px);
+  --right: 7vw;
+  --bottom: 9vh;
+  --rim: #ffd48e;
+  --body:
+    radial-gradient(ellipse 34% 8% at 40% 30%, rgba(255, 255, 255, 0.26), transparent),
+    radial-gradient(ellipse 28% 7% at 62% 52%, rgba(255, 255, 255, 0.2), transparent),
+    radial-gradient(ellipse 36% 8% at 34% 70%, rgba(255, 255, 255, 0.22), transparent),
+    radial-gradient(ellipse 22% 14% at 34% 58%, rgba(90, 200, 120, 0.46), transparent),
+    radial-gradient(ellipse 14% 20% at 64% 40%, rgba(90, 200, 120, 0.38), transparent),
+    radial-gradient(
+      circle at 68% 26%,
+      color-mix(in srgb, var(--bg) 32%, #3fb0d0) 0,
+      color-mix(in srgb, var(--bg) 66%, #1a5e7c) 52%,
+      color-mix(in srgb, var(--bg) 92%, #0c2a3c) 82%
+    );
+  --glow:
+    0 0 0 1px rgba(210, 240, 255, 0.2), 12px -18px 60px rgba(255, 200, 140, 0.18),
+    -30px 40px 150px rgba(60, 170, 190, 0.22);
+  --moon-hi: #f2efe6;
+  --moon-lo: #55555f;
+}
+.planet[data-kind="you"] .m1 {
+  --m: 10%;
+  left: -14%;
+  top: 14%;
+}
+
+/* ─── settings: a machine, with a toothed ring ─── */
+.planet[data-kind="settings"] {
+  --size: min(34vmin, 320px);
+  --right: 10vw;
+  --bottom: 11vh;
+  --rim: #bfe0e6;
+  --ring: rgba(190, 220, 228, 0.38);
+  --ring-w: 10px;
+  --ring-style: dashed;
+  --tilt: -10deg;
+  --body:
+    repeating-radial-gradient(circle at 68% 26%, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 16px),
+    radial-gradient(
+      circle at 68% 26%,
+      color-mix(in srgb, var(--bg) 48%, #5d7f88) 0,
+      color-mix(in srgb, var(--bg) 80%, #1c3138) 50%,
+      var(--bg) 82%
+    );
+  --glow:
+    0 0 0 1px rgba(200, 228, 235, 0.2), 12px -18px 60px rgba(150, 210, 220, 0.18),
+    -30px 40px 150px rgba(80, 130, 150, 0.2);
+}
+
+/* ─── friends: a pair, one big and one nearly as big ─── */
+.planet[data-kind="friends"] {
+  --size: min(30vmin, 290px);
+  --right: 20vw;
+  --bottom: 14vh;
+  --rim: #d9b8ff;
+  --body: radial-gradient(
+    circle at 68% 26%,
+    color-mix(in srgb, var(--bg) 46%, #7a52c8) 0,
+    color-mix(in srgb, var(--bg) 80%, #2c1c5a) 50%,
+    var(--bg) 82%
+  );
+  --glow:
+    0 0 0 1px rgba(225, 205, 255, 0.2), 12px -18px 60px rgba(190, 150, 255, 0.2),
+    -30px 40px 150px rgba(120, 80, 220, 0.2);
+}
+.planet[data-kind="friends"] .m1 {
+  --m: 64%;
+  left: -52%;
+  top: 38%;
+  --moon-hi: color-mix(in srgb, var(--bg) 40%, #ff9ac8);
+  --moon-lo: color-mix(in srgb, var(--bg) 78%, #6a1c4a);
+  box-shadow:
+    0 0 0 1px rgba(255, 200, 225, 0.2),
+    -10px 14px 70px rgba(255, 120, 190, 0.2);
+}
+
+/* ─── admin: a black disc with a ring of fire ─── */
+.planet[data-kind="admin"] {
+  --size: min(34vmin, 330px);
+  --right: 9vw;
+  --bottom: 12vh;
+  --rim: #ffb066;
+  --ring: rgba(255, 170, 90, 0.85);
+  --ring-w: 2px;
+  --tilt: -8deg;
+  --body: #000;
+  --glow:
+    0 0 0 3px rgba(255, 170, 90, 0.9), 0 0 36px 8px rgba(255, 120, 60, 0.5),
+    0 0 140px 34px rgba(255, 70, 40, 0.22);
+}
+.planet[data-kind="admin"] .ring {
+  left: -62%;
+  right: -62%;
+  top: 40%;
+  bottom: 40%;
+  box-shadow: 0 0 18px rgba(255, 130, 60, 0.6);
+}

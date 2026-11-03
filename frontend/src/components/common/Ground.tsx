@@ -1,10 +1,19 @@
 import React from "react";
-import { useShownPhase } from "../../hooks/useAuraPhase";
+import { PLACES, useShownSpace } from "../../hooks/useSpace";
 import { Atmosphere } from "./Atmosphere";
 
 /** The one background behind every page, mounted once above all of them. */
-export const Ground: React.FC = () => (
-  <div className="jqzz-app jqzz-ground" data-phase={useShownPhase()} aria-hidden="true">
-    <Atmosphere />
-  </div>
-);
+export const Ground: React.FC = () => {
+  const { place, phase } = useShownSpace();
+  return (
+    <div
+      className="jqzz-app jqzz-ground"
+      data-phase={phase}
+      data-place={place}
+      style={{ "--space-tint": PLACES[place].tint } as React.CSSProperties}
+      aria-hidden="true"
+    >
+      <Atmosphere />
+    </div>
+  );
+};

@@ -75,7 +75,7 @@ export const ProfilePage: React.FC<{
   const face = profile && { ...profile.user, profilePictureUrl: profile.user.profilePictureUrl ?? undefined };
 
   return (
-    <PlayFrame phase={space === "history" ? "ANSWER" : space === "you" ? "QUESTION" : "ELABORATION"}>
+    <PlayFrame phase={space === "history" ? "ANSWER" : space === "you" ? "QUESTION" : "ELABORATION"} space={tab}>
       <div className={`jqzz-space jqzz-space-${space}`}>
         <main className="jqzz-shelf jqzz-profile">
           <section className="jqzz-pcard" aria-label={profile ? `${profile.user.name}'s profile` : "Profile"}>

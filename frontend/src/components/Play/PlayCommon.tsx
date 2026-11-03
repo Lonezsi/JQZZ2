@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { GamePlayer, GameState } from "../../types/play";
 import { Avatar, resolveImage } from "../common/Avatar";
-import { useAuraPhase } from "../../hooks/useAuraPhase";
+import { useSpace, type Place } from "../../hooks/useSpace";
 import { useSecondsLeft } from "../../hooks/useGame";
 import { typeLabel } from "../../utils/questionInfo";
 import { useAuth } from "../../contexts/AuthContext";
@@ -39,16 +39,19 @@ export const ConfirmButton: React.FC<{
 };
 
 /** The background and frame every play screen sits in. */
-export const PlayFrame: React.FC<{ phase?: string; children: React.ReactNode }> = ({
+export const PlayFrame: React.FC<{ phase?: string; space?: Place; children: React.ReactNode }> = ({
   phase,
+  space = "game",
   children,
 }) => (
-  <PhasedFrame phase={phase ?? "IDLE"}>{children}</PhasedFrame>
+  <PhasedFrame phase={phase ?? "IDLE"} space={space}>
+    {children}
+  </PhasedFrame>
 );
 
-/** the frame, which tells the shared background what phase it is in */
-const PhasedFrame: React.FC<{ phase: string; children: React.ReactNode }> = ({ phase, children }) => {
-  useAuraPhase(phase);
+/** the frame, which tells the shared background where this page is, and in what phase */
+const PhasedFrame: React.FC<{ phase: string; space: Place; children: React.ReactNode }> = ({ phase, space, children }) => {
+  useSpace(space, phase);
   return (
     <div className="jqzz-app jqzz-play" data-phase={phase}>
       <div className="jqzz-play-frame">{children}</div>

@@ -212,7 +212,7 @@ export const Clouds: React.FC = () => {
     let drawnH = 0;
     // last state drawn, to skip frames where nothing moved by a cell
     const offsets = new Int32Array(CLOUDS.length * 2).fill(-1e9);
-    let clock = { secs: 0, lx: 0, ly: 0, sy: 0 };
+    let clock = { secs: 0, lx: 0, ly: 0, sy: 0, sx: 0 };
     let lastAt = -Infinity;
 
     const readInks = () => {
@@ -255,7 +255,7 @@ export const Clouds: React.FC = () => {
         const s = sprites[i];
         if (!s) return;
         const span = W + s.w;
-        const travel = (clock.secs / crossing(c.depth)) * W;
+        const travel = (clock.secs / crossing(c.depth)) * W + (clock.sx * scrollShare(c.depth)) / CELL;
         let x = (((c.x * span + travel) % span) + span) % span - s.w;
         // rising with the page, slower the further back; one that leaves at
         // the top comes round again from the bottom, so a long page has sky too
@@ -358,11 +358,11 @@ export const Clouds: React.FC = () => {
       paint();
     };
 
-    const tick: CloudTick = (secs, lx, ly, sy, fast, now) => {
+    const tick: CloudTick = (secs, lx, ly, sy, fast, now, sx = 0) => {
       if (document.hidden || effectsChoice() === "reduced" || !ready()) return;
       // while the page scrolls, every frame; otherwise a few times a second at most
       if (!fast && now - lastAt < MIN_GAP) return;
-      clock = { secs, lx, ly, sy };
+      clock = { secs, lx, ly, sy, sx };
       if (!place()) return;
       lastAt = now;
       paint();

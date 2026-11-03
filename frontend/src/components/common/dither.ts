@@ -28,9 +28,19 @@ export type CloudTick = (
   scrollY: number,
   fast: boolean,
   now: number,
+  /** how far the camera has moved along, in px (negative: the clouds go right) */
+  shiftX?: number,
 ) => void;
 export const cloudTicks = new Set<CloudTick>();
 
-export function tickClouds(secs: number, leanX: number, leanY: number, scrollY: number, fast: boolean, now: number) {
-  cloudTicks.forEach((t) => t(secs, leanX, leanY, scrollY, fast, now));
+export function tickClouds(
+  secs: number,
+  leanX: number,
+  leanY: number,
+  scrollY: number,
+  fast: boolean,
+  now: number,
+  shiftX = 0,
+) {
+  cloudTicks.forEach((t) => t(secs, leanX, leanY, scrollY, fast, now, shiftX));
 }

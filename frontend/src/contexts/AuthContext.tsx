@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import axios from "axios";
 import type { User } from "../types";
+import { InSpace } from "../components/common/InSpace";
 import { userService } from "../services/userService";
 import { KEY_STORE } from "../services/api";
 import { guestName } from "../utils/guestName";
@@ -115,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   if (loading) {
     return (
       <div className="jqzz-app">
+        <InSpace place="loading" />
         <div className="jqzz-status-screen" role="status">
           {!unreachable && <span className="jqzz-spinner" aria-hidden="true" />}
           <span className="jqzz-annot">{unreachable ? "server · down" : "server · connecting"}</span>

@@ -61,7 +61,7 @@ export const AdminPage: React.FC<{ tab?: string }> = ({ tab: fromRoute }) => {
   }, []);
 
   return (
-    <PlayFrame phase="QUESTION">
+    <PlayFrame phase="QUESTION" space="admin">
       <div className="jqzz-space jqzz-space-you">
         <main className="jqzz-shelf jqzz-admin">
           <div className="jqzz-admin-head">
