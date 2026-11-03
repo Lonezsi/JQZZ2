@@ -19,11 +19,12 @@
 @import "./styles/motion.css";
 @import "./styles/mobile.css";
 
+/* the lettering: Fomt, made for the site in tools/font-lab from Old English Five */
 @font-face {
-  font-family: "Old English Five";
+  font-family: "Fomt";
   src:
-    url("/OldEnglishFive.woff2") format("woff2"),
-    url("/OldEnglishFive.ttf") format("truetype");
+    url("/Fomt.woff2") format("woff2"),
+    url("/Fomt.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -97,7 +98,7 @@
   /* four voices: big titles, questions, everything you read, the grey labels */
   --font-ui: "Albert Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-data: "Spline Sans Mono", ui-monospace, Consolas, monospace;
-  --font-display: "Old English Five", "UnifrakturMaguntia", serif;
+  --font-display: "Fomt", "UnifrakturMaguntia", serif;
   --font-title: "Great Warrior", Georgia, serif;
   /* kept for older class names */
   --font-mono: var(--font-data);
