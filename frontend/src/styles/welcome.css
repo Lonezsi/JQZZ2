@@ -460,12 +460,16 @@
 
 /* ─── the first load: the camera climbs to the star ──────────────────
    The star the camera flies at is drawn on the background while it nears
-   (components/common/LaunchStar.tsx); the poster's own is hidden until that
-   one lands on it, then grows out of it. The rest of the poster arrives with the
-   camera. --launch-t is the time already gone when the poster mounted. */
+   (components/common/LaunchStar.tsx). While it flies (:root[data-star="flying"])
+   the star is all there is: the poster's own is hidden, so is everything else,
+   and the page sits half a sidebar to the left so the star is in the middle of
+   the screen. Once it lands, counting from then:
+     0s     the poster's star grows out of it: it shines harder
+     1.1s   the sidebar slides in and pushes the page (and the star) into place
+     2.3s   the rest of the poster arrives, then the toolbar
+   The sidebar's half is in sidebar.css. */
 .jqzz-poster.launching .p-star {
   animation: none;
-  /* it grows out of the landed star's centre, on top of it: the star shines harder */
   transition:
     opacity 900ms ease-out,
     scale 1500ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -478,13 +482,42 @@
   animation: none;
 }
 .jqzz-poster.launching .p-star-core {
-  animation: twinkle 4s var(--ease-in-out) calc(4200ms + var(--launch-t)) infinite alternate;
+  animation: twinkle 4s var(--ease-in-out) 4s infinite alternate;
 }
-.jqzz-poster.launching .p-axis {
-  animation: axisDraw 1200ms var(--ease) calc(2400ms + var(--launch-t)) backwards;
+:root[data-star="flying"] .jqzz-poster.launching :is(.from-l, .from-r, .from-top, .p-arc, .jqzz-poster-grid, .p-spark, .p-axis),
+:root[data-star="flying"] .jqzz-main:has(.jqzz-poster.launching) > .jqzz-toolbar {
+  opacity: 0;
+  animation: none;
 }
-.jqzz-poster.launching :is(.from-l, .from-r, .from-top, .p-arc, .jqzz-poster-grid, .p-spark) {
-  animation-delay: calc(2500ms + var(--d, 0ms) + var(--launch-t));
+:root[data-star="landed"] .jqzz-poster.launching :is(.from-l, .from-r, .from-top, .p-arc, .jqzz-poster-grid, .p-spark) {
+  animation: fromSide 1400ms var(--ease) calc(2300ms + var(--d, 0ms)) backwards;
+}
+:root[data-star="landed"] .jqzz-poster.launching .p-axis {
+  animation: axisDraw 1400ms var(--ease) 2100ms backwards;
+}
+:root[data-star="landed"] .jqzz-main:has(.jqzz-poster.launching) > .jqzz-toolbar {
+  animation: toolbarArrive 1200ms var(--ease) 2600ms backwards;
+}
+@keyframes toolbarArrive {
+  from {
+    opacity: 0;
+    translate: 0 -12px;
+  }
+}
+@media (min-width: 761px) {
+  /* translate's % is the page's own width, so this is half the sidebar's */
+  :root[data-star="flying"] .jqzz-main:has(.jqzz-poster.launching) {
+    translate: calc((100% - 100vw) / 2) 0;
+  }
+  /* pushed: the same move and pace as the sidebar's, so it's the sidebar doing it */
+  :root[data-star="landed"] .jqzz-main:has(.jqzz-poster.launching) {
+    animation: pushedAside 2400ms cubic-bezier(0.16, 1, 0.3, 1) 1100ms backwards;
+  }
+}
+@keyframes pushedAside {
+  from {
+    translate: calc((100% - 100vw) / 2) 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

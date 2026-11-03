@@ -37,14 +37,14 @@ export const LaunchStar: React.FC = () => {
       landed = true;
       document.documentElement.dataset.star = "landed";
       window.setTimeout(() => setGone(true), 1500);
-      // done: nothing waits on it any more, and nothing is drawn
+      // done, once everything waiting on it has arrived (welcome.css): nothing is drawn any more
       window.setTimeout(() => {
         finished = true;
         cancelAnimationFrame(raf);
         window.clearInterval(backstop);
         delete document.documentElement.dataset.star;
         setOver(true);
-      }, 3600);
+      }, 5000);
     };
     // in a tab nobody's looking at there are no frames: the page mustn't wait on them
     const backstop = window.setInterval(() => shownSpace().place !== "loading" && sinceLaunch() > 7000 && land(), 1000);

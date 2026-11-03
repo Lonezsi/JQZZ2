@@ -689,7 +689,7 @@ button.jqzz-user-row:active {
     opacity: 0;
   }
   :root[data-star="landed"] .jqzz-sidebar {
-    animation: sidebarArrive 2400ms cubic-bezier(0.16, 1, 0.3, 1) 900ms backwards;
+    animation: sidebarArrive 2400ms cubic-bezier(0.16, 1, 0.3, 1) 1100ms backwards;
   }
 }
 @keyframes sidebarArrive {

@@ -7,10 +7,6 @@ import { useFriends } from "../../../hooks/useFriends";
 import { playService } from "../../../services/playService";
 import { GameModes } from "./GameModes";
 import { StarFlare } from "./StarFlare";
-import { sinceLaunch } from "../../../hooks/useSpace";
-
-/** past this, the launch is over: the poster arrives the ordinary way */
-const LAUNCH_MS = 3000;
 
 interface WelcomeProps {
   onCreate?: () => void;
@@ -79,11 +75,8 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
   const phases = mine.reduce((sum, q) => sum + q.actions.length, 0);
   const today = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
 
-  // the first load's launch: the star leads the camera up here, however far it's got
-  const [launch] = useState(() => {
-    const t = sinceLaunch();
-    return t < LAUNCH_MS ? -Math.round(t) : null;
-  });
+  // the first load: while the star is still out (common/LaunchStar.tsx), the poster waits for it
+  const [launching] = useState(() => document.documentElement.dataset.star !== undefined);
 
   // the poster is exactly as tall as what you can see of the page
   const rootRef = useRef<HTMLDivElement>(null);
@@ -99,13 +92,8 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
   return (
     <div ref={rootRef} className="jqzz-welcome-root">
       <section
-        className={launch === null ? "jqzz-poster" : "jqzz-poster launching"}
-        style={
-          {
-            ...(height ? { "--poster-h": `${height}px` } : {}),
-            ...(launch === null ? {} : { "--launch-t": `${launch}ms` }),
-          } as React.CSSProperties
-        }
+        className={launching ? "jqzz-poster launching" : "jqzz-poster"}
+        style={height ? ({ "--poster-h": `${height}px` } as React.CSSProperties) : undefined}
         aria-label="jqzz"
       >
         {/* image 3's grid; its lit planet is in the background (Atmosphere) */}
