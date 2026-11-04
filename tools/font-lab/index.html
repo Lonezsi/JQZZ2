@@ -193,6 +193,12 @@
         <p class="note">drawn with the same pen as the symbols, textura style: straight stems, broken corners</p>
       </div>
     </details>
+    <details open>
+      <summary><span class="annot">accented letters</span><input type="checkbox" id="on-accents" checked title="on" /></summary>
+      <div class="body" id="g-accents">
+        <p class="note">the ones polish, hungarian and slovak need that the font never had (french was all there). marks come from the font's own é, É, š and Š; dots are stars.</p>
+      </div>
+    </details>
     <details>
       <summary><span class="annot">open tops</span><input type="checkbox" id="on-open" checked title="on" /></summary>
       <div class="body" id="g-open"></div>
@@ -204,6 +210,18 @@
     <details>
       <summary><span class="annot">numbers</span><input type="checkbox" id="on-digits" checked title="on" /></summary>
       <div class="body" id="g-digits"></div>
+    </details>
+    <details open>
+      <summary><span class="annot">kerning</span><input type="checkbox" id="on-kern" checked title="on" /></summary>
+      <div class="body" id="g-kern">
+        <p class="note">every pair measured from the finished outlines: how close the two shapes come at each height, brought to the gap two n's have. the export saves it next to the font; add_kerning.py writes it in.</p>
+      </div>
+    </details>
+    <details>
+      <summary><span class="annot">keep ink inside the box</span><input type="checkbox" id="on-fit" checked title="on" /></summary>
+      <div class="body" id="g-fit">
+        <p class="note">the font's capitals hang past their own edge (F by almost a tenth of an em), which anything clipping to the text box cuts off at the end of a word. these get widened just enough to hold their ink.</p>
+      </div>
     </details>
     <details>
       <summary><span class="annot">view</span></summary>
@@ -283,11 +301,10 @@ const SLIDERS = [
   ["dots", "starFat", "star fatness", 40, 200, 1, 100, "%"],
   ["dots", "starTurn", "star turn", 0, 45, 1, 0, "°"],
   ["ostar", "oStar", "star size", 60, 400, 2, 170, "u"],
-  ["ostar", "oGap", "gap", 0, 80, 1, 26, "u"],
+  ["ostar", "cutScale", "cutout size (o, f, t)", 100, 220, 1, 140, "%"],
   ["ostar", "oY", "height", -150, 150, 2, 0, "u"],
-  ["crossbar", "barStar", "star size", 60, 300, 2, 170, "u"],
+  ["crossbar", "barStar", "star size", 60, 360, 2, 230, "u"],
   ["crossbar", "barY", "height", -150, 150, 2, 0, "u"],
-  ["crossbar", "barGap", "gap", 0, 80, 1, 22, "u"],
   ["tails", "tailDepth", "depth", 120, 340, 2, 250, "u"],
   ["tails", "tailReach", "reach", 0, 400, 2, 220, "u"],
   ["tails", "tailNib", "nib", 50, 130, 1, 85, "%"],
@@ -299,14 +316,21 @@ const SLIDERS = [
   ["parens", "parenBow", "bow", 80, 400, 2, 210, "u"],
   ["parens", "parenThick", "thickness", 30, 160, 2, 76, "u"],
   ["digits", "digitSide", "side space", 0, 160, 2, 54, "u"],
+  ["accents", "accentGap", "space over tall letters", 0, 160, 2, 60, "u"],
+  ["accents", "ogonek", "ogonek size", 50, 160, 1, 100, "%"],
+  ["fit", "fitMargin", "margin", 0, 80, 2, 12, "u"],
+  ["kern", "kernTight", "tightness", 50, 150, 1, 100, "%"],
+  ["kern", "kernTol", "leave alone up to", 0, 100, 1, 30, "% looser"],
+  ["kern", "kernStrength", "strength", 0, 100, 1, 70, "%"],
+  ["kern", "kernMax", "most it tucks in", 0, 400, 5, 220, "u"],
   ["view", "size", "glyph size", 48, 220, 4, 96, "px"],
 ];
 const TEXTS = [
   ["open", "openList", "which glyphs", "vwy"],
-  ["tails", "tailList", "which glyphs", "yj"],
-  ["letters", "letterList", "which glyphs", "dpqyYVTEG"],
+  ["tails", "tailList", "which glyphs", ""],
+  ["letters", "letterList", "which glyphs", "dpqyjvwYVTEG"],
 ];
-const TOGGLES = ["symbols", "dots", "ostar", "crossbar", "tails", "letters", "open", "parens", "digits"];
+const TOGGLES = ["symbols", "dots", "ostar", "crossbar", "tails", "letters", "accents", "open", "parens", "digits", "fit", "kern"];
 
 for (const [group, id, label, min, max, step, value, unit] of SLIDERS) {
   const div = document.createElement("div");
@@ -515,8 +539,9 @@ function symbolDefs() {
   const { xh, cap, axis, desc } = M;
   const st = (s) => (pts, closed, k) => penStroke(pts, s, closed, k);
   const mirrorX = (pts, w) => pts.map(([x, y]) => [w - x, y]);
-  const lt = [[220, 600], [20, axis], [220, 100]];
-  const small = [[190, 500], [20, axis], [190, 200]];
+  const chev = (s) => (pts, k) => penStroke(pts, { ...s, nibAngle: 90 }, false, k);
+  const lt = [[260, axis + 260], [20, axis], [260, axis - 260]];
+  const small = [[190, axis + 190], [20, axis], [190, axis - 190]];
   const brace = [[230, cap], [110, cap - 70], [110, axis + 90], [0, axis], [110, axis - 90], [110, desc + 70], [230, desc]];
   const bracket = [[200, cap], [20, cap], [20, desc], [200, desc]];
   return {
@@ -530,12 +555,14 @@ function symbolDefs() {
     "=": (s) => [st(s)([[0, axis - 110], [460, axis - 110]]), st(s)([[0, axis + 110], [460, axis + 110]])],
     "×": (s) => [st(s)([[40, axis - 190], [420, axis + 190]]), st(s)([[40, axis + 190], [420, axis - 190]])],
     "÷": (s) => [st(s)([[0, axis], [460, axis]]), starPaper(230, axis + 230, 70 * (s.dotStar / 100), s), starPaper(230, axis - 230, 70 * (s.dotStar / 100), s)],
-    "<": (s) => [st(s)(lt)],
-    ">": (s) => [st(s)(mirrorX(lt, 220))],
-    "‹": (s) => [st(s)(small)],
-    "›": (s) => [st(s)(mirrorX(small, 190))],
-    "«": (s) => [st(s)(small), st(s)(small.map(([x, y]) => [x + 190, y]))],
-    "»": (s) => [st(s)(mirrorX(small, 190)), st(s)(mirrorX(small, 190).map(([x, y]) => [x + 190, y]))],
+    // chevrons: a slimmer nib held upright, so both arms come out the same
+    // weight (at the usual angle one arm runs along the nib and goes thin)
+    "<": (s) => [chev(s)(lt, 0.62)],
+    ">": (s) => [chev(s)(mirrorX(lt, 220), 0.62)],
+    "‹": (s) => [chev(s)(small, 0.55)],
+    "›": (s) => [chev(s)(mirrorX(small, 190), 0.55)],
+    "«": (s) => [chev(s)(small, 0.55), chev(s)(small.map(([x, y]) => [x + 170, y]), 0.55)],
+    "»": (s) => [chev(s)(mirrorX(small, 190), 0.55), chev(s)(mirrorX(small, 190).map(([x, y]) => [x + 170, y]), 0.55)],
     "/": (s) => [st(s)([[0, desc + 60], [430, cap]])],
     "\\": (s) => [st(s)([[0, cap], [430, desc + 60]])],
     "|": (s) => [st(s)([[0, desc], [0, cap]])],
@@ -624,14 +651,25 @@ function part(ch, { dx = 0, dy = 0, turn = false, ax = 0, ay = 0 } = {}) {
   return toPaper(mapCmds(g.path.commands, (x, y) => (turn ? [ax - x, ay - y] : [x + dx, y + dy])));
 }
 
+/** the u's top half (its two heads, stems at x 114-253 and 416-554), moved along by dx */
+function uTops(dx = 0) {
+  return part("u", { dx }).intersect(
+    new paper.Path.Rectangle({ from: [-200 + dx, 300], to: [900 + dx, 1200], insert: false }),
+    { insert: false },
+  );
+}
+
 function letterDefs() {
   const { xh, cap } = M;
   const st = (s) => (pts, k = 1) => penStroke(pts, s, false, k * (s.letterNib / 100));
   const curve = (s) => (pts, k = 1) => penStroke(smooth(pts), s, false, k * (s.letterNib / 100));
   // the font's capitals are wide and heavy: the drawn ones are stretched out
   // and their main strokes drawn with a fuller nib to sit next to them
-  const capCurve = (s) => (pts, k = 1) =>
-    penStroke(smooth(pts.map(([x, y]) => [x * 1.22, y])), s, false, k * (k >= 1 ? 1.12 : 1) * (s.letterNib / 100));
+  const capCurve = (s) => (pts, k = 1) => {
+    const wide = pts.map(([x, y]) => [x * 1.22, y]);
+    // main strokes are straight and broken at the corners; only the thin curls curve
+    return penStroke(k >= 1 ? wide : smooth(wide), s, false, k * (k >= 1 ? 1.12 : 1) * (s.letterNib / 100));
+  };
   // the l's stem sits at x 114-256; the o's stems at 87-224 and 372-510.
   // Turned half round (x' = ax - x, y' = ay - y) the l's foot becomes a
   // head at the x-height and its head a foot down in the descender.
@@ -640,6 +678,36 @@ function letterDefs() {
     d: () => [part("o"), part("l", { dx: 258 })],
     p: () => [part("o"), lUnder(87)],
     q: () => [part("o"), lUnder(372)],
+    // the font's i (stem at x 114-253) without its foot or dot, the stem run
+    // straight down into the y's hook; the star centred over it
+    j: (s) => {
+      const g = font.charToGlyph("i");
+      const body = contours(g.path.commands).filter((c) => bbox(c).y0 < M.xh).flat();
+      const stem = toPaper(body).subtract(
+        new paper.Path.Rectangle({ from: [-100, -60], to: [600, 250], insert: false }),
+        { insert: false },
+      );
+      // cut where the i's stem is still straight (x 114-253), so the pen's
+      // stem carries on without a step
+      const sx = 184;
+      return [
+        stem,
+        st(s)([[sx, 320], [sx, -170], [sx - 100, -285], [sx - 210, -250]], 1.02),
+        starPaper(sx, 903, (166 / 2) * (s.dotStar / 100), s),
+      ];
+    },
+    // v: the u with its right stem brought down to a point, no foot
+    // v: the u's two heads, the stems brought down to meet in a point, the
+    // way textura writes it: thick on the left, a hairline on the right
+    v: (s) => [uTops(), st(s)([[184, 370], [184, 140], [330, -17]], 1.02), st(s)([[485, 370], [485, 150], [330, -17]], 1.02)],
+    // w: two v's sharing the middle stem
+    w: (s) => [
+      uTops(), uTops(302),
+      st(s)([[184, 370], [184, 140], [330, -17]], 1.02),
+      st(s)([[485, 370], [485, 150], [330, -17]], 1.02),
+      st(s)([[485, 300], [485, 140], [632, -17]], 1.02),
+      st(s)([[787, 370], [787, 150], [632, -17]], 1.02),
+    ],
     // the font's u (right stem at x 416-554) without its right foot, that
     // stem carried straight down into an angular hook
     y: (s) => {
@@ -648,7 +716,8 @@ function letterDefs() {
         { insert: false },
       );
       const sx = 485;
-      return [u, st(s)([[sx, 160], [sx, -170], [sx - 120, -285], [sx - 270, -245]], 1.02)];
+      // started high enough that the pen's slanted start stays inside the u
+      return [u, st(s)([[sx, 200], [sx, -170], [sx - 120, -285], [sx - 270, -245]], 1.02)];
     },
     // the C is a thin outer sweep round a thick inner stem (x 313-451)
     E: (s) => [
@@ -658,7 +727,7 @@ function letterDefs() {
     ],
     G: (s) => [
       part("C"),
-      curve(s)([[560, 470], [720, 500], [760, 380], [740, 160], [680, 40]], 0.9),
+      st(s)([[560, 470], [740, 490], [750, 140], [680, 40]], 0.9),
       st(s)([[560, 470], [700, 470]], 0.45),
     ],
     T: (s) => [
@@ -682,6 +751,90 @@ function letterDefs() {
   };
 }
 let LETTERS = {};
+
+// ─── accented letters the font lacks, from its own marks ─────────────
+const ACCENTED = "ąćęłńśźżĄĆĘŁŃŚŹŻőűŐŰčďĺľňŕťžČĎĹĽŇŔŤŽ";
+
+/** the mark on one of the font's own accented letters, and the letter under it */
+function markFrom(src, upper) {
+  const g = font.charToGlyph(src);
+  const cs = contours(g.path.commands);
+  const line = (upper ? M.cap : M.xh) - 20;
+  const mark = cs.filter((c) => bbox(c).y0 > line).flat();
+  const base = cs.filter((c) => bbox(c).y0 <= line).flat();
+  return { mark, base: bbox(base) };
+}
+
+function compose(ch, s) {
+  const upper = ch !== ch.toLowerCase();
+  let baseCh = ch.normalize("NFD")[0];
+  let kind = { "\u0301": "acute", "\u030b": "dacute", "\u030c": "caron", "\u0307": "dot", "\u0328": "ogonek" }[ch.normalize("NFD")[1]];
+  if (ch === "ł" || ch === "Ł") { baseCh = ch === "ł" ? "l" : "L"; kind = "stroke"; }
+  if ("ďťľĽ".includes(ch)) kind = "apostrophe";
+  const baseEdit = edit(font.charToGlyph(baseCh), s, baseCh.codePointAt(0), true);
+  const base = toPaper(baseEdit.commands);
+  const b = bbox(baseEdit.commands);
+  let advance = baseEdit.advance;
+  const parts = [base];
+  // a mark moved over this letter: centred like it was on its own letter,
+  // and lifted clear of anything tall (ĺ)
+  const place = ({ mark, base: srcBase }, extraDx = 0, scale = 1) => {
+    const mb = bbox(mark);
+    const dx = b.cx - srcBase.cx + extraDx;
+    const dy = Math.max(0, b.y1 + s.accentGap - mb.y0);
+    const cx = mb.cx, cy = mb.y0;
+    return toPaper(mapCmds(mark, (x, y) => [cx + (x - cx) * scale + dx, cy + (y - cy) * scale + dy]));
+  };
+  if (kind === "acute") parts.push(place(markFrom(upper ? "É" : "é", upper)));
+  if (kind === "caron") parts.push(place(markFrom(upper ? "Š" : "š", upper)));
+  if (kind === "dacute") {
+    const m = markFrom(upper ? "É" : "é", upper);
+    const w = bbox(m.mark).w;
+    parts.push(place(m, -w * 0.55, 0.95), place(m, w * 0.55, 0.95));
+  }
+  if (kind === "dot") {
+    const top = upper ? M.cap : M.xh;
+    parts.push(starPaper(b.cx, Math.max(top, b.y1) + 170, 80 * (s.dotStar / 100), s));
+  }
+  if (kind === "ogonek") {
+    const k = s.ogonek / 100;
+    const rx = b.x1 - 50;
+    parts.push(penStroke([[rx, 40], [rx - 50 * k, -80 * k], [rx + 10 * k, -190 * k], [rx + 100 * k, -175 * k]], s, false, 0.5));
+  }
+  if (kind === "stroke") {
+    const y = upper ? M.cap * 0.48 : M.xh * 0.6;
+    // the main stem is the widest crossing; the capital's bar also has to
+    // clear the second stroke inside the font's L
+    const stems = stemsAt(base, y).sort((a, c) => c[1] - c[0] - (a[1] - a[0]));
+    const st = stems[0];
+    const x0 = st ? st[0] - 150 : b.cx - 150;
+    const x1 = upper ? Math.max(...stemsAt(base, y).map((p) => p[1])) + 60 : st ? st[1] + 150 : b.cx + 150;
+    const rise = (x1 - x0) * 0.32;
+    // the nib turned across the bar, or a bar this steep comes out a hairline
+    parts.push(penStroke([[x0, y - rise / 2], [x1, y + rise / 2]], { ...s, nibAngle: s.nibAngle - 90 }, false, 0.55));
+  }
+  if (kind === "apostrophe") {
+    // the font's own ’ beside the top of the stem, as these are written
+    const q = font.charToGlyph("’");
+    const qb = bbox(q.path.commands);
+    const k = 0.8;
+    // beside the top of the letter: past whatever it has at the height of
+    // the top half of the mark (the L's curl, the d's stem; not the t's
+    // star, which sits lower)
+    const top = upper ? M.cap : b.y1;
+    let right = -Infinity;
+    for (let y = top - qb.h * k * 0.5; y <= top; y += 10) {
+      const xs = crossings(base, y);
+      if (xs.length) right = Math.max(right, xs[xs.length - 1]);
+    }
+    const st = Number.isFinite(right) ? [right, right] : null;
+    const x0 = (st ? right + 25 : b.x1 + 10) - qb.x0 * k;
+    const y0 = top - qb.y1 * k;
+    parts.push(toPaper(mapCmds(q.path.commands, (x, y) => [x0 + x * k, y0 + y * k])));
+    if (!upper && st) advance = Math.max(advance, Math.round(st[1] + 25 + qb.w * k + 40));
+  }
+  return { item: unite(parts), advance };
+}
 
 function mirrored(ch) {
   const g = font.charToGlyph(ch);
@@ -821,8 +974,8 @@ let cacheKey = "";
  * Keyed by character, not glyph: the font shares one placeholder glyph
  * between several characters (± ‡ ¯ ...), and each gets its own shape here.
  */
-function edit(glyph, s, code = glyph.unicode) {
-  const key = code ?? `g${glyph.index}`;
+function edit(glyph, s, code = glyph.unicode, raw = false) {
+  const key = `${raw ? "r" : ""}${code ?? `g${glyph.index}`}`;
   if (cache.has(key)) return cache.get(key);
   const ch = code !== undefined ? String.fromCodePoint(code) : "";
   let cmds = clone(glyph.path.commands);
@@ -834,7 +987,12 @@ function edit(glyph, s, code = glyph.unicode) {
   if (s.straighten || s.gridSnap) edited = true;
 
   const defs = s.on_symbols ? SYMBOLS : {};
-  if (defs[ch]) {
+  const comp = s.on_accents && ch && ACCENTED.includes(ch) ? compose(ch, s) : null;
+  if (comp) {
+    item = comp.item;
+    adv = comp.advance;
+    edited = true;
+  } else if (defs[ch]) {
     item = unite(defs[ch](s));
     const b = item.bounds;
     item.translate(new paper.Point(s.symSide - b.left, 0));
@@ -842,9 +1000,15 @@ function edit(glyph, s, code = glyph.unicode) {
     edited = true;
   } else if (s.on_letters && ch && s.letterList.includes(ch) && LETTERS[ch]) {
     item = unite(LETTERS[ch](s));
-    const b = item.bounds;
-    item.translate(new paper.Point(s.letterSide - b.left, 0));
-    adv = Math.round(b.width + s.letterSide * 2);
+    if (ch === "j") {
+      // spaced like the i it's built from; its hook hangs left under the
+      // letter before, as a j's does
+      adv = font.charToGlyph("i").advanceWidth;
+    } else {
+      const b = item.bounds;
+      item.translate(new paper.Point(s.letterSide - b.left, 0));
+      adv = Math.round(b.width + s.letterSide * 2);
+    }
     edited = true;
   } else if (s.on_parens && (ch === "(" || ch === ")")) {
     item = parenOutline(ch, s, adv);
@@ -890,7 +1054,7 @@ function edit(glyph, s, code = glyph.unicode) {
       const hole = contours(cmds).map((c) => bbox(c)).find((b, i, all) => all.some((o) => o !== b && inside(b, o)));
       if (hole) {
         const cx = hole.cx, cy = hole.cy + s.oY;
-        item = unite([base.subtract(starGrown(cx, cy, s.oStar, s.oGap, s), { insert: false }), starPaper(cx, cy, s.oStar, s)]);
+        item = unite([base.subtract(starPaper(cx, cy, (s.oStar * s.cutScale) / 100, s), { insert: false }), starPaper(cx, cy, s.oStar, s)]);
         edited = true;
       }
     }
@@ -906,12 +1070,25 @@ function edit(glyph, s, code = glyph.unicode) {
         }
         if (rows.length) {
           const b0 = rows[0] - 8, b1 = rows[rows.length - 1] + 8;
-          for (const [x0, x1] of [[-600, stem[0] - 1], [stem[1] + 1, 1600]]) {
-            base = base.subtract(new paper.Path.Rectangle({ from: [x0, b0], to: [x1, b1], insert: false }), { insert: false });
-          }
+          // left of the stem everything goes, up past the star's cutout (the
+          // f's hook only reaches right); right of it, just the bar
+          const reach = (rows[0] + rows[rows.length - 1]) / 2 + s.barY + (s.barStar * s.cutScale) / 100 + 40;
+          base = base.subtract(new paper.Path.Rectangle({ from: [-600, b0], to: [stem[0] - 1, Math.max(b1, reach)], insert: false }), { insert: false });
+          base = base.subtract(new paper.Path.Rectangle({ from: [stem[1] + 1, b0], to: [1600, b1], insert: false }), { insert: false });
           // cut into the stem with a gap, like the o's, so it reads as a star and not a cross
           const cx = (stem[0] + stem[1]) / 2, cy = (b0 + b1) / 2 + s.barY;
-          base = unite([base.subtract(starGrown(cx, cy, s.barStar, s.barGap, s), { insert: false }), starPaper(cx, cy, s.barStar, s)]);
+          // the cutout stops at the star's top point, so the stem carries on
+          // out of it (into the f's hook, or the t's head)
+          const hole = starPaper(cx, cy, (s.barStar * s.cutScale) / 100, s).intersect(
+            new paper.Path.Rectangle({ from: [-600, -600], to: [1600, cy + s.barStar * 0.97], insert: false }),
+            { insert: false },
+          );
+          const cut = base.subtract(hole, { insert: false });
+          // and leaves scraps of stem beside the star's points: drop them
+          const pieces = cut.className === "CompoundPath" ? [...cut.children] : [cut];
+          const total = pieces.reduce((sum, p) => sum + Math.abs(p.area), 0);
+          for (const p of pieces) if (Math.abs(p.area) < total * 0.06) p.remove();
+          base = unite([cut, starPaper(cx, cy, s.barStar, s)]);
         }
       }
       item = base;
@@ -934,6 +1111,11 @@ function edit(glyph, s, code = glyph.unicode) {
     }
   }
   if (item) cmds = fromPaper(item);
+  if (raw) {
+    const out = { commands: cmds, advance: adv, edited };
+    cache.set(key, out);
+    return out;
+  }
 
   // shape sliders, then even gaps for the numbers
   const sx = s.width / 100, sy = s.height / 100, sh = Math.tan((s.slant * Math.PI) / 180);
@@ -946,12 +1128,149 @@ function edit(glyph, s, code = glyph.unicode) {
     adv = Math.round(b.w + s.digitSide * 2);
     edited = true;
   }
+  // ink that hangs past either edge: the glyph moves right and/or widens
+  if (s.on_fit && cmds.length) {
+    const b = bbox(cmds);
+    const m = s.fitMargin;
+    // on the left only what's above the baseline counts: a hook below the
+    // line (the j's) is meant to tuck under the letter before
+    const above = cmds.filter((c) => c.y === undefined || c.y > -20);
+    b.x0 = above.length ? bbox(above).x0 : b.x0;
+    if (b.x0 < 0) {
+      const dx = Math.ceil(m - b.x0);
+      cmds = mapCmds(cmds, (x, y) => [x + dx, y]);
+      adv += dx;
+      b.x1 += dx;
+      edited = true;
+    }
+    if (b.x1 > adv) {
+      adv = Math.ceil(b.x1 + m);
+      edited = true;
+    }
+  }
   const out = { commands: cmds, advance: adv, edited };
   cache.set(key, out);
   return out;
 }
 
 let SYMBOLS = {};
+
+// ─── kerning: measured from the outlines ──────────────────────────────
+// Each glyph's ink is cut into horizontal bands; per band, how far right
+// (and left) it reaches. A pair's gap is the closest its right edge comes
+// to the next one's left edge in the same or a neighbouring band. That gap
+// is compared with the font's usual gap: pairs clearly looser are pulled
+// in (the arm of a T over an o), the rest are left as drawn.
+const BAND = 24;
+let profiles = new Map();
+let pairCache = new Map();
+
+function profileOf(e) {
+  const lo = M.desc - 200;
+  const n = Math.ceil((M.asc + 300 - lo) / BAND);
+  const left = new Array(n).fill(Infinity);
+  const right = new Array(n).fill(-Infinity);
+  const put = (x, y) => {
+    const b = Math.floor((y - lo) / BAND);
+    if (b < 0 || b >= n) return;
+    if (x < left[b]) left[b] = x;
+    if (x > right[b]) right[b] = x;
+  };
+  let px = 0, py = 0, sx = 0, sy = 0;
+  const line = (x0, y0, x1, y1) => {
+    const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (BAND / 2)));
+    for (let i = 0; i <= steps; i++) put(x0 + ((x1 - x0) * i) / steps, y0 + ((y1 - y0) * i) / steps);
+  };
+  for (const c of e.commands) {
+    if (c.type === "M") { px = sx = c.x; py = sy = c.y; put(px, py); }
+    else if (c.type === "L") { line(px, py, c.x, c.y); px = c.x; py = c.y; }
+    else if (c.type === "Q" || c.type === "C") {
+      // flattened: a curve as short straight pieces
+      const k = 12;
+      let qx = px, qy = py;
+      for (let i = 1; i <= k; i++) {
+        const t = i / k, u = 1 - t;
+        let x, y;
+        if (c.type === "Q") {
+          x = u * u * px + 2 * u * t * c.x1 + t * t * c.x;
+          y = u * u * py + 2 * u * t * c.y1 + t * t * c.y;
+        } else {
+          x = u * u * u * px + 3 * u * u * t * c.x1 + 3 * u * t * t * c.x2 + t * t * t * c.x;
+          y = u * u * u * py + 3 * u * u * t * c.y1 + 3 * u * t * t * c.y2 + t * t * t * c.y;
+        }
+        line(qx, qy, x, y);
+        qx = x; qy = y;
+      }
+      px = c.x; py = c.y;
+    } else if (c.type === "Z") { line(px, py, sx, sy); px = sx; py = sy; }
+  }
+  return { left, right, advance: e.advance };
+}
+
+function profile(code, s) {
+  if (profiles.has(code)) return profiles.get(code);
+  const g = font.charToGlyph(String.fromCodePoint(code));
+  const p = profileOf(edit(g, s, code));
+  profiles.set(code, p);
+  return p;
+}
+
+/** the closest two glyphs' ink comes, set side by side with no kerning; null if they never face each other */
+function gapBetween(a, b) {
+  let best = Infinity, facing = 0;
+  for (let i = 0; i < a.right.length; i++) {
+    if (a.right[i] === -Infinity) continue;
+    let hit = false;
+    for (let j = Math.max(0, i - 1); j <= Math.min(b.left.length - 1, i + 1); j++) {
+      if (b.left[j] === Infinity) continue;
+      hit = true;
+      // neighbouring bands count a little further apart: they only meet on a slant
+      const d = a.advance - a.right[i] + b.left[j] + (j === i ? 0 : BAND * 0.5);
+      if (d < best) best = d;
+    }
+    if (hit) facing++;
+  }
+  return facing >= 3 ? best : null;
+}
+
+let kernTarget = null;
+// the characters that kern: letters, numbers, everyday punctuation (not ©, † ...)
+const KERNS = /[\p{L}\p{N}.,;:!?'"‘’‚“”„«»‹›()\-–—]/u;
+const BASIC = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"].map((c) => c.codePointAt(0));
+
+/** the kerning for a pair, in font units (negative pulls together) */
+function kernPair(left, right, s) {
+  if (!s.on_kern) return 0;
+  const key = `${left},${right}`;
+  if (pairCache.has(key)) return pairCache.get(key);
+  if (kernTarget === null) {
+    // the font's usual gap: the median over every pair of plain letters
+    const gaps = [];
+    for (const a of BASIC) for (const b of BASIC) {
+      const g = gapBetween(profile(a, s), profile(b, s));
+      if (g !== null) gaps.push(g);
+    }
+    gaps.sort((a, b) => a - b);
+    kernTarget = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 120;
+  }
+  let k = 0;
+  const gap = KERNS.test(String.fromCodePoint(left)) && KERNS.test(String.fromCodePoint(right))
+    ? gapBetween(profile(left, s), profile(right, s))
+    : null;
+  if (gap !== null) {
+    const target = (kernTarget * s.kernTight) / 100;
+    // only pairs clearly looser than the usual gap are pulled in (the arm of
+    // a T over an o); the rest keep the spacing the font was drawn with.
+    // Apart only where two shapes would crowd (a star's point).
+    const crowd = target * 0.25;
+    if (gap > target * (1 + s.kernTol / 100)) k = (-(gap - target) * s.kernStrength) / 100;
+    else if (gap < crowd) k = crowd - gap;
+    k = Math.round(Math.max(-s.kernMax, Math.min(k, 120)));
+    if (Math.abs(k) < 8) k = 0;
+  }
+  pairCache.set(key, k);
+  return k;
+}
 
 // ─── drawing ─────────────────────────────────────────────────────────
 function toD(commands) {
@@ -1023,11 +1342,11 @@ function renderPreview() {
     let prev = null;
     for (const ch of line) {
       const g = font.charToGlyph(ch);
-      if (prev) x += font.getKerningValue(prev, g) * (s.width / 100);
+      if (prev !== null) x += kernPair(prev, ch.codePointAt(0), s);
       const e = edit(g, s, ch.codePointAt(0));
       paths.push(`<path transform="translate(${x} ${y})" d="${toD(e.commands)}" />`);
       x += e.advance;
-      prev = g;
+      prev = ch.codePointAt(0);
     }
     maxW = Math.max(maxW, x);
   });
@@ -1085,7 +1404,13 @@ function renderAll() {
     queued = false;
     const s = settings();
     const key = JSON.stringify({ ...s, size: 0, weight: 0 });
-    if (key !== cacheKey) { cache = new Map(); cacheKey = key; }
+    if (key !== cacheKey) {
+      cache = new Map();
+      profiles = new Map();
+      pairCache = new Map();
+      kernTarget = null;
+      cacheKey = key;
+    }
     try {
       renderPreview();
       renderGrid();
@@ -1122,7 +1447,26 @@ function exportFont() {
     descender: Math.round(font.descender * (s.height / 100)),
     glyphs: out,
   });
-  made.download(`${family.replace(/\s+/g, "")}.otf`);
+  const file = family.replace(/\s+/g, "");
+  made.download(`${file}.otf`);
+  if (s.on_kern) {
+    // every pair that kerns, by glyph name, for add_kerning.py to write in
+    const kept = glyphs.filter(({ code }) => !isDeleted(code));
+    const nameOf = (code) => `uni${code.toString(16).toUpperCase().padStart(4, "0")}`;
+    const pairs = [];
+    for (const a of kept) for (const b of kept) {
+      const k = kernPair(a.code, b.code, s);
+      if (k) pairs.push([nameOf(a.code), nameOf(b.code), k]);
+    }
+    const blob = new Blob([JSON.stringify({ font: `${file}.otf`, pairs })], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${file}-kerning.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    $("status").textContent = `exported, with ${pairs.length} kerning pairs beside it. run add_kerning.py to put them in the font.`;
+    return;
+  }
   $("status").textContent = s.weight > 0 ? "exported. weight isn't in it yet (preview only)." : "exported.";
 }
 
@@ -1215,8 +1559,8 @@ fetch(FONT_URL)
         glyphs.push({ glyph: g, code });
       }
     }
-    // characters the pen draws that the font never had
-    for (const ch of Object.keys(SYMBOLS)) {
+    // characters the pen draws, and accented ones built, that the font never had
+    for (const ch of [...Object.keys(SYMBOLS), ...ACCENTED]) {
       const code = ch.codePointAt(0);
       if (!seen.has(code)) {
         seen.add(code);
