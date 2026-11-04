@@ -214,13 +214,18 @@ const pencil: Brush = {
   live: 1,
   reach: 2,
   mirrors: true,
-  grainCap: { grain: "fine", bite: 0.5 },
+  grainCap: { grain: "fine", bite: 0.68 },
   dab(s, d) {
     const { ctx } = s;
-    const r = Math.max(0.6, (s.size / 2) * (0.55 + 0.45 * d.p));
+    // the point wears down as it goes: a long line ends a little wider than it began
+    const worn = Math.min(0.18, ((s.state.travel as number) ?? 0) / 9000);
+    if (!s.mirrored) s.state.travel = ((s.state.travel as number) ?? 0) + d.step;
+    const r = Math.max(0.6, (s.size / 2) * (0.55 + 0.45 * d.p) * (1 + worn));
+    // a fast line skims the paper and leaves less behind
+    const skim = Math.min(1, Math.max(0.55, 1.15 - d.speed * 0.25));
     // pressing harder pushes graphite down into the paper's valleys
-    ctx.fillStyle = grainFill(s, "fine", 0.3 + 0.5 * d.p);
-    ctx.globalAlpha = s.opacity * (0.25 + 0.6 * d.p);
+    ctx.fillStyle = grainFill(s, "fine", 0.45 + 0.45 * d.p);
+    ctx.globalAlpha = s.opacity * (0.34 + 0.56 * d.p) * skim;
     const jx = (s.rand() - 0.5) * 0.5;
     const jy = (s.rand() - 0.5) * 0.5;
     ctx.beginPath();
@@ -232,6 +237,25 @@ const pencil: Brush = {
       ctx.arc(d.x + jx, d.y + jy, r, 0, TAU);
     }
     ctx.fill();
+    // graphite goes down in fine scratches along the line, not in round blots
+    if (d.step > 0 && r > 1) {
+      const ux = Math.cos(d.angle);
+      const uy = Math.sin(d.angle);
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineCap = "round";
+      for (let i = 0; i < 3; i++) {
+        const off = (s.rand() - 0.5) * r * 1.6;
+        const len = d.step * (0.8 + s.rand() * 0.9);
+        const sx = d.x - uy * off;
+        const sy = d.y + ux * off;
+        ctx.globalAlpha = s.opacity * (0.12 + 0.35 * d.p) * skim * s.rand();
+        ctx.lineWidth = 0.35 + s.rand() * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(sx - ux * len, sy - uy * len);
+        ctx.lineTo(sx, sy);
+        ctx.stroke();
+      }
+    }
   },
 };
 
@@ -457,10 +481,12 @@ const paint: Brush = {
     const nx = -Math.sin(d.angle);
     const ny = Math.cos(d.angle);
     ctx.lineCap = "round";
+    // a light touch only lands the middle of the brush: dry-brush streaks
+    const reach = 0.22 + 0.36 * d.p;
     for (const b of bristles) {
       const x = d.x + nx * b.off * spread;
       const y = d.y + ny * b.off * spread;
-      if (b.lx !== null && b.ly !== null && b.load > 0.02) {
+      if (b.lx !== null && b.ly !== null && b.load > 0.02 && Math.abs(b.off) <= reach) {
         // a drying bristle skips: that's the streaks at the end of a stroke
         const skip = b.load < 0.4 && s.rand() > b.load * 2.4;
         if (!skip) {
@@ -514,13 +540,32 @@ const watercolor: Brush = {
   live: 0.42,
   reach: 1.3,
   mirrors: true,
+  begin(s) {
+    // the sheet as the wash finds it: what it runs into
+    s.state.under = sampler(s.paint, 6);
+    s.state.carried = s.color;
+  },
   dab(s, d) {
     const { ctx } = s;
-    const r = (s.size / 2) * (0.6 + 0.4 * d.p);
-    ctx.fillStyle = s.color;
+    let r = (s.size / 2) * (0.6 + 0.4 * d.p);
+    // running into paint already there: the wash takes some of it up and
+    // carries it on, and its edge spreads further into it (a bleed)
+    const under = s.state.under as Sampler | null;
+    const u = under?.(d.x, d.y);
+    let colour = (s.state.carried as string) ?? s.color;
+    if (u && u[3] > 50) {
+      const k = 0.18 * (u[3] / 255);
+      colour = mix(colour, hexOf(u[0], u[1], u[2]), k);
+      r *= 1 + 0.35 * (u[3] / 255);
+    } else {
+      // on clean paper it settles back toward its own colour
+      colour = mix(colour, s.color, 0.12);
+    }
+    if (!s.mirrored) s.state.carried = colour;
+    ctx.fillStyle = colour;
     ctx.globalAlpha = 1;
-    // the wet edge creeps out unevenly
-    ragged(ctx, d.x, d.y, r, r, s.rand() * TAU, 0.3, s.rand, 14);
+    // the wet edge creeps out unevenly, more so where it's bleeding
+    ragged(ctx, d.x, d.y, r, r, s.rand() * TAU, u && u[3] > 50 ? 0.45 : 0.3, s.rand, 14);
     ctx.fill();
   },
   dry(s, wet, area) {
@@ -560,6 +605,44 @@ const watercolor: Brush = {
     if ("filter" in oc) oc.filter = "blur(1.2px)";
     oc.drawImage(rim, 0, 0);
     oc.filter = "none";
+    // blooms: here and there, water creeping back into the drying wash pushes
+    // the pigment out, leaving a paler middle with a hard, dark rim
+    const blooms = Math.min(3, Math.floor((w * h) / 26000));
+    for (let i = 0; i < blooms; i++) {
+      const bx = w * (0.2 + 0.6 * s.rand());
+      const by = h * (0.2 + 0.6 * s.rand());
+      const br = Math.max(6, Math.min(w, h) * (0.12 + 0.12 * s.rand()));
+      const bloom = make();
+      const bc = bloom.getContext("2d")!;
+      bc.fillStyle = "#000";
+      ragged(bc, bx, by, br, br, s.rand() * TAU, 0.45, s.rand, 18);
+      bc.fill();
+      // only where the wash is
+      bc.globalCompositeOperation = "destination-in";
+      bc.drawImage(shape, 0, 0);
+      // a paler middle...
+      oc.globalCompositeOperation = "destination-out";
+      oc.globalAlpha = 0.45;
+      oc.drawImage(bloom, 0, 0);
+      // ...and the pigment it pushed out, at its edge
+      const edge = make();
+      const ec = edge.getContext("2d")!;
+      ec.drawImage(bloom, 0, 0);
+      ec.globalCompositeOperation = "destination-out";
+      // the same bloom a little smaller round its own middle: what's between is its rim
+      ec.save();
+      ec.translate(bx, by);
+      ec.scale(0.86, 0.86);
+      ec.translate(-bx, -by);
+      ec.drawImage(bloom, 0, 0);
+      ec.restore();
+      ec.globalCompositeOperation = "source-in";
+      ec.fillStyle = (s.state.carried as string) ?? s.color;
+      ec.fillRect(0, 0, w, h);
+      oc.globalCompositeOperation = "source-over";
+      oc.globalAlpha = 0.5 * s.opacity;
+      oc.drawImage(edge, 0, 0);
+    }
     // the paper's tooth lifts some of the wash: granulation
     oc.globalCompositeOperation = "destination-out";
     oc.globalAlpha = 0.38;
@@ -588,18 +671,31 @@ const airbrush: Brush = {
   mirrors: true,
   dab(s, d) {
     const { ctx } = s;
-    const r = (s.size / 2) * (0.7 + 0.3 * d.p);
-    ctx.globalAlpha = s.opacity * 0.12 * (0.35 + 0.65 * d.p);
-    ctx.drawImage(softTip(s.color, 0), d.x - r, d.y - r, r * 2, r * 2);
-    // fine spatter around the cone
+    // held further off (a light press), the cone is wider and its spray thinner
+    const r = (s.size / 2) * (1.25 - 0.5 * d.p);
+    const thick = 0.35 + 0.65 * d.p;
+    // the mist that rides with the droplets
+    ctx.globalAlpha = s.opacity * 0.08 * thick;
+    ctx.drawImage(softTip(s.color, 0), d.x - r * 1.2, d.y - r * 1.2, r * 2.4, r * 2.4);
+    // droplets, most in the middle and fewer out to the edge (a bell curve)
     ctx.fillStyle = s.color;
-    for (let i = 0; i < 3; i++) {
+    const n = Math.round(16 + r * thick * 1.2);
+    for (let i = 0; i < n; i++) {
+      const g = Math.sqrt(-2 * Math.log(1 - s.rand() * 0.999)) * 0.45;
       const a = s.rand() * TAU;
-      const dist = r * Math.sqrt(s.rand()) * 1.15;
-      const dot = 0.5 + s.rand() * 1.3;
-      ctx.globalAlpha = s.opacity * 0.22 * s.rand();
+      const dist = Math.min(1.3, g) * r;
+      // a bigger nozzle throws bigger drops
+      const dot = (0.5 + s.rand() * s.rand() * 1.8) * Math.max(1, s.size / 45);
+      ctx.globalAlpha = s.opacity * (0.25 + 0.5 * s.rand()) * thick;
+      ctx.fillRect(d.x + Math.cos(a) * dist - dot / 2, d.y + Math.sin(a) * dist - dot / 2, dot, dot);
+    }
+    // now and then it spits: a bigger drop
+    if (s.rand() < 0.025) {
+      const a = s.rand() * TAU;
+      const dist = r * s.rand() * 0.9;
+      ctx.globalAlpha = s.opacity * 0.85;
       ctx.beginPath();
-      ctx.arc(d.x + Math.cos(a) * dist, d.y + Math.sin(a) * dist, dot, 0, TAU);
+      ctx.arc(d.x + Math.cos(a) * dist, d.y + Math.sin(a) * dist, 1.2 + s.rand() * 2.2, 0, TAU);
       ctx.fill();
     }
   },
