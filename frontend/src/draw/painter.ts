@@ -11,7 +11,7 @@
  * Layers: the paper, the drawing, and the wet stroke on top of it until the
  * pen lifts. Undo keeps what a change covered, before and after.
  */
-import { brushOf, type Brush, type Dab, type Stroke, type ToolId } from "./brushes";
+import { brushOf, type Area, type Brush, type Dab, type Stroke, type ToolId } from "./brushes";
 import { grainTile, hexOf, paperSheet, rng } from "./paper";
 
 export interface Sample {
@@ -107,6 +107,16 @@ interface Live {
 /** undo keeps changes up to this many bytes, dropping the oldest */
 const UNDO_BYTES = 90 * 1024 * 1024;
 
+/** where two parts of the sheet overlap, if they do */
+const meet = (a: Area | null, b: Area): Area | null => {
+  if (!a) return null;
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  const x1 = Math.min(a.x + a.w, b.x + b.w);
+  const y1 = Math.min(a.y + a.h, b.y + b.h);
+  return x1 > x && y1 > y ? { x, y, w: x1 - x, h: y1 - y } : null;
+};
+
 const canvas = (w: number, h: number) => {
   const c = document.createElement("canvas");
   c.width = w;
@@ -152,6 +162,10 @@ export class Painter {
   private sheet: HTMLCanvasElement;
   paper: string;
 
+  /** what of the view needs drawing again: all of it, or (while a stroke goes on) just this box */
+  private dirtyAll = true;
+  private dirty: [number, number, number, number] | null = null;
+
   private undos: Change[] = [];
   private redos: Change[] = [];
   private undoBytes = 0;
@@ -166,7 +180,9 @@ export class Painter {
     this.height = opts.height;
     view.width = this.width;
     view.height = this.height;
-    this.vctx = view.getContext("2d")!;
+    // opaque, since the paper is always under it, and drawn without waiting
+    // on the page's own frames: the line keeps up with the pen
+    this.vctx = (view.getContext("2d", { alpha: false, desynchronized: true }) ?? view.getContext("2d"))!;
     this.layers = [this.newLayer()];
     this.wet = canvas(this.width, this.height);
     this.wctx = this.wet.getContext("2d")!;
@@ -381,7 +397,7 @@ export class Painter {
         const l = this.live;
         if (!l || performance.now() - l.lastMove < 40 || !l.last) return;
         this.dab({ ...l.last, step: 0, speed: 0 });
-        this.schedule();
+        this.schedule(true);
       }, 30);
     }
     this.schedule();
@@ -391,7 +407,7 @@ export class Painter {
     if (!this.live) return;
     for (const at of samples) this.push(at, false);
     this.live.lastMove = performance.now();
-    this.schedule();
+    this.schedule(true);
   }
 
   end() {
@@ -551,6 +567,7 @@ export class Painter {
       l.box[1] = Math.min(l.box[1], y - reach);
       l.box[2] = Math.max(l.box[2], x + reach);
       l.box[3] = Math.max(l.box[3], y + reach);
+      this.touch(x - reach, y - reach, x + reach, y + reach);
     };
     grow(d.x, d.y);
     if (brush.kind === "path") {
@@ -635,10 +652,10 @@ export class Painter {
   }
 
   /** the wet stroke as it joins the layer: held to the grain, and to the layer's paint when its alpha is locked */
-  private strokeImage(l: Live): HTMLCanvasElement {
-    const src = this.capped(l);
+  private strokeImage(l: Live, part?: Area): HTMLCanvasElement {
+    const src = this.capped(l, part);
     if (!this.layer.lockAlpha || l.brush.composite === "destination-out") return src;
-    const area = this.clampBox(l.box);
+    const area = part ?? this.clampBox(l.box);
     if (!area) return src;
     const c = this.lctx;
     c.save();
@@ -654,10 +671,10 @@ export class Painter {
   }
 
   /** the wet stroke held to the paper's grain (dry media), or the wet stroke as it is */
-  private capped(l: Live): HTMLCanvasElement {
+  private capped(l: Live, part?: Area): HTMLCanvasElement {
     const cap = l.brush.grainCap;
     if (!cap) return this.wet;
-    const area = this.clampBox(l.box);
+    const area = part ?? this.clampBox(l.box);
     if (!area) return this.wet;
     const key = `${cap.grain}|${cap.bite}`;
     let pattern = this.caps.get(key);
@@ -869,21 +886,54 @@ export class Painter {
 
   // ─── showing it ──────────────────────────────────────────────────
 
-  private schedule() {
+  /** the view gets this part of the sheet drawn again on the next frame */
+  private touch(x0: number, y0: number, x1: number, y1: number) {
+    const d = this.dirty;
+    this.dirty = d
+      ? [Math.min(d[0], x0), Math.min(d[1], y0), Math.max(d[2], x1), Math.max(d[3], y1)]
+      : [x0, y0, x1, y1];
+  }
+
+  /**
+   * Draws the view again on the next frame: all of it, or with `part`, only
+   * what's been touched since the last one. A stroke going on touches a few
+   * dabs' worth, so each frame of it costs that much, not the whole sheet.
+   */
+  private schedule(part = false) {
+    if (!part) this.dirtyAll = true;
     if (this.frame) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
-      if (this.live?.brush.kind === "path") this.drawPath(false);
-      this.redraw();
+      const l = this.live;
+      if (l?.brush.kind === "path") {
+        // a path brush draws its stroke whole each time: all of it may have moved
+        this.drawPath(false);
+        this.touch(l.box[0], l.box[1], l.box[2], l.box[3]);
+      }
+      const all = this.dirtyAll;
+      const area = !all && this.dirty ? this.clampBox(this.dirty) : null;
+      this.dirtyAll = false;
+      this.dirty = null;
+      if (all) this.redraw();
+      else if (area) this.redraw(area);
     });
   }
 
-  private redraw() {
+  private redraw(area?: Area) {
     const v = this.vctx;
     v.globalCompositeOperation = "source-over";
     v.globalAlpha = 1;
-    v.drawImage(this.sheet, 0, 0);
-    this.drawLayers(v, true);
+    if (area) {
+      v.save();
+      v.beginPath();
+      v.rect(area.x, area.y, area.w, area.h);
+      v.clip();
+      v.drawImage(this.sheet, area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
+    } else {
+      v.drawImage(this.sheet, 0, 0);
+    }
+    this.drawLayers(v, true, area);
+    if (area) v.restore();
   }
 
   /**
@@ -891,35 +941,40 @@ export class Painter {
    * at its opacity. While a stroke is wet it's put on its own layer first, so
    * the layer's blend applies to the stroke the way it will once it's dry.
    */
-  private drawLayers(to: CanvasRenderingContext2D, withWet = false) {
+  private drawLayers(to: CanvasRenderingContext2D, withWet = false, area?: Area) {
     const l = withWet ? this.live : null;
     this.layers.forEach((layer, i) => {
       if (!layer.visible) return;
       let img: HTMLCanvasElement = layer.canvas;
-      if (l && i === this.active && !l.brush.direct) img = this.withWet(l);
+      if (l && i === this.active && !l.brush.direct) img = this.withWet(l, area);
       to.globalAlpha = layer.opacity;
       to.globalCompositeOperation = layer.blend;
-      to.drawImage(img, 0, 0);
+      if (area) to.drawImage(img, area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
+      else to.drawImage(img, 0, 0);
     });
     to.globalAlpha = 1;
     to.globalCompositeOperation = "source-over";
   }
 
-  /** the active layer with the wet stroke on it */
-  private withWet(l: Live): HTMLCanvasElement {
+  /** the active layer with the wet stroke on it (only within `part`, when given: the rest isn't looked at) */
+  private withWet(l: Live, part?: Area): HTMLCanvasElement {
     const c = this.cctx;
+    const r = part ?? { x: 0, y: 0, w: this.width, h: this.height };
+    c.save();
+    c.beginPath();
+    c.rect(r.x, r.y, r.w, r.h);
+    c.clip();
     c.globalCompositeOperation = "copy";
     c.globalAlpha = 1;
-    c.drawImage(this.paint, 0, 0);
-    const area = this.clampBox(l.box);
+    c.drawImage(this.paint, r.x, r.y, r.w, r.h, r.x, r.y, r.w, r.h);
+    const area = meet(this.clampBox(l.box), r);
     if (area) {
       c.globalCompositeOperation = l.brush.composite;
       const whole = l.brush.composite === "multiply" || l.brush.kind === "path" || l.brush.composite === "destination-out";
       c.globalAlpha = (l.brush.composite === "destination-out" ? 1 : l.brush.live) * (whole ? l.s.opacity : 1);
-      c.drawImage(this.strokeImage(l), area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
+      c.drawImage(this.strokeImage(l, area), area.x, area.y, area.w, area.h, area.x, area.y, area.w, area.h);
     }
-    c.globalCompositeOperation = "source-over";
-    c.globalAlpha = 1;
+    c.restore();
     return this.comp;
   }
 
