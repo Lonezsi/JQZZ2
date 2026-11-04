@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../hooks/useGame";
 import { go, joinUrl } from "../../hooks/useHashRoute";
+import { useEscape } from "../../hooks/useEscape";
 import { playService } from "../../services/playService";
 import type { GameState } from "../../types/play";
 import { ConfirmButton, Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage, AnswerPicture } from "./PlayCommon";
@@ -22,6 +23,12 @@ export const HostScreen: React.FC<{ code: string }> = ({ code }) => {
   const { game, error, setError, act, serverNow } = useGame(code);
   const me = user?.id ?? "";
   const { drawers, saw } = useDrawers();
+  // Esc leaves only where there's nothing to leave: no such game, someone
+  // else's, or it's over; and it takes down a notice that's up. Never mid-game.
+  useEscape(!game && !!error, () => go("/"));
+  useEscape(!!game && game.hostId !== me, () => go("/"));
+  useEscape(game?.status === "FINISHED", () => go("/"));
+  useEscape(!!game && !!error, () => setError(null));
 
   if (!game) {
     return (

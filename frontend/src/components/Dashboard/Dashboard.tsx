@@ -150,7 +150,6 @@ export const Dashboard: React.FC = () => {
   // first, and with the quiz closed too it goes back
   useEscape(!!quiz, () => setActiveQuizId(null));
   useEscape(selectedActionIds.size > 0, clearSelectedActions);
-  useEscape(identityOpen, () => setIdentityOpen(false));
   useEscape(navOpen, () => setNavOpen(false));
 
   const handleCommand = useCallback((label: string) => {

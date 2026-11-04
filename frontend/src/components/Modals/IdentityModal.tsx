@@ -13,6 +13,7 @@ import { GoogleButton, useGoogleEnabled } from "../common/GoogleButton";
 import { GoogleAccount } from "../common/GoogleAccount";
 import { SecretId } from "../common/SecretId";
 import { Glyph } from "../common/Glyph";
+import { useEscape } from "../../hooks/useEscape";
 
 interface IdentityModalProps {
   state?: PresenceState;
@@ -30,6 +31,8 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
   onClose,
   inline = false,
 }) => {
+  // Esc closes it, wherever it was opened from
+  useEscape(!inline && state === "open", onClose);
   const { updateUser, register, login, logout } = useAuth();
   const [name, setName] = useState(current?.name ?? "");
   const [handle, setHandle] = useState(current?.handle ?? "");

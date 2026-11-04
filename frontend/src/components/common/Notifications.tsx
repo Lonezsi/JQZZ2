@@ -8,6 +8,7 @@ import type { User } from "../../types";
 import { when } from "../../utils/format";
 import { Avatar } from "./Avatar";
 import { Glyph } from "./Glyph";
+import { keyOf } from "../../constants/commands";
 
 /** cards in the corner at once; the rest wait on your profile */
 const MAX_SHOWN = 4;
@@ -95,7 +96,7 @@ export const Notifications: React.FC = () => {
             <Glyph name="BELL" size={14} />
             <span className="jqzz-inbox-count">{unread.length}</span>
           </button>
-          <a className="jqzz-inbox-all" href="#/me/notifications" title="all of them, read too">
+          <a className="jqzz-inbox-all" href="#/me/notifications" title="all of them, read too" data-keys={keyOf("Notifications")}>
             all
           </a>
           <button className="jqzz-inbox-clear" onClick={readAll} title="mark them all read" aria-label="Mark all read">

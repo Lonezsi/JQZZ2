@@ -23,6 +23,7 @@ import { SecretId } from "../common/SecretId";
 import { useGoogleEnabled } from "../common/GoogleButton";
 import { hits } from "../../utils/search";
 import { takeSearch } from "../../hooks/searchOnArrival";
+import { keyOf } from "../../constants/commands";
 import { RefChip } from "./StashBits";
 import { Glide } from "../common/Glide";
 
@@ -138,6 +139,8 @@ export const ProfilePage: React.FC<{
             options={tabs.map((t) => ({
               key: t,
               href: `${base}/${t}`,
+              // your own tabs each have a key: H, S, B, Y and ,
+              keys: self ? keyOf(TAB_COMMAND[t] ?? "") || undefined : undefined,
               icon:
                 t === "history"
                   ? "HISTORY"
@@ -228,6 +231,15 @@ export const ProfilePage: React.FC<{
 };
 
 type Friends = ReturnType<typeof useFriends>;
+
+/** the command that opens each of your own tabs, for its key */
+const TAB_COMMAND: Partial<Record<Tab, string>> = {
+  history: "Game history",
+  stash: "Open stash",
+  notifications: "Notifications",
+  you: "Your profile",
+  settings: "Settings",
+};
 
 /** what the search box offers to look through, per tab */
 const SEARCHES: Record<Tab, string> = {

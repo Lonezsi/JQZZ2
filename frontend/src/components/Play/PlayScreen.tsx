@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../hooks/useGame";
 import { go } from "../../hooks/useHashRoute";
+import { useEscape } from "../../hooks/useEscape";
 import { playService, type Submission } from "../../services/playService";
 import { describeQuestion, modeOf } from "../../utils/questionTypes";
 import type { GameState } from "../../types/play";
@@ -76,6 +77,13 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
       .catch(() => {})
       .finally(() => go("/"));
   };
+
+  // Esc leaves only where there's nothing to leave: no such game, kept out of
+  // it, or it's over; and it takes down a notice that's up. Never mid-game.
+  useEscape(!game && !!error, () => go("/join"));
+  useEscape(!!refused && !!game && !inGame, () => go("/join"));
+  useEscape(game?.status === "FINISHED", () => go("/"));
+  useEscape(!!game && !!error, () => setError(null));
 
   if (refused && game && !inGame) {
     return (

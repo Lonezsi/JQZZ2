@@ -12,6 +12,7 @@ const clamp = (x: number) => Math.min(1, Math.max(0, x));
  * poster's own, which grows out of it (welcome.css), so the star only seems
  * to shine harder; then this one fades away under it. Drawn only while it
  * changes. :root[data-star] says how far it's got: "flying", "landed".
+ * A first load bound anywhere else never reaches it: it rises out of the top.
  */
 export const LaunchStar: React.FC = () => {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -77,9 +78,12 @@ export const LaunchStar: React.FC = () => {
         V = size.height / 2;
       }
 
-      // far off it's small and high; it comes down and grows the nearer we get
-      const zoom = 0.1 + 0.9 * near ** 1.6;
-      const y = Hs * 0.1 + (ty - Hs * 0.1) * near ** 1.3;
+      // far off it's small and high; it comes down and grows the nearer we get.
+      // Bound anywhere but the front page, the camera never reaches it: it
+      // rises out of the top instead, a little bigger, and is gone
+      const passing = place !== "loading" && place !== "front";
+      const zoom = passing ? 0.1 + 0.25 * near : 0.1 + 0.9 * near ** 1.6;
+      const y = passing ? Hs * 0.1 - Hs * 0.5 * near ** 1.2 : Hs * 0.1 + (ty - Hs * 0.1) * near ** 1.3;
       const k = Math.min(window.devicePixelRatio || 1, 1.5);
       const w = Math.round(W * k);
       const h = Math.round(Hs * k);

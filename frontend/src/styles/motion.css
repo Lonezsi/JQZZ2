@@ -1002,6 +1002,14 @@ button.jqzz-tile:hover .jqzz-tile-letter {
 }
 
 /* ─── our tooltip ─────────────────────────────────────────────────── */
+/* a key it has, after the words (data-keys, Tooltip.tsx) */
+.jqzz-tooltip-keys {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.jqzz-tooltip-keys:only-child {
+  margin-left: 0;
+}
 .jqzz-tooltip {
   position: fixed;
   z-index: var(--z-tooltip);

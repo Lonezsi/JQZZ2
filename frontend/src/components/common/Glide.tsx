@@ -9,6 +9,8 @@ export interface GlideOption {
   /** a link, for tabs that are places */
   href?: string;
   title?: string;
+  /** its key, shown in its tooltip (constants/commands.ts) */
+  keys?: string;
   /** a count or note after the label */
   extra?: React.ReactNode;
 }
@@ -49,7 +51,7 @@ export const Glide: React.FC<{
         );
         if (o.href) {
           return (
-            <a key={o.key} href={o.href} aria-current={on ? "page" : undefined} title={o.title}>
+            <a key={o.key} href={o.href} aria-current={on ? "page" : undefined} title={o.title} data-keys={o.keys}>
               {inner}
             </a>
           );
@@ -62,6 +64,7 @@ export const Glide: React.FC<{
             aria-checked={kind === "radio" ? on : undefined}
             aria-selected={kind === "tabs" ? on : undefined}
             title={o.title}
+            data-keys={o.keys}
             disabled={disabled}
             onClick={() => !on && onPick?.(o.key)}
           >

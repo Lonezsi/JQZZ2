@@ -55,7 +55,17 @@ const STASH: Record<StashKind, { tab: string; icon: string; noun: string }> = {
   IMAGE: { tab: "images", icon: "▣", noun: "image" },
 };
 
-/** how many of each kind "all" shows; one kind on its own shows more */
+/**
+ * The keys that aren't commands, listed with them so every key is in one
+ * place. Picked from here, each does what pressing it does.
+ */
+const KEYS: { icon: string; label: string; combo: string; press: KeyboardEventInit }[] = [
+  { icon: "⌕", label: "Search your quizzes", combo: "/", press: { key: "/" } },
+  { icon: "▣", label: "Select every step", combo: "Mod A", press: { key: "a", ctrlKey: true } },
+  { icon: "✕", label: "Close, or go up a level", combo: "Esc", press: { key: "Escape" } },
+];
+
+/** how many of each kind "all" shows once you type; one kind on its own shows more */
 const EACH = 5;
 const ALONE = 40;
 /** a row and a section label, in px: the lens is moved by them */
@@ -130,14 +140,25 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   };
 
   const all: Record<Kind, Item[]> = {
-    command: COMMANDS.filter((c) => hits(q, c.label)).map((c) => ({
-      kind: "command",
-      key: c.label,
-      icon: c.icon,
-      label: c.label,
-      keys: c.sub,
-      run: close(() => onExecute(c.label)),
-    })),
+    command: [
+      ...COMMANDS.filter((c) => hits(q, c.label)).map((c): Item => ({
+        kind: "command",
+        key: c.label,
+        icon: c.icon,
+        label: c.label,
+        keys: c.sub,
+        run: close(() => onExecute(c.label)),
+      })),
+      ...KEYS.filter((k) => hits(q, k.label)).map((k): Item => ({
+        kind: "command",
+        key: k.label,
+        icon: k.icon,
+        label: k.label,
+        keys: k.combo,
+        // once the palette is gone, the key itself
+        run: close(() => window.setTimeout(() => window.dispatchEvent(new KeyboardEvent("keydown", { ...k.press, bubbles: true })), 0)),
+      })),
+    ],
     // quizzes, stash and people only show up once you type, unless their pill is on
     quiz:
       q || only === "quiz"
@@ -196,7 +217,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         : [],
   };
   const kinds = (only ? [only] : (["command", "quiz", "stash", "person"] as Kind[])).filter((k) => all[k].length);
-  const items = kinds.flatMap((k) => all[k].slice(0, only ? ALONE : EACH));
+  // with nothing typed, every command and key is there; typing, a few of each
+  const items = kinds.flatMap((k) => all[k].slice(0, only || (!q && k === "command") ? ALONE : EACH));
   const active = Math.min(activeIdx, Math.max(items.length - 1, 0));
   // a label above every section but a lone one
   const labelled = kinds.length > 1 || (only === null && kinds[0] !== "command");

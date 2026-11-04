@@ -5,7 +5,8 @@ import { Keys } from "../../common/Keys";
 import { DeleteQuizButton } from "../../common/DeleteQuizButton";
 import { usePeople } from "../../../hooks/usePeople";
 import { useAuth } from "../../../contexts/AuthContext";
-import { ariaShortcut, modLabel } from "../../../utils/shortcuts";
+import { ariaShortcut } from "../../../utils/shortcuts";
+import { keyOf } from "../../../constants/commands";
 
 interface ToolbarProps {
   mode: EditorMode;
@@ -70,10 +71,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {quiz && (
         <div className="jqzz-seg" role="group" aria-label="Editor mode" data-mode={mode}>
           <span className="jqzz-seg-thumb" aria-hidden="true" />
-          <button aria-pressed={mode === "visual"} onClick={() => setMode("visual")}>
+          <button aria-pressed={mode === "visual"} onClick={() => setMode("visual")} data-keys={keyOf("Switch visual / text")}>
             Visual
           </button>
-          <button aria-pressed={mode === "text"} onClick={() => setMode("text")}>
+          <button aria-pressed={mode === "text"} onClick={() => setMode("text")} data-keys={keyOf("Switch visual / text")}>
             Text
           </button>
         </div>
@@ -133,7 +134,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           className="jqzz-toolbar-btn run"
           onClick={onStart}
           aria-keyshortcuts={ariaShortcut("Mod ↵")}
-          title={`start · ${modLabel("Mod ↵")}`}
+          title="start a game"
+          data-keys="Mod ↵"
         >
           <span aria-hidden="true">▶</span> Start
         </button>

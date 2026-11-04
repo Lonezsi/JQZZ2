@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Keys } from "./Keys";
 import { createPortal } from "react-dom";
 
 /**
@@ -9,9 +10,13 @@ import { createPortal } from "react-dom";
  * only name (an icon button), it becomes its aria-label so nothing is lost
  * for screen readers. A phone has no hover, so there a long press shows it,
  * and the tap that ends the press doesn't count as a tap.
+ *
+ * Something that has a key of its own says so with data-keys ("V", "Mod ↵",
+ * as constants/commands.ts writes them), and the bubble shows it as keycaps
+ * after the words, or on its own.
  */
 export const Tooltip: React.FC = () => {
-  const [tip, setTip] = useState<{ text: string; x: number; y: number; below: boolean } | null>(null);
+  const [tip, setTip] = useState<{ text: string; keys: string | null; x: number; y: number; below: boolean } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const current = useRef<Element | null>(null);
   const bubble = useRef<HTMLDivElement>(null);
@@ -38,18 +43,19 @@ export const Tooltip: React.FC = () => {
     };
 
     const show = (el: Element) => {
-      const text = el.getAttribute("data-tip");
-      if (!text) return;
+      const text = el.getAttribute("data-tip") ?? "";
+      const keys = el.getAttribute("data-keys");
+      if (!text && !keys) return;
       const r = el.getBoundingClientRect();
       const below = r.top < 56;
-      setTip({ text, x: r.left + r.width / 2, y: below ? r.bottom + 10 : r.top - 10, below });
+      setTip({ text, keys, x: r.left + r.width / 2, y: below ? r.bottom + 10 : r.top - 10, below });
     };
 
     const target = (from: EventTarget | null) => {
       const node = from instanceof Element ? from : null;
-      const el = node?.closest("[title], [data-tip]") ?? null;
+      const el = node?.closest("[title], [data-tip], [data-keys]") ?? null;
       if (el?.hasAttribute("title")) adopt(el);
-      return el?.hasAttribute("data-tip") ? el : null;
+      return el?.hasAttribute("data-tip") || el?.hasAttribute("data-keys") ? el : null;
     };
 
     const enter = (e: Event, delay: number) => {
@@ -146,6 +152,7 @@ export const Tooltip: React.FC = () => {
       style={{ left: tip.x, top: tip.y }}
     >
       {tip.text}
+      {tip.keys && <Keys combo={tip.keys} className="jqzz-tooltip-keys" />}
     </div>,
     document.body,
   );
