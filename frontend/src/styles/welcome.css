@@ -579,8 +579,23 @@
   .p-coords {
     top: 13%;
   }
+  /* from just above the bottom-left note, upward: on a narrow screen the
+     line is longer than the room under the buttons, and it would run into it */
   .p-vert-l {
-    top: 64%;
+    top: auto;
+    bottom: calc(3.5% + 4.4em);
+  }
+}
+/* no keyboard: the commands are the star button up in the corner */
+.p-br-touch {
+  display: none;
+}
+@media (hover: none) {
+  .p-br-keys {
+    display: none;
+  }
+  .p-br-touch {
+    display: inline;
   }
 }
 

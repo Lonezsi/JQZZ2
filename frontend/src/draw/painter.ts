@@ -946,9 +946,10 @@ export class Painter {
     return out;
   }
 
-  /** the drawing alone (no paper), every layer, to keep for a reload */
+  /** every layer and which paper it's on, to keep for a reload or in the stash (a drawing) */
   snapshot(): string {
     return JSON.stringify({
+      paper: this.paper,
       active: this.active,
       layers: this.layers.map((l) => ({
         name: l.name,
@@ -975,6 +976,7 @@ export class Painter {
     if (src.trimStart().startsWith("{")) {
       // a snapshot of our own: every layer as it was
       const saved = JSON.parse(src) as {
+        paper?: string;
         active?: number;
         layers?: { name?: string; visible?: boolean; opacity?: number; blend?: GlobalCompositeOperation; lockAlpha?: boolean; image: string }[];
       };
@@ -992,6 +994,7 @@ export class Painter {
       }
       if (!layers.length) layers = [this.newLayer()];
       active = Math.max(0, Math.min(saved.active ?? 0, layers.length - 1));
+      if (saved.paper) this.setPaper(saved.paper);
     } else {
       // a picture: one layer of it
       const layer = this.newLayer();

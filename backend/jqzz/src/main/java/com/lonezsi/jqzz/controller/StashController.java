@@ -9,12 +9,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.lonezsi.jqzz.model.ImageVisibility;
@@ -23,6 +25,7 @@ import com.lonezsi.jqzz.model.StashItem;
 import com.lonezsi.jqzz.model.StashKind;
 import com.lonezsi.jqzz.service.ImageService;
 import com.lonezsi.jqzz.service.StashService;
+import com.lonezsi.jqzz.service.WebPicture;
 
 /** Your stash. Who you are comes from the X-User-Id header, like the image library. */
 @RestController
@@ -31,16 +34,51 @@ public class StashController {
 
     private final StashService stash;
     private final ImageService images;
+    private final WebPicture web;
 
-    public StashController(StashService stash, ImageService images) {
+    public StashController(StashService stash, ImageService images, WebPicture web) {
         this.stash = stash;
         this.images = images;
+        this.web = web;
     }
 
-    /** Everything you saved, plus the pictures you uploaded yourself. */
+    /** Everything you saved, plus the pictures you uploaded yourself (a drawing's picture among them). */
     @GetMapping
     public Map<String, Object> list(@RequestHeader(value = "X-User-Id", required = false) String userId) {
         return Map.of("items", stash.list(userId), "images", images.listMine(userId));
+    }
+
+    /** A new drawing: the picture it makes (file) and its layers (the painter's snapshot). */
+    @PostMapping("/drawings")
+    public StashItem newDrawing(@RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestParam("picture") MultipartFile picture,
+            @RequestParam("layers") String layers,
+            @RequestParam(value = "title", required = false) String title) throws java.io.IOException {
+        return stash.saveDrawing(userId, null, title, layers, picture.getBytes(), picture.getContentType());
+    }
+
+    /** One of your drawings, drawn on and saved again. */
+    @PutMapping("/drawings/{id}")
+    public StashItem saveDrawing(@RequestHeader(value = "X-User-Id", required = false) String userId,
+            @PathVariable("id") Long id,
+            @RequestParam("picture") MultipartFile picture,
+            @RequestParam("layers") String layers,
+            @RequestParam(value = "title", required = false) String title) throws java.io.IOException {
+        return stash.saveDrawing(userId, id, title, layers, picture.getBytes(), picture.getContentType());
+    }
+
+    /** {url}: a picture from the web, kept as one of your own (WebPicture says which addresses are allowed). */
+    @PostMapping("/from-url")
+    public Map<String, Object> fromUrl(@RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestBody Map<String, String> body) {
+        if (userId == null || userId.isBlank()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in first");
+        try {
+            WebPicture.Fetched got = web.fetch(body.get("url"));
+            var image = images.keep(userId, got.name().isBlank() ? "picture" : got.name(), got.data(), got.mimeType());
+            return Map.of("id", image.getId(), "handle", image.getHandle());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     /** {recordId, questionKey?}: one question of a game you were in, or the whole quiz. */

@@ -64,6 +64,8 @@ function writeKept(k: Kept) {
 export interface DrawingFrameHandle {
   /** the picture as a file */
   export(): Promise<Blob>;
+  /** every layer, as the painter keeps them: to save it as a drawing (the stash) */
+  snapshot(): string;
   /** whether anything changed since it was last sent */
   readonly unsent: boolean;
   readonly empty: boolean;
@@ -130,7 +132,8 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       saved = null;
     }
     const from = saved ?? start;
-    if (from) p.load(from).catch(() => {});
+    // a drawing of our own says which paper it's on
+    if (from) p.load(from).then(() => setPaper(p.paper)).catch(() => {});
     return () => p.destroy();
     // the sheet is made once; what it starts from is read once
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,6 +200,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     ref,
     () => ({
       export: () => painter.current!.export(),
+      snapshot: () => painter.current!.snapshot(),
       get unsent() {
         return !!painter.current && !painter.current.isEmpty && painter.current.revision !== sentAt;
       },

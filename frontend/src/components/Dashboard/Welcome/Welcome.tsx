@@ -176,7 +176,8 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
           and how it works ↓
         </span>
         <span className="jqzz-annot p-br from-r">
-          ctrl k for everything
+          <span className="p-br-keys">ctrl k for everything</span>
+          <span className="p-br-touch">✦ for everything</span>
           <br />
           <span className="p-br-dots" aria-hidden="true">· · · ·</span>
         </span>

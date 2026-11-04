@@ -2,7 +2,8 @@ import type { ImageVisibility, Phase } from "./index";
 
 /* The stash and the game history: what /stash and /history send back. */
 
-export type StashKind = "QUIZ" | "QUESTION" | "IMAGE" | "TYPE";
+/** DRAWING: drawn here, its layers in payload (the painter's snapshot), its picture at imageId */
+export type StashKind = "QUIZ" | "QUESTION" | "IMAGE" | "TYPE" | "DRAWING";
 
 /** A question's shape without its words: what a TYPE item holds, and what the add tray offers. */
 export interface TypeShape {

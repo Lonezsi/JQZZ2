@@ -54,6 +54,22 @@ export const stashService = {
   open: (userId: string, id: number) =>
     api.post<Quiz>(`/stash/${id}/open`, null, as(userId)).then((r) => r.data),
 
+  /** a drawing, new or (with id) drawn on again: the picture it makes and its layers */
+  saveDrawing: (userId: string, d: { id?: number; title?: string; layers: string; picture: Blob }) => {
+    const form = new FormData();
+    form.append("picture", d.picture, "drawing");
+    form.append("layers", d.layers);
+    if (d.title) form.append("title", d.title);
+    const url = d.id == null ? "/stash/drawings" : `/stash/drawings/${d.id}`;
+    const headers = { headers: { "Content-Type": "multipart/form-data", "X-User-Id": userId } };
+    return (d.id == null ? api.post<StashItem>(url, form, headers) : api.put<StashItem>(url, form, headers)).then(
+      (r) => r.data,
+    );
+  },
+  /** a picture from a web address, kept as one of yours */
+  fromUrl: (userId: string, url: string) =>
+    api.post<{ id: number; handle: string }>("/stash/from-url", { url }, as(userId)).then((r) => r.data),
+
   imageVisibility: (userId: string, id: number, visibility: ImageVisibility) =>
     api.patch<LibraryImage>(`/images/${id}`, { visibility }, as(userId)).then((r) => r.data),
 };

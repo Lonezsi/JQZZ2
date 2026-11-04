@@ -53,6 +53,7 @@ const STASH: Record<StashKind, { tab: string; icon: string; noun: string }> = {
   QUESTION: { tab: "questions", icon: "?", noun: "question" },
   TYPE: { tab: "types", icon: "◫", noun: "type" },
   IMAGE: { tab: "images", icon: "▣", noun: "image" },
+  DRAWING: { tab: "drawings", icon: "✎", noun: "drawing" },
 };
 
 /**
@@ -189,7 +190,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 go(`/me/stash/${STASH[i.kind].tab}`);
               }),
             })),
-            ...(stash?.images ?? []).filter((img) => hits(q, img.handle, img.reference, "image")).map((img): Item => ({
+            // a drawing's picture is the drawing: it isn't listed again as an image
+            ...(stash?.images ?? [])
+              .filter((img) => !stash?.items.some((i) => i.kind === "DRAWING" && i.imageId === img.id))
+              .filter((img) => hits(q, img.handle, img.reference, "image"))
+              .map((img): Item => ({
               kind: "stash",
               key: `image-${img.id}`,
               icon: STASH.IMAGE.icon,

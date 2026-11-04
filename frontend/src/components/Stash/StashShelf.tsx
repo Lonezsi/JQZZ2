@@ -19,6 +19,7 @@ import { Glyph } from "../common/Glyph";
 import { Select } from "../common/Select";
 import { setTypesCache } from "../../hooks/useTypes";
 import { useEscape } from "../../hooks/useEscape";
+import { AddPicture, DrawStudio } from "./AddPicture";
 import { ModePicker } from "../common/ModePicker";
 import { describe, modeKey, modeOf, typeIdOf } from "../../utils/questionTypes";
 import { QuestionImage } from "../Play/PlayCommon";
@@ -31,9 +32,16 @@ const SECTIONS: { tab: string; kind: StashKind; label: string; icon: string; nou
   { tab: "questions", kind: "QUESTION", label: "questions", icon: "ITEM_QUESTION", noun: "question" },
   { tab: "types", kind: "TYPE", label: "types", icon: "TYPE", noun: "type" },
   { tab: "images", kind: "IMAGE", label: "images", icon: "IMAGE", noun: "image" },
+  { tab: "drawings", kind: "DRAWING", label: "drawings", icon: "DRAW", noun: "drawing" },
 ];
 
-const KINDS: Record<string, StashKind> = { quiz: "QUIZ", question: "QUESTION", image: "IMAGE", type: "TYPE" };
+const KINDS: Record<string, StashKind> = {
+  quiz: "QUIZ",
+  question: "QUESTION",
+  image: "IMAGE",
+  type: "TYPE",
+  drawing: "DRAWING",
+};
 
 /** what a saved item can be found by: its names and the questions in it */
 function itemText(item: StashItem) {
@@ -129,33 +137,60 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
   }, [data, me]);
   const of = (kind: StashKind) =>
     data?.items.filter((i) => i.kind === kind && hits(query, ...itemText(i))) ?? [];
-  const uploads = data?.images.filter((img) => hits(query, img.handle, img.reference)) ?? [];
+  // a drawing's picture is in the image library too: it shows as the drawing, not again as an upload
+  const drawn = useMemo(
+    () => new Set(data?.items.filter((i) => i.kind === "DRAWING").map((i) => i.imageId) ?? []),
+    [data],
+  );
+  const uploads = data?.images.filter((img) => !drawn.has(img.id) && hits(query, img.handle, img.reference)) ?? [];
   // what each chip would show, so the counts follow the search
   const counts = useMemo(() => {
-    const c: Record<StashKind, number> = { QUIZ: 0, QUESTION: 0, TYPE: 0, IMAGE: 0 };
+    const c: Record<StashKind, number> = { QUIZ: 0, QUESTION: 0, TYPE: 0, IMAGE: 0, DRAWING: 0 };
     if (!data) return c;
     data.items.forEach((i) => hits(query, ...itemText(i)) && c[i.kind]++);
-    data.images.forEach((img) => hits(query, img.handle, img.reference) && c.IMAGE++);
+    data.images.forEach((img) => !drawn.has(img.id) && hits(query, img.handle, img.reference) && c.IMAGE++);
     return c;
-  }, [data, query]);
+  }, [data, query, drawn]);
+
+  // the +: something new came in, so look again; and the drawing being drawn, if any
+  const reload = useCallback(() => {
+    if (me) stashService.list(me).then(setData).catch((err) => setError(errorMessage(err)));
+  }, [me]);
+  const [studio, setStudio] = useState<StashItem | null | undefined>(undefined);
+  const [saves, setSaves] = useState(0);
 
   const searching = query.trim().length > 0;
   const several = shown.length > 1;
 
   return (
     <div className="jqzz-shelf-body-wrap">
-      <FilterChips
-        label="Show"
-        on={on}
-        onChange={setOn}
-        total={data ? Object.values(counts).reduce((a, b) => a + b, 0) : undefined}
-        options={SECTIONS.map((s) => ({
-          key: s.kind,
-          label: s.label,
-          icon: s.icon,
-          count: data ? counts[s.kind] : undefined,
-        }))}
-      />
+      <div className="jqzz-shelf-top">
+        <FilterChips
+          label="Show"
+          on={on}
+          onChange={setOn}
+          total={data ? Object.values(counts).reduce((a, b) => a + b, 0) : undefined}
+          options={SECTIONS.map((s) => ({
+            key: s.kind,
+            label: s.label,
+            icon: s.icon,
+            count: data ? counts[s.kind] : undefined,
+          }))}
+        />
+        {me && <AddPicture me={me} onAdded={(item) => (item ? put(item) : reload())} onDraw={() => setStudio(null)} />}
+      </div>
+      {studio !== undefined && (
+        <DrawStudio
+          me={me}
+          item={studio}
+          onSaved={(item) => {
+            put(item);
+            setSaves((n) => n + 1);
+            reload();
+          }}
+          onClose={() => setStudio(undefined)}
+        />
+      )}
 
       {linkNote && (
         <p className={`jqzz-play-note${linkNote.bad ? " bad" : ""} jqzz-shelf-linknote`} role="status">
@@ -182,6 +217,34 @@ export const StashShelf: React.FC<{ tab?: string; add?: { kind: string; ref: str
               <section key={s.kind} className="jqzz-shelf-section" aria-label={s.label}>
                 {head}
                 <TypesTab types={items} me={me} put={put} drop={drop} reload={setData} searching={searching} />
+              </section>
+            );
+          }
+          if (s.kind === "DRAWING") {
+            return (
+              <section key={s.kind} className="jqzz-shelf-section" aria-label={s.label}>
+                {head}
+                {items.length === 0 ? (
+                  <p className="jqzz-shelf-empty">
+                    {searching ? "none of your drawings match that." : "nothing drawn yet. the + up there has a pencil."}
+                  </p>
+                ) : (
+                  <ul className="jqzz-shelf-grid">
+                    {items.map((item, i) => (
+                      <DrawingCard
+                        key={item.id}
+                        item={item}
+                        picture={data.images.find((img) => img.id === item.imageId)?.reference}
+                        me={me}
+                        index={i}
+                        saves={saves}
+                        put={put}
+                        drop={drop}
+                        onDraw={() => setStudio(item)}
+                      />
+                    ))}
+                  </ul>
+                )}
               </section>
             );
           }
@@ -662,6 +725,44 @@ const SavedImageCard: React.FC<{
       <RefChip reference={item.reference} me={me} />
       {item.title && <RefChip reference={item.title} me={me} label="picture" />}
       <VisibilitySwitch value={item.visibility} onChange={c.setVisibility} busy={c.busy} />
+      <ConfirmButton onConfirm={c.remove} disabled={c.busy}>
+        remove
+      </ConfirmButton>
+      {c.error && <p className="jqzz-play-note bad">{c.error}</p>}
+    </li>
+  );
+};
+
+/** One of your drawings: its picture, its name, and the way back into it with every layer. */
+const DrawingCard: React.FC<{
+  item: StashItem;
+  /** how a quiz names its picture */
+  picture?: string;
+  me: string;
+  index: number;
+  saves: number;
+  put: (i: StashItem) => void;
+  drop: (id: number) => void;
+  onDraw: () => void;
+}> = ({ item, picture, me, index, saves, put, drop, onDraw }) => {
+  const c = useItemControls(item, me, put, drop);
+  return (
+    <li className="jqzz-shelf-card" style={{ "--i": Math.min(index, 12) } as React.CSSProperties}>
+      {item.imageId != null && (
+        <button type="button" className="jqzz-shelf-card-pic" onClick={onDraw} title="draw on it">
+          {/* how many saves this visit, in the address: a drawing saved again shows its new picture */}
+          <img src={`${imageUrl(item.imageId, me)}${imageUrl(item.imageId, me).includes("?") ? "&" : "?"}v=${saves}`} alt="" loading="lazy" />
+        </button>
+      )}
+      <span className="jqzz-shelf-title">{item.title || item.handle}</span>
+      {picture && <RefChip reference={picture} me={me} label="picture" />}
+      <div className="jqzz-play-row">
+        <button type="button" className="jqzz-play-btn small" onClick={onDraw}>
+          <Glyph name="DRAW" size={13} /> draw on it
+        </button>
+        <VisibilitySwitch value={item.visibility} onChange={c.setVisibility} busy={c.busy} />
+      </div>
+      {item.visibility !== "PRIVATE" && <ShareButton kind={item.kind} reference={item.reference} />}
       <ConfirmButton onConfirm={c.remove} disabled={c.busy}>
         remove
       </ConfirmButton>

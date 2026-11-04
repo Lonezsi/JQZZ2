@@ -19,6 +19,7 @@ import com.lonezsi.jqzz.game.GameEngine;
 import com.lonezsi.jqzz.model.Action;
 import com.lonezsi.jqzz.model.Answer;
 import com.lonezsi.jqzz.model.GameRecord;
+import com.lonezsi.jqzz.model.Image;
 import com.lonezsi.jqzz.model.ImageVisibility;
 import com.lonezsi.jqzz.model.Phase;
 import com.lonezsi.jqzz.model.Question;
@@ -308,6 +309,56 @@ public class StashService {
         return stash.save(copy);
     }
 
+    // ─── drawings ──────────────────────────────────────────────────────
+
+    /** the most a drawing's layers may take, as the painter's snapshot: what the payload column holds */
+    static final int MAX_DRAWING = 4 * 1024 * 1024;
+
+    /**
+     * A drawing made in the drawing frame: its layers (the painter's snapshot,
+     * JSON) and the picture they make. New, it goes in as a private picture in
+     * the image library and a DRAWING item pointing at it; saved again
+     * ({@code id} given), the same picture and item are changed, so wherever
+     * it's used it's the new one.
+     */
+    @Transactional
+    public StashItem saveDrawing(String userId, Long id, String title, String layers, byte[] picture, String mimeType) {
+        require(userId);
+        if (layers == null || !layers.trim().startsWith("{")) throw bad("That drawing came without its layers");
+        if (layers.length() > MAX_DRAWING) throw bad("That drawing has too much on it to keep (its layers are over 4 MB)");
+        if (picture == null || picture.length == 0) throw bad("That drawing came without its picture");
+        String name = title == null || title.isBlank() ? null : clip(title.trim(), 120);
+        try {
+            if (id != null) {
+                StashItem item = mine(id, userId);
+                if (item.getKind() != StashKind.DRAWING) throw bad("That isn't a drawing");
+                // a copy of someone else's drawing gets a picture of its own the first time it's changed
+                if (item.getImageId() != null && images.isUploadedBy(item.getImageId(), userId)) {
+                    images.replace(item.getImageId(), userId, picture, mimeType);
+                } else {
+                    item.setImageId(images.keep(userId, name == null ? item.getHandle() : name, picture, mimeType).getId());
+                }
+                item.setPayload(layers);
+                if (name != null) item.setTitle(name);
+                return stash.save(item);
+            }
+            Image image = images.keep(userId, name == null ? "drawing" : name, picture, mimeType);
+            StashItem item = new StashItem();
+            item.setKind(StashKind.DRAWING);
+            item.setTitle(name);
+            item.setPayload(layers);
+            item.setImageId(image.getId());
+            item.setSavedBy(userId);
+            item.setOwnerId(userId);
+            item.setVisibility(ImageVisibility.PRIVATE);
+            item.setHandle(freeHandle(StashKind.DRAWING, name == null ? "drawing" : name, userId));
+            item.setCreatedAt(LocalDateTime.now());
+            return stash.save(item);
+        } catch (IllegalArgumentException | SecurityException e) {
+            throw bad(e.getMessage());
+        }
+    }
+
     // ─── changing and removing ─────────────────────────────────────────
 
     /** New handle, title or visibility. Handles follow the image rules for the namespace it lands in. */
@@ -352,6 +403,15 @@ public class StashService {
                         : "You already have a " + item.getKind().name().toLowerCase() + " called " + newHandle);
             }
         }
+        // a drawing's picture is seen by whoever can see the drawing
+        if (item.getKind() == StashKind.DRAWING && newVisibility != item.getVisibility() && item.getImageId() != null
+                && images.isUploadedBy(item.getImageId(), userId)) {
+            try {
+                images.changeVisibility(item.getImageId(), userId, newVisibility);
+            } catch (IllegalArgumentException | SecurityException e) {
+                throw conflict(e.getMessage());
+            }
+        }
         item.setHandle(newHandle);
         item.setOwnerId(newOwner);
         item.setVisibility(newVisibility);
@@ -388,7 +448,7 @@ public class StashService {
     @Transactional(readOnly = true)
     public Quiz practiceQuiz(Long id, String userId) {
         StashItem item = get(id, userId);
-        if (item.getKind() == StashKind.IMAGE) throw bad("A picture can't be played");
+        if (item.getKind() == StashKind.IMAGE || item.getKind() == StashKind.DRAWING) throw bad("A picture can't be played");
         Map<String, Object> content = read(item.getPayload());
         Quiz quiz = new Quiz();
         quiz.setName(nameOf(content, item.getTitle()));

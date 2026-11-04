@@ -61,6 +61,34 @@ public class ImageService {
     }
 
     /**
+     * A private picture of someone's that didn't come from an upload form (a
+     * drawing, a picture from a web address), under a handle made free from
+     * {@code base}: "drawing", then "drawing_2" and so on.
+     */
+    public Image keep(String ownerId, String base, byte[] data, String mimeType) {
+        if (ownerId == null || ownerId.isBlank()) throw new IllegalArgumentException("Sign in first");
+        if (mimeType == null || !mimeType.startsWith("image/")) throw new IllegalArgumentException("That isn't a picture");
+        String stem = base == null ? "" : base.toLowerCase().replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
+        if (stem.isEmpty()) stem = "picture";
+        if (stem.length() > 40) stem = stem.substring(0, 40).replaceAll("_+$", "");
+        String handle = stem;
+        for (int n = 2; imageRepository.existsByOwnerIdAndHandle(ownerId, handle); n++) handle = stem + "_" + n;
+        Image image = new Image(handle, ownerId, ImageVisibility.PRIVATE, data, mimeType);
+        image.setUploadedBy(ownerId);
+        return imageRepository.save(image);
+    }
+
+    /** A new picture for one of your own, keeping its handle and whoever can see it: a drawing saved again. */
+    public Image replace(Long id, String userId, byte[] data, String mimeType) {
+        if (mimeType == null || !mimeType.startsWith("image/")) throw new IllegalArgumentException("That isn't a picture");
+        Image img = imageRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Image not found"));
+        if (userId == null || !isUploadedBy(id, userId)) throw new SecurityException("You can only change your own images");
+        img.setData(data);
+        img.setMimeType(mimeType);
+        return imageRepository.save(img);
+    }
+
+    /**
      * Resolve a reference string to an image ID (or URL). The reference can be:
      * - "handle" (public)
      * - ":handle" (current user's private/semi-private)
