@@ -7,7 +7,7 @@ import { Tooltip } from "./components/common/Tooltip";
 import { useTouchDrag } from "./hooks/useTouchDrag";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { useNavShortcuts } from "./hooks/useNavShortcuts";
-// Esc closes what's open, then goes back: from the first page on
+// Esc closes what's open, then goes up a level: from the first page on
 import "./hooks/useEscape";
 
 /* Hash routes, so the app needs nothing from the server it's served by:

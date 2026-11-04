@@ -3,7 +3,9 @@ import { go } from "./useHashRoute";
 
 /*
  * Esc closes whatever is on top, one thing per press, and with nothing left
- * open it goes back. Anything that can be closed says so with useEscape while
+ * open it goes up a level: not back through every page you've been on, but
+ * out of where you are (a past game to your history, anything else to the
+ * front page). Anything that can be closed says so with useEscape while
  * it's open; the one opened last is asked first. A handler returns false when
  * it had nothing to close after all, and the press goes on down.
  *
@@ -31,19 +33,6 @@ export function useEscape(open: boolean, close: Closer) {
   }, [open]);
 }
 
-/* how many pages deep you've gone in this tab, so back never leaves the site */
-let depth = 0;
-let lastHash = window.location.hash;
-window.addEventListener("hashchange", () => {
-  const was = lastHash;
-  lastHash = window.location.hash;
-  if (backing) {
-    backing = false;
-    depth = Math.max(0, depth - 1);
-  } else if (was !== lastHash) depth++;
-});
-let backing = false;
-
 /** one level up from where you are: a profile's tab to the front page, a past game to your history */
 function upFrom(route: string): string | null {
   const [, where, a] = route.split("/");
@@ -52,17 +41,12 @@ function upFrom(route: string): string | null {
   return "/";
 }
 
-function back() {
+function up() {
   const route = window.location.hash.replace(/^#/, "");
   const [, where] = route.split("/");
   if (where === "host" || where === "play") return;
-  if (depth > 0) {
-    backing = true;
-    window.history.back();
-    return;
-  }
-  const up = upFrom(route);
-  if (up !== null) go(up);
+  const to = upFrom(route);
+  if (to !== null) go(to);
 }
 
 window.addEventListener("keydown", (e) => {
@@ -79,5 +63,5 @@ window.addEventListener("keydown", (e) => {
       return;
     }
   }
-  back();
+  up();
 });
