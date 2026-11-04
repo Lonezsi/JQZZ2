@@ -60,10 +60,10 @@ export const AddPicture: React.FC<{
   };
 
   return (
-    <div className="jqzz-shelf-add">
+    <div className="jqzz-pic-add">
       <button
         type="button"
-        className="jqzz-shelf-add-btn"
+        className="jqzz-pic-add-btn"
         aria-label="Add a picture"
         aria-expanded={open}
         title="add a picture"
@@ -71,10 +71,10 @@ export const AddPicture: React.FC<{
       >
         <Glyph name="ADD" size={16} />
       </button>
-      <Popover open={open} onClose={close} label="Add a picture" className="jqzz-holo jqzz-shelf-add-menu">
+      <Popover open={open} onClose={close} label="Add a picture" className="jqzz-holo jqzz-pic-add-menu">
         {asking ? (
           <form
-            className="jqzz-shelf-add-ask"
+            className="jqzz-pic-add-ask"
             onSubmit={(e) => {
               e.preventDefault();
               go();
@@ -85,7 +85,7 @@ export const AddPicture: React.FC<{
             </label>
             <input
               id="jqzz-add-value"
-              className="jqzz-input"
+              className="jqzz-field-input"
               autoFocus
               value={value}
               inputMode="url"
@@ -103,7 +103,7 @@ export const AddPicture: React.FC<{
             {note && <p className={`jqzz-play-note${note.bad ? " bad" : ""}`}>{note.text}</p>}
           </form>
         ) : (
-          <ul className="jqzz-shelf-add-ways">
+          <ul className="jqzz-pic-add-ways">
             <li>
               <button
                 type="button"
@@ -192,7 +192,7 @@ export const DrawStudio: React.FC<{
     <div className="jqzz-studio" role="dialog" aria-label={item ? "Draw on it" : "Draw a picture"}>
       <div className="jqzz-studio-head">
         <input
-          className="jqzz-input jqzz-studio-title"
+          className="jqzz-field-input jqzz-studio-title"
           value={title}
           placeholder="what is it?"
           aria-label="Name"

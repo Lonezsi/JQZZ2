@@ -756,12 +756,10 @@ const DrawingCard: React.FC<{
       )}
       <span className="jqzz-shelf-title">{item.title || item.handle}</span>
       {picture && <RefChip reference={picture} me={me} label="picture" />}
-      <div className="jqzz-play-row">
-        <button type="button" className="jqzz-play-btn small" onClick={onDraw}>
-          <Glyph name="DRAW" size={13} /> draw on it
-        </button>
-        <VisibilitySwitch value={item.visibility} onChange={c.setVisibility} busy={c.busy} />
-      </div>
+      <button type="button" className="jqzz-play-btn small" onClick={onDraw}>
+        <Glyph name="DRAW" size={13} /> draw on it
+      </button>
+      <VisibilitySwitch value={item.visibility} onChange={c.setVisibility} busy={c.busy} />
       {item.visibility !== "PRIVATE" && <ShareButton kind={item.kind} reference={item.reference} />}
       <ConfirmButton onConfirm={c.remove} disabled={c.busy}>
         remove

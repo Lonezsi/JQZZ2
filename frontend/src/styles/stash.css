@@ -1531,11 +1531,11 @@ a.jqzz-board-name:hover {
   flex: 1;
   min-width: 0;
 }
-.jqzz-shelf-add {
+.jqzz-pic-add {
   position: relative;
   flex-shrink: 0;
 }
-.jqzz-shelf-add-btn {
+.jqzz-pic-add-btn {
   display: grid;
   place-items: center;
   width: 36px;
@@ -1548,20 +1548,20 @@ a.jqzz-board-name:hover {
     background var(--dur-1) var(--ease),
     rotate var(--dur-2) var(--ease);
 }
-.jqzz-shelf-add-btn:hover {
+.jqzz-pic-add-btn:hover {
   background: color-mix(in srgb, var(--accent) 24%, transparent);
 }
-.jqzz-shelf-add-btn[aria-expanded="true"] {
+.jqzz-pic-add-btn[aria-expanded="true"] {
   rotate: 45deg;
 }
-.jqzz-shelf-add-menu {
+.jqzz-pic-add-menu {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
   width: min(300px, calc(100vw - 32px));
   padding: 8px;
 }
-.jqzz-shelf-add-ways {
+.jqzz-pic-add-ways {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1569,7 +1569,7 @@ a.jqzz-board-name:hover {
   padding: 0;
   list-style: none;
 }
-.jqzz-shelf-add-ways button {
+.jqzz-pic-add-ways button {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1582,11 +1582,11 @@ a.jqzz-board-name:hover {
   color: var(--text);
   text-align: left;
 }
-.jqzz-shelf-add-ways button:hover,
-.jqzz-shelf-add-ways button:focus-visible {
+.jqzz-pic-add-ways button:hover,
+.jqzz-pic-add-ways button:focus-visible {
   background: var(--raised);
 }
-.jqzz-shelf-add-ask {
+.jqzz-pic-add-ask {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1628,8 +1628,26 @@ a.jqzz-board-name:hover {
   flex: 1;
   min-width: 0;
   max-width: 420px;
+  min-height: 38px;
+  font-size: 16px;
 }
 .jqzz-studio .jqzz-draw {
   --draw-h: calc(100dvh - 76px);
   flex: 1;
+}
+
+/* the card's own: as wide as the card, its choices by icon (each says what it means on hover) */
+.jqzz-shelf-card > .jqzz-vis {
+  align-self: stretch;
+}
+.jqzz-shelf-card > .jqzz-vis > button {
+  padding: 2px 4px;
+}
+.jqzz-shelf-card > .jqzz-vis .jqzz-glide-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
