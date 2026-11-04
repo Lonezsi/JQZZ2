@@ -108,6 +108,10 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const [tools, setTools] = useState<ToolSettings>(kept.current.tools);
   const [recent, setRecent] = useState<string[]>(kept.current.recent);
   const [mirror, setMirror] = useState(false);
+  // the view turned over left to right, to see the drawing with fresh eyes;
+  // the drawing itself doesn't change
+  const [flipped, setFlipped] = useState(false);
+  const flippedRef = useRef(false);
   const [pop, setPop] = useState<Pop>(null);
   const toggle = (which: Exclude<Pop, null>) => setPop((open) => (open === which ? null : which));
   const [, setTick] = useState(0);
@@ -250,7 +254,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     const s = sheetRef.current;
     if (s) {
       s.classList.toggle("settle", settle);
-      s.style.transform = `translate(${v.x}px, ${v.y}px) rotate(${v.angle}rad) scale(${v.scale})`;
+      s.style.transform = `translate(${v.x}px, ${v.y}px) rotate(${v.angle}rad) scale(${v.scale})${flippedRef.current ? " scaleX(-1)" : ""}`;
     }
     const z = zoomRef.current;
     if (z) {
@@ -347,13 +351,16 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     const ty = (e.tiltY ?? 0) * (Math.PI / 180);
     const lean = Math.min(1, Math.hypot(Math.tan(tx), Math.tan(ty)) / 2.2);
     const at = toSheet(v, { x: e.clientX - r.left - r.width / 2, y: e.clientY - r.top - r.height / 2 }, fitted.current.fit, SHEET_W, SHEET_H);
+    const flip = flippedRef.current;
+    const facing = Math.atan2(Math.tan(ty), Math.tan(tx)) - v.angle;
     return {
-      x: at.x,
+      // turned over, the sheet's left is on the screen's right
+      x: flip ? SHEET_W - at.x : at.x,
       y: at.y,
       pressure: pen ? (e.pressure > 0 ? e.pressure : 0.5) : -1,
       tilt: pen ? lean : 0,
-      // the lean is seen on the screen; the sheet may be turned under it
-      tiltAngle: Math.atan2(Math.tan(ty), Math.tan(tx)) - v.angle,
+      // the lean is seen on the screen; the sheet may be turned (or turned over) under it
+      tiltAngle: flip ? Math.PI - facing : facing,
       t: e.timeStamp,
     };
   };
@@ -643,6 +650,18 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
         <span className="jqzz-draw-gap" />
         <button className="jqzz-draw-act" onClick={() => p?.clear()} disabled={!p || p.isEmpty} title="clear this layer">
           <ActionIcon name="clear" />
+        </button>
+        <button
+          className={`jqzz-draw-act${flipped ? " on" : ""}`}
+          onClick={() => {
+            flippedRef.current = !flippedRef.current;
+            setFlipped(flippedRef.current);
+            apply(view.current, true);
+          }}
+          aria-pressed={flipped}
+          title="flip: see it turned over left to right (the drawing stays as it is)"
+        >
+          <ActionIcon name="flip" />
         </button>
         <button className={`jqzz-draw-act${mirror ? " on" : ""}`} onClick={() => setMirror((m) => !m)} aria-pressed={mirror} title="mirror: draw both halves at once">
           <ActionIcon name="mirror" />

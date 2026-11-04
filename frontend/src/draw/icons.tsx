@@ -111,6 +111,13 @@ const actions = {
       <path d="M9 7L4 17h5zM15 7l5 10h-5z" />
     </>
   ),
+  /* the page turned over: an arrow each way across a line */
+  flip: (
+    <>
+      <path d="M12 4v16" />
+      <path d="M8.5 8.5 4.5 12l4 3.5M15.5 8.5l4 3.5-4 3.5" />
+    </>
+  ),
   paper: (
     <>
       <path d="M6 3.5h8.5L19 8v12.5H6z" />
