@@ -102,9 +102,9 @@ export const ColorPicker: React.FC<{ value: string; onChange: (hex: string) => v
 
   const shown = fit(lch);
   return (
-    <div className="jqzz-picker">
+    <div className="jqzz-colorpick">
       <div
-        className="jqzz-picker-square"
+        className="jqzz-colorpick-square"
         role="slider"
         tabIndex={0}
         aria-label="lightness and colourfulness"
@@ -114,13 +114,13 @@ export const ColorPicker: React.FC<{ value: string; onChange: (hex: string) => v
       >
         <canvas ref={square} width={N} height={N} aria-hidden="true" />
         <span
-          className="jqzz-picker-dot"
+          className="jqzz-colorpick-dot"
           style={{ left: `${(lch.C / MAX_C) * 100}%`, top: `${(1 - lch.L) * 100}%`, background: hexOfLch(lch) }}
           aria-hidden="true"
         />
       </div>
       <div
-        className="jqzz-picker-hue"
+        className="jqzz-colorpick-hue"
         style={{ background: HUES }}
         role="slider"
         tabIndex={0}
@@ -131,12 +131,12 @@ export const ColorPicker: React.FC<{ value: string; onChange: (hex: string) => v
         onPointerDown={(e) => drag(e.currentTarget, e, (fx) => ({ ...lch, H: fx * 360 }))}
         onKeyDown={(e) => nudge(e, "H")}
       >
-        <span className="jqzz-picker-hue-dot" style={{ left: `${(lch.H / 360) * 100}%` }} aria-hidden="true" />
+        <span className="jqzz-colorpick-hue-dot" style={{ left: `${(lch.H / 360) * 100}%` }} aria-hidden="true" />
       </div>
-      <div className="jqzz-picker-row">
-        <span className="jqzz-picker-now" style={{ background: value }} aria-hidden="true" />
+      <div className="jqzz-colorpick-row">
+        <span className="jqzz-colorpick-now" style={{ background: value }} aria-hidden="true" />
         <input
-          className="jqzz-picker-hex"
+          className="jqzz-colorpick-hex"
           value={typed}
           aria-label="hex"
           spellCheck={false}
@@ -151,7 +151,7 @@ export const ColorPicker: React.FC<{ value: string; onChange: (hex: string) => v
             }
           }}
         />
-        <span className="jqzz-picker-lch jqzz-annot" aria-hidden="true">
+        <span className="jqzz-colorpick-lch jqzz-annot" aria-hidden="true">
           L {Math.round(shown.L * 100)} · C {shown.C.toFixed(2)} · H {Math.round(lch.H)}
         </span>
       </div>

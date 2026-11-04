@@ -83,13 +83,15 @@ interface Props {
   /** sends the picture; resolves true when it was taken */
   onSend?: (picture: Blob) => Promise<boolean>;
   sendLabel?: string;
+  /** what sending is called on the button and the line under it: a game sends, the stash saves */
+  verb?: "send" | "save";
   /** server time it's due: whatever is drawn goes by itself just before */
   dueAt?: number | null;
   serverNow?: () => number;
 }
 
 export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function DrawingFrame(
-  { keepAs, start, onSend, sendLabel = "send", dueAt, serverNow },
+  { keepAs, start, onSend, sendLabel = "send", verb = "send", dueAt, serverNow },
   ref,
 ) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -140,8 +142,15 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       saved = null;
     }
     const from = saved ?? start;
-    // a drawing of our own says which paper it's on
-    if (from) p.load(from).then(() => setPaper(p.paper)).catch(() => {});
+    // a drawing of our own says which paper it's on; one that was already
+    // sent (not work kept from a reload) starts out with nothing new to send
+    if (from)
+      p.load(from)
+        .then(() => {
+          setPaper(p.paper);
+          if (!saved) setSentAt(p.revision);
+        })
+        .catch(() => {});
     return () => p.destroy();
     // the sheet is made once; what it starts from is read once
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -625,7 +634,15 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   // ─── what it looks like ───────────────────────────────────────
 
   const p = painter.current;
-  const status = sending ? "sending..." : problem ? problem : sentAt >= 0 && !unsent ? "sent" : sentAt >= 0 ? "changed since you sent it" : null;
+  const status = sending
+    ? `${verb === "save" ? "saving" : "sending"}...`
+    : problem
+      ? problem
+      : sentAt >= 0 && !unsent
+        ? (verb === "save" ? "saved" : "sent")
+        : sentAt >= 0
+          ? `changed since you ${verb === "save" ? "saved" : "sent"} it`
+          : null;
 
   const swatch = (c: string, recentOne = false) => (
     <button
@@ -702,7 +719,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
         </button>
         {onSend && (
           <button className="jqzz-play-btn primary jqzz-draw-send" disabled={!p || p.isEmpty || sending || !unsent} onClick={send}>
-            {sentAt >= 0 && unsent ? "send again" : sendLabel}
+            {sentAt >= 0 && unsent ? (verb === "save" ? "save changes" : "send again") : sendLabel}
           </button>
         )}
       </div>

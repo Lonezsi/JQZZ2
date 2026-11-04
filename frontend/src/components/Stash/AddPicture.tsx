@@ -175,18 +175,56 @@ export const DrawStudio: React.FC<{
   const [savedId, setSavedId] = useState<number | null>(item?.id ?? null);
   const keepAs = `jqzz:studio:${item?.id ?? "new"}`;
 
-  const leave = () => {
-    if (frame.current?.unsent && !window.confirm("leave without saving? it stays here till you close the tab.")) return;
-    if (!frame.current?.unsent) {
-      try {
-        sessionStorage.removeItem(keepAs);
-      } catch {
-        /* nothing kept */
-      }
+  // closing with something unsaved asks first, in the page (a browser's own
+  // confirm box can be turned off, and then nothing would close)
+  const [asking, setAsking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const forget = () => {
+    try {
+      sessionStorage.removeItem(keepAs);
+    } catch {
+      /* nothing kept */
     }
+  };
+  const leave = () => {
+    if (frame.current?.unsent) {
+      setProblem(null);
+      setAsking(true);
+      return;
+    }
+    forget();
     onClose();
   };
+  const save = async () => {
+    const f = frame.current;
+    if (!f) return false;
+    const saved = await stashService.saveDrawing(me, {
+      id: savedId ?? undefined,
+      title: title.trim() || undefined,
+      layers: f.snapshot(),
+      picture: await f.export(),
+    });
+    setSavedId(saved.id);
+    onSaved(saved);
+    return true;
+  };
+  const saveAndClose = async () => {
+    setSaving(true);
+    setProblem(null);
+    try {
+      await save();
+      forget();
+      onClose();
+    } catch (err) {
+      setProblem(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+  // Esc: the question first (keep drawing), then the studio itself
   useEscape(true, leave);
+  useEscape(asking, () => setAsking(false));
 
   const download = async (kind: "png" | "ora") => {
     const f = frame.current;
@@ -234,6 +272,7 @@ export const DrawStudio: React.FC<{
         keepAs={keepAs}
         start={item?.payload ?? null}
         sendLabel="save to your stash"
+        verb="save"
         onSend={async (picture) => {
           const layers = frame.current?.snapshot();
           if (!layers) return false;
@@ -248,6 +287,46 @@ export const DrawStudio: React.FC<{
           return true;
         }}
       />
+      {asking && (
+        <div className="jqzz-modal-overlay" onClick={() => setAsking(false)}>
+          <div
+            className="jqzz-modal jqzz-holo"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="jqzz-studio-leave"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="jqzz-modal-head">
+              <h3 id="jqzz-studio-leave" className="jqzz-chroma">
+                it isn't saved
+              </h3>
+            </div>
+            <p className="jqzz-play-note">
+              {savedId == null ? "this drawing isn't in your stash yet." : "what you've drawn since the last save isn't in your stash."}
+            </p>
+            {problem && <p className="jqzz-play-note bad">{problem}</p>}
+            <div className="jqzz-modal-row jqzz-studio-leave-row">
+              <button type="button" className="jqzz-modal-btn primary" disabled={saving} onClick={saveAndClose} autoFocus>
+                {saving ? "saving..." : "save and close"}
+              </button>
+              <button
+                type="button"
+                className="jqzz-modal-btn danger"
+                disabled={saving}
+                onClick={() => {
+                  forget();
+                  onClose();
+                }}
+              >
+                close without saving
+              </button>
+              <button type="button" className="jqzz-modal-btn ghost" disabled={saving} onClick={() => setAsking(false)}>
+                keep drawing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

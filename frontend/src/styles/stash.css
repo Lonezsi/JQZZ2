@@ -1651,3 +1651,8 @@ a.jqzz-board-name:hover {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* leaving a drawing unsaved: three ways out, one under another */
+.jqzz-studio-leave-row {
+  flex-direction: column;
+}
