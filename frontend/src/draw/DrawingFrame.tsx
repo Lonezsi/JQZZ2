@@ -6,6 +6,7 @@ import { ActionIcon, ToolIcon } from "./icons";
 import { LayersPanel } from "./LayersPanel";
 import { HOME, isHome, keepInReach, snapAngle, toSheet, twoFingers, viewLabel, zoomAt, type Pt, type View } from "./view";
 import { useFitHeight } from "./fit";
+import { ColorPicker } from "./ColorPicker";
 
 /*
  * The drawing frame: a sheet of paper and a box of tools. Everything here
@@ -18,7 +19,7 @@ import { useFitHeight } from "./fit";
  */
 
 /** the popovers: one open at a time */
-type Pop = "colors" | "paper" | "layers" | null;
+type Pop = "colors" | "picker" | "paper" | "layers" | null;
 
 /** the sheet, in its own pixels; it's scaled to fit the screen */
 export const SHEET_W = 1200;
@@ -66,6 +67,9 @@ export interface DrawingFrameHandle {
   export(): Promise<Blob>;
   /** every layer, as the painter keeps them: to save it as a drawing (the stash) */
   snapshot(): string;
+  /** to download: the picture, or every layer of it (OpenRaster) */
+  png(): Promise<Blob>;
+  ora(): Promise<Blob>;
   /** whether anything changed since it was last sent */
   readonly unsent: boolean;
   readonly empty: boolean;
@@ -201,6 +205,8 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     () => ({
       export: () => painter.current!.export(),
       snapshot: () => painter.current!.snapshot(),
+      png: () => painter.current!.png(),
+      ora: () => painter.current!.ora(),
       get unsent() {
         return !!painter.current && !painter.current.isEmpty && painter.current.revision !== sentAt;
       },
@@ -511,12 +517,13 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const setSetting = (patch: Partial<{ size: number; opacity: number }>) =>
     setTools((all) => ({ ...all, [tool]: { size, opacity, ...patch } }));
 
-  const choose = (hex: string, custom = false) => {
+  /** stay: the picker is still open, being dragged */
+  const choose = (hex: string, custom = false, stay = false) => {
     setColor(hex);
     if (brushOf(tool).kind === "tool" && tool === "pick") setTool(lastBrush.current);
     if (tool === "eraser" || tool === "smudge") setTool(lastBrush.current === "eraser" ? "pencil" : lastBrush.current);
     if (custom) setRecent((r) => [hex, ...r.filter((c) => c !== hex)].slice(0, 6));
-    else setPop((open) => (open === "colors" ? null : open));
+    else if (!stay) setPop((open) => (open === "colors" ? null : open));
   };
 
   // a tap anywhere outside the open popover (or its button) closes it
@@ -740,10 +747,25 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
           <div className={`jqzz-draw-colors${pop === "colors" ? " open" : ""}`} role="group" aria-label="colours">
             {PALETTE.map((c) => swatch(c))}
             {recent.map((c) => swatch(c, true))}
-            <label className="jqzz-draw-swatch custom" title="any colour" style={{ "--swatch": color } as React.CSSProperties}>
-              <input type="color" value={color} onChange={(e) => choose(e.target.value, true)} aria-label="any colour" />
-            </label>
+            <button
+              className={`jqzz-draw-swatch custom${pop === "picker" ? " open" : ""}`}
+              title="any colour"
+              aria-label="any colour"
+              aria-expanded={pop === "picker"}
+              data-pop="picker"
+              style={{ "--swatch": color } as React.CSSProperties}
+              onClick={() => toggle("picker")}
+            />
           </div>
+          {pop === "picker" && (
+            <div className="jqzz-draw-picker" data-pop="picker" role="dialog" aria-label="any colour">
+              <ColorPicker
+                value={color}
+                onChange={(hex) => choose(hex, false, true)}
+                onDone={(hex) => setRecent((r) => [hex, ...r.filter((c) => c !== hex)].slice(0, 6))}
+              />
+            </div>
+          )}
         </div>
         <canvas ref={previewRef} className="jqzz-draw-preview" aria-hidden="true" />
         {brush.kind !== "tool" ? (

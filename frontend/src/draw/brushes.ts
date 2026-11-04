@@ -9,7 +9,8 @@
  * itself; watercolour pools at its edges as it dries; an eraser takes away.
  * The smudge stick is the one tool that works on the drawing directly.
  */
-import { grainTile, rgbOf, shade, type GrainId } from "./paper";
+import { grainTile, hexOf, rgbOf, shade, type GrainId } from "./paper";
+import { mix } from "./oklab";
 
 export type ToolId =
   | "pencil"
@@ -107,6 +108,36 @@ export interface Area {
 }
 
 const TAU = Math.PI * 2;
+
+/** what's on a sheet at a point: red, green, blue, alpha (0..255), or null off it */
+type Sampler = (x: number, y: number) => Uint8ClampedArray | null;
+
+/**
+ * A sheet read once, at 1/scale its size, to look up colours on it as often
+ * as wanted: reading the real thing back pixel by pixel would stall the
+ * graphics card on every dab. Null when it can't be read.
+ */
+function sampler(src: HTMLCanvasElement, scale: number): Sampler | null {
+  const w = Math.max(1, Math.ceil(src.width / scale));
+  const h = Math.max(1, Math.ceil(src.height / scale));
+  try {
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true })!;
+    ctx.drawImage(src, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    return (x, y) => {
+      const cx = Math.floor(x / scale);
+      const cy = Math.floor(y / scale);
+      if (cx < 0 || cy < 0 || cx >= w || cy >= h) return null;
+      const i = (cy * w + cx) * 4;
+      return data.subarray(i, i + 4);
+    };
+  } catch {
+    return null;
+  }
+}
 
 /** a round tip with a soft edge, in one colour; hardness 1 is a crisp disc */
 const tips = new Map<string, HTMLCanvasElement>();
@@ -383,20 +414,13 @@ const paint: Brush = {
   reach: 1.2,
   mirrors: true,
   begin(s, d) {
+    // the sheet as the stroke finds it, small: what the bristles drag through
+    const under = sampler(s.paint, 6);
+    s.state.under = under;
     // what's already on the sheet where the brush lands mixes into the paint a little
     let base = s.color;
-    try {
-      const px = s.paint.getContext("2d")!.getImageData(Math.round(d.x), Math.round(d.y), 1, 1).data;
-      if (px[3] > 90) {
-        const [r, g, b] = rgbOf(base);
-        const k = 0.22 * (px[3] / 255);
-        base = `#${[r + (px[0] - r) * k, g + (px[1] - g) * k, b + (px[2] - b) * k]
-          .map((v) => Math.round(v).toString(16).padStart(2, "0"))
-          .join("")}`;
-      }
-    } catch {
-      /* a sheet we can't read just doesn't mix */
-    }
+    const px = under?.(d.x, d.y);
+    if (px && px[3] > 90) base = mix(base, hexOf(px[0], px[1], px[2]), 0.22 * (px[3] / 255));
     const n = Math.max(8, Math.min(64, Math.round(s.size / 1.6)));
     const bristles: Bristle[] = [];
     for (let i = 0; i < n; i++) {
@@ -419,6 +443,7 @@ const paint: Brush = {
   dab(s, d) {
     const { ctx } = s;
     const bristles = s.state.bristles as Bristle[];
+    const under = s.state.under as Sampler | null;
     // pressing splays the bristles wider
     const spread = s.size * (0.75 + 0.35 * d.p);
     const nx = -Math.sin(d.angle);
@@ -454,6 +479,13 @@ const paint: Brush = {
         b.load = Math.max(0, b.load - d.step * b.rate);
         b.lx = x;
         b.ly = y;
+        // wet on wet: a bristle takes on the colour it's dragged through, the
+        // more so as its own paint runs out, mixed the way eyes see colour
+        const u = under?.(x, y);
+        if (u && u[3] > 60 && d.step > 0) {
+          const k = Math.min(0.5, d.step * 0.012 * (u[3] / 255) * (1.15 - b.load));
+          if (k > 0.004) b.color = mix(b.color, hexOf(u[0], u[1], u[2]), k);
+        }
       }
     }
   },

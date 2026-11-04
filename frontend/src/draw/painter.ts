@@ -12,6 +12,7 @@
  * pen lifts. Undo keeps what a change covered, before and after.
  */
 import { brushOf, type Area, type Brush, type Dab, type Stroke, type ToolId } from "./brushes";
+import { oraOf } from "./ora";
 import { grainTile, hexOf, paperSheet, rng } from "./paper";
 
 export interface Sample {
@@ -999,6 +1000,19 @@ export class Painter {
     if (out && out.size > 1_300_000) out = await blob("image/jpeg", 0.78);
     if (!out) throw new Error("This browser couldn't save the drawing");
     return out;
+  }
+
+  /** the picture as a PNG, full size, nothing lost: to download */
+  async png(): Promise<Blob> {
+    const flat = this.flatten();
+    const out = await new Promise<Blob | null>((resolve) => flat.toBlob(resolve, "image/png"));
+    if (!out) throw new Error("This browser couldn't make the picture");
+    return out;
+  }
+
+  /** every layer as an OpenRaster file, for Krita, GIMP or MyPaint */
+  ora(): Promise<Blob> {
+    return oraOf(this.width, this.height, this.layers, this.sheet, this.flatten());
   }
 
   /** every layer and which paper it's on, to keep for a reload or in the stash (a drawing) */

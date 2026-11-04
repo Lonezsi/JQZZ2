@@ -188,6 +188,21 @@ export const DrawStudio: React.FC<{
   };
   useEscape(true, leave);
 
+  const download = async (kind: "png" | "ora") => {
+    const f = frame.current;
+    if (!f) return;
+    try {
+      const blob = kind === "png" ? await f.png() : await f.ora();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(title.trim() || "drawing").replace(/[\\/:*?"<>|]+/g, "_")}.${kind}`;
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Couldn't export it");
+    }
+  };
+
   return createPortal(
     <div className="jqzz-studio" role="dialog" aria-label={item ? "Draw on it" : "Draw a picture"}>
       <div className="jqzz-studio-head">
@@ -199,6 +214,17 @@ export const DrawStudio: React.FC<{
           maxLength={120}
           onChange={(e) => setTitle(e.target.value)}
         />
+        <button type="button" className="jqzz-play-btn small ghost" onClick={() => download("png")} title="the picture, full size">
+          export .png
+        </button>
+        <button
+          type="button"
+          className="jqzz-play-btn small ghost"
+          onClick={() => download("ora")}
+          title="every layer, for Krita, GIMP or MyPaint"
+        >
+          export layers .ora
+        </button>
         <button type="button" className="jqzz-play-btn small ghost" onClick={leave}>
           close
         </button>
