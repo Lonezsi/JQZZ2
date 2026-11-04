@@ -83,6 +83,26 @@ const paths: Record<ToolId, React.ReactNode> = {
       <path d="M15 9l-8.5 8.5-2.5 2.5-.5-.5 2.5-2.5L14.5 8.5" />
     </>
   ),
+  // the fun ones: a halftone, the site's star, the font's dagger, a split, sorted bars
+  dither: (
+    <>
+      <path d="M4 4h4v4H4zM12 4h4v4h-4zM8 8h4v4H8zM16 8h4v4h-4zM4 12h4v4H4zM12 12h4v4h-4zM8 16h4v4H8z" />
+    </>
+  ),
+  star: <path d="M12 2.5c.5 5 3.6 8.1 9.5 9.5-5.9 1.4-9 4.5-9.5 9.5-.5-5-3.6-8.1-9.5-9.5 5.9-1.4 9-4.5 9.5-9.5z" />,
+  dagger: (
+    <>
+      <path d="M12 2.5v4M8 6.5h8M12 6.5l-1.6 4.5L12 21.5l1.6-10.5z" />
+    </>
+  ),
+  rgbsplit: (
+    <>
+      <circle cx="9" cy="12" r="5" />
+      <circle cx="12" cy="12" r="5" strokeDasharray="2 2" />
+      <circle cx="15" cy="12" r="5" />
+    </>
+  ),
+  pixelsort: <path d="M5 20v-4M9 20v-7M13 20v-10M17 20v-13M21 20V4" />,
 };
 
 export const ToolIcon: React.FC<{ tool: ToolId; size?: number }> = ({ tool, size = 20 }) => (

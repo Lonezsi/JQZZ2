@@ -254,8 +254,8 @@
   display: flex;
   gap: 4px;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+  /* few enough now to fit, and the groups pop out above it */
+  overflow: visible;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
@@ -306,6 +306,82 @@
 .jqzz-draw-tool.on .jqzz-draw-tool-name {
   max-width: 90px;
 }
+/* ─── the two groups: the one last picked, and the rest when held (or >) ─── */
+.jqzz-draw-group {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+.jqzz-draw-group-more {
+  width: 18px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--dur-1) var(--ease),
+    rotate var(--dur-2) var(--ease);
+}
+.jqzz-draw-group-more:hover {
+  color: var(--text);
+}
+.jqzz-draw-group-more.open {
+  color: var(--accent);
+  rotate: -90deg;
+}
+/* the people card's glass and shape, above the toolbar */
+.jqzz-draw-group-pop {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  z-index: var(--z-menu);
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: 16px 8px 8px;
+  border-radius: var(--radius-xl);
+  transform-origin: 20% 100%;
+  animation: groupIn 260ms var(--ease) backwards;
+}
+@keyframes groupIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+.jqzz-draw-group-pop > :not(.jqzz-holo-dots) {
+  position: relative;
+}
+.jqzz-draw-group-pop .jqzz-pop-head {
+  padding: 0 12px 8px;
+}
+.jqzz-draw-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+.jqzz-draw-group-grid .jqzz-draw-tool {
+  width: 100%;
+  gap: 10px;
+  justify-content: flex-start;
+  animation: groupTool 300ms var(--ease) backwards;
+  animation-delay: calc(60ms + var(--i, 0) * 28ms);
+}
+@keyframes groupTool {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+.jqzz-draw-group-grid .jqzz-draw-tool-name {
+  max-width: none;
+}
+
 .jqzz-draw-tool:focus-visible,
 .jqzz-draw-act:focus-visible,
 .jqzz-draw-swatch:focus-visible,
@@ -558,10 +634,10 @@
     font-size: var(--fs-small);
   }
 
-  /* every brush in sight: one row, icons only */
+  /* the two groups and the loose tools: one row, icons only (a hold opens a group) */
   .jqzz-draw-tools {
     display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 2px;
     padding: 2px;
     overflow: visible;
@@ -577,6 +653,20 @@
   }
   .jqzz-draw-tool-name {
     display: none;
+  }
+  .jqzz-draw-group > .jqzz-draw-tool {
+    flex: 1;
+  }
+  /* no > on a phone: holding the group is how it opens */
+  .jqzz-draw-group-more {
+    display: none;
+  }
+  .jqzz-draw-group-grid .jqzz-draw-tool {
+    justify-content: flex-start;
+    padding: 0 12px;
+  }
+  .jqzz-draw-group-grid .jqzz-draw-tool-name {
+    display: inline;
   }
 
   .jqzz-draw-tune {

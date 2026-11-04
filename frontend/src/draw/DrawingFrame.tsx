@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
-import { BRUSHES, brushOf, type ToolId } from "./brushes";
+import { BRUSHES, brushOf, GROUPS, LOOSE, type ToolId } from "./brushes";
 import { Painter, type Sample } from "./painter";
 import { PAPERS } from "./paper";
 import { ActionIcon, ToolIcon } from "./icons";
@@ -19,7 +19,7 @@ import { ColorPicker } from "./ColorPicker";
  */
 
 /** the popovers: one open at a time */
-type Pop = "colors" | "picker" | "paper" | "layers" | null;
+type Pop = "colors" | "picker" | "paper" | "layers" | "draw" | "fun" | null;
 
 /** the sheet, in its own pixels; it's scaled to fit the screen */
 export const SHEET_W = 1200;
@@ -157,6 +157,15 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   }, []);
 
   const lastBrush = useRef<ToolId>("pencil");
+  // the one last picked from each group, which the group's button shows
+  const [lastOf, setLastOf] = useState<Record<"draw" | "fun", ToolId>>({ draw: "pencil", fun: "dither" });
+  useEffect(() => {
+    const g = GROUPS.find((x) => x.tools.includes(tool));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (g) setLastOf((l) => (l[g.id] === tool ? l : { ...l, [g.id]: tool }));
+  }, [tool]);
+  const holdTimer = useRef(0);
+  const held = useRef(false);
   useEffect(() => {
     if (brushOf(tool).kind !== "tool") lastBrush.current = tool;
   }, [tool]);
@@ -467,6 +476,8 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     if (brush.kind === "tool" && (at.x < 0 || at.y < 0 || at.x >= SHEET_W || at.y >= SHEET_H)) return;
     capture(e);
     active.current = e.pointerId;
+    // the dither pen prints on the screen's grid: how big a sheet pixel is shown right now
+    p.screenScale = fitted.current.fit * view.current.scale;
     p.begin(at);
   };
 
@@ -774,18 +785,97 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       </div>
 
       <div className="jqzz-draw-tools" role="toolbar" aria-label="tools">
-        {BRUSHES.map((b) => (
-          <button
-            key={b.id}
-            className={`jqzz-draw-tool${tool === b.id ? " on" : ""}`}
-            onClick={() => setTool(b.id)}
-            aria-pressed={tool === b.id}
-            title={`${b.label} (${b.key.toUpperCase()})`}
-          >
-            <ToolIcon tool={b.id} />
-            <span className="jqzz-draw-tool-name">{b.label}</span>
-          </button>
-        ))}
+        {GROUPS.map((g) => {
+          const shown = g.tools.includes(tool) ? tool : lastOf[g.id];
+          const b = brushOf(shown);
+          const open = pop === g.id;
+          return (
+            <div key={g.id} className="jqzz-draw-group" data-pop={g.id}>
+              <button
+                className={`jqzz-draw-tool${g.tools.includes(tool) ? " on" : ""}`}
+                onClick={() => {
+                  // a hold opened the group: the tap that ends it isn't a pick
+                  if (held.current) {
+                    held.current = false;
+                    return;
+                  }
+                  setTool(shown);
+                }}
+                onPointerDown={() => {
+                  held.current = false;
+                  window.clearTimeout(holdTimer.current);
+                  holdTimer.current = window.setTimeout(() => {
+                    held.current = true;
+                    setPop(g.id);
+                  }, 380);
+                }}
+                onPointerUp={() => window.clearTimeout(holdTimer.current)}
+                onPointerLeave={() => window.clearTimeout(holdTimer.current)}
+                onPointerCancel={() => window.clearTimeout(holdTimer.current)}
+                onContextMenu={(e) => e.preventDefault()}
+                aria-pressed={g.tools.includes(tool)}
+                title={`${b.label} (${b.key.toUpperCase()}) · hold for every ${g.label} tool`}
+              >
+                <ToolIcon tool={shown} />
+                <span className="jqzz-draw-tool-name">{b.label}</span>
+              </button>
+              <button
+                className={`jqzz-draw-group-more${open ? " open" : ""}`}
+                onClick={() => toggle(g.id)}
+                aria-expanded={open}
+                aria-label={`every ${g.label} tool`}
+                title={`every ${g.label} tool`}
+              >
+                ›
+              </button>
+              {open && (
+                <div className="jqzz-holo jqzz-draw-group-pop" role="dialog" aria-label={`${g.label} tools`}>
+                  <div className="jqzz-holo-dots" aria-hidden="true" />
+                  <div className="jqzz-pop-head">
+                    <span className="jqzz-pop-title OEF jqzz-chroma">{g.label}</span>
+                    <span className="jqzz-annot">{g.tools.length} tools</span>
+                  </div>
+                  <div className="jqzz-draw-group-grid">
+                    {g.tools.map((id, i) => {
+                      const t = brushOf(id);
+                      return (
+                        <button
+                          key={id}
+                          className={`jqzz-draw-tool${tool === id ? " on" : ""}`}
+                          style={{ "--i": i } as React.CSSProperties}
+                          onClick={() => {
+                            setTool(id);
+                            setPop(null);
+                          }}
+                          aria-pressed={tool === id}
+                          title={`${t.label} (${t.key.toUpperCase()})`}
+                        >
+                          <ToolIcon tool={id} />
+                          <span className="jqzz-draw-tool-name">{t.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {LOOSE.map((id) => {
+          const b = brushOf(id);
+          return (
+            <button
+              key={id}
+              className={`jqzz-draw-tool${tool === id ? " on" : ""}`}
+              onClick={() => setTool(id)}
+              aria-pressed={tool === id}
+              title={`${b.label} (${b.key.toUpperCase()})`}
+            >
+              <ToolIcon tool={id} />
+              <span className="jqzz-draw-tool-name">{b.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="jqzz-draw-tune">

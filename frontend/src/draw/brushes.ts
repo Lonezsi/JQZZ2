@@ -10,6 +10,7 @@
  * The smudge stick is the one tool that works on the drawing directly.
  */
 import { grainTile, hexOf, rgbOf, shade, type GrainId } from "./paper";
+import { FUN } from "./funBrushes";
 import { mix } from "./oklab";
 
 export type ToolId =
@@ -24,7 +25,12 @@ export type ToolId =
   | "smudge"
   | "eraser"
   | "fill"
-  | "pick";
+  | "pick"
+  | "dither"
+  | "star"
+  | "dagger"
+  | "rgbsplit"
+  | "pixelsort";
 
 /** one point along a stroke, after smoothing */
 export interface Dab {
@@ -60,6 +66,8 @@ export interface Stroke {
   mirrored: boolean;
   /** the sheet's width, to keep the grain on the mirrored half where the sheet has it */
   width: number;
+  /** the background's dither cell, in sheet pixels at the zoom the stroke started at (the dither pen) */
+  cell: number;
 }
 
 export interface Brush {
@@ -674,6 +682,17 @@ const fill: Brush = {
 
 const pick: Brush = { ...fill, id: "pick", label: "pick a colour", key: "k" };
 
-export const BRUSHES: Brush[] = [pencil, ink, marker, crayon, charcoal, paint, watercolor, airbrush, smudge, eraser, fill, pick];
+/** every brush and tool; the fill bucket isn't offered any more, but a fill is still how the picker works */
+export const BRUSHES: Brush[] = [pencil, ink, marker, crayon, charcoal, paint, watercolor, airbrush, ...FUN, smudge, eraser, pick];
+
+/**
+ * How the toolbar shows them: two groups that pop out (hold, or the > on a
+ * computer), each showing the one last picked from it, and the rest loose.
+ */
+export const GROUPS: { id: "draw" | "fun"; label: string; tools: ToolId[] }[] = [
+  { id: "draw", label: "draw", tools: ["pencil", "ink", "marker", "crayon", "charcoal", "paint", "watercolor", "airbrush"] },
+  { id: "fun", label: "fun", tools: ["dither", "star", "dagger", "rgbsplit", "pixelsort"] },
+];
+export const LOOSE: ToolId[] = ["smudge", "eraser", "pick"];
 
 export const brushOf = (id: ToolId) => BRUSHES.find((b) => b.id === id) ?? pencil;

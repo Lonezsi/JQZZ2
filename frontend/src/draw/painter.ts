@@ -13,6 +13,7 @@
  */
 import { brushOf, type Area, type Brush, type Dab, type Stroke, type ToolId } from "./brushes";
 import { oraOf } from "./ora";
+import { CELL } from "../components/common/dither";
 import { grainTile, hexOf, paperSheet, rng } from "./paper";
 
 export interface Sample {
@@ -139,6 +140,8 @@ export class Painter {
   size = 4;
   opacity = 0.9;
   symmetry = false;
+  /** screen pixels per sheet pixel, as the sheet's shown (the frame keeps it up to date): the dither pen prints on the screen's grid */
+  screenScale = 1;
   /** told when the drawing or what can be undone changes */
   onChange: () => void = () => {};
   /** told when the colour picker tool picks */
@@ -365,6 +368,7 @@ export class Painter {
       paint: this.paint,
       mirrored: false,
       width: this.width,
+      cell: CELL / this.screenScale,
     };
     const live: Live = {
       brush,
