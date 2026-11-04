@@ -697,10 +697,16 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   gap: 2px;
   padding: 10px 12px 10px 16px;
 }
-.jqzz-return-text b {
+/* the label keeps to its line and is cut off there; the quiz's name isn't:
+   it wraps, its tall letters reach past their line, and only the ticket's
+   own edge stops it */
+.jqzz-return-text .jqzz-annot {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+.jqzz-return-text b {
+  overflow-wrap: anywhere;
   font-family: var(--font-title);
   font-weight: normal;
   font-size: 19px;

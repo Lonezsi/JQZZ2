@@ -1,19 +1,15 @@
 import { useEffect } from "react";
 import { go } from "./useHashRoute";
+import { COMMANDS } from "../constants/commands";
+import { lettersBusy, pressed } from "../utils/shortcuts";
 
-/** The same anywhere in the app: Mod J joins a game, Mod B opens the stash, Mod H your history. */
-export const NAV_SHORTCUTS: { key: string; combo: string; to: string }[] = [
-  { key: "j", combo: "Mod J", to: "/join" },
-  { key: "b", combo: "Mod B", to: "/me/stash" },
-  { key: "h", combo: "Mod H", to: "/me/history" },
-];
-
+/** The keys that take you somewhere, the same anywhere in the app (constants/commands.ts). */
 export function useNavShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
-      const hit = NAV_SHORTCUTS.find((s) => s.key === e.key.toLowerCase());
-      if (!hit) return;
+      if (lettersBusy(e)) return;
+      const hit = COMMANDS.find((c) => c.to && pressed(e, c.sub));
+      if (!hit?.to) return;
       e.preventDefault();
       go(hit.to);
     };

@@ -18,6 +18,7 @@ import { hits } from "../../utils/search";
 import { Glyph } from "../common/Glyph";
 import { Select } from "../common/Select";
 import { setTypesCache } from "../../hooks/useTypes";
+import { useEscape } from "../../hooks/useEscape";
 import { ModePicker } from "../common/ModePicker";
 import { describe, modeKey, modeOf, typeIdOf } from "../../utils/questionTypes";
 import { QuestionImage } from "../Play/PlayCommon";
@@ -898,11 +899,7 @@ const ResetDialog: React.FC<{ me: string; onClose: () => void; onDone: (types: S
         setBusy(null);
       });
   };
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscape(true, onClose);
   return (
     <div className="jqzz-modal-overlay" data-state="open" onClick={onClose}>
       <div

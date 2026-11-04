@@ -39,6 +39,10 @@ interface CloudDef {
 }
 
 const CLOUDS: CloudDef[] = [
+  // the far layer: small and faint, the pictures again but mirrored or not where the near ones aren't
+  { src: "cumulus-a", x: 0.24, y: 0.3, size: 0.17, depth: 0.04, k: 0.42, flip: true },
+  { src: "cumulus-b", x: 0.56, y: 0.12, size: 0.15, depth: 0.06, k: 0.38 },
+  { src: "cumulus-c", x: 0.9, y: 0.4, size: 0.14, depth: 0.08, k: 0.4, flip: true },
   { src: "haze", x: 0.1, y: -0.06, size: 0.62, depth: 0.15, k: 0.55 },
   { src: "scatter", x: 0.62, y: 0.58, size: 0.44, depth: 0.35, k: 0.6, flip: true },
   { src: "cumulus-c", x: 0.38, y: 0.02, size: 0.3, depth: 0.5, k: 0.8 },

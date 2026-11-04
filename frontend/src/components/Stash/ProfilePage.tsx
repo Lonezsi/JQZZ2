@@ -22,6 +22,7 @@ import { GoogleAccount } from "../common/GoogleAccount";
 import { SecretId } from "../common/SecretId";
 import { useGoogleEnabled } from "../common/GoogleButton";
 import { hits } from "../../utils/search";
+import { takeSearch } from "../../hooks/searchOnArrival";
 import { RefChip } from "./StashBits";
 import { Glide } from "../common/Glide";
 
@@ -53,8 +54,14 @@ export const ProfilePage: React.FC<{
   const friends = useFriends();
   // one search for the whole page: it looks through whichever tab is open,
   // and starts over when another one is
-  const [search, setSearch] = useState<{ tab: Tab; q: string }>({ tab, q: "" });
+  const [search, setSearch] = useState<{ tab: Tab; q: string }>(() => ({ tab, q: takeSearch(tab) ?? "" }));
   const query = search.tab === tab ? search.q : "";
+  // sent here to find something (the commands' stash results): start with it
+  useEffect(() => {
+    const q = takeSearch(tab);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (q !== null) setSearch({ tab, q });
+  }, [tab]);
 
   const load = useCallback(() => {
     if (!me || !id) return;

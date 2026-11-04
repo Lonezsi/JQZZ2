@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscape } from "../../hooks/useEscape";
 import { VisibilitySwitch } from "../Stash/StashBits";
 import { createPortal } from "react-dom";
 import { api, errorMessage } from "../../services/api";
@@ -15,6 +16,7 @@ export const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   onSave,
   userId,
 }) => {
+  useEscape(true, onClose);
   const [handle, setHandle] = useState("");
   const [visibility, setVisibility] = useState<ImageVisibility>("PRIVATE");
   const [file, setFile] = useState<File | null>(null);

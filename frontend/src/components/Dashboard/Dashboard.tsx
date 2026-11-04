@@ -18,6 +18,8 @@ import { stashService } from "../../services/stashService";
 import { convertToBackendQuiz } from "../../utils/quizConverter";
 import { errorMessage } from "../../services/api";
 import { go } from "../../hooks/useHashRoute";
+import { useEscape } from "../../hooks/useEscape";
+import { COMMANDS } from "../../constants/commands";
 import "../../index.css";
 
 export const Dashboard: React.FC = () => {
@@ -144,24 +146,19 @@ export const Dashboard: React.FC = () => {
       .catch((err) => alert(`couldn't start it: ${errorMessage(err)}`));
   }, [quiz, newQuiz, user]);
 
-  useKeyboardShortcuts({
-    onPalette: () => setPaletteOpen(true),
-    onNewQuiz: newQuiz,
-    onToggleMode: () => setMode(mode === "visual" ? "text" : "visual"),
-    // one thing at a time: dialog, then palette, then the selection
-    onEscape: () => {
-      if (navOpen) setNavOpen(false);
-      else if (identityOpen) setIdentityOpen(false);
-      else if (paletteOpen) setPaletteOpen(false);
-      else clearSelectedActions();
-    },
-    onExport: handleExport,
-    onSelectAll: selectAllActions, // Ctrl+A
-    onImport: handleImport, // Ctrl+I
-    onStart: handleStart, // Ctrl+Enter
-  });
+  // Esc, one thing at a time (hooks/useEscape.ts): what was opened last goes
+  // first, and with the quiz closed too it goes back
+  useEscape(!!quiz, () => setActiveQuizId(null));
+  useEscape(selectedActionIds.size > 0, clearSelectedActions);
+  useEscape(identityOpen, () => setIdentityOpen(false));
+  useEscape(navOpen, () => setNavOpen(false));
 
   const handleCommand = useCallback((label: string) => {
+    const to = COMMANDS.find((c) => c.label === label)?.to;
+    if (to) {
+      go(to);
+      return;
+    }
     switch (label) {
       case "New quiz":
         newQuiz();
@@ -178,9 +175,6 @@ export const Dashboard: React.FC = () => {
       case "Start":
         handleStart();
         break;
-      case "Join a game":
-        go("/join");
-        break;
       case "Stash this quiz":
         handleStash();
         break;
@@ -192,14 +186,14 @@ export const Dashboard: React.FC = () => {
             .catch((err) => alert(`couldn't start it: ${errorMessage(err)}`));
         }
         break;
-      case "Open stash":
-        go("/me/stash");
-        break;
-      case "Game history":
-        go("/me/history");
-        break;
     }
   }, [newQuiz, handleImport, handleExport, handleStart, handleStash, mode, setMode, quiz, user]);
+
+  useKeyboardShortcuts({
+    onPalette: () => setPaletteOpen(true),
+    onSelectAll: selectAllActions,
+    onCommand: handleCommand,
+  });
 
   return (
     <div className="jqzz-app" data-phase={selectedAction?.phase ?? "IDLE"}>

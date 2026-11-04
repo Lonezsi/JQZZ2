@@ -138,9 +138,9 @@ JQZZ is built around a simple idea: give people freedom to create quizzes withou
   - [ ] Drag snippets from library to editor
 - [ ] **Make key shortcuts actually work contextually**
   - [ ] Command palette (Cmd/Ctrl+K)
-  - [ ] New quiz (Cmd/Ctrl+N)
-  - [ ] Toggle mode (Cmd/Ctrl+`)
-  - [ ] Export (Cmd/Ctrl+E)
+  - [ ] New quiz (N)
+  - [ ] Toggle mode (V)
+  - [ ] Export (E)
   - [ ] Select all (Cmd/Ctrl+A)
   - [ ] Escape to close modals
   - [ ] Prevent shortcuts in text inputs

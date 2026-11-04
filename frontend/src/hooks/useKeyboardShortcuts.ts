@@ -1,66 +1,49 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { COMMANDS } from "../constants/commands";
+import { lettersBusy, pressed } from "../utils/shortcuts";
 
-interface ShortcutHandlers {
-  onPalette?: () => void;
-  onNewQuiz?: () => void;
-  onToggleMode?: () => void;
-  onEscape?: () => void;
-  onExport?: () => void;
-  onSelectAll?: () => void;
-  onImport?: () => void;
-  onStart?: () => void;
-}
-
+/**
+ * The editor's keys: Ctrl K opens the commands, Ctrl A selects every step,
+ * and each command acting on the open quiz runs on its key from
+ * constants/commands.ts (by label, through onCommand). Ctrl keys work while
+ * typing too; plain letters only when you aren't (utils/shortcuts.ts).
+ */
 export const useKeyboardShortcuts = ({
   onPalette,
-  onNewQuiz,
-  onToggleMode,
-  onEscape,
-  onExport,
   onSelectAll,
-  onImport,
-  onStart,
-}: ShortcutHandlers) => {
+  onCommand,
+}: {
+  onPalette: () => void;
+  onSelectAll: () => void;
+  onCommand: (label: string) => void;
+}) => {
+  const latest = useRef({ onPalette, onSelectAll, onCommand });
   useEffect(() => {
-    const handler = (e: globalThis.KeyboardEvent) => {
-      // Don't intercept shortcuts when typing in text fields
-      const tag = (e.target as HTMLElement)?.tagName;
-      const isTextInput = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable;
-
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key === "k") {
+    latest.current = { onPalette, onSelectAll, onCommand };
+  });
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const { onPalette, onSelectAll, onCommand } = latest.current;
+      const t = e.target as HTMLElement | null;
+      const typing = t?.tagName === "INPUT" || t?.tagName === "TEXTAREA" || !!t?.isContentEditable;
+      if (pressed(e, "Mod K")) {
         e.preventDefault();
-        onPalette?.();
+        onPalette();
+        return;
       }
-      if (mod && e.key === "n") {
+      if (pressed(e, "Mod A") && !typing) {
         e.preventDefault();
-        onNewQuiz?.();
+        onSelectAll();
+        return;
       }
-      if (mod && e.key === "`") {
-        e.preventDefault();
-        onToggleMode?.();
-      }
-      if (mod && e.key === "e") {
-        e.preventDefault();
-        onExport?.();
-      }
-      if (mod && e.key === "i") {
-        e.preventDefault();
-        onImport?.();
-      }
-      if (mod && e.key === "Enter") {
-        e.preventDefault();
-        onStart?.();
-      }
-      if (mod && e.key === "a" && !isTextInput) {
-        e.preventDefault();
-        onSelectAll?.();
-      }
-      if (e.key === "Escape") {
-        onEscape?.();
-      }
+      const hit = COMMANDS.find(
+        (c) => !c.to && c.sub && pressed(e, c.sub) && (c.sub.startsWith("Mod") || !lettersBusy(e)),
+      );
+      if (!hit) return;
+      e.preventDefault();
+      onCommand(hit.label);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onPalette, onNewQuiz, onToggleMode, onEscape, onExport, onSelectAll, onImport, onStart]);
+  }, []);
 };

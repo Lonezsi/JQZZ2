@@ -10,6 +10,7 @@ import { usePeople } from "../../../hooks/usePeople";
 import { useFriends } from "../../../hooks/useFriends";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
 import { Keys } from "../../common/Keys";
+import { keyOf } from "../../../constants/commands";
 import { ariaShortcut, modLabel } from "../../../utils/shortcuts";
 import { useQuiz } from "../../../contexts/QuizContext";
 import { go } from "../../../hooks/useHashRoute";
@@ -123,29 +124,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           className="jqzz-sid-action primary"
           onClick={onNewQuiz}
-          aria-keyshortcuts={ariaShortcut("Mod N")}
+          aria-keyshortcuts={ariaShortcut(keyOf("New quiz"))}
         >
           <span className="jqzz-plus" aria-hidden="true" />
           New quiz
-          <Keys combo="Mod N" />
+          <Keys combo={keyOf("New quiz")} />
         </button>
         <button
           className="jqzz-sid-action"
           onClick={onImport}
-          aria-keyshortcuts={ariaShortcut("Mod I")}
+          aria-keyshortcuts={ariaShortcut(keyOf("Import a .txt"))}
         >
           <span className="jqzz-sid-action-icon" aria-hidden="true">
             ↑
           </span>
           Import .txt
-          <Keys combo="Mod I" />
+          <Keys combo={keyOf("Import a .txt")} />
         </button>
-        <a className="jqzz-sid-action" href="#/join" aria-keyshortcuts={ariaShortcut("Mod J")}>
+        <a className="jqzz-sid-action" href="#/join" aria-keyshortcuts={ariaShortcut(keyOf("Join a game"))}>
           <span className="jqzz-sid-action-icon" aria-hidden="true">
             ⌁
           </span>
           Join a game
-          <Keys combo="Mod J" />
+          <Keys combo={keyOf("Join a game")} />
         </a>
       </div>
 
@@ -209,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={`jqzz-sid-places${canStash ? " with-arrow" : ""}`}
           aria-label="Yours"
         >
-          <a href="#/me/history" aria-keyshortcuts={ariaShortcut("Mod H")} title={`your games · ${modLabel("Mod H")}`}>
+          <a href="#/me/history" aria-keyshortcuts={ariaShortcut(keyOf("Game history"))} title={`your games · ${modLabel(keyOf("Game history"))}`}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8M2.5 2.5v2.4h2.4M8 5v3.2l2 1.4" />
             </svg>
@@ -219,7 +220,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {canStash && (
               <StashArrow open={stashOpen} onToggle={() => setLayout({ stashOpen: !stashOpen })} />
             )}
-            <a href="#/me/stash" aria-keyshortcuts={ariaShortcut("Mod B")} title={`what you saved · ${modLabel("Mod B")}`}>
+            <a href="#/me/stash" aria-keyshortcuts={ariaShortcut(keyOf("Open stash"))} title={`what you saved · ${modLabel(keyOf("Open stash"))}`}>
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M2.5 5.5h11v7.5h-11zM4 5.5 5.2 3h5.6L12 5.5M6.2 8.5h3.6" />
               </svg>

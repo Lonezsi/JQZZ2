@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useEscape } from "../../hooks/useEscape";
 import { createPortal } from "react-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
@@ -21,6 +22,7 @@ export const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({
   onClose,
   onSelect,
 }) => {
+  useEscape(true, onClose);
   const { user } = useAuth();
   const [images, setImages] = useState<Image[]>([]);
   const [search, setSearch] = useState("");
