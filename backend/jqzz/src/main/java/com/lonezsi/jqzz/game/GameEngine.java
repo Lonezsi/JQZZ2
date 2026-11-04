@@ -68,6 +68,8 @@ public class GameEngine {
     static final long HOST_GRACE_MS = TimeUnit.SECONDS.toMillis(20);
     /** a game paused for a host who never comes back ends after this, so players see their scores */
     static final long HOST_GIVE_UP_MS = TimeUnit.MINUTES.toMillis(10);
+    /** a lobby nobody joined, left by its host: gone after this, and with it the host's way back to it */
+    static final long EMPTY_LOBBY_MS = TimeUnit.MINUTES.toMillis(2);
 
     private final QuizRepository quizRepository;
     private final UserRepository userRepository;
@@ -284,7 +286,8 @@ public class GameEngine {
      * The host's screen is the show. If it drops out mid-game, the game keeps
      * going for HOST_GRACE_MS (a reload, a wifi blink), then pauses until it
      * comes back, and resumes by itself when it does. If it never does, the
-     * game ends after HOST_GIVE_UP_MS so players still get their scores.
+     * game ends after HOST_GIVE_UP_MS so players still get their scores. A
+     * lobby nobody joined is just forgotten, EMPTY_LOBBY_MS after the host left.
      */
     void hostCheck(String code) {
         Game game = games.get(code);
@@ -293,6 +296,7 @@ public class GameEngine {
         long now = now();
         long next = -1;
         boolean touched = false;
+        boolean forget = false;
         synchronized (game) {
             if (here) {
                 game.hostAwaySince = 0;
@@ -319,9 +323,16 @@ public class GameEngine {
                     } else {
                         next = HOST_GRACE_MS + HOST_GIVE_UP_MS - away;
                     }
+                } else if (game.status() == Game.Status.LOBBY && game.players.isEmpty()) {
+                    if (away >= EMPTY_LOBBY_MS) forget = true;
+                    else next = EMPTY_LOBBY_MS - away;
                 }
             }
             game.version++;
+        }
+        if (forget) {
+            forget(game);
+            return;
         }
         if (next >= 0) clock.schedule(() -> hostCheck(code), next + 50, TimeUnit.MILLISECONDS);
         if (touched) reschedule(game);
@@ -521,12 +532,14 @@ public class GameEngine {
         for (Game game : new ArrayList<>(games.values())) {
             boolean finished = game.status() == Game.Status.FINISHED && now - game.touchedAt() > FORGET_FINISHED_MS;
             boolean idle = now - game.touchedAt() > FORGET_IDLE_MS;
-            if (finished || idle) {
-                games.remove(game.code());
-                ScheduledFuture<?> t = timers.remove(game.code());
-                if (t != null) t.cancel(false);
-            }
+            if (finished || idle) forget(game);
         }
+    }
+
+    private void forget(Game game) {
+        games.remove(game.code());
+        ScheduledFuture<?> t = timers.remove(game.code());
+        if (t != null) t.cancel(false);
     }
 
     // ─── plumbing ──────────────────────────────────────────────────────

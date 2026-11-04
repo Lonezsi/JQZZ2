@@ -738,9 +738,30 @@ button.jqzz-tile:hover .jqzz-tile-letter {
   color: var(--text);
   background: var(--raised);
 }
+/* left alone, the tickets bob down till only their top edge shows; a hover
+   on that edge brings them back up (ReturnToGame.tsx) */
+.jqzz-return {
+  transition: translate 420ms var(--ease);
+}
+.jqzz-return.down {
+  translate: -50% calc(100% + 16px + env(safe-area-inset-bottom, 0px) - 14px);
+  /* past where it settles, then back up a little: a bob */
+  transition: translate 1100ms cubic-bezier(0.34, 1.45, 0.5, 1);
+}
+/* on the notifications page: the paused ones, waiting */
+.jqzz-paused-games {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
 @media (prefers-reduced-motion: reduce) {
   .jqzz-return-card {
     animation: none;
+  }
+  .jqzz-return,
+  .jqzz-return.down {
+    transition: none;
   }
 }
 

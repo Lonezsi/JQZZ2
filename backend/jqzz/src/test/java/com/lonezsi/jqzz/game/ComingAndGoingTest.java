@@ -166,6 +166,29 @@ class ComingAndGoingTest {
     }
 
     @Test
+    void aLobbyNobodyJoinedIsForgottenSoonAfterTheHostLeaves() {
+        String code = (String) engine.host(7L, "host").get("code");
+        hostWatching = false;
+        engine.hostCheck(code);
+        assertThat(engine.mine("host")).hasSize(1); // just stepped out: the way back is still there
+
+        engine.game(code).hostAwaySince = engine.now() - GameEngine.EMPTY_LOBBY_MS - 1;
+        engine.hostCheck(code);
+        assertThat(engine.mine("host")).isEmpty();
+    }
+
+    @Test
+    void aLobbySomeoneIsWaitingInStaysForTheHost() {
+        String code = (String) engine.host(7L, "host").get("code");
+        engine.join(code, "p1");
+        hostWatching = false;
+        engine.hostCheck(code);
+        engine.game(code).hostAwaySince = engine.now() - GameEngine.EMPTY_LOBBY_MS - 1;
+        engine.hostCheck(code);
+        assertThat(engine.mine("host")).hasSize(1);
+    }
+
+    @Test
     void aPauseTheHostMadeIsTheirsToLift() {
         String code = startedGame();
         engine.pause(code, "host");
