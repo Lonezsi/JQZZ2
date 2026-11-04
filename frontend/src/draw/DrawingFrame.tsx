@@ -255,15 +255,25 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   /** the sheet's size when it just fits the window, and the window's */
   const fitted = useRef({ fit: 1, w: 0, h: 0, vw: 0, vh: 0 });
   const view = useRef<View>(HOME);
+  /**
+   * the turn the screen shows, which never jumps: a full turn and none are
+   * the same place, but going from one to the other with the settle
+   * transition would spin the sheet all the way round, so the screen always
+   * goes the short way to wherever the view's angle is
+   */
+  const shownTurn = useRef(0);
 
   const apply = useCallback((next: View, settle = false) => {
     const f = fitted.current;
     const v = keepInReach(next, f.w, f.h, f.vw, f.vh);
     view.current = v;
+    const t = Math.PI * 2;
+    const step = v.angle - shownTurn.current;
+    shownTurn.current += step - t * Math.round(step / t);
     const s = sheetRef.current;
     if (s) {
       s.classList.toggle("settle", settle);
-      s.style.transform = `translate(${v.x}px, ${v.y}px) rotate(${v.angle}rad) scale(${v.scale})${flippedRef.current ? " scaleX(-1)" : ""}`;
+      s.style.transform = `translate(${v.x}px, ${v.y}px) rotate(${shownTurn.current}rad) scale(${v.scale})${flippedRef.current ? " scaleX(-1)" : ""}`;
     }
     const z = zoomRef.current;
     if (z) {
