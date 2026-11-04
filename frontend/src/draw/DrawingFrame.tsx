@@ -4,7 +4,7 @@ import { Painter, type Sample } from "./painter";
 import { PAPERS } from "./paper";
 import { ActionIcon, ToolIcon } from "./icons";
 import { LayersPanel } from "./LayersPanel";
-import { HOME, isHome, keepInReach, snapAngle, toSheet, twoFingers, viewLabel, zoomAt, type Pt, type View } from "./view";
+import { HOME, isHome, keepInReach, snapAngle, toSheet, TURN_AFTER, twist, twoFingers, viewLabel, zoomAt, type Pt, type View } from "./view";
 import { useFitHeight } from "./fit";
 import { ColorPicker } from "./ColorPicker";
 
@@ -341,7 +341,8 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const active = useRef<number | null>(null);
   const penSeen = useRef(false);
   const touches = useRef(new Map<number, { x: number; y: number; sx: number; sy: number; t: number }>());
-  const gesture = useRef<{ at: number; moved: boolean; most: number; ids: number[]; a0: Pt; b0: Pt; start: View } | null>(null);
+  /** turning: the fingers have twisted far enough that the sheet turns with them (view.ts, TURN_AFTER) */
+  const gesture = useRef<{ at: number; moved: boolean; most: number; ids: number[]; a0: Pt; b0: Pt; start: View; turning?: boolean } | null>(null);
   const pan = useRef<{ id: number; x: number; y: number; start: View } | null>(null);
   /** a tap that only closed a popover: it doesn't draw too */
   const swallow = useRef<number | null>(null);
@@ -481,7 +482,14 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       }
       if (g.ids.length === 2 && g.ids.includes(e.pointerId)) {
         const [a, b] = g.ids.map((id) => touches.current.get(id)!);
-        apply(twoFingers(g.start, g.a0, g.b0, local(a.x, a.y), local(b.x, b.y)));
+        const pa = local(a.x, a.y);
+        const pb = local(b.x, b.y);
+        if (!g.turning && Math.abs(twist(g.a0, g.b0, pa, pb)) > TURN_AFTER) {
+          // twisted on purpose: from here the sheet turns too, from where the fingers are now
+          g.turning = true;
+          regrip();
+        }
+        apply(twoFingers(g.start, g.a0, g.b0, pa, pb, g.turning));
       }
       return;
     }

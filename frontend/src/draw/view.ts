@@ -35,16 +35,23 @@ export function toSheet(v: View, p: Pt, fit: number, width: number, height: numb
   return { x: ux / fit + width / 2, y: uy / fit + height / 2 };
 }
 
+/** how far two fingers must twist before the sheet turns with them: less is just a wobble in a pinch */
+export const TURN_AFTER = (15 * Math.PI) / 180;
+
+/** how much the line between two fingers turned going from a0, b0 to a, b */
+export const twist = (a0: Pt, b0: Pt, a: Pt, b: Pt) =>
+  wrap(Math.atan2(b.y - a.y, b.x - a.x) - Math.atan2(b0.y - a0.y, b0.x - a0.x));
+
 /**
  * Two fingers moved from a0, b0 to a, b: the view that keeps the bit of
  * sheet that was under them under them, zoomed by how far apart they went
- * and turned by how much the line between them turned.
+ * and, if `turn`, turned by how much the line between them turned.
  */
-export function twoFingers(start: View, a0: Pt, b0: Pt, a: Pt, b: Pt): View {
+export function twoFingers(start: View, a0: Pt, b0: Pt, a: Pt, b: Pt, turn = true): View {
   const d0 = Math.max(1, Math.hypot(b0.x - a0.x, b0.y - a0.y));
   const d = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
   const scale = clamp((start.scale * d) / d0, MIN_SCALE, MAX_SCALE);
-  const angle = start.angle + Math.atan2(b.y - a.y, b.x - a.x) - Math.atan2(b0.y - a0.y, b0.x - a0.x);
+  const angle = turn ? start.angle + twist(a0, b0, a, b) : start.angle;
   const m0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 };
   const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   return { ...pinned(start, m0, m, scale, angle), scale, angle };
