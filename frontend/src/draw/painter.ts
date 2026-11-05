@@ -11,7 +11,7 @@
  * Layers: the paper, the drawing, and the wet stroke on top of it until the
  * pen lifts. Undo keeps what a change covered, before and after.
  */
-import { brushOf, type Area, type Brush, type Dab, type Stroke, type ToolId } from "./brushes";
+import { brushOf, knobsOf, type Area, type Brush, type Dab, type Stroke, type ToolId } from "./brushes";
 import { oraOf } from "./ora";
 import { CELL } from "../components/common/dither";
 import { grainTile, hexOf, paperSheet, rng } from "./paper";
@@ -142,6 +142,8 @@ export class Painter {
   symmetry = false;
   /** screen pixels per sheet pixel, as the sheet's shown (the frame keeps it up to date): the dither pen prints on the screen's grid */
   screenScale = 1;
+  /** the current brush's own settings, as set (Brush.knobs) */
+  knobs: Record<string, number> = {};
   /** told when the drawing or what can be undone changes */
   onChange: () => void = () => {};
   /** told when the colour picker tool picks */
@@ -369,6 +371,7 @@ export class Painter {
       mirrored: false,
       width: this.width,
       cell: CELL / this.screenScale,
+      knobs: knobsOf(brush, this.knobs),
     };
     const live: Live = {
       brush,
@@ -526,7 +529,7 @@ export class Painter {
     tilted: { tilt: number; tiltAngle: number },
   ) {
     const l = this.live!;
-    const spacing = Math.max(0.6, this.size * l.brush.spacing);
+    const spacing = Math.max(0.6, this.size * (l.s.knobs.spacing !== undefined ? l.s.knobs.spacing / 100 : l.brush.spacing));
     const rough = Math.hypot(via.x - from.x, via.y - from.y) + Math.hypot(to.x - via.x, to.y - via.y);
     const steps = Math.max(1, Math.ceil(rough / 0.75));
     const dt = Math.max(1, to.t - from.t);

@@ -68,7 +68,25 @@ export interface Stroke {
   width: number;
   /** the background's dither cell, in sheet pixels at the zoom the stroke started at (the dither pen) */
   cell: number;
+  /** the brush's own settings (Brush.knobs), each at its start unless set */
+  knobs: Record<string, number>;
 }
+
+/** a setting a brush has of its own, shown as a slider under size and opacity */
+export interface Knob {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  start: number;
+  /** how the value reads next to the slider */
+  show?: (v: number) => string;
+}
+
+/** every knob of a brush at its start, then whatever's been set */
+export const knobsOf = (b: Brush, set: Record<string, number> = {}) =>
+  Object.fromEntries((b.knobs ?? []).map((k) => [k.id, set[k.id] ?? k.start]));
 
 export interface Brush {
   id: ToolId;
@@ -100,6 +118,8 @@ export interface Brush {
   direct?: boolean;
   /** a stroke can be mirrored */
   mirrors: boolean;
+  /** settings of its own; "spacing", in percent of the size, overrides `spacing` */
+  knobs?: Knob[];
   begin?(s: Stroke, d: Dab): void;
   dab?(s: Stroke, d: Dab): void;
   /** path brushes: draw the whole stroke so far */

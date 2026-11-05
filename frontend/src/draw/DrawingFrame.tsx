@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
-import { BRUSHES, brushOf, GROUPS, LOOSE, type ToolId } from "./brushes";
+import { BRUSHES, brushOf, GROUPS, knobsOf, LOOSE, type ToolId } from "./brushes";
 import { Painter, type Sample } from "./painter";
 import { PAPERS } from "./paper";
 import { ActionIcon, ToolIcon } from "./icons";
@@ -34,7 +34,7 @@ const PALETTE = [
 ];
 
 /** what each tool was last set to, so switching back finds it as it was */
-type ToolSettings = Partial<Record<ToolId, { size: number; opacity: number }>>;
+type ToolSettings = Partial<Record<ToolId, { size: number; opacity: number; knobs?: Record<string, number> }>>;
 
 const KEEP = "jqzz:draw";
 interface Kept {
@@ -124,6 +124,8 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   const brush = brushOf(tool);
   const size = tools[tool]?.size ?? brush.size.start;
   const opacity = tools[tool]?.opacity ?? brush.opacity;
+  const knobs = knobsOf(brush, tools[tool]?.knobs);
+  const knobsKey = JSON.stringify(knobs);
 
   // ─── the painter ───────────────────────────────────────────────
 
@@ -177,9 +179,10 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
     p.color = color;
     p.size = size;
     p.opacity = opacity;
+    p.knobs = JSON.parse(knobsKey);
     p.symmetry = mirror;
     p.setPaper(paper);
-  }, [tool, color, size, opacity, mirror, paper]);
+  }, [tool, color, size, opacity, mirror, paper, knobsKey]);
 
   useEffect(() => {
     kept.current = { tool: lastBrush.current, color, paper, tools, recent };
@@ -560,7 +563,9 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
   // ─── settings ──────────────────────────────────────────────────
 
   const setSetting = (patch: Partial<{ size: number; opacity: number }>) =>
-    setTools((all) => ({ ...all, [tool]: { size, opacity, ...patch } }));
+    setTools((all) => ({ ...all, [tool]: { size, opacity, knobs: all[tool]?.knobs, ...patch } }));
+  const setKnob = (id: string, v: number) =>
+    setTools((all) => ({ ...all, [tool]: { size, opacity, ...all[tool], knobs: { ...all[tool]?.knobs, [id]: v } } }));
 
   /** stay: the picker is still open, being dragged */
   const choose = (hex: string, custom = false, stay = false) => {
@@ -646,7 +651,19 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       pp.size = Math.min(size, 70);
       pp.opacity = tool === "eraser" || tool === "smudge" ? 1 : opacity;
       pp.symmetry = false;
-      if (tool === "eraser" || tool === "smudge") {
+      pp.knobs = JSON.parse(knobsKey);
+      if (tool === "rgbsplit" || tool === "pixelsort") {
+        // these change what's there: two bands of colour for them to work on
+        pp.tool = "marker";
+        pp.size = 40;
+        pp.color = color;
+        stroke(pp, 0.05, 0.95, 1, 0);
+        pp.color = color === "#2c5bcf" ? "#f4a338" : "#2c5bcf";
+        stroke(pp, 0.05, 0.95, 1, 0.18);
+        pp.tool = tool;
+        pp.size = Math.min(size, 60);
+        pp.opacity = opacity;
+      } else if (tool === "eraser" || tool === "smudge") {
         // something to rub out first: a band of marker
         pp.tool = "marker";
         pp.size = 64;
@@ -658,7 +675,7 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
       stroke(pp, 0, 1, tool === "watercolor" ? 0.8 : 1);
     }, 40);
     return () => window.clearTimeout(t);
-  }, [tool, color, size, opacity, paper]);
+  }, [tool, color, size, opacity, paper, knobsKey]);
 
   // ─── what it looks like ───────────────────────────────────────
 
@@ -936,6 +953,20 @@ export const DrawingFrame = forwardRef<DrawingFrameHandle, Props>(function Drawi
               />
               <output>{Math.round(opacity * 100)}%</output>
             </label>
+            {brush.knobs?.map((k) => (
+              <label key={k.id} className="jqzz-draw-slider">
+                <span>{k.label}</span>
+                <input
+                  type="range"
+                  min={k.min}
+                  max={k.max}
+                  step={k.step}
+                  value={knobs[k.id]}
+                  onChange={(e) => setKnob(k.id, Number(e.target.value))}
+                />
+                <output>{k.show ? k.show(knobs[k.id]) : knobs[k.id]}</output>
+              </label>
+            ))}
           </div>
         ) : (
           <p className="jqzz-draw-hint">
