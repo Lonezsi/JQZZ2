@@ -152,20 +152,19 @@
     -30px 40px 150px rgba(200, 60, 120, 0.2);
 }
 
-/* ─── the editor: a wireframe, seen from its pole ─── */
+/* ─── the editor: a calm blue world, nothing on it but its light ─── */
 .planet[data-kind="editor"] {
   --size: min(44vmin, 430px);
   --right: 5vw;
   --bottom: 8vh;
-  --rim: #7fd0ff;
+  --rim: #8fd6ff;
   --body:
-    repeating-radial-gradient(circle at 50% 50%, rgba(130, 190, 255, 0.2) 0 1px, transparent 1px 26px),
-    repeating-conic-gradient(from 0deg at 50% 50%, rgba(130, 190, 255, 0.16) 0 0.7deg, transparent 0.7deg 15deg),
     radial-gradient(
-      circle at 68% 26%,
-      color-mix(in srgb, var(--bg) 52%, #2a5ec8) 0,
-      color-mix(in srgb, var(--bg) 82%, #14285a) 50%,
-      var(--bg) 80%
+      circle at 66% 28%,
+      color-mix(in srgb, var(--bg) 40%, #3a7ee0) 0,
+      color-mix(in srgb, var(--bg) 70%, #1d4aa8) 38%,
+      color-mix(in srgb, var(--bg) 88%, #0f2458) 62%,
+      var(--bg) 82%
     );
   --glow:
     0 0 0 1px rgba(160, 215, 255, 0.2), 12px -18px 60px rgba(110, 190, 255, 0.2),
