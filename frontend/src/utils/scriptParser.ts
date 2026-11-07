@@ -817,7 +817,8 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
             if ((EXTRA_FIELDS as string[]).includes(f.key) && asText !== undefined) {
               options[f.key as QuestionField] = asText;
               if (f.key === "max") maxLine = f.line;
-            } else if (asText !== undefined && qRefOf(asText)) {
+            } else if (asText !== undefined && qRefOf(asText) && f.key !== "ref") {
+              // ref is the quiz's own hidden label, never written: it keeps the plain message
               err(f.line, `unexpected "${f.key}" in ${qRef}. To use an earlier question's answers, write from: "${qRefOf(asText)}"`);
             } else {
               err(f.line, `unexpected "${f.key}" in ${qRef}`);

@@ -566,6 +566,7 @@ ShowAnswers(Q1, time: 10)`;
   say("S4", `${W()}\nShowQuestion(time: 30)`, "say which question this step shows: ShowQuestion(Q1, time: 30)");
   say("S5", `${W()}\nShowVotes(Q1, time: 30)`, "ShowVotes isn't a step. The steps are ShowWaiting, ShowQuestion, ShowAnswers, ShowElaboration and ShowResult");
   say("S6", `${W()}\nNewQuestion Q2 (\n  ask: "pick", score: "votes",\n  source: "Q1",\n)`, 'unexpected "source" in Q2. To use an earlier question\'s answers, write from: "Q1"');
+  say("a ref written in a script", `NewQuestion Q1 (\n  ask: "write",\n  ref: "q1",\n)\nShowQuestion(Q1, time: 60)`, 'unexpected "ref" in Q1');
   // links
   say("L1", `${W()}\n${PICK_VOTES("Q9")}${shows}`, 'from: "Q9" names Q9, which isn\'t defined');
   say("L2", `${W()}\n${PICK_VOTES("the first one")}${shows}`, 'from names a question, like from: "Q1"');
