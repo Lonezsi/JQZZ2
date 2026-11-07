@@ -13,18 +13,19 @@ import com.lonezsi.jqzz.model.QuestionType;
 public record Mode(Ask ask, Score score) {
 
     public enum Ask {
-        PICK, PICK_MANY, TYPE_IN, ORDER, NUMBER, MATCH, RANK, WRITE, DRAW, CHAIN;
+        PICK, PICK_MANY, TYPE_IN, ORDER, NUMBER, MATCH, RANK, WRITE, DRAW, CHAIN, PERSON;
 
         /** the scores it can take, the first when none is said */
         public List<Score> scores() {
             return switch (this) {
-                case PICK -> List.of(Score.RIGHT, Score.CROWD, Score.NONE);
+                case PICK -> List.of(Score.RIGHT, Score.CROWD, Score.NONE, Score.VOTES);
                 case PICK_MANY -> List.of(Score.RIGHT, Score.NONE);
                 case TYPE_IN, ORDER, MATCH -> List.of(Score.RIGHT);
                 case NUMBER -> List.of(Score.RIGHT, Score.CROWD);
                 case RANK -> List.of(Score.CROWD, Score.NONE);
                 case WRITE, DRAW -> List.of(Score.VOTES, Score.AUTHORS, Score.SECRET, Score.KNOCKOUT, Score.NONE);
                 case CHAIN -> List.of(Score.NONE);
+                case PERSON -> List.of(Score.RIGHT, Score.NONE);
             };
         }
 
@@ -94,9 +95,9 @@ public record Mode(Ask ask, Score score) {
         return ask == Ask.WRITE || ask == Ask.DRAW;
     }
 
-    /** voting, guessing or battles happen during the reveal */
+    /** voting, guessing or battles happen during the reveal; a pick that borrows earlier answers is voted on while it's asked */
     public boolean judged() {
-        return score == Score.VOTES || score == Score.AUTHORS || score == Score.SECRET || score == Score.KNOCKOUT;
+        return (score == Score.VOTES && ask != Ask.PICK) || score == Score.AUTHORS || score == Score.SECRET || score == Score.KNOCKOUT;
     }
 
     /** the "speed" setting counts */

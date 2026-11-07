@@ -25,17 +25,17 @@ import com.lonezsi.jqzz.service.StashService;
  * state goes out on /topic/play/{code} to everyone watching it.
  *
  * POST /play/host                 {quizId, userId}       a new game, you host it
- * POST /play/{code}/join          {userId}               you're in
+ * POST /play/{code}/join          {userId, name?}        you're in; name: who you are, when the quiz has a roster
  * GET  /play/{code}                                      where it is
  * GET  /play/live                                        {live}: games under way (a deploy waits for none)
  * POST /play/{code}/start|pause|resume|skip|end|restart  {userId}  host only
  * POST /play/{code}/kick          {userId, playerId}     host only
  * POST /play/{code}/invite        {userId, playerId}     host only: playerId gets a notification
- * POST /play/{code}/submit        {userId, picks|text|tiers|pairs}
+ * POST /play/{code}/submit        {userId, picks|text|tiers|pairs|choices}
  * POST /play/{code}/draw          the image itself (PNG/WebP/JPEG), X-User-Id: who drew it
  * GET  /play/{code}/task          X-User-Id: what only you see now (secret word, what you're handed)
  * GET  /play/{code}/art/{id}      a drawing from the game
- * POST /play/{code}/vote          {userId, choice, match | guesses}
+ * POST /play/{code}/vote          {userId, choice|choices, match | guesses}
  * POST /play/{code}/leave         {userId}
  * POST /play/{code}/hurry         {userId}               done: nudge the host to move on
  * POST /play/rematch              {recordId, userId}     that game's quiz again, everyone invited
@@ -90,7 +90,7 @@ public class PlayController {
 
     @PostMapping("/{code}/join")
     public Map<String, Object> join(@PathVariable String code, @RequestBody PlayRequest r) {
-        return engine.join(code, r.userId);
+        return engine.join(code, r.userId, r.name);
     }
 
     @PostMapping("/{code}/leave")
@@ -140,7 +140,7 @@ public class PlayController {
 
     @PostMapping("/{code}/submit")
     public Map<String, Object> submit(@PathVariable String code, @RequestBody PlayRequest r) {
-        return engine.submit(code, r.userId, r.picks, r.text, r.tiers, r.pairs);
+        return engine.submit(code, r.userId, r.picks, r.text, r.tiers, r.pairs, r.choices);
     }
 
     /** the body is the drawing, sent as the file it is; who drew it rides in a header, not the address */
@@ -170,7 +170,7 @@ public class PlayController {
 
     @PostMapping("/{code}/vote")
     public Map<String, Object> vote(@PathVariable String code, @RequestBody PlayRequest r) {
-        return engine.vote(code, r.userId, r.choice, r.match, r.guesses);
+        return engine.vote(code, r.userId, r.choice, r.choices, r.match, r.guesses);
     }
 
     @PostMapping("/{code}/hurry")
@@ -192,5 +192,9 @@ public class PlayController {
         public String choice;
         public Integer match;
         public Map<String, String> guesses;
+        /** who you are, in a game whose quiz has a roster */
+        public String name;
+        /** what you chose: entry keys, or one player for a person question */
+        public List<String> choices;
     }
 }

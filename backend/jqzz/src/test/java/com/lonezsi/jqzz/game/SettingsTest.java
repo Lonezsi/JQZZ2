@@ -109,4 +109,31 @@ class SettingsTest {
         g.skip(3);
         assertThat(g.players.get("p").score).isEqualTo(200);
     }
+
+    @Test
+    void snapshot_keepsRefFromPicksAndOverflow() {
+        Quiz quiz = quiz(1L);
+        quiz.getActions().forEach(a -> {
+            a.getQuestion().setOptions("from=q1, picks=2, overflow=6, ref=q2");
+            a.getQuestion().setMode("pick/votes");
+        });
+        Game.QuestionSnap q = GameEngine.snapshot(quiz, new Random(1)).get(0).question();
+        assertThat(q.options()).containsEntry("from", "q1").containsEntry("picks", "2")
+                .containsEntry("overflow", "6").containsEntry("ref", "q2");
+        assertThat(q.from()).isEqualTo("q1");
+        assertThat(q.ref()).isEqualTo("q2");
+        assertThat(q.picks()).isEqualTo(2);
+        assertThat(q.overflow()).isEqualTo(6);
+        assertThat(q.mode()).isEqualTo(new Mode(Mode.Ask.PICK, Mode.Score.VOTES));
+    }
+
+    @Test
+    void snapshot_skipsTheRosterStep() {
+        Quiz quiz = quiz(1L, 2L);
+        Action roster = new Action(null, Phase.ROSTER, 0);
+        roster.setPreview("{\"names\":[\"Anna\"],\"unique\":true}");
+        quiz.getActions().add(0, roster);
+        List<Game.Step> steps = GameEngine.snapshot(quiz, new Random(1));
+        assertThat(steps).hasSize(4).allSatisfy(s -> assertThat(s.phase()).isNotEqualTo(Phase.ROSTER));
+    }
 }

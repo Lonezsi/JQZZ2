@@ -128,14 +128,14 @@ public class GameEngine {
         if (quizId == null || hostId == null || hostId.isBlank()) throw bad("quizId and userId are required");
         if (!userRepository.existsById(hostId)) throw notFound("No such user");
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> notFound("No such quiz"));
-        Game game = hostQuiz(quiz, hostId);
+        Game game = hostQuiz(quiz, hostId, true);
         synchronized (game) {
             return view(game);
         }
     }
 
-    /** A game of any quiz, saved or not (a stashed one for practice). */
-    private Game hostQuiz(Quiz quiz, String hostId) {
+    /** A game of any quiz, saved or not (a stashed one for practice). withRoster: players join as one of its Roster names */
+    private Game hostQuiz(Quiz quiz, String hostId, boolean withRoster) {
         Random rng = new Random(random.nextLong());
         List<Game.Step> steps = snapshot(quiz, rng);
         if (steps.stream().noneMatch(s -> s.question() != null)) {
@@ -145,8 +145,35 @@ public class GameEngine {
         Game game = new Game(code, hostId, quiz.getName(), steps, rng, now());
         game.authorId = quiz.getAuthorId();
         game.quizId = quiz.getId();
+        game.here = online(game);
+        if (withRoster) readRoster(game, quiz);
         games.put(code, game);
         return game;
+    }
+
+    /**
+     * The quiz's Roster line ({"names": [...], "unique": true}) onto the game.
+     * Read as forgivingly as the script reader writes it; a roster that can't
+     * be read is no roster, so the game still plays, open to anyone.
+     */
+    private void readRoster(Game game, Quiz quiz) {
+        Action roster = quiz.getActions().stream().filter(a -> a.getPhase() == Phase.ROSTER).findFirst().orElse(null);
+        if (roster == null) return;
+        try {
+            tools.jackson.databind.JsonNode tree = json.readTree(roster.getPreview() == null ? "" : roster.getPreview());
+            Map<String, String> names = new LinkedHashMap<>();
+            for (tools.jackson.databind.JsonNode n : tree.path("names")) {
+                if (!n.isString()) continue;
+                String name = n.asString().strip().replaceAll("\\s+", " ");
+                if (name.isEmpty() || name.length() > 30) continue;
+                names.putIfAbsent(Game.nameKey(name), name);
+                if (names.size() >= 50) break;
+            }
+            game.roster = List.copyOf(names.values());
+            game.uniqueNames = !tree.path("unique").isBoolean() || tree.path("unique").asBoolean();
+        } catch (RuntimeException e) {
+            System.err.println("game " + game.code() + ": unreadable roster: " + e);
+        }
     }
 
     /**
@@ -209,7 +236,8 @@ public class GameEngine {
     @Transactional(readOnly = true)
     public Map<String, Object> practice(Quiz quiz, String userId) {
         User user = userRepository.findById(userId == null ? "" : userId).orElseThrow(() -> notFound("No such user"));
-        Game game = hostQuiz(quiz, userId);
+        // practice is alone: nobody to pick a name from the list for
+        Game game = hostQuiz(quiz, userId, false);
         return change(game, g -> {
             g.addPlayer(user.getId(), user.getName(), user.getProfilePictureUrl(), now());
             g.start(now());
@@ -223,9 +251,14 @@ public class GameEngine {
     }
 
     public Map<String, Object> join(String code, String userId) {
+        return join(code, userId, null);
+    }
+
+    /** name: the roster name they picked, in a game whose quiz has a roster */
+    public Map<String, Object> join(String code, String userId, String name) {
         Game game = find(code);
         User user = userRepository.findById(userId == null ? "" : userId).orElseThrow(() -> notFound("No such user"));
-        return change(game, g -> g.addPlayer(user.getId(), user.getName(), user.getProfilePictureUrl(), now()));
+        return change(game, g -> g.addPlayer(user.getId(), user.getName(), user.getProfilePictureUrl(), name, now()));
     }
 
     public Map<String, Object> leave(String code, String userId) {
@@ -424,8 +457,14 @@ public class GameEngine {
 
     public Map<String, Object> submit(String code, String userId, List<Long> picks, String text,
             Map<Long, String> tiers, Map<Long, String> pairs) {
+        return submit(code, userId, picks, text, tiers, pairs, null);
+    }
+
+    /** choices: entry keys for a pick that borrows, or [playerId] for a person question */
+    public Map<String, Object> submit(String code, String userId, List<Long> picks, String text,
+            Map<Long, String> tiers, Map<Long, String> pairs, List<String> choices) {
         Game game = find(code);
-        return change(game, g -> g.submit(userId, picks, text, tiers, pairs, now(), online(game)));
+        return change(game, g -> g.submit(userId, picks, text, tiers, pairs, choices, now(), online(game)));
     }
 
     /**
@@ -479,8 +518,14 @@ public class GameEngine {
 
     public Map<String, Object> vote(String code, String userId, String choice, Integer match,
             Map<String, String> guesses) {
+        return vote(code, userId, choice, null, match, guesses);
+    }
+
+    /** choices: up to the question's picks, in place of one choice */
+    public Map<String, Object> vote(String code, String userId, String choice, List<String> choices, Integer match,
+            Map<String, String> guesses) {
         Game game = find(code);
-        return change(game, g -> g.vote(userId, choice, match, guesses, now(), online(game)));
+        return change(game, g -> g.vote(userId, choice, choices, match, guesses, now(), online(game)));
     }
 
     /** done here: tell the host to get on with it */

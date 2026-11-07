@@ -9,6 +9,9 @@ import com.lonezsi.jqzz.model.Quiz;
 import tools.jackson.databind.json.JsonMapper;
 import java.util.ArrayList;
 import java.util.List;
+import com.lonezsi.jqzz.config.LoginKeyFilter;
+import com.lonezsi.jqzz.model.User;
+import com.lonezsi.jqzz.repository.UserRepository;
 import com.lonezsi.jqzz.service.QuizService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,13 +38,16 @@ class QuizControllerTest {
     @Mock
     private QuizService quizService;
 
+    @Mock
+    private UserRepository users;
+
     private QuizController quizController;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        quizController = new QuizController(quizService, JsonMapper.builder().build(), false);
+        quizController = new QuizController(quizService, JsonMapper.builder().build(), users, false);
         mockMvc = MockMvcBuilders.standaloneSetup(quizController).build();
     }
 
@@ -183,5 +189,68 @@ class QuizControllerTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete("/quizzes/1"))
                 .andExpect(status().isForbidden());
+    }
+
+    /** a quiz by "anna" with who's coming in its first step */
+    private static Quiz withRoster(String author) {
+        Action roster = new Action(null, Phase.ROSTER, 0);
+        roster.setPreview("{\"names\":[\"Anna\",\"Bence\"],\"unique\":true}");
+        Question q = new Question();
+        q.setId(5L);
+        q.setText("What did you do yesterday?");
+        Quiz quiz = new Quiz();
+        quiz.setId(1L);
+        quiz.setName("Yesterday");
+        quiz.setAuthorId(author);
+        quiz.setActions(new ArrayList<>(List.of(roster, new Action(q, Phase.QUESTION, 60))));
+        return quiz;
+    }
+
+    @Test
+    void theListNeverShowsARoster() throws Exception {
+        when(quizService.findAll()).thenReturn(List.of(withRoster("anna")));
+        for (String summary : new String[] { "true", "false" }) {
+            mockMvc.perform(get("/quizzes").param("summary", summary).requestAttr(LoginKeyFilter.USER, "anna"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].actions.length()").value(1))
+                    .andExpect(jsonPath("$[0].actions[0].phase").value("QUESTION"));
+        }
+        mockMvc.perform(get("/quizzes"))
+                .andExpect(jsonPath("$[0].actions.length()").value(1));
+    }
+
+    @Test
+    void onlyTheAuthorAndTheAdminGetTheRoster() throws Exception {
+        when(quizService.findById(1L)).thenReturn(Optional.of(withRoster("anna")));
+        User admin = new User();
+        admin.setId("boss");
+        admin.setAdmin(true);
+        User someone = new User();
+        someone.setId("bob");
+        when(users.findById("boss")).thenReturn(Optional.of(admin));
+        when(users.findById("bob")).thenReturn(Optional.of(someone));
+
+        mockMvc.perform(get("/quizzes/1").requestAttr(LoginKeyFilter.USER, "anna"))
+                .andExpect(jsonPath("$.actions.length()").value(2))
+                .andExpect(jsonPath("$.actions[0].phase").value("ROSTER"))
+                .andExpect(jsonPath("$.actions[0].preview").value("{\"names\":[\"Anna\",\"Bence\"],\"unique\":true}"));
+        mockMvc.perform(get("/quizzes/1").requestAttr(LoginKeyFilter.USER, "boss"))
+                .andExpect(jsonPath("$.actions.length()").value(2));
+        mockMvc.perform(get("/quizzes/1").requestAttr(LoginKeyFilter.USER, "bob"))
+                .andExpect(jsonPath("$.actions.length()").value(1))
+                .andExpect(jsonPath("$.actions[0].phase").value("QUESTION"));
+        // a quiz from before authors were kept is anyone's, roster and all
+        when(quizService.findById(2L)).thenReturn(Optional.of(withRoster(null)));
+        mockMvc.perform(get("/quizzes/2").requestAttr(LoginKeyFilter.USER, "bob"))
+                .andExpect(jsonPath("$.actions.length()").value(2));
+    }
+
+    @Test
+    void getOne_withoutAKey_stillWorks() throws Exception {
+        when(quizService.findById(1L)).thenReturn(Optional.of(withRoster("anna")));
+        mockMvc.perform(get("/quizzes/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Yesterday"))
+                .andExpect(jsonPath("$.actions.length()").value(1));
     }
 }

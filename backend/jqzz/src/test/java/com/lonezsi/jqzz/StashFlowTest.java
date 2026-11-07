@@ -244,4 +244,26 @@ class StashFlowTest {
         if (userId != null) request.header("X-User-Id", userId);
         return http.send(request.build(), HttpResponse.BodyHandlers.ofString());
     }
+
+    @Test
+    void aStashedQuizLeavesItsRosterBehind_butKeepsItsLinks() throws Exception {
+        String dora = register("Dora");
+        String quiz = send("POST", "/quizzes", null, """
+            {"name": "Yesterday", "authorId": "%s", "actions": [
+               {"phase": "ROSTER", "time": 0, "preview": "{\\"names\\":[\\"Anna\\",\\"Bence\\"],\\"unique\\":true}"},
+               {"phase": "QUESTION", "time": 60, "question":
+                 {"id": 1, "text": "What did you do yesterday?", "type": "USER_GENERATED", "mode": "write/none", "options": "ref=q1"}},
+               {"phase": "QUESTION", "time": 40, "question":
+                 {"id": 2, "text": "Which one is the funniest?", "type": "PREWRITTEN_SINGLE", "mode": "pick/votes",
+                  "options": "from=q1, overflow=6, ref=q2"}}
+            ]}
+            """.formatted(dora)).body();
+        long quizId = id(quiz, "$.id");
+        String saved = send("POST", "/stash/from-quiz", dora, "{\"quizId\": %d}".formatted(quizId)).body();
+        String payload = JsonPath.read(saved, "$[0].payload");
+        assertThat(payload).doesNotContain("ROSTER").doesNotContain("Anna").doesNotContain("Bence");
+        assertThat(payload).contains("ref=q1").contains("from=q1, overflow=6, ref=q2").contains("pick/votes");
+        // and the list everyone sees never shows who's coming
+        assertThat(send("GET", "/quizzes", null, null).body()).doesNotContain("Bence");
+    }
 }

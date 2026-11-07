@@ -502,6 +502,8 @@ public class StashService {
         Map<Long, Map<String, Object>> questions = new LinkedHashMap<>();
         List<Map<String, Object>> steps = new ArrayList<>();
         for (Action a : quiz.getActions()) {
+            // who's coming names real friends: a copy in the stash goes without them
+            if (a.getPhase() == Phase.ROSTER) continue;
             Map<String, Object> step = new LinkedHashMap<>();
             step.put("phase", a.getPhase() == null ? Phase.TEXT.name() : a.getPhase().name());
             step.put("time", a.getTime());

@@ -236,4 +236,51 @@ class ComingAndGoingTest {
         assertThatThrownBy(() -> engine.invite(code, "p1", "away")).hasMessageContaining("Only the host");
         assertThatThrownBy(() -> engine.invite(code, "host", "p1")).hasMessageContaining("already in");
     }
+
+    private static Action rosterStep(String preview) {
+        Action a = new Action(null, Phase.ROSTER, 0);
+        a.setPreview(preview);
+        return a;
+    }
+
+    @Test
+    void practice_skipsTheRoster() {
+        quiz.getActions().add(0, rosterStep("{\"names\":[\"Anna\",\"Bence\"],\"unique\":true}"));
+        String code = (String) engine.practice(quiz, "p1").get("code");
+        Game g = engine.game(code);
+        assertThat(g.roster).isEmpty();
+        assertThat(g.players.get("p1").name).isEqualTo("p1");
+        assertThat(g.status()).isEqualTo(Game.Status.PLAYING);
+        assertThat(g.steps).hasSize(1);
+    }
+
+    @Test
+    void join_withANameThroughTheEngine() {
+        quiz.getActions().add(0, rosterStep("{\"names\":[\"Anna\",\"Bence\"],\"unique\":true}"));
+        String code = (String) engine.host(7L, "host").get("code");
+        engine.join(code, "p1", "anna");
+        assertThat(engine.game(code).players.get("p1").name).isEqualTo("Anna");
+        assertThatThrownBy(() -> engine.join(code, "p2"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("400").hasMessageContaining("Pick who you are");
+        assertThatThrownBy(() -> engine.join(code, "p2", "Anna")).hasMessageContaining("Anna is already here");
+        engine.join(code, "p2", "Bence");
+        engine.start(code, "host");
+        assertThatThrownBy(() -> engine.join(code, "p2", "Anna"))
+                .hasMessageContaining("409").hasMessageContaining("You can only change who you are before the game starts");
+    }
+
+    @Test
+    void aRosterLineReachesTheGame_andBrokenJsonMeansNone() {
+        quiz.getActions().add(0, rosterStep("{\"names\":[\" Anna \",\"anna\",\"Bence   Kiss\",\"\",\" \",42],\"unique\":false}"));
+        Game g = engine.game((String) engine.host(7L, "host").get("code"));
+        assertThat(g.roster).containsExactly("Anna", "Bence Kiss");
+        assertThat(g.uniqueNames).isFalse();
+        assertThat(g.steps).as("never played").hasSize(1);
+
+        quiz.getActions().set(0, rosterStep("{\"names\": [\"Anna\""));
+        Game broken = engine.game((String) engine.host(7L, "host").get("code"));
+        assertThat(broken.roster).isEmpty();
+        assertThat(broken.uniqueNames).isTrue();
+    }
 }

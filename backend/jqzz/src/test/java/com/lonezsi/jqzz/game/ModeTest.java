@@ -137,4 +137,41 @@ class ModeTest {
         g.skip(2);
         assertThat(g.view(3, EVERYONE_ONLINE).get("interaction")).isEqualTo("bracket");
     }
+
+    @Test
+    void person_takesRightAndNone() {
+        assertThat(Mode.Ask.PERSON.scores()).containsExactly(Mode.Score.RIGHT, Mode.Score.NONE);
+        assertThat(Mode.parse("person/right", null)).isEqualTo(new Mode(Mode.Ask.PERSON, Mode.Score.RIGHT));
+        assertThat(Mode.parse("person/none", null)).isEqualTo(new Mode(Mode.Ask.PERSON, Mode.Score.NONE));
+        assertThat(Mode.parse("person/votes", null).score()).as("a score it can't take: its first").isEqualTo(Mode.Score.RIGHT);
+        assertThat(Mode.Ask.PERSON.key()).isEqualTo("person");
+        assertThat(new Mode(Mode.Ask.PERSON, Mode.Score.RIGHT).speedy()).isFalse();
+    }
+
+    @Test
+    void pickTakesVotesLast_soItsDefaultStaysRight() {
+        assertThat(Mode.Ask.PICK.scores()).containsExactly(Mode.Score.RIGHT, Mode.Score.CROWD, Mode.Score.NONE, Mode.Score.VOTES);
+        assertThat(Mode.parse("pick", null).score()).isEqualTo(Mode.Score.RIGHT);
+        assertThat(Mode.parse("pick/votes", null)).isEqualTo(new Mode(Mode.Ask.PICK, Mode.Score.VOTES));
+        assertThat(Mode.of(QuestionType.PREWRITTEN_SINGLE).score()).isEqualTo(Mode.Score.RIGHT);
+    }
+
+    @Test
+    void pickVotes_isNotJudged_writeVotesStillIs() {
+        assertThat(new Mode(Mode.Ask.PICK, Mode.Score.VOTES).judged()).isFalse();
+        assertThat(new Mode(Mode.Ask.WRITE, Mode.Score.VOTES).judged()).isTrue();
+        assertThat(new Mode(Mode.Ask.DRAW, Mode.Score.VOTES).judged()).isTrue();
+        assertThat(new Mode(Mode.Ask.WRITE, Mode.Score.AUTHORS).judged()).isTrue();
+        assertThat(new Mode(Mode.Ask.PERSON, Mode.Score.RIGHT).judged()).isFalse();
+    }
+
+    @Test
+    void rosterIsTheLastPhase_andNeverPlays() {
+        Phase[] all = Phase.values();
+        // phases are stored by position: a new one only ever goes last
+        assertThat(all[all.length - 1]).isEqualTo(Phase.ROSTER);
+        assertThat(Phase.SETTING.ordinal()).isEqualTo(7);
+        assertThat(Phase.ROSTER.isPlayable()).isFalse();
+        assertThat(Phase.fromString("roster")).isEqualTo(Phase.ROSTER);
+    }
 }
