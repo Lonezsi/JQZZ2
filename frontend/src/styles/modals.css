@@ -746,3 +746,46 @@ select.jqzz-modal-input option {
   box-shadow: 0 0 10px var(--accent);
   pointer-events: none;
 }
+
+/* making a quiz with a chat AI: two numbered steps */
+.jqzz-aikit-step {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.jqzz-aikit-step h4 {
+  margin-bottom: 8px;
+  font-size: var(--fs-body);
+  font-weight: 650;
+  color: var(--text);
+}
+.jqzz-aikit-step .jqzz-ai-btn {
+  min-height: 36px;
+}
+.jqzz-aikit textarea {
+  min-height: 160px;
+  font-family: var(--font-data);
+  font-size: var(--fs-small);
+}
+.jqzz-aikit-problems {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line));
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  font-size: var(--fs-small);
+}
+.jqzz-aikit-problems ul {
+  margin: 6px 0 8px;
+  padding-left: 16px;
+  list-style: disc;
+  font-family: var(--font-data);
+  color: var(--danger);
+}
+.jqzz-aikit-problems li.warn {
+  color: var(--warm);
+}
+@media (max-width: 760px) {
+  .jqzz-aikit .jqzz-modal-inline {
+    flex-wrap: wrap;
+  }
+}

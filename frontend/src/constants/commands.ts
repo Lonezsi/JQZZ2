@@ -3,7 +3,8 @@ import type { Command } from "../types";
 /*
  * Every command, with its key. Plain letters, each the first letter of what
  * it does (or what it's for), pressed on their own while you're not typing:
- *   N new quiz · I import · E export · V view: visual or text · P practice
+ *   N new quiz · I import · A make a quiz with AI · E export
+ *   V view: visual or text · P practice
  *   J join · S stash · Shift S stash this quiz · H history · B the bell
  *   Y you (your profile) · , settings (as in most apps) · F the front page
  * The ones that matter more keep the Ctrl (⌘ on a Mac): Ctrl K for these
@@ -15,6 +16,7 @@ import type { Command } from "../types";
 export const COMMANDS: (Command & { to?: string })[] = [
   { icon: "+", label: "New quiz", sub: "N" },
   { icon: "↑", label: "Import a .txt", sub: "I" },
+  { icon: "✦", label: "Make a quiz with AI", sub: "A" },
   { icon: "↓", label: "Export this quiz", sub: "E" },
   { icon: "~", label: "Switch visual / text", sub: "V" },
   { icon: "▷", label: "Start", sub: "Mod ↵" },

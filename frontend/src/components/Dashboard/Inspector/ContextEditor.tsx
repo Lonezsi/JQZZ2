@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { Action, Question, Answer, Phase } from "../../../types";
 import { generateId } from "../../../utils/idGenerator";
 import { ImagePicker } from "../../Modals/ImagePicker";
-import { describe, formatOptions, modeKey, modeOf, parseOptions, typeIdOf } from "../../../utils/questionTypes";
+import { borrows, describe, formatOptions, modeKey, modeOf, parseOptions, typeIdOf } from "../../../utils/questionTypes";
 import type { Mode, QuestionField } from "../../../utils/questionTypes";
 import { ModePicker } from "../../common/ModePicker";
 import { Select } from "../../common/Select";
@@ -14,6 +14,8 @@ import { DRAG_IMAGE_KEY, dragging } from "../../../utils/dragKeys";
 import { QuestionImage } from "../../Play/PlayCommon";
 import { Glyph } from "../../common/Glyph";
 import { Glide } from "../../common/Glide";
+import { showRefs, storeRefs } from "../../../utils/scriptRefs";
+import { FillInHelp, LinkFields } from "./LinkFields";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -80,6 +82,8 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
   onQuestionUpdate,
 }) => {
   const [answers, setAnswers] = useState<Answer[]>(question?.answers ?? []);
+  const { quiz } = useQuiz();
+  const actions = quiz?.actions ?? [];
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -88,6 +92,11 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
 
   if (!action) {
     return <p className="jqzz-panel-hint">click a card to edit it.</p>;
+  }
+
+  if (action.phase === "ROSTER") {
+    // not on the timeline, so never selected; just in case, it says where it's edited
+    return <p className="jqzz-panel-hint">who's coming is edited on its card above the timeline.</p>;
   }
 
   if (action.phase === "DIVIDER") {
@@ -203,6 +212,30 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
     onQuestionUpdate(question.id, { options: formatOptions({ ...options, [key]: value.trim() }) || undefined });
   };
 
+  /** patches for several questions at once: a link labels its source too */
+  const apply = (patches: { id: number; patch: Partial<Question> }[]) =>
+    patches.forEach(({ id, patch }) => onQuestionUpdate(id, patch));
+
+  // prompts keep {@q2.winner}; here they read and are typed as {Q2.winner}
+  const shownText = question ? showRefs(question.text, actions, question) : "";
+  const shownElab = question ? showRefs(question.elaborationText ?? "", actions, question) : "";
+  const textError = question ? storeRefs(shownText, actions, question).error : undefined;
+  const elabError = question ? storeRefs(shownElab, actions, question).error : undefined;
+  const setText = (field: "text" | "elaborationText", typed: string) => {
+    if (!question) return;
+    const stored = storeRefs(typed, actions, question);
+    apply(stored.patches);
+    onQuestionUpdate(question.id, { [field]: stored.text });
+  };
+
+  // a question whose options or list of players come from elsewhere
+  const noAnswers =
+    mode.ask === "person"
+      ? "no answers here: the options are the players."
+      : borrows(mode, options)
+        ? "no answers here: the options are that question's answers."
+        : null;
+
   const removeAnswer = (idx: number) => {
     const next = answers.filter((_, i) => i !== idx);
     setAnswers(next);
@@ -252,9 +285,15 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
             <textarea
               id="jqzz-prompt"
               className="jqzz-field-textarea"
-              value={question.text}
-              onChange={(e) => onQuestionUpdate(question.id, { text: e.target.value })}
+              value={shownText}
+              onChange={(e) => setText("text", e.target.value)}
             />
+            {textError && (
+              <p className="jqzz-panel-hint jqzz-link-warn" role="alert">
+                {textError}
+              </p>
+            )}
+            <FillInHelp question={question} actions={actions} mode={mode} text={question.text} />
           </div>
           <div className="jqzz-field-group">
             <div className="jqzz-field-label">image</div>
@@ -271,11 +310,14 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
               id="jqzz-elab"
               className="jqzz-field-textarea short"
               placeholder="shown after the answer"
-              value={question.elaborationText || ""}
-              onChange={(e) =>
-                onQuestionUpdate(question.id, { elaborationText: e.target.value })
-              }
+              value={shownElab}
+              onChange={(e) => setText("elaborationText", e.target.value)}
             />
+            {elabError && (
+              <p className="jqzz-panel-hint jqzz-link-warn" role="alert">
+                {elabError}
+              </p>
+            )}
           </div>
           {info.fields.length > 0 && (
             <div className="jqzz-field-pair">
@@ -296,12 +338,17 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
               ))}
             </div>
           )}
-          {(shape || answers.length > 0) && (
+          <LinkFields question={question} actions={actions} mode={mode} apply={apply} />
+          {(shape || answers.length > 0 || noAnswers) && (
             <>
               <div className="jqzz-section-label">
                 {shape ? `${shape.text}s` : "answers"} <span className="jqzz-section-count">{answers.length}</span>
               </div>
-              {!shape && <p className="jqzz-panel-hint">no answers here: players make them.</p>}
+              {noAnswers ? (
+                <p className="jqzz-panel-hint">{noAnswers}</p>
+              ) : (
+                !shape && <p className="jqzz-panel-hint">no answers here: players make them.</p>
+              )}
               {mode.ask === "order" && <p className="jqzz-panel-hint">put them in the right order here. players see them shuffled.</p>}
               {mode.ask === "number" && <p className="jqzz-panel-hint">one answer: the right number, and the points for getting it spot on.</p>}
               {mode.score === "secret" && <p className="jqzz-panel-hint">everyone gets one of these to {mode.ask === "draw" ? "draw" : "describe without saying it"}.</p>}
@@ -352,7 +399,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
                   </button>
                 </div>
               ))}
-              {shape && !(mode.ask === "number" && answers.length >= 1) && (
+              {shape && !noAnswers && !(mode.ask === "number" && answers.length >= 1) && (
                 <button className="jqzz-add-answer" onClick={addAnswer}>
                   + Add {shape.text}
                 </button>

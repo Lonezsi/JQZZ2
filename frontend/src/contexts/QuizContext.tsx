@@ -16,6 +16,8 @@ import { quizService } from "../services/quizService";
 import { API_BASE_URL, errorMessage, keyHeader } from "../services/api";
 import { convertToBackendQuiz } from "../utils/quizConverter";
 import { parseScript } from "../utils/scriptParser";
+import { freshRefs } from "../utils/scriptRefs";
+import type { Roster } from "../utils/roster";
 
 export type SaveState = "saved" | "saving" | "error";
 
@@ -68,6 +70,8 @@ interface QuizContextType {
   /** a new quiz from a script, opened; resolves to it, or null when it couldn't be made */
   importScript: (name: string, script: string) => Promise<Quiz | null>;
   dropSnippet: (snippetId: string, at?: number) => void;
+  /** who's coming: replaces the open quiz's roster, or takes it out (null) */
+  setRoster: (r: Roster | null) => void;
   handleParsed: (questions: Question[], actions: Action[]) => void;
 }
 
@@ -117,6 +121,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     deleteActions,
     newQuiz: createQuiz,
     dropSnippet,
+    setRoster,
     handleParsed,
   } = useQuizMutations(activeQuizId, setQuizzes, authorId);
 
@@ -182,7 +187,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   const appendActions = useCallback(
     (quizId: number, actions: Action[]) =>
       setQuizzes((prev) =>
-        prev.map((q) => (q.id === quizId ? { ...q, actions: [...q.actions, ...actions] } : q)),
+        // their labels are renamed where they'd clash with the quiz's, so they link to themselves
+        prev.map((q) => (q.id === quizId ? { ...q, actions: [...q.actions, ...freshRefs(actions, q.actions)] } : q)),
       ),
     [setQuizzes],
   );
@@ -302,7 +308,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   // --- Selection logic ---
   const getActionIdsInOrder = useCallback((): number[] => {
     if (!quiz) return [];
-    return quiz.actions.map((a) => a.id);
+    // the roster isn't a step on the timeline, so it's never selected (or deleted with a selection)
+    return quiz.actions.filter((a) => a.phase !== "ROSTER").map((a) => a.id);
   }, [quiz]);
 
   const toggleSelectAction = useCallback(
@@ -406,6 +413,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     appendActions,
     importScript,
     dropSnippet,
+    setRoster,
     handleParsed,
   };
 

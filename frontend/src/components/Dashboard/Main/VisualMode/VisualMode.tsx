@@ -15,6 +15,8 @@ import { DropSkeleton } from "./DropSkeleton";
 import { DRAG_GROUP_KEY, DRAG_SNIPPET_KEY, dragging } from "../../../../utils/dragKeys";
 import { snippetActions } from "../../../../utils/snippetActions";
 import { readContent } from "../../../../utils/stashContent";
+import { showRefs } from "../../../../utils/scriptRefs";
+import { RosterCard } from "../RosterCard";
 
 interface VisualModeProps {
   quiz: Quiz | undefined;
@@ -39,6 +41,7 @@ interface VisualModeProps {
   onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
   onNewQuiz: () => void;
   onImport: () => void;
+  onMakeWithAI?: () => void;
 }
 
 export const VisualMode: React.FC<VisualModeProps> = ({
@@ -60,6 +63,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onDropZoneDrop,
   onNewQuiz,
   onImport,
+  onMakeWithAI,
 }) => {
   const { dropSnippet, setMode, reorderActions, moveActions, deleteActions } = useQuiz();
 
@@ -139,7 +143,10 @@ export const VisualMode: React.FC<VisualModeProps> = ({
       (el) =>
         !el.classList.contains("jqzz-drop-skeleton") &&
         !el.classList.contains("jqzz-load-skeleton") &&
-        !el.classList.contains("kind-add"),
+        !el.classList.contains("kind-add") &&
+        // who's coming sits above the first item, and nothing drops in front of it
+        !el.classList.contains("jqzz-roster-card") &&
+        !el.classList.contains("jqzz-roster-tip"),
     );
     for (let i = 0; i < rows.length; i++) {
       const box = rows[i].getBoundingClientRect();
@@ -149,19 +156,23 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   };
 
   if (!quiz) {
-    return <Welcome onCreate={onNewQuiz} onImport={onImport} />;
+    return <Welcome onCreate={onNewQuiz} onImport={onImport} onMakeWithAI={onMakeWithAI} />;
   }
 
   if (renderItems.length === 0) {
     return (
-      <EmptyState
-        dropOver={dropOver}
-        onDropZoneDragOver={onDropZoneDragOver}
-        onDropZoneDragLeave={onDropZoneDragLeave}
-        onDropZoneDrop={onDropZoneDrop}
-        onPick={dropSnippet}
-        onTextMode={() => setMode("text")}
-      />
+      <>
+        {/* a quiz that so far only says who's coming */}
+        <RosterCard quiz={quiz} />
+        <EmptyState
+          dropOver={dropOver}
+          onDropZoneDragOver={onDropZoneDragOver}
+          onDropZoneDragLeave={onDropZoneDragLeave}
+          onDropZoneDrop={onDropZoneDrop}
+          onPick={dropSnippet}
+          onTextMode={() => setMode("text")}
+        />
+      </>
     );
   }
 
@@ -271,6 +282,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
         slotRef.current = null;
       }}
     >
+      <RosterCard quiz={quiz} />
       {visibleItems.map((item, idx) => {
         const skeleton =
           incoming && slot === idx && !besideItself(idx) ? (
@@ -294,7 +306,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
             key={`${q.id}-${idx}`}
             className={`jqzz-group${movingAt === idx ? " moving" : ""}`}
             role="group"
-            aria-label={`Question ${n}: ${q.text}`}
+            aria-label={`Question ${n}: ${showRefs(q.text, quiz.actions, q)}`}
           >
             <div
               className="jqzz-group-head"
@@ -356,7 +368,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                     />
                   </span>
                 </div>
-                <span className="jqzz-group-text">{q.text || "untitled question"}</span>
+                <span className="jqzz-group-text">{showRefs(q.text, quiz.actions, q) || "untitled question"}</span>
                 {/* the question's rhythm: its phases, widths by time */}
                 <span className="jqzz-phase-strip" aria-hidden="true">
                   {item.actions.map((a) => (

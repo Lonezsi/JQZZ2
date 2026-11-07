@@ -8,6 +8,7 @@ import { Main } from "./Main/Main";
 import { Inspector } from "./Inspector/Inspector";
 import { CommandPalette } from "../Modals/CommandPalette";
 import { IdentityModal } from "../Modals/IdentityModal";
+import { AiQuizDialog } from "../Modals/AiQuizDialog";
 import { quizService } from "../../services/quizService";
 import { Imperfections } from "../common/Atmosphere";
 import { useSpace } from "../../hooks/useSpace";
@@ -81,6 +82,8 @@ export const Dashboard: React.FC = () => {
   useSwipeDrawer(navOpen, setNavOpen);
   const [identityOpen, setIdentityOpen] = useState(false);
   const identityPresence = usePresence(identityOpen, 240);
+  // making a quiz with a chat AI: from the sidebar, the front page or its key
+  const [aiOpen, setAiOpen] = useState(false);
 
   // Imports a .txt script as a new quiz
   const handleImport = useCallback(() => {
@@ -165,6 +168,9 @@ export const Dashboard: React.FC = () => {
       case "Import a .txt":
         handleImport();
         break;
+      case "Make a quiz with AI":
+        setAiOpen(true);
+        break;
       case "Export this quiz":
         handleExport();
         break;
@@ -207,6 +213,7 @@ export const Dashboard: React.FC = () => {
             clearSelectedActions();
           }}
         />
+        {aiOpen && <AiQuizDialog onClose={() => setAiOpen(false)} />}
         {identityPresence.mounted && user && (
           <IdentityModal
             state={identityPresence.state}
@@ -241,6 +248,10 @@ export const Dashboard: React.FC = () => {
             handleImport();
             setNavOpen(false);
           }}
+          onMakeWithAI={() => {
+            setAiOpen(true);
+            setNavOpen(false);
+          }}
           onHomeClick={() => {
             setActiveQuizId(null);
             setNavOpen(false);
@@ -255,6 +266,7 @@ export const Dashboard: React.FC = () => {
           onMenu={() => setNavOpen(true)}
           onNewQuiz={newQuiz}
           onImport={handleImport}
+          onMakeWithAI={() => setAiOpen(true)}
           onStart={handleStart}
           selectedActionIds={selectedActionIds}
           toggleSelectAction={toggleSelectAction}

@@ -86,7 +86,7 @@ export const QuizList: React.FC<QuizListProps> = ({
             {/* its phases in their colours, one tick each */}
             <span className="jqzz-quiz-rhythm" aria-hidden="true">
               {q.actions
-                .filter((a) => a.phase !== "TEXT" && a.phase !== "DIVIDER")
+                .filter((a) => a.phase !== "TEXT" && a.phase !== "DIVIDER" && a.phase !== "ROSTER")
                 .slice(0, 28)
                 .map((a) => (
                   <span

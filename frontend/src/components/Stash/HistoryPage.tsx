@@ -11,6 +11,7 @@ import { Glyph } from "../common/Glyph";
 import { Loading } from "../common/Loading";
 import { plural, when } from "../../utils/format";
 import { typeIcon, typeLabel } from "../../utils/questionInfo";
+import { plainRefs } from "../../utils/scriptRefs";
 
 /**
  * Games as a timeline, newest on top: where you (or whoever's profile it is)
@@ -164,6 +165,8 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
         {questions.map((q, i) => {
           const r = results[String(q.key)];
           const gain = r?.gains?.[me];
+          // as it was played, fill-ins filled; a record without that reads them plainly
+          const text = r?.text ?? plainRefs(q.text);
           return (
             <li key={q.key} className="jqzz-answer-card" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
               <div className="jqzz-answer-head">
@@ -172,7 +175,7 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
                 </span>
                 <span className="jqzz-keep-text">
                   <span className="jqzz-answer-q">
-                    <span className="jqzz-annot">{i + 1}</span> {q.text || "untitled question"}
+                    <span className="jqzz-annot">{i + 1}</span> {text || "untitled question"}
                   </span>
                   <span className="jqzz-annot">
                     {typeLabel(q)}
@@ -198,7 +201,7 @@ const Answers: React.FC<{ record: HistoryRecord; me: string }> = ({ record, me }
                       stashService.asType(
                         me,
                         { recordId: record.id, questionKey: q.key },
-                        `${typeLabel(q)}: ${q.text || "question"}`.slice(0, 60),
+                        `${typeLabel(q)}: ${plainRefs(q.text) || "question"}`.slice(0, 60),
                       )
                     }
                   />
@@ -223,6 +226,31 @@ const Kept: React.FC<{ recordId: number; id: string; alt: string }> = ({ recordI
 );
 
 const Result: React.FC<{ q: StashedQuestion; r: QuestionResult; recordId: number }> = ({ q, r, recordId }) => {
+  if (r.named) {
+    // a person question: who got named, most first, and who it really was
+    return (
+      <>
+        {r.author !== undefined && (
+          <p className="jqzz-champion">{r.author ? <>it was {r.author}</> : "nobody's answer won, so there was no one to guess"}</p>
+        )}
+        {r.named.length === 0 ? (
+          <p className="jqzz-annot">nobody named anyone</p>
+        ) : (
+          <ul className="jqzz-entries-recap">
+            {[...r.named]
+              .sort((a, b) => b.count - a.count)
+              .map((n) => (
+                <li key={n.by}>
+                  <span className="jqzz-entry-text">
+                    {n.by} · {n.count}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        )}
+      </>
+    );
+  }
   if (r.chains) {
     const chains = r.chains.filter((c) => c.links.length > 0);
     if (chains.length === 0) return <p className="jqzz-annot">nothing got handed on</p>;

@@ -222,3 +222,144 @@
   padding: 0 4px;
   letter-spacing: 0.08em;
 }
+
+/* the parse strip's button, and its quieter look when it's only a heads up */
+.jqzz-parse-errors.heads-up {
+  color: var(--warm);
+}
+.jqzz-parse-copy {
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.jqzz-parse-copy:hover {
+  color: var(--text);
+}
+
+/* ─── who's coming: the roster card, and the tip that says a quiz can have one ───
+   In visual mode it sits in the content column above the first question; in
+   text mode, between the bar and the script. */
+.jqzz-roster-tip,
+.jqzz-roster-card {
+  position: relative;
+  margin: 0 0 24px calc(var(--tc-w, 0px) + var(--node-w, 0px));
+  max-width: 900px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(var(--blur));
+  backdrop-filter: blur(var(--blur));
+}
+.jqzz-text-editor > .jqzz-roster-tip,
+.jqzz-text-editor > .jqzz-roster-card {
+  margin: 0;
+  flex-shrink: 0;
+}
+.jqzz-roster-tip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 8px 8px 16px;
+  border-style: dashed;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.jqzz-roster-tip > span {
+  flex: 1;
+  min-width: 200px;
+}
+.jqzz-roster-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+}
+.jqzz-roster-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.jqzz-roster-head .jqzz-annot {
+  color: var(--warm);
+  letter-spacing: 0.08em;
+}
+.jqzz-roster-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.jqzz-roster-link {
+  min-height: 28px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  transition:
+    color var(--dur-1) var(--ease),
+    background var(--dur-1) var(--ease);
+}
+.jqzz-roster-link:hover {
+  color: var(--text);
+  background: var(--sunken);
+}
+.jqzz-roster-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.jqzz-roster-chip {
+  padding: 2px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--raised);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+.jqzz-roster-card .jqzz-field-textarea {
+  min-height: 120px;
+}
+.jqzz-roster-problem {
+  color: var(--danger);
+  font-size: var(--fs-small);
+}
+.jqzz-roster-shared {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.jqzz-roster-card .jqzz-ai-btn:disabled {
+  opacity: 0.45;
+}
+
+@media (max-width: 760px) {
+  /* the bar holds two buttons now: on a phone the input takes its own line */
+  .jqzz-ai-bar {
+    flex-wrap: wrap;
+    border-radius: var(--radius-lg);
+    padding: 6px;
+  }
+  .jqzz-ai-input {
+    flex-basis: 100%;
+    min-height: 32px;
+    padding: 0 8px;
+  }
+  /* like every panel on a phone: solid, no live blur */
+  .jqzz-roster-tip,
+  .jqzz-roster-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--surface-solid);
+  }
+}

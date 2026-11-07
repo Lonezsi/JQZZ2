@@ -38,13 +38,16 @@ export function contentToActions(content: StashContent): Action[] {
       })),
     });
   }
-  return content.steps.map((s) => ({
-    id: generateId(),
-    phase: s.phase,
-    time: s.time,
-    preview: s.preview ?? "",
-    question: s.question == null ? null : (byKey.get(s.question) ?? null),
-  }));
+  // the stash leaves a quiz's roster behind; one that slipped in stays out of the quiz it's added to
+  return content.steps
+    .filter((s) => s.phase !== "ROSTER")
+    .map((s) => ({
+      id: generateId(),
+      phase: s.phase,
+      time: s.time,
+      preview: s.preview ?? "",
+      question: s.question == null ? null : (byKey.get(s.question) ?? null),
+    }));
 }
 
 export function readType(item: Pick<StashItem, "payload" | "title">): TypeShape {

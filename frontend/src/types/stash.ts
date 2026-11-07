@@ -74,6 +74,12 @@ export interface QuestionResult {
   numbers?: { by: string; value: number }[];
   /** telephone: each chain as it was handed on */
   chains?: { links: { by: string; text?: string; image?: string }[] }[];
+  /** person: how many named each player, by name */
+  named?: { by: string; count: number }[];
+  /** person scored right: whoever made the winner it asked about (null: nobody won) */
+  author?: string | null;
+  /** the prompt as it was played, fill-ins filled; only when it differs from the stored one */
+  text?: string;
   /** points each player got, by user id */
   gains?: Record<string, number>;
 }

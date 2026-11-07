@@ -10,6 +10,8 @@ export function buildRenderItems(quiz: Quiz | undefined): RenderItem[] {
   } | null = null;
 
   for (const action of quiz.actions) {
+    // who's coming isn't a step on the timeline: the roster card above it shows it
+    if (action.phase === "ROSTER") continue;
     if (action.phase === "DIVIDER") {
       currentGroup = null;
       items.push({ kind: "divider", action });

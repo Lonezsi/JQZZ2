@@ -7,6 +7,8 @@ function derivePreview(action: Action): string {
   if (action.preview) return action.preview; // already set
   if (action.phase === "DIVIDER") return "---";
   if (action.phase === "TEXT") return action.preview || "";
+  // the roster keeps its names as JSON here; a made-up label would read as a broken one
+  if (action.phase === "ROSTER") return action.preview || "";
   const q = action.question;
   if (!q) return action.phase;
   const label = action.phase.charAt(0) + action.phase.slice(1).toLowerCase();

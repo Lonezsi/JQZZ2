@@ -56,8 +56,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const author =
     quiz && (quiz.authorId === user?.id ? "you" : (users.find((u) => u.id === quiz.authorId)?.name ?? "someone"));
   const notice = useSaveNotice(saveState);
-  const canStart =
-    !!quiz && quiz.actions.some((a) => a.phase !== "TEXT" && a.phase !== "DIVIDER");
+  // only a question makes something to play: notes, dividers, settings and the roster don't
+  const canStart = !!quiz && quiz.actions.some((a) => a.question);
 
   return (
     <div className={`jqzz-toolbar${quiz ? "" : " empty"}`}>
