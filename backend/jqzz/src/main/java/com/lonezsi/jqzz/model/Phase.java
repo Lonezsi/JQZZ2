@@ -10,10 +10,12 @@ public enum Phase {
     TEXT,
     DIVIDER,
     /** switches quiz settings (shuffle, points, ...) for what follows, until the next one */
-    SETTING;
+    SETTING,
+    /** who the quiz expects (the script's Roster line): preview is {"names":[...],"unique":true}; never played */
+    ROSTER;
 
     public boolean isPlayable() {
-        return this != TEXT && this != DIVIDER && this != SETTING;
+        return this != TEXT && this != DIVIDER && this != SETTING && this != ROSTER;
     }
 
     public static Phase fromString(String phase) {

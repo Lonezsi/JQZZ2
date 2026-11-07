@@ -8,10 +8,13 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.lonezsi.jqzz.model.Phase;
 import com.lonezsi.jqzz.model.QuestionType;
@@ -49,6 +52,14 @@ public class Game {
     public static final long MAX_GAME_ART_BYTES = 160_000_000L;
     /** what a "crowd" number question is worth when its answers don't say */
     public static final int CROWD_NUMBER_POINTS = 1000;
+    /** different entries one player can vote for on one question, at most */
+    public static final int MOST_PICKS = 10;
+    /** "overflow: on": the most options one player sees */
+    public static final int OVERFLOW_DEFAULT = 6;
+    /** in a prompt: the winning answer of the question labelled so */
+    private static final Pattern WINNER = Pattern.compile("\\{@([a-z0-9-]+)\\.winner\\}");
+    /** in a prompt: a winner, or who made and what was the answer this player was dealt */
+    private static final Pattern FILL = Pattern.compile("\\{@([a-z0-9-]+)\\.winner\\}|\\{(author|answer)\\}", Pattern.CASE_INSENSITIVE);
 
     public enum Status { LOBBY, PLAYING, PAUSED, FINISHED }
 
@@ -92,6 +103,32 @@ public class Game {
         Double number(String key) {
             return Fuzzy.number(options.get(key));
         }
+
+        /** its hidden label, when another question uses it */
+        String ref() {
+            return options.get("ref");
+        }
+
+        /** the label of the question it takes from, or null */
+        String from() {
+            String f = options.get("from");
+            return f == null || f.isBlank() ? null : f.trim();
+        }
+
+        /** how many different ones each player may vote for, 1 to MOST_PICKS */
+        int picks() {
+            Double p = number("picks");
+            return p == null ? 1 : (int) Math.max(1, Math.min(MOST_PICKS, Math.round(p)));
+        }
+
+        /** the most options one player sees, or 0: everyone sees them all */
+        int overflow() {
+            String o = options.get("overflow");
+            if (o == null) return 0;
+            if (List.of("on", "yes", "true").contains(o.trim().toLowerCase(Locale.ROOT))) return OVERFLOW_DEFAULT;
+            Double n = Fuzzy.number(o);
+            return n == null || n < 2 ? 0 : (int) Math.min(20, Math.round(n));
+        }
     }
 
     /** a drawing, kept while the game lasts and served by its id */
@@ -125,6 +162,11 @@ public class Game {
         final String text;
         final String image;
         int votes;
+        /** made about an earlier entry (write or draw with from): that entry, and the question it was made in */
+        Entry about;
+        long aboutFrom;
+        /** ballots: how many times it was on the ballot of someone who voted that round */
+        int shown;
 
         Entry(String key, String authorId, String text) {
             this(key, authorId, text, null);
@@ -135,6 +177,14 @@ public class Game {
             this.authorId = authorId;
             this.text = text;
             this.image = image;
+        }
+
+        /** the same entry under a new key, for a pick that borrows it; votes start again */
+        Entry copy(String newKey) {
+            Entry e = new Entry(newKey, authorId, text, image);
+            e.about = about;
+            e.aboutFrom = aboutFrom;
+            return e;
         }
     }
 
@@ -178,7 +228,11 @@ public class Game {
         final Map<String, Long> secrets = new LinkedHashMap<>();
         /** share of the time still left when they answered, for "speed" */
         final Map<String, Double> left = new HashMap<>();
-        final Map<String, String> votes = new LinkedHashMap<>();
+        /**
+         * voter to the entry keys they voted for: one, or up to picks; on a pick
+         * with ballots, the votes are kept per round in {@code ballots}
+         */
+        final Map<String, List<String>> votes = new LinkedHashMap<>();
         final Map<String, Map<String, String>> guesses = new LinkedHashMap<>();
         List<Entry> entries = List.of();
         Map<Long, String> consensus = Map.of();
@@ -194,6 +248,23 @@ public class Game {
         Telephone telephone;
         boolean revealed;
         boolean settled;
+        /** a pick that borrows: who sees what, round by round; null when everyone sees all but their own (the board is shared) */
+        Ballots ballots;
+        /** a pick that borrows: the source's entries are copied in; the vote has been opened */
+        boolean borrowed;
+        boolean opened;
+        /** write or draw with from: the source entry each player makes something about */
+        final Map<String, Entry> dealt = new LinkedHashMap<>();
+        /** person: who each player named */
+        final Map<String, String> named = new LinkedHashMap<>();
+        /** anything voted on, or a knockout: the top entry once settled, a tie broken once at random */
+        String winner;
+        /** the entries that tied for the top before the coin flip; empty without a tie */
+        List<String> tied = List.of();
+        /** scored, but its points wait for a later person question so they don't give its answer away */
+        boolean held;
+        /** person + right: points paid with it from the questions it was keeping secret */
+        final Map<String, Integer> released = new LinkedHashMap<>();
     }
 
     final String code;
@@ -234,6 +305,25 @@ public class Game {
     Map<String, Object> lastSent;
     long touchedAt;
 
+    /** who's coming (the quiz's Roster line): players join as one of these names; empty: anyone, as themselves */
+    List<String> roster = List.of();
+    /** two players can't be the same roster name */
+    boolean uniqueNames = true;
+    /** everyone who's played since the game started, with the name they had here: who a person question lists, whose answer {author} is */
+    final Map<String, String> played = new LinkedHashMap<>();
+    /** who's at the game right now; the engine sets it, a test leaves everyone here */
+    Predicate<String> here = id -> true;
+    /** each distinct question of the steps, by id */
+    final Map<Long, QuestionSnap> snaps = new LinkedHashMap<>();
+    /** question id -> the question it takes from (its from=, resolved once) */
+    final Map<Long, QuestionSnap> sources = new HashMap<>();
+    /** question id -> label -> the question its {@label.winner} fills from */
+    final Map<Long, Map<String, QuestionSnap>> winnerRefs = new HashMap<>();
+    /** person + right question id -> the questions whose makers it asks about: its source, and that one's source while it only borrows */
+    final Map<Long, Set<Long>> guards = new LinkedHashMap<>();
+    /** finish() is settling everything: nothing is kept back any more */
+    boolean finishing;
+
     public Game(String code, String hostId, String quizName, List<Step> steps, Random random, long now) {
         this.code = code;
         this.hostId = hostId;
@@ -241,6 +331,52 @@ public class Game {
         this.steps = List.copyOf(steps);
         this.random = random;
         this.touchedAt = now;
+        link();
+    }
+
+    /** resolves every from= and {@label.winner} once, by the hidden labels (nearest earlier first) */
+    private void link() {
+        for (Step s : steps) {
+            if (s.question() != null) snaps.putIfAbsent(s.question().id(), s.question());
+        }
+        List<QuestionSnap> order = new ArrayList<>(snaps.values());
+        for (int i = 0; i < order.size(); i++) {
+            QuestionSnap q = order.get(i);
+            QuestionSnap source = resolve(order, i, q.from());
+            if (source != null) sources.put(q.id(), source);
+            for (String text : new String[] { q.text(), q.elaborationText() }) {
+                if (text == null) continue;
+                Matcher m = WINNER.matcher(text);
+                while (m.find()) {
+                    QuestionSnap filled = resolve(order, i, m.group(1));
+                    if (filled != null) winnerRefs.computeIfAbsent(q.id(), k -> new LinkedHashMap<>()).put(m.group(1), filled);
+                }
+            }
+        }
+        for (QuestionSnap q : order) {
+            if (q.mode().ask() != Mode.Ask.PERSON || q.mode().score() != Mode.Score.RIGHT) continue;
+            Set<Long> chain = new LinkedHashSet<>();
+            QuestionSnap prev = null;
+            QuestionSnap s = sources.get(q.id());
+            while (s != null && !chain.contains(s.id()) && (prev == null || borrows(prev))) {
+                chain.add(s.id());
+                prev = s;
+                s = sources.get(s.id());
+            }
+            if (!chain.isEmpty()) guards.put(q.id(), chain);
+        }
+    }
+
+    /** the question a label points at from position i: the nearest earlier one with it, else the first; never itself */
+    private static QuestionSnap resolve(List<QuestionSnap> order, int i, String label) {
+        if (label == null || label.isBlank()) return null;
+        for (int j = i - 1; j >= 0; j--) {
+            if (label.equals(order.get(j).ref())) return order.get(j);
+        }
+        for (int j = 0; j < order.size(); j++) {
+            if (j != i && label.equals(order.get(j).ref())) return order.get(j);
+        }
+        return null;
     }
 
     public String code() { return code; }
@@ -251,20 +387,60 @@ public class Game {
     // ─── people ────────────────────────────────────────────────────────
 
     public void addPlayer(String id, String name, String picture, long now) {
+        addPlayer(id, name, picture, null, now);
+    }
+
+    /** as: the roster name they picked, in a game whose quiz has a roster; null keeps the one they have */
+    public void addPlayer(String id, String accountName, String picture, String as, long now) {
         if (kicked.contains(id)) throw new IllegalStateException("The host took you out of this game");
         Player existing = players.get(id);
-        if (existing != null) {
-            existing.name = name;
-            existing.picture = picture;
-        } else {
-            if (players.size() >= MAX_PLAYERS) throw new IllegalStateException("This game is full");
-            if (!joinedOnce.contains(id) && !open()) {
-                throw new IllegalStateException("This game has started and isn't taking new players");
+        if (roster.isEmpty()) {
+            if (existing != null) {
+                existing.name = accountName;
+                existing.picture = picture;
+            } else {
+                if (players.size() >= MAX_PLAYERS) throw new IllegalStateException("This game is full");
+                if (!joinedOnce.contains(id) && !open()) {
+                    throw new IllegalStateException("This game has started and isn't taking new players");
+                }
+                players.put(id, new Player(id, accountName, picture));
+                joinedOnce.add(id);
             }
-            players.put(id, new Player(id, name, picture));
-            joinedOnce.add(id);
+        } else {
+            boolean asked = as != null && !as.isBlank();
+            String wanted = asked ? onRoster(as) : null; // the list's own spelling
+            if (asked && wanted == null) throw new IllegalArgumentException("That name isn't on the list");
+            if (existing != null) {
+                existing.picture = picture; // a roster name is never swapped for the account's
+                if (wanted != null && !nameKey(wanted).equals(nameKey(existing.name))) {
+                    if (status != Status.LOBBY) throw new IllegalStateException("You can only change who you are before the game starts");
+                    claim(wanted, id);
+                    existing.name = wanted;
+                }
+            } else {
+                if (players.size() >= MAX_PLAYERS) throw new IllegalStateException("This game is full");
+                if (wanted == null) throw new IllegalArgumentException("Pick who you are");
+                claim(wanted, id);
+                // the list is the guest list: a name on it gets in even once the doors close
+                players.put(id, new Player(id, wanted, picture));
+                joinedOnce.add(id);
+            }
         }
+        if (status != Status.LOBBY) played.put(id, players.get(id).name);
         changed(now);
+    }
+
+    /** the roster's spelling of a name, or null when it isn't on it */
+    private String onRoster(String name) {
+        String key = nameKey(name);
+        return roster.stream().filter(r -> nameKey(r).equals(key)).findFirst().orElse(null);
+    }
+
+    /** unique names: nobody else here already has it */
+    private void claim(String wanted, String id) {
+        if (uniqueNames && players.values().stream().anyMatch(p -> !p.id.equals(id) && nameKey(p.name).equals(nameKey(wanted)))) {
+            throw new IllegalArgumentException(wanted + " is already here");
+        }
     }
 
     public void removePlayer(String id, long now) {
@@ -295,6 +471,8 @@ public class Game {
         }
         forgetAnswers();
         players.values().forEach(p -> { p.score = 0; p.gain = 0; });
+        played.clear();
+        players.values().forEach(p -> played.put(p.id, p.name));
         recorded = false;
         recordId = null;
         status = Status.PLAYING;
@@ -322,6 +500,7 @@ public class Game {
         questions.clear();
         art.clear();
         artBytes = 0;
+        finishing = false;
     }
 
     public void pause(long now) {
@@ -341,6 +520,8 @@ public class Game {
         if (b != null && !b.done) b.roundEndsAt += away;
         Telephone t = currentTelephone();
         if (t != null && !t.done) t.roundEndsAt += away;
+        Ballots bb = currentBallots();
+        if (bb != null && !bb.done && bb.roundEndsAt > 0) bb.roundEndsAt += away;
         status = Status.PLAYING;
         changed(now);
     }
@@ -373,6 +554,11 @@ public class Game {
             }
             changed(now);
         }
+        Ballots bb = currentBallots();
+        if (bb != null && !bb.done && bb.roundEndsAt > 0 && now >= bb.roundEndsAt && now < endsAt) {
+            bb.next(now, endsAt);
+            changed(now);
+        }
         if (now >= endsAt) advance(now);
     }
 
@@ -384,6 +570,8 @@ public class Game {
         if (b != null && !b.done && b.roundEndsAt > 0) next = Math.min(next, b.roundEndsAt);
         Telephone t = currentTelephone();
         if (t != null && !t.done && t.roundEndsAt > 0) next = Math.min(next, t.roundEndsAt);
+        Ballots bb = currentBallots();
+        if (bb != null && !bb.done && bb.roundEndsAt > 0) next = Math.min(next, bb.roundEndsAt);
         return next;
     }
 
@@ -394,6 +582,7 @@ public class Game {
         endsAt = now + Math.max(1, step.seconds()) * 1000L;
         QuestionSnap q = step.question();
         if (q != null) {
+            prepareSources(q);
             Phase phase = step.phase();
             if (phase == Phase.ANSWER || phase == Phase.ELABORATION || phase == Phase.RESULT) {
                 reveal(q);
@@ -406,6 +595,8 @@ public class Game {
                 QState st = state(q);
                 players.keySet().forEach(p -> secret(q, st, p));
             }
+            if (phase == Phase.QUESTION && borrows(q)) openVote(q, state(q), step.seconds(), now);
+            if (phase == Phase.QUESTION && dealsPairs(q)) dealPairs(q, state(q));
             if (phase == Phase.QUESTION && q.mode().ask() == Mode.Ask.CHAIN) {
                 QState st = state(q);
                 if (st.telephone == null && !st.revealed) {
@@ -440,6 +631,7 @@ public class Game {
     }
 
     private void finish(long now) {
+        finishing = true;
         for (Step s : steps) {
             QuestionSnap q = s.question();
             if (q == null) continue;
@@ -447,6 +639,17 @@ public class Game {
             if (st == null) continue;
             reveal(q);
             settle(q);
+        }
+        // the person question that kept these back never came: they're paid now
+        for (QState st : questions.values()) {
+            if (!st.held) continue;
+            st.held = false;
+            st.gains.forEach((u, pts) -> {
+                Player p = players.get(u);
+                if (p == null) return;
+                p.score += pts;
+                p.gain += pts;
+            });
         }
         status = Status.FINISHED;
         index = steps.size();
@@ -477,6 +680,15 @@ public class Game {
      */
     public void submit(String userId, List<Long> picks, String text, Map<Long, String> tiers,
             Map<Long, String> pairs, long now, Predicate<String> online) {
+        submit(userId, picks, text, tiers, pairs, null, now, online);
+    }
+
+    /**
+     * As above; {@code choices}: entry keys on a pick that borrows an earlier
+     * question's answers, or the one player named on a person question.
+     */
+    public void submit(String userId, List<Long> picks, String text, Map<Long, String> tiers,
+            Map<Long, String> pairs, List<String> choices, long now, Predicate<String> online) {
         Step step = current();
         if (status != Status.PLAYING || step == null || step.phase() != Phase.QUESTION || step.question() == null) {
             throw new IllegalStateException("Answers are closed");
@@ -485,8 +697,14 @@ public class Game {
         QuestionSnap q = step.question();
         QState st = state(q);
         Mode mode = q.mode();
+        if (dealsPairs(q)) dealTo(q, st, userId);
         switch (mode.ask()) {
             case PICK -> {
+                if (borrows(q)) {
+                    voteOn(q, st, userId, choices, now, online);
+                    changed(now);
+                    return;
+                }
                 if (picks == null || picks.size() != 1 || !hasAnswer(q, picks.get(0))) {
                     throw new IllegalArgumentException("Pick one answer");
                 }
@@ -544,6 +762,13 @@ public class Game {
                 changed(now);
                 return;
             }
+            case PERSON -> {
+                String who = choices == null || choices.size() != 1 ? null : choices.get(0);
+                if (who == null || who.isBlank()) throw new IllegalArgumentException("Pick someone");
+                if (who.equals(userId)) throw new IllegalArgumentException("Pick someone else");
+                if (!peopleFor(q).contains(who)) throw new IllegalArgumentException("Pick someone from the list");
+                st.named.put(userId, who);
+            }
             case DRAW -> throw new IllegalArgumentException("Send a drawing");
             case WRITE -> {
                 String clean = written(text);
@@ -598,6 +823,7 @@ public class Game {
             t.put(userId, new Telephone.Link(userId, null, id));
             telephoneDone(t, now, online);
         } else {
+            if (dealsPairs(q)) dealTo(q, st, userId);
             id = keepArt(bytes, contentType, st.drawings.get(userId));
             st.drawings.put(userId, id);
             if (everyoneDid(st.drawings.keySet(), online)) endsAt = Math.min(endsAt, now + EVERYONE_DONE_MS);
@@ -673,6 +899,12 @@ public class Game {
      */
     public void vote(String userId, String choice, Integer match, Map<String, String> guesses,
             long now, Predicate<String> online) {
+        vote(userId, choice, null, match, guesses, now, online);
+    }
+
+    /** As above; {@code choices}: up to the question's picks entries, in place of one choice. */
+    public void vote(String userId, String choice, List<String> choices, Integer match, Map<String, String> guesses,
+            long now, Predicate<String> online) {
         Step step = current();
         String interaction = interaction();
         if (status != Status.PLAYING || interaction == null || !List.of("vote", "guess", "bracket").contains(interaction)) {
@@ -683,11 +915,17 @@ public class Game {
         boolean words = step.question().mode().score() == Mode.Score.SECRET;
         switch (interaction) {
             case "vote" -> {
-                Entry e = entry(st, choice);
-                if (e == null) throw new IllegalArgumentException("That answer is not on the board");
-                if (e.authorId.equals(userId)) throw new IllegalArgumentException("You can't vote for your own");
-                st.votes.put(userId, e.key);
-                if (everyoneDid(voters(st, st.votes.keySet()), online)) endsAt = Math.min(endsAt, now + EVERYONE_DONE_MS);
+                QuestionSnap q = step.question();
+                List<String> keys = choices != null ? distinct(choices) : choice == null ? List.of() : List.of(choice);
+                if (keys.isEmpty()) throw new IllegalArgumentException("That answer is not on the board");
+                if (keys.size() > q.picks()) throw new IllegalArgumentException("You can vote for up to " + q.picks());
+                for (String key : keys) {
+                    Entry e = entry(st, key);
+                    if (e == null) throw new IllegalArgumentException("That answer is not on the board");
+                    if (e.authorId.equals(userId)) throw new IllegalArgumentException("You can't vote for your own");
+                }
+                st.votes.put(userId, keys);
+                if (everyoneDid(boardDone(q, st), online)) endsAt = Math.min(endsAt, now + EVERYONE_DONE_MS);
             }
             case "guess" -> {
                 if (guesses == null || guesses.isEmpty()) throw new IllegalArgumentException("Guess at least one");
@@ -744,12 +982,42 @@ public class Game {
             AnswerSnap word = secret(q, st, userId);
             m.put("word", word == null ? null : word.text());
         }
+        if (dealsPairs(q)) {
+            // what they were dealt: the prompt filled in for them, and the answer it's about
+            Entry d = dealTo(q, st, userId);
+            m.put("prompt", fill(q, q.text(), userId));
+            if (d != null) m.put("about", about(d, sources.get(q.id())));
+        }
         switch (mode.ask()) {
             case DRAW -> {
                 m.put("kind", "draw");
                 m.put("drawing", st.drawings.get(userId));
             }
             case WRITE -> m.put("kind", "write");
+            case PICK -> {
+                if (!borrows(q)) break;
+                m.put("kind", "ballot");
+                m.put("picks", q.picks());
+                Ballots b = st.ballots;
+                if (b != null) {
+                    m.put("round", b.round);
+                    m.put("rounds", b.rounds);
+                }
+                List<Map<String, Object>> ballot = new ArrayList<>();
+                for (String key : optionsOf(st, userId, true)) {
+                    Entry e = entry(st, key);
+                    if (e != null) ballot.add(entryFace(e));
+                }
+                m.put("ballot", ballot);
+                List<String> chosen = (b != null ? b.votesNow() : st.votes).get(userId);
+                m.put("chosen", chosen == null ? List.of() : chosen);
+            }
+            case PERSON -> {
+                m.put("kind", "person");
+                m.put("chosen", st.named.get(userId));
+                // the maker of the winner picks too, so nobody can tell: their phone says why
+                if (q.mode().score() == Mode.Score.RIGHT && userId.equals(rightPerson(q))) m.put("yours", true);
+            }
             case CHAIN -> {
                 Telephone t = st.telephone;
                 if (t == null || t.done) return m;
@@ -812,7 +1080,8 @@ public class Game {
      */
     private Set<String> answeredBy(QState st, QuestionSnap q) {
         return switch (q.mode().ask()) {
-            case PICK, PICK_MANY, ORDER -> st.picks.keySet();
+            case PICK, PICK_MANY, ORDER -> borrows(q) ? ballotDone(q, st) : st.picks.keySet();
+            case PERSON -> st.named.keySet();
             case RANK -> whole(st.tiers, q);
             case MATCH -> whole(st.pairs, q);
             case NUMBER -> st.numbers.keySet();
@@ -850,10 +1119,18 @@ public class Game {
                 String key = "e" + (i + 1);
                 String author = made.get(i).getKey();
                 String value = made.get(i).getValue();
-                entries.add(drawn ? new Entry(key, author, null, value) : new Entry(key, author, value));
+                Entry e = drawn ? new Entry(key, author, null, value) : new Entry(key, author, value);
+                if (dealsPairs(q)) {
+                    // what it was made about goes with it, into a later vote too
+                    e.about = st.dealt.get(author);
+                    e.aboutFrom = sources.get(q.id()).id();
+                }
+                entries.add(e);
             }
             st.entries = entries;
         }
+        // a vote that was skipped still has a board
+        if (borrows(q) && !st.borrowed) borrow(q, st);
         if (st.telephone != null) {
             st.telephone.done = true;
             st.telephone.roundEndsAt = 0;
@@ -872,10 +1149,8 @@ public class Game {
             case RIGHT -> scoreRight(q, st, gains);
             case CROWD -> scoreCrowd(q, st, gains);
             case VOTES -> {
-                st.votes.values().forEach(key -> {
-                    Entry e = entry(st, key);
-                    if (e != null) e.votes++;
-                });
+                countVotes(st);
+                // 100 a vote, however often it was seen
                 st.entries.forEach(e -> {
                     if (e.votes > 0) gains.merge(e.authorId, e.votes * VOTE_POINTS, Integer::sum);
                 });
@@ -909,22 +1184,90 @@ public class Game {
                     }
                 }
                 if (b.champion != null) gains.merge(b.champion.authorId, CHAMPION_POINTS, Integer::sum);
+                st.winner = b.champion == null ? null : b.champion.key;
             }
             case NONE -> {
-                // nobody scores; a ranking still shows where the group put things
+                // nobody scores; a ranking still shows where the group put things, a vote what won
                 if (mode.ask() == Mode.Ask.RANK) st.consensus = consensus(q, st);
+                if (voting(q)) countVotes(st);
             }
         }
+        if (voting(q)) pickWinner(st);
         if (q.speed() && mode.speedy()) {
             // the last moment is worth half
             gains.replaceAll((user, points) -> (int) Math.round(points * (0.5 + 0.5 * st.left.getOrDefault(user, 0.0))));
         }
         if (q.weight() != 100) gains.replaceAll((user, points) -> points * q.weight() / 100);
         gains.values().removeIf(points -> points == 0);
+        Map<String, Integer> payout = new HashMap<>(gains);
+        if (!gains.isEmpty() && hidesMakers(q)) {
+            // the answer to a later "who made it": its points would give it away, so they wait
+            st.held = true;
+            payout.clear();
+        }
+        if (q.mode().ask() == Mode.Ask.PERSON) {
+            // its guess is over: what it was keeping secret is paid now
+            questions.forEach((id, h) -> {
+                if (!h.held || hidesMakers(snaps.get(id))) return;
+                h.held = false;
+                h.gains.forEach((u, pts) -> {
+                    payout.merge(u, pts, Integer::sum);
+                    st.released.merge(u, pts, Integer::sum);
+                });
+            });
+        }
         players.values().forEach(p -> {
-            p.gain = gains.getOrDefault(p.id, 0);
+            p.gain = payout.getOrDefault(p.id, 0);
             p.score += p.gain;
         });
+    }
+
+    /** every vote cast onto its entry; on ballots, also how often each was seen by someone who voted */
+    private void countVotes(QState st) {
+        Ballots b = st.ballots;
+        if (b == null) {
+            st.votes.values().forEach(keys -> keys.forEach(key -> {
+                Entry e = entry(st, key);
+                if (e != null) e.votes++;
+            }));
+            return;
+        }
+        for (int r = 0; r < b.rounds; r++) {
+            Map<String, List<String>> dealtThen = b.dealt.get(r);
+            b.votes.get(r).forEach((voter, keys) -> {
+                keys.forEach(key -> {
+                    Entry e = entry(st, key);
+                    if (e != null) e.votes++;
+                });
+                if (keys.isEmpty()) return;
+                dealtThen.getOrDefault(voter, List.of()).forEach(key -> {
+                    Entry e = entry(st, key);
+                    if (e != null) e.shown++;
+                });
+            });
+        }
+        b.done = true;
+        b.roundEndsAt = 0;
+    }
+
+    /**
+     * The winner, once: the most votes (on ballots, the most votes for the
+     * times it was seen), a tie settled at random. Nobody voting leaves every
+     * entry tied, so a later "who made it" still has something to ask about.
+     */
+    private void pickWinner(QState st) {
+        if (st.entries.isEmpty()) {
+            st.winner = null;
+            return;
+        }
+        boolean perShown = st.ballots != null;
+        Comparator<Entry> rank = perShown
+                ? (a, b) -> Long.compare((long) a.votes * Math.max(1, b.shown), (long) b.votes * Math.max(1, a.shown))
+                : Comparator.comparingInt(e -> e.votes);
+        Entry best = Collections.max(st.entries, rank);
+        List<Entry> top = st.entries.stream().filter(e -> rank.compare(e, best) == 0).toList();
+        st.winner = top.get(random.nextInt(top.size())).key;
+        st.tied = top.size() >= 2 ? top.stream().map(e -> e.key).toList() : List.of();
     }
 
     /** "right": whoever gets it right */
@@ -956,6 +1299,13 @@ public class Game {
             case NUMBER -> numberGains(q, st).forEach((user, points) -> {
                 if (points > 0) gains.merge(user, points, Integer::sum);
             });
+            case PERSON -> {
+                // the maker can't name themselves, so they can't score
+                String right = rightPerson(q);
+                if (right != null) st.named.forEach((user, who) -> {
+                    if (who.equals(right)) gains.merge(user, GUESS_POINTS, Integer::sum);
+                });
+            }
             default -> { /* no right answer to get */ }
         }
     }
@@ -1177,6 +1527,13 @@ public class Game {
         return st == null ? null : st.bracket;
     }
 
+    private Ballots currentBallots() {
+        Step s = current();
+        if (s == null || s.phase() != Phase.QUESTION || s.question() == null) return null;
+        QState st = questions.get(s.question().id());
+        return st == null ? null : st.ballots;
+    }
+
     private Telephone currentTelephone() {
         Step s = current();
         if (s == null || s.phase() != Phase.QUESTION || s.question() == null) return null;
@@ -1194,7 +1551,8 @@ public class Game {
         QState st = questions.get(s.question().id());
         if (st == null || st.settled) return null;
         return switch (s.question().mode().score()) {
-            case VOTES -> st.entries.size() >= 2 ? "vote" : null;
+            // a pick scored by votes was voted on while it was asked, and is settled by now
+            case VOTES -> s.question().mode().entries() && st.entries.size() >= 2 ? "vote" : null;
             case AUTHORS, SECRET -> st.entries.size() >= 1 && players.size() >= 2 ? "guess" : null;
             case KNOCKOUT -> st.bracket != null && !st.bracket.done ? "bracket" : null;
             default -> null;
@@ -1218,6 +1576,7 @@ public class Game {
         List<Long> order = questionOrder();
         v.put("questionCount", order.size());
 
+        if (!roster.isEmpty()) v.put("roster", rosterView());
         Step step = current();
         if (step != null) {
             v.put("phase", step.phase().name());
@@ -1233,6 +1592,7 @@ public class Game {
                 v.put("question", questionView(q, revealed, showElaboration));
                 if (step.phase() == Phase.QUESTION) {
                     v.put("answered", st == null ? List.of() : List.copyOf(answeredBy(st, q)));
+                    if (st != null && borrows(q)) v.put("board", boardView(q, st, step));
                     if (st != null && st.telephone != null && !st.telephone.done) {
                         Telephone t = st.telephone;
                         Map<String, Object> tv = new LinkedHashMap<>();
@@ -1253,7 +1613,7 @@ public class Game {
         if ("vote".equals(interaction) || "guess".equals(interaction) || "bracket".equals(interaction)) {
             QState st = questions.get(step.question().id());
             Set<String> acted = switch (interaction) {
-                case "vote" -> st.votes.keySet();
+                case "vote" -> boardDone(step.question(), st);
                 case "guess" -> st.guesses.keySet();
                 default -> {
                     Set<String> s = new LinkedHashSet<>();
@@ -1284,12 +1644,33 @@ public class Game {
         Mode mode = q.mode();
         Mode.Ask ask = mode.ask();
         m.put("id", q.id());
-        m.put("text", q.text());
+        m.put("text", fill(q, q.text(), null));
         m.put("imageUrl", q.imageUrl());
         m.put("type", type(q).name());
         m.put("ask", ask.key());
         m.put("score", mode.score().key());
         if (q.weight() != 100) m.put("weight", q.weight());
+        if (voting(q) && q.picks() > 1) m.put("picks", q.picks());
+        // the real prompt is each player's own (task)
+        if (dealsPairs(q)) m.put("dealt", true);
+        if (ask == Mode.Ask.PERSON) {
+            List<Map<String, Object>> people = new ArrayList<>();
+            for (String id : peopleFor(q)) {
+                Map<String, Object> pm = new LinkedHashMap<>();
+                pm.put("id", id);
+                pm.put("name", knownName(id));
+                people.add(pm);
+            }
+            m.put("people", people);
+            Entry won = mode.score() == Mode.Score.RIGHT ? winnerOf(sources.get(q.id())) : null;
+            if (won != null) {
+                // what's being asked about, never who made it
+                Map<String, Object> em = new LinkedHashMap<>();
+                if (won.image != null) em.put("image", won.image);
+                else em.put("text", won.text);
+                m.put("entry", em);
+            }
+        }
         if (q.speed() && mode.speedy()) m.put("speed", true);
         if (ask == Mode.Ask.NUMBER) {
             for (String key : List.of("unit", "min", "max")) {
@@ -1325,10 +1706,10 @@ public class Game {
         // the number, the secret words (until the guessing is over)
         boolean secret = mode.score() == Mode.Score.SECRET;
         boolean hidden = secret ? st == null || !st.settled : (ask == Mode.Ask.TYPE_IN || ask == Mode.Ask.NUMBER) && !revealed;
-        boolean none = mode.entries() && !secret || ask == Mode.Ask.CHAIN;
+        boolean none = mode.entries() && !secret || ask == Mode.Ask.CHAIN || borrows(q) || ask == Mode.Ask.PERSON;
         m.put("answers", none || hidden ? List.of() : answers);
         if (showElaboration) {
-            m.put("elaborationText", q.elaborationText());
+            m.put("elaborationText", fill(q, q.elaborationText(), null));
             m.put("elaborationImageUrl", q.elaborationImageUrl());
         }
         return m;
@@ -1340,12 +1721,20 @@ public class Game {
         r.put("settled", st.settled);
         switch (mode.ask()) {
             case PICK, PICK_MANY -> {
-                r.put("counts", pickCounts(q, st));
-                r.put("correct", switch (mode.score()) {
-                    case RIGHT -> q.answers().stream().filter(a -> a.value() > 0).map(AnswerSnap::id).toList();
-                    case CROWD -> st.top;
-                    default -> List.of();
-                });
+                if (!borrows(q)) {
+                    r.put("counts", pickCounts(q, st));
+                    r.put("correct", switch (mode.score()) {
+                        case RIGHT -> q.answers().stream().filter(a -> a.value() > 0).map(AnswerSnap::id).toList();
+                        case CROWD -> st.top;
+                        default -> List.of();
+                    });
+                }
+            }
+            case PERSON -> {
+                Map<String, Integer> named = new LinkedHashMap<>();
+                st.named.values().forEach(who -> named.merge(who, 1, Integer::sum));
+                r.put("named", named);
+                if (mode.score() == Mode.Score.RIGHT && st.settled) r.put("author", rightPerson(q));
             }
             case TYPE_IN -> {
                 r.put("typed", typedView(q, st));
@@ -1413,8 +1802,10 @@ public class Game {
             }
             default -> { /* written: entries below */ }
         }
-        if (mode.entries()) {
-            // who made what stays hidden while players are voting or guessing on it
+        boolean hidden = hidesMakers(q);
+        if (board(q)) {
+            // who made what stays hidden while players are voting or guessing on it,
+            // and while a later question still asks who made it
             boolean showAuthors = !mode.judged() || st.settled;
             List<Map<String, Object>> entries = new ArrayList<>();
             for (Entry e : st.entries) {
@@ -1422,9 +1813,11 @@ public class Game {
                 em.put("key", e.key);
                 if (e.image != null) em.put("image", e.image);
                 else em.put("text", e.text);
+                if (e.about != null) em.put("about", about(e.about, snaps.get(e.aboutFrom)));
                 if (showAuthors) {
-                    em.put("authorId", e.authorId);
+                    if (!hidden) em.put("authorId", e.authorId);
                     em.put("votes", e.votes);
+                    if (st.ballots != null) em.put("shown", e.shown);
                 }
                 if (mode.score() == Mode.Score.SECRET && st.settled) {
                     AnswerSnap word = wordOf(q, st, e.authorId);
@@ -1445,23 +1838,29 @@ public class Game {
             if (mode.score() == Mode.Score.AUTHORS) {
                 r.put("authors", st.entries.stream().map(e -> e.authorId).distinct().toList());
             }
-            if (mode.score() == Mode.Score.KNOCKOUT && st.bracket != null) r.put("bracket", bracketView(st.bracket));
+            if (mode.score() == Mode.Score.KNOCKOUT && st.bracket != null) r.put("bracket", bracketView(st.bracket, hidden));
+            if (st.settled && (voting(q) || mode.score() == Mode.Score.KNOCKOUT)) {
+                r.put("winner", st.winner);
+                if (!st.tied.isEmpty()) r.put("tied", st.tied);
+            }
         }
-        if (st.settled) r.put("gains", st.gains);
+        if (st.settled && !st.held) r.put("gains", st.gains);
+        if (st.held) r.put("held", true);
+        if (!st.released.isEmpty()) r.put("released", st.released);
         return r;
     }
 
-    private Map<String, Object> bracketView(Bracket b) {
+    private Map<String, Object> bracketView(Bracket b, boolean hidden) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("round", b.round);
         m.put("rounds", b.rounds);
         m.put("roundEndsAt", b.done ? null : b.roundEndsAt);
         m.put("done", b.done);
-        m.put("matches", b.matches.stream().map(x -> matchView(x, false)).toList());
-        m.put("history", b.history.stream().map(r -> r.stream().map(x -> matchView(x, true)).toList()).toList());
+        m.put("matches", b.matches.stream().map(x -> matchView(x, false, hidden)).toList());
+        m.put("history", b.history.stream().map(r -> r.stream().map(x -> matchView(x, true, hidden)).toList()).toList());
         if (b.champion != null) {
             Map<String, Object> c = side(b.champion);
-            c.put("authorId", b.champion.authorId);
+            if (!hidden) c.put("authorId", b.champion.authorId);
             m.put("champion", c);
         }
         return m;
@@ -1496,7 +1895,8 @@ public class Game {
         return out.size() > 40 ? out.subList(0, 40) : out;
     }
 
-    private Map<String, Object> matchView(Match x, boolean resolved) {
+    /** hidden: a later question still asks who made these, so the authors stay off */
+    private Map<String, Object> matchView(Match x, boolean resolved, boolean hidden) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", x.id);
         m.put("a", side(x.a));
@@ -1506,8 +1906,10 @@ public class Game {
             m.put("votesA", forA);
             m.put("votesB", x.votes.size() - forA);
             m.put("winner", x.winner == null ? null : x.winner.key);
-            m.put("authorA", x.a.authorId);
-            m.put("authorB", x.b == null ? null : x.b.authorId);
+            if (!hidden) {
+                m.put("authorA", x.a.authorId);
+                m.put("authorB", x.b == null ? null : x.b.authorId);
+            }
         }
         return m;
     }
@@ -1547,13 +1949,26 @@ public class Game {
         QState st = questions.get(q.id());
         if (st == null) return r;
         Mode mode = q.mode();
+        String filled = fill(q, q.text(), null);
+        if (filled != null && !filled.equals(q.text())) r.put("text", filled);
         switch (mode.ask()) {
             case PICK, PICK_MANY -> {
+                if (borrows(q)) break; // its entries are below
                 List<Integer> counts = new ArrayList<>();
                 for (AnswerSnap a : q.answers()) {
                     counts.add((int) st.picks.values().stream().filter(p -> p.contains(a.id())).count());
                 }
                 r.put("counts", counts);
+            }
+            case PERSON -> {
+                Map<String, Integer> counts = new LinkedHashMap<>();
+                st.named.values().forEach(who -> counts.merge(who, 1, Integer::sum));
+                List<Map<String, Object>> named = new ArrayList<>();
+                counts.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue())
+                        .forEach(c -> named.add(Map.of("by", knownName(c.getKey()), "count", c.getValue())));
+                r.put("named", named);
+                String right = mode.score() == Mode.Score.RIGHT ? rightPerson(q) : null;
+                r.put("author", right == null ? null : knownName(right));
             }
             case ORDER, MATCH -> {
                 // how many got each item right, by position
@@ -1598,7 +2013,7 @@ public class Game {
             }
             default -> { /* written and drawn: entries below */ }
         }
-        if (mode.entries()) {
+        if (board(q)) {
             List<Map<String, Object>> entries = new ArrayList<>();
             for (Entry e : st.entries) {
                 Map<String, Object> em = new LinkedHashMap<>();
@@ -1622,6 +2037,297 @@ public class Game {
         }
         if (!st.gains.isEmpty()) r.put("gains", new LinkedHashMap<>(st.gains));
         return r;
+    }
+
+    // ─── earlier questions ─────────────────────────────────────────────
+
+    /** a pick whose options are an earlier question's answers */
+    boolean borrows(QuestionSnap q) {
+        return q.mode().ask() == Mode.Ask.PICK && (q.mode().score() == Mode.Score.VOTES || q.from() != null);
+    }
+
+    /** has a board of entries: made here (write, draw) or borrowed */
+    boolean board(QuestionSnap q) {
+        return q.mode().entries() || borrows(q);
+    }
+
+    /** people vote on its entries, so it ends up with a winner */
+    boolean voting(QuestionSnap q) {
+        return borrows(q) || (q.mode().entries() && q.mode().score() == Mode.Score.VOTES);
+    }
+
+    /** write or draw with from: everyone gets someone else's answer to make something about */
+    boolean dealsPairs(QuestionSnap q) {
+        return q.mode().entries() && sources.containsKey(q.id());
+    }
+
+    /** whose answers these really are: a pick that borrows is its source's */
+    QuestionSnap maker(QuestionSnap q) {
+        Set<Long> seen = new HashSet<>();
+        QuestionSnap m = q;
+        while (borrows(m) && sources.containsKey(m.id()) && seen.add(m.id())) m = sources.get(m.id());
+        return m;
+    }
+
+    /** an unsettled person question still asks who made this question's answers */
+    boolean guarded(long id) {
+        if (finishing || status == Status.FINISHED) return false;
+        for (Map.Entry<Long, Set<Long>> g : guards.entrySet()) {
+            if (!g.getValue().contains(id)) continue;
+            QState p = questions.get(g.getKey());
+            if (p == null || !p.settled) return true;
+        }
+        return false;
+    }
+
+    /** its makers stay off every screen, and its points wait */
+    boolean hidesMakers(QuestionSnap q) {
+        return q != null && (guarded(q.id()) || guarded(maker(q).id()));
+    }
+
+    /** someone's name in this game, here or gone */
+    String knownName(String id) {
+        Player p = players.get(id);
+        return p != null ? p.name : played.getOrDefault(id, "someone who left");
+    }
+
+    /** how names are compared: trimmed, inner spaces collapsed, lowercase */
+    static String nameKey(String s) {
+        return s == null ? "" : s.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Before a question that uses earlier ones: they're revealed and settled
+     * (so their winners are known), and a pick that borrows copies its
+     * source's entries in. A source that never ran is left alone.
+     */
+    private void prepareSources(QuestionSnap q) {
+        List<QuestionSnap> needs = new ArrayList<>();
+        if (sources.containsKey(q.id())) needs.add(sources.get(q.id()));
+        needs.addAll(winnerRefs.getOrDefault(q.id(), Map.of()).values());
+        for (QuestionSnap s : needs) {
+            QState sst = questions.get(s.id());
+            if (sst != null && !sst.settled) {
+                reveal(s);
+                settle(s);
+            }
+        }
+        if (borrows(q)) {
+            QState st = state(q);
+            if (!st.borrowed) borrow(q, st);
+        }
+    }
+
+    /** the source's entries, under keys of their own, in a fresh order */
+    private void borrow(QuestionSnap q, QState st) {
+        st.borrowed = true;
+        QuestionSnap src = sources.get(q.id());
+        QState sst = src == null ? null : questions.get(src.id());
+        if (sst == null) return;
+        List<Entry> from = new ArrayList<>(sst.entries);
+        Collections.shuffle(from, random);
+        List<Entry> copies = new ArrayList<>();
+        for (int i = 0; i < from.size(); i++) copies.add(from.get(i).copy("e" + (i + 1)));
+        st.entries = copies;
+    }
+
+    /**
+     * The vote opens: with an overflow that someone here has more than that
+     * many to choose from, everyone here is dealt ballots; otherwise the board
+     * is shared, everyone seeing all but their own.
+     */
+    private void openVote(QuestionSnap q, QState st, int seconds, long now) {
+        if (st.opened) return;
+        st.opened = true;
+        List<String> voters = players.keySet().stream().filter(here).toList();
+        int cap = q.overflow();
+        boolean tooMany = cap >= 2 && voters.stream()
+                .anyMatch(v -> st.entries.stream().filter(e -> !e.authorId.equals(v)).count() > cap);
+        if (tooMany) st.ballots = Ballots.open(st.entries, voters, cap, Math.max(1, seconds) * 1000L, now, endsAt, random);
+    }
+
+    /** what a voter can vote for this round: their ballot, or everything not theirs; null when they're not dealt yet */
+    private List<String> optionsOf(QState st, String voter, boolean deal) {
+        if (st.ballots != null) return deal ? st.ballots.ballotOf(voter, st.entries, random) : st.ballots.peek(voter);
+        return st.entries.stream().filter(e -> !e.authorId.equals(voter)).map(e -> e.key).toList();
+    }
+
+    /** a vote on a pick that borrows, cast while it's asked: the whole list, replacing the last */
+    private void voteOn(QuestionSnap q, QState st, String userId, List<String> choices, long now, Predicate<String> online) {
+        List<String> keys = choices == null ? List.of() : distinct(choices);
+        if (keys.isEmpty()) throw new IllegalArgumentException("Pick one");
+        if (keys.size() > q.picks()) throw new IllegalArgumentException("You can vote for up to " + q.picks());
+        List<String> options = optionsOf(st, userId, true);
+        for (String key : keys) {
+            Entry e = entry(st, key);
+            if (e == null) {
+                throw new IllegalArgumentException(st.ballots != null ? "That one isn't on your list" : "That answer is not on the board");
+            }
+            if (e.authorId.equals(userId)) throw new IllegalArgumentException("You can't vote for your own");
+            if (!options.contains(key)) throw new IllegalArgumentException("That one isn't on your list");
+        }
+        Ballots b = st.ballots;
+        (b != null ? b.votesNow() : st.votes).put(userId, keys);
+        if (everyoneDid(ballotDone(q, st), online)) {
+            if (b != null && b.round < b.rounds) b.roundEndsAt = Math.min(b.roundEndsAt, now + EVERYONE_DONE_MS);
+            else endsAt = Math.min(endsAt, now + EVERYONE_DONE_MS);
+        }
+    }
+
+    /** done with this round of a pick that borrows: voted for as many as they can, or nothing to vote on */
+    private Set<String> ballotDone(QuestionSnap q, QState st) {
+        Set<String> done = new LinkedHashSet<>();
+        Map<String, List<String>> cast = st.ballots != null ? st.ballots.votesNow() : st.votes;
+        for (String p : players.keySet()) {
+            List<String> options = optionsOf(st, p, false);
+            if (options == null) continue; // away when it was dealt: not done until they've had theirs
+            List<String> mine = cast.get(p);
+            if (options.isEmpty() || (mine != null && mine.size() >= Math.min(q.picks(), options.size()))) done.add(p);
+        }
+        return done;
+    }
+
+    /** a board vote during the reveal (write or draw): voted for as many as they can */
+    private Set<String> boardDone(QuestionSnap q, QState st) {
+        Set<String> done = new LinkedHashSet<>();
+        st.votes.forEach((voter, keys) -> {
+            long theirs = st.entries.stream().filter(e -> !e.authorId.equals(voter)).count();
+            if (keys.size() >= Math.min(q.picks(), theirs)) done.add(voter);
+        });
+        return done;
+    }
+
+    private static List<String> distinct(List<String> keys) {
+        return keys.stream().filter(k -> k != null && !k.isBlank()).distinct().toList();
+    }
+
+    /** write or draw with from: everyone here gets someone else's answer, a different one each while they go round */
+    private void dealPairs(QuestionSnap q, QState st) {
+        if (!st.dealt.isEmpty()) return;
+        QState sst = questions.get(sources.get(q.id()).id());
+        if (sst == null) return;
+        List<String> who = players.keySet().stream().filter(here).toList();
+        st.dealt.putAll(Ballots.pairs(sst.entries, who, random));
+    }
+
+    /** what this player makes something about; a latecomer is dealt the least dealt one now */
+    private Entry dealTo(QuestionSnap q, QState st, String userId) {
+        Entry have = st.dealt.get(userId);
+        if (have != null) return have;
+        QState sst = questions.get(sources.get(q.id()).id());
+        if (sst == null) return null;
+        Entry e = Ballots.pairFor(userId, sst.entries, st.dealt, random);
+        if (e != null) st.dealt.put(userId, e);
+        return e;
+    }
+
+    /**
+     * The words a screen shows: winners filled in the same for everyone,
+     * {author} and {answer} for one player (forPlayer), or ___ on the shared
+     * screen. Someone's words always go in quotes.
+     */
+    String fill(QuestionSnap q, String text, String forPlayer) {
+        if (text == null || text.indexOf('{') < 0) return text;
+        QState st = questions.get(q.id());
+        Entry d = forPlayer == null || st == null ? null : st.dealt.get(forPlayer);
+        Matcher m = FILL.matcher(text);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            String put;
+            if (m.group(1) != null) {
+                Entry won = winnerOf(winnerRefs.getOrDefault(q.id(), Map.of()).get(m.group(1)));
+                put = won == null ? "…" : won.image != null ? "a drawing" : quoted(won.text);
+            } else if (forPlayer == null) {
+                put = "___";
+            } else if (m.group(2).equalsIgnoreCase("author")) {
+                put = d == null || hidesMakers(sources.get(q.id())) ? "someone" : knownName(d.authorId);
+            } else {
+                put = d == null || d.text == null ? "something" : quoted(d.text);
+            }
+            m.appendReplacement(out, Matcher.quoteReplacement(put));
+        }
+        m.appendTail(out);
+        return out.toString();
+    }
+
+    private static String quoted(String text) {
+        return "“" + text + "”";
+    }
+
+    /** an answer something was made about: what it was, and whose, unless that's still a secret */
+    private Map<String, Object> about(Entry d, QuestionSnap from) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (!hidesMakers(from)) m.put("name", knownName(d.authorId));
+        if (d.image != null) m.put("image", d.image);
+        else m.put("text", d.text);
+        return m;
+    }
+
+    /** an entry as a voter sees it: never who made it */
+    private Map<String, Object> entryFace(Entry e) {
+        Map<String, Object> m = side(e);
+        if (e.about != null) m.put("about", about(e.about, snaps.get(e.aboutFrom)));
+        return m;
+    }
+
+    /** the settled winner of a question, or null */
+    private Entry winnerOf(QuestionSnap q) {
+        QState st = q == null ? null : questions.get(q.id());
+        return st == null || !st.settled || st.winner == null ? null : entry(st, st.winner);
+    }
+
+    /** person + right: whoever made the winner of its source, or null */
+    private String rightPerson(QuestionSnap q) {
+        Entry won = winnerOf(sources.get(q.id()));
+        return won == null ? null : won.authorId;
+    }
+
+    /**
+     * Who a person question lists: everyone who's played since the start, the
+     * players here, and whoever made the answers it's about (so the right one
+     * is always there), by name.
+     */
+    List<String> peopleFor(QuestionSnap q) {
+        Set<String> ids = new LinkedHashSet<>(played.keySet());
+        ids.addAll(players.keySet());
+        QuestionSnap src = sources.get(q.id());
+        QState made = src == null ? null : questions.get(maker(src).id());
+        if (made != null) made.entries.forEach(e -> ids.add(e.authorId));
+        List<String> out = new ArrayList<>(ids);
+        out.sort(Comparator.comparing((String id) -> knownName(id), String.CASE_INSENSITIVE_ORDER).thenComparing(id -> id));
+        return out;
+    }
+
+    private Map<String, Object> rosterView() {
+        List<Map<String, Object>> names = new ArrayList<>();
+        for (String name : roster) {
+            Map<String, Object> n = new LinkedHashMap<>();
+            n.put("name", name);
+            n.put("taken", players.values().stream().anyMatch(p -> nameKey(p.name).equals(nameKey(name))));
+            names.add(n);
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("names", names);
+        m.put("unique", uniqueNames);
+        return m;
+    }
+
+    /** a pick that borrows, while it's asked: the shared wall, or only how the ballots go */
+    private Map<String, Object> boardView(QuestionSnap q, QState st, Step step) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        Ballots b = st.ballots;
+        m.put("mode", b == null ? "shared" : "ballots");
+        m.put("count", st.entries.size());
+        if (b == null) {
+            m.put("entries", st.entries.stream().map(this::entryFace).toList());
+        } else {
+            m.put("cap", b.cap);
+            m.put("round", b.round);
+            m.put("rounds", b.rounds);
+            m.put("roundEndsAt", status == Status.PAUSED ? null : b.roundEndsAt > 0 ? b.roundEndsAt : endsAt);
+            m.put("roundSeconds", b.rounds == 1 ? (double) Math.max(1, step.seconds()) : b.roundMs / 1000.0);
+        }
+        return m;
     }
 
     private String nameOf(String userId) {
