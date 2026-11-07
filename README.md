@@ -10,7 +10,7 @@ JQZZ is a real-time, multiplayer quiz platform built for flexibility and speed. 
 
 ### Quiz Editor
 - **Visual Mode** — Drag-and-drop action cards, snippet templates, multi-select with Ctrl/Shift
-- **Text Mode** — A custom script language (`JQzz Script v1`) for authoring quizzes as plain text
+- **Text Mode** — A custom script language (`JQzz Script v3`) for authoring quizzes as plain text
 - **Bidirectional** — Switch modes freely; text is the source of truth, visual is a live preview
 - **Snippets** — Pre-built question templates (MC, True/False, Tier List, Lightning Round, etc.)
 

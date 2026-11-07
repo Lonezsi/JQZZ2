@@ -1,0 +1,45 @@
+# Yesterday · JQzz Script v3
+# about: Write what you did yesterday, vote for the funniest, guess who wrote it, draw someone's face, vote for the funniest drawing.
+# players: 3+
+
+NewQuestion Q1 (
+  ask: "write", score: "none",
+  prompt: "What did you do yesterday?",
+)
+
+NewQuestion Q2 (
+  ask: "pick", score: "votes",
+  from: "Q1",
+  prompt: "Which one is the funniest?",
+  overflow: 6,
+)
+
+NewQuestion Q3 (
+  ask: "person", score: "right",
+  from: "Q2",
+  prompt: "The funniest answer was: {Q2.winner}. Who do you think wrote it?",
+)
+
+NewQuestion Q4 (
+  ask: "draw", score: "none",
+  from: "Q1",
+  prompt: "How did you think {author}'s face looked when they typed {answer}?",
+)
+
+NewQuestion Q5 (
+  ask: "pick", score: "votes",
+  from: "Q4",
+  prompt: "Which drawing is the funniest? Pick up to 2.",
+  picks: 2,
+)
+
+ShowQuestion(Q1, time: 60)
+ShowQuestion(Q2, time: 40)
+ShowAnswers(Q2, time: 15)
+ShowQuestion(Q3, time: 25)
+ShowAnswers(Q3, time: 10)
+ShowResult(Q3, time: 8)
+ShowQuestion(Q4, time: 90)
+ShowQuestion(Q5, time: 40)
+ShowAnswers(Q5, time: 15)
+ShowResult(Q5, time: 10)
