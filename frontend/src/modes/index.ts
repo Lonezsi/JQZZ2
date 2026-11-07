@@ -16,6 +16,7 @@ import sketchAndGuess from "./sketch-and-guess.txt?raw";
 import artBattle from "./art-battle.txt?raw";
 import telephone from "./telephone.txt?raw";
 import partyMix from "./party-mix.txt?raw";
+import yesterday from "./yesterday.txt?raw";
 
 export interface GameMode {
   id: string;
@@ -62,4 +63,5 @@ export const GAME_MODES: GameMode[] = [
   readMode("art-battle", artBattle),
   readMode("telephone", telephone),
   readMode("party-mix", partyMix),
+  readMode("yesterday", yesterday),
 ];

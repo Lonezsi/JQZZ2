@@ -256,8 +256,6 @@ for (const mode of GAME_MODES) {
 }
 const asks = new Set(GAME_MODES.flatMap((m) => m.modes.map((x) => x.ask)));
 const scores = new Set(GAME_MODES.flatMap((m) => m.modes.map((x) => x.score)));
-// "person" comes with the yesterday mode, which needs from: to read; until that mode is in, it's the one ask no mode uses
-if (!GAME_MODES.some((m) => m.id === "yesterday")) asks.add("person");
 check("the modes use every ask", ASKS.every((a) => asks.has(a.id)), ASKS.filter((a) => !asks.has(a.id)).map((a) => a.id));
 check("the modes use every score", SCORES.every((x) => scores.has(x.id)), SCORES.filter((x) => !scores.has(x.id)).map((x) => x.id));
 
