@@ -249,6 +249,40 @@ function unwrap(line: string): string | null {
 const structural = (s: string) =>
   readHeader(s) !== null || readShowLine(s) !== null || /^roster\s*\(/i.test(s) || readSettingsLine(s) !== null || s === "}" || s === ")";
 
+export type TopKind = "skip" | "divider" | "settings" | "close" | "roster" | "roster-miss" | "header" | "step" | "note";
+
+/**
+ * What a line outside a question block is, the way the parser reads it, and
+ * its text once tidied (`unwrapped`: a list marker or ** was taken off). The
+ * editor's hints use this too, so they can't disagree with the parser.
+ */
+export function topLine(raw: string): { kind: TopKind; text: string; unwrapped: boolean } {
+  let text = clean(raw);
+  if (!text || /^```[\w-]*$/.test(text) || text.startsWith("#") || text.startsWith("//")) return { kind: "skip", text, unwrapped: false };
+  const inner = unwrap(text);
+  const unwrapped = inner !== null && structural(inner);
+  if (unwrapped) text = inner;
+  let kind: TopKind = "note";
+  if (text === "---") kind = "divider";
+  else if (readSettingsLine(text)) kind = "settings";
+  else if (text === "}") kind = "close";
+  else if (/^roster\s*\(/i.test(text)) kind = "roster";
+  // Roster: ..., players(...): an attempt at a roster; "players: Anna, Bence" stays a note
+  else if (/^roster\s*[:=([{]/i.test(text) || /^players\s*[([{=]/i.test(text)) kind = "roster-miss";
+  else if (readHeader(text)) kind = "header";
+  else if (readShowLine(text)) kind = "step";
+  return { kind, text, unwrapped };
+}
+
+/** a line inside a block that starts something new at the top, so a block left open ends before it */
+export const startsTop = (raw: string) => TOP_LINE.test(clean(raw));
+/** a header's "(" on a line of its own */
+export const opensBlock = (raw: string) => OPEN_LINE.test(clean(raw));
+/** a line that ends a block: ")" on its own, or a field line ending in ")" */
+export const closesBlock = (raw: string) => CLOSE_LINE.test(clean(raw)) || endsWithClose(raw.replace(INVISIBLE, "")) !== null;
+/** a roster line that goes on past this one: its ")" is still to come */
+export const rosterGoesOn = (raw: string) => !maskStrings(clean(raw)).includes(")");
+
 /** fields a question block can have besides its extras (questionTypes: QuestionField) */
 const EXTRA_FIELDS: QuestionField[] = ["unit", "min", "max", "rounds"];
 
@@ -582,23 +616,19 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
 
   while (i < lines.length) {
     const lineNo = i + 1;
-    let line = clean(lines[i]);
+    const top = topLine(lines[i]);
+    const line = top.text;
     i++;
 
-    if (!line || /^```[\w-]*$/.test(line) || line.startsWith("#") || line.startsWith("//")) continue;
+    if (top.kind === "skip") continue;
+    if (top.unwrapped) fix(lineNo, "took off the list marker");
 
-    const inner = unwrap(line);
-    if (inner !== null && structural(inner)) {
-      fix(lineNo, "took off the list marker");
-      line = inner;
-    }
-
-    if (line === "---") {
+    if (top.kind === "divider") {
       actions.push({ id: generateId(), phase: "DIVIDER", time: 0, question: null, preview: "---" });
       continue;
     }
 
-    const group = readSettingsLine(line);
+    const group = top.kind === "settings" ? readSettingsLine(line) : null;
     if (group) {
       if (group.changed) fix(lineNo, `read as ${group.canonical}`);
       const before: Partial<QuizSettings> = {};
@@ -609,7 +639,7 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
       setting(group.opened);
       continue;
     }
-    if (line === "}") {
+    if (top.kind === "close") {
       const before = groups.pop();
       if (before) setting(before);
       else err(lineNo, `"}" closes a group that was never opened`);
@@ -617,7 +647,7 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
     }
 
     // ─── Roster("Anna", "Bence") ───
-    if (/^roster\s*\(/i.test(line)) {
+    if (top.kind === "roster") {
       let whole = line;
       if (!maskStrings(whole).includes(")")) {
         // the names went on over the next lines
@@ -640,7 +670,7 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
       }
       continue;
     }
-    if (/^roster\s*[:=([{]/i.test(line) || /^players\s*[([{=]/i.test(line)) {
+    if (top.kind === "roster-miss") {
       err(lineNo, 'write the roster like this: Roster("Anna", "Bence")');
       continue;
     }
