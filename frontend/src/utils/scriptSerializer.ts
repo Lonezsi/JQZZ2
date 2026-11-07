@@ -3,6 +3,9 @@ import { PHASE_FN_MAP } from "../constants/phaseMaps";
 import { DEFAULTS, parseSettings } from "./settings";
 import type { QuizSettings } from "./settings";
 import { modeOf, parseOptions } from "./questionTypes";
+import type { OptionKey } from "./questionTypes";
+import { readRoster, rosterLine } from "./roster";
+import { showRefs, sourceOf } from "./scriptRefs";
 
 export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v3
 # Author: you
@@ -27,7 +30,7 @@ export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v3
 #
 # A question is what players do (ask) and how it scores (score):
 #   ask: pick, pick-many, type-in, order, number, match, rank,
-#        write, draw, chain
+#        write, draw, chain, person
 #   score: right       whoever gets it right
 #          crowd       whoever sides with the most
 #          votes       everyone votes for the best one
@@ -38,6 +41,16 @@ export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v3
 #   number takes unit, min, max; chain takes rounds; match answers take
 #   { text: "Gold", match: "Au", value: 100 }
 #   type: "poll" and the other old names still read (docs/script.md)
+#
+# Using an earlier question (docs/script.md):
+#   from: "Q1"     pick + votes: vote on Q1's answers
+#                  write, draw: everyone gets someone else's Q1 answer
+#                  person + right: guess who made Q1's winner
+#   picks: 2       vote for up to 2
+#   overflow: 6    nobody sees more than 6 answers
+#   in a prompt: {Q2.winner}; with from: {author} and {answer}
+#
+# Roster("Anna", "Bence")   who's coming: they pick their name when they join
 #
 # Use --- to insert a visual divider.
 # Settings group what's inside them, until the closing brace:
@@ -69,14 +82,28 @@ function getUniqueQuestionsFromActions(actions: Action[]): Question[] {
   return result;
 }
 
+/** the extras written in a block, in the order they're stored; from is written first and ref never */
+const WRITTEN: OptionKey[] = ["unit", "min", "max", "rounds", "picks", "overflow"];
+
 export function quizToScript(quiz: Quiz | undefined): string {
   if (!quiz || quiz.actions.length === 0) return EMPTY_SCRIPT;
+
+  // who's coming, written right under the title
+  const rosterStep = quiz.actions.find((a) => a.phase === "ROSTER");
+  const roster = rosterStep ? readRoster(rosterStep.preview) : null;
+  const rosterText = roster && roster.names.length > 0 ? rosterLine(roster) : null;
+  if (quiz.actions.every((a) => a.phase === "ROSTER")) {
+    if (!rosterText) return EMPTY_SCRIPT;
+    const [title, ...rest] = EMPTY_SCRIPT.split("\n");
+    return [title, "", rosterText, "", ...rest].join("\n");
+  }
 
   const lines: string[] = [
     // no author line: a quiz's author id is its owner's login, and scripts get shared
     `# ${quiz.name} · JQzz Script v3`,
     "",
   ];
+  if (rosterText) lines.push(rosterText, "");
 
   const uniqueQuestions = getUniqueQuestionsFromActions(quiz.actions);
 
@@ -91,11 +118,16 @@ export function quizToScript(quiz: Quiz | undefined): string {
     const mode = modeOf(q);
     const answers = q.answers ?? [];
     lines.push(`  ask: ${str(mode.ask)}, score: ${str(mode.score)},`);
-    lines.push(`  prompt: ${str(q.text)},`);
-    if (q.elaborationText) lines.push(`  elaboration: ${str(q.elaborationText)},`);
+    // the question it uses, by its number here; a link to one that's gone is left out, and reading it back says what's missing
+    const source = sourceOf(quiz.actions, q);
+    const sourceNo = source && qIndexMap.get(source.id);
+    if (sourceNo) lines.push(`  from: "Q${sourceNo}",`);
+    // {@q2.winner} is kept by label; the script says {Q2.winner}
+    lines.push(`  prompt: ${str(showRefs(q.text, quiz.actions, q))},`);
+    if (q.elaborationText) lines.push(`  elaboration: ${str(showRefs(q.elaborationText, quiz.actions, q))},`);
     // a type's extras, numbers bare and words quoted
     const extras = parseOptions(q.options);
-    (Object.keys(extras) as (keyof typeof extras)[]).forEach((k) => {
+    WRITTEN.filter((k) => extras[k] !== undefined && extras[k] !== "").forEach((k) => {
       const v = extras[k]!;
       lines.push(`  ${k}: ${/^-?\d+(\.\d+)?$/.test(v) ? v : str(v)},`);
     });
@@ -122,6 +154,7 @@ export function quizToScript(quiz: Quiz | undefined): string {
     return ka.length === Object.keys(b).length && ka.every((k) => a[k as keyof QuizSettings] === b[k as keyof QuizSettings]);
   };
   for (const a of quiz.actions) {
+    if (a.phase === "ROSTER") continue; // written under the title
     if (a.phase === "SETTING") {
       const s = parseSettings(a.preview);
       if (groups.length > 0 && sameAs(s, groups[groups.length - 1])) {
