@@ -163,4 +163,28 @@ class QuizPersistenceTest {
                 : HttpRequest.BodyPublishers.ofString(json));
         return http.send(request.build(), HttpResponse.BodyHandlers.ofString());
     }
+
+    /** who's coming is kept as a step of its own, first, and a game never plays it */
+    @Test
+    void aRosterIsStoredAsAStepThatNeverPlays() throws Exception {
+        HttpResponse<String> created = send("POST", "/quizzes", "{\"name\": \"Yesterday\", \"actions\": []}");
+        long quizId = ((Number) JsonPath.read(created.body(), "$.id")).longValue();
+        String roster = "{\\\"names\\\":[\\\"Anna\\\",\\\"Bence\\\"],\\\"unique\\\":true}";
+        String body = """
+            {"name": "Yesterday", "actions": [
+               {"phase": "ROSTER", "time": 0, "preview": "%s", "question": null},
+               {"phase": "QUESTION", "time": 30, "question": %s}
+            ]}
+            """.formatted(roster, QUESTION);
+        assertThat(send("PUT", "/quizzes/" + quizId, body).statusCode()).isEqualTo(200);
+
+        String saved = send("GET", "/quizzes/" + quizId, null).body();
+        assertThat(JsonPath.<List<String>>read(saved, "$.actions[*].phase")).containsExactly("ROSTER", "QUESTION");
+        assertThat(JsonPath.<String>read(saved, "$.actions[0].preview")).isEqualTo("{\"names\":[\"Anna\",\"Bence\"],\"unique\":true}");
+
+        String host = JsonPath.read(send("POST", "/users/register", "{\"name\": \"Host\"}").body(), "$.id");
+        String game = send("POST", "/play/host", "{\"quizId\": %d, \"userId\": \"%s\"}".formatted(quizId, host)).body();
+        assertThat(JsonPath.<Integer>read(game, "$.total")).isEqualTo(1);
+        assertThat(JsonPath.<List<String>>read(game, "$.roster.names[*].name")).containsExactly("Anna", "Bence");
+    }
 }
