@@ -2,31 +2,39 @@ import React from "react";
 import type { GameBracket, GameMatch, GameState } from "../../types/play";
 import { TIERS } from "../../types/play";
 import type { MyAnswer } from "./Answering";
-import { nameOf, tileColour, tileLetter } from "../../utils/play";
-import { AnswerPicture } from "./PlayCommon";
+import { boardOutcome, nameOf, tileColour, tileLetter } from "../../utils/play";
+import { AnswerPicture, PlayerFace } from "./PlayCommon";
 import { modeOf } from "../../utils/questionTypes";
 import { MatchReveal, NumberReveal, OrderReveal, TypedReveal } from "./Recall";
-import { ChainsReveal, DrawnReveal, EntryFace } from "./Drawn";
+import { BoardNotes, ChainsReveal, DrawnReveal, EntryFace, Subject } from "./Drawn";
 
-/** What happened on the current question, for whichever type it is. */
-export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer; me?: string; serverNow?: () => number; controls?: boolean }> = ({
-  game,
-  mine,
-  me,
-  serverNow,
-  controls,
-}) => {
+/** What happened on the current question, for whichever type it is. `room`: on the big screen, where nobody has points to wait for. */
+export const Reveal: React.FC<{
+  game: GameState;
+  mine?: MyAnswer;
+  me?: string;
+  serverNow?: () => number;
+  controls?: boolean;
+  room?: boolean;
+}> = ({ game, mine, me, serverNow, controls, room }) => {
   const q = game.question;
   const r = game.reveal;
   if (!q || !r) return null;
   const { ask, score } = modeOf(q);
   if (r.bracket && score === "knockout") return <BracketReveal game={game} bracket={r.bracket} />;
   // things players wrote with secret words show like drawings: each with its word and the guesses
-  if (ask === "write" && score === "secret") return <DrawnReveal game={game} me={me} />;
+  if (ask === "write" && score === "secret") return <DrawnReveal game={game} me={me} room={room} />;
   switch (ask) {
     case "pick":
+      // a pick on earlier answers reveals them as a board, like the question they came from
+      if (r.entries) {
+        return r.entries.some((e) => e.image) ? <DrawnReveal game={game} me={me} room={room} /> : <EntriesReveal game={game} room={room} />;
+      }
+      return <ChoiceReveal game={game} mine={mine} />;
     case "pick-many":
       return <ChoiceReveal game={game} mine={mine} />;
+    case "person":
+      return <PersonReveal game={game} mine={mine} me={me} />;
     case "rank":
       return <TierReveal game={game} mine={mine} />;
     case "type-in":
@@ -38,11 +46,11 @@ export const Reveal: React.FC<{ game: GameState; mine?: MyAnswer; me?: string; s
     case "match":
       return <MatchReveal game={game} mine={mine} />;
     case "draw":
-      return <DrawnReveal game={game} me={me} />;
+      return <DrawnReveal game={game} me={me} room={room} />;
     case "chain":
       return <ChainsReveal game={game} serverNow={serverNow ?? Date.now} controls={controls} />;
     default:
-      return <EntriesReveal game={game} />;
+      return <EntriesReveal game={game} room={room} />;
   }
 };
 
@@ -110,35 +118,83 @@ const TierReveal: React.FC<{ game: GameState; mine?: MyAnswer }> = ({ game, mine
   );
 };
 
-const EntriesReveal: React.FC<{ game: GameState }> = ({ game }) => {
-  const r = game.reveal!;
-  const entries = r.entries ?? [];
-  if (entries.length === 0) return <p className="jqzz-play-note">nobody wrote anything.</p>;
-  const top = Math.max(0, ...entries.map((e) => e.votes ?? 0));
-  const { score } = modeOf(game.question);
-  const scored = r.settled && score !== "none";
-  const sorted = scored ? [...entries].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0)) : entries;
+const EntriesReveal: React.FC<{ game: GameState; room?: boolean }> = ({ game, room }) => {
+  const { entries, sorted, scored, isWinner, count } = boardOutcome(game);
+  if (entries.length === 0) {
+    return <p className="jqzz-play-note">{modeOf(game.question).ask === "pick" ? "nothing came in to vote on." : "nobody wrote anything."}</p>;
+  }
   return (
-    <div className="jqzz-entry-grid wall">
-      {sorted.map((e, i) => (
-        <div
-          key={e.key}
-          className={`jqzz-entry static${scored && top > 0 && e.votes === top ? " winner" : ""}`}
-          style={{ "--i": i } as React.CSSProperties}
-        >
-          <span className="jqzz-entry-text">{e.text}</span>
-          {(e.authorId || scored) && (
-            <span className="jqzz-entry-meta">
-              {e.authorId && <span>{nameOf(game, e.authorId)}</span>}
-              {scored && (
-                <span className="jqzz-annot">
-                  {e.votes ?? 0} {score === "authors" ? "saw through it" : "votes"}
-                </span>
-              )}
-            </span>
-          )}
-        </div>
+    <>
+      <div className="jqzz-entry-grid wall">
+        {sorted.map((e, i) => (
+          <div key={e.key} className={`jqzz-entry static${isWinner(e) ? " winner" : ""}`} style={{ "--i": i } as React.CSSProperties}>
+            <span className="jqzz-entry-text">{e.text}</span>
+            <Subject about={e.about} />
+            {(e.authorId || scored) && (
+              <span className="jqzz-entry-meta">
+                {e.authorId && <span>{nameOf(game, e.authorId)}</span>}
+                {scored && <span className="jqzz-annot">{count(e)}</span>}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <BoardNotes game={game} room={room} />
+    </>
+  );
+};
+
+/** Who got picked: for "who was it", who it really was and who saw it coming. */
+const PersonReveal: React.FC<{ game: GameState; mine?: MyAnswer; me?: string }> = ({ game, mine, me }) => {
+  const r = game.reveal!;
+  const right = modeOf(game.question).score === "right";
+  const named = Object.entries(r.named ?? {}).sort((a, b) => b[1] - a[1]);
+  const said = mine?.person;
+  const chips = named.length > 0 && (
+    <div className="jqzz-guess-names">
+      {named.map(([id, n]) => (
+        <span key={id} className={`jqzz-chip${right && id === r.author ? " agreed" : ""}`}>
+          {nameOf(game, id)} · {n}
+        </span>
       ))}
+    </div>
+  );
+  const yourPick = said && <p className="jqzz-play-note">you said {nameOf(game, said)}</p>;
+
+  if (!right) {
+    const most = named.length ? named[0][1] : 0;
+    const top = named.filter(([, n]) => n === most).map(([id]) => nameOf(game, id));
+    return (
+      <div className="jqzz-it-was">
+        {top.length > 0 && <p className="jqzz-play-prompt">most picked: {top.join(", ")}</p>}
+        {chips}
+        {yourPick}
+      </div>
+    );
+  }
+  if (!r.settled) return null;
+  if (!r.author) {
+    return (
+      <div className="jqzz-it-was">
+        <p className="jqzz-play-prompt">nobody's answer won, so there's no one to guess.</p>
+      </div>
+    );
+  }
+  const who = game.players.find((p) => p.id === r.author);
+  // everyone who named someone, and how many of them named the one it was
+  const guessed = r.named?.[r.author] ?? 0;
+  const guessers = named.reduce((sum, [, n]) => sum + n, 0);
+  return (
+    <div className="jqzz-it-was">
+      {who && <PlayerFace player={who} viewerId={me} className="jqzz-play-face huge" />}
+      <p className="jqzz-play-prompt">it was {nameOf(game, r.author)}</p>
+      {r.author === me && (
+        <p className="jqzz-play-note">
+          it was you. {guessed} of {guessers} guessed it.
+        </p>
+      )}
+      {chips}
+      {r.author !== me && yourPick}
     </div>
   );
 };

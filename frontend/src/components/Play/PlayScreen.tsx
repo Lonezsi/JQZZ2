@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../hooks/useGame";
 import { go } from "../../hooks/useHashRoute";
 import { useEscape } from "../../hooks/useEscape";
-import { playService, type Submission } from "../../services/playService";
+import { playService, type Submission, type Vote } from "../../services/playService";
 import { describeQuestion, modeOf } from "../../utils/questionTypes";
 import type { GameState } from "../../types/play";
 import { IdentityModal } from "../Modals/IdentityModal";
@@ -18,6 +18,7 @@ import { Confetti } from "../common/Confetti";
 import { errorMessage } from "../../services/api";
 import { Glyph } from "../common/Glyph";
 import { Doodle } from "./Doodle";
+import { WhoAreYou } from "./WhoAreYou";
 
 const STORE = (code: string) => `jqzz.mine.${code}`;
 
@@ -35,6 +36,8 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
   const me = user?.id ?? "";
   const { game, error, setError, act, serverNow } = useGame(code);
   const [identityOpen, setIdentityOpen] = useState(false);
+  // in a roster game, choosing another name off the list (lobby only)
+  const [renaming, setRenaming] = useState(false);
   const identity = usePresence(identityOpen, 240);
 
   // what you sent, per question, kept for this tab so a reload remembers it
@@ -54,13 +57,15 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
   );
 
   // in the game? if not, join it, but only until the game says no (the host
-  // took you out, or it's full): then stop asking and say why
+  // took you out, or it's full): then stop asking and say why. A game with a
+  // roster waits for you to pick your name instead.
   const joining = useRef(false);
   const [refused, setRefused] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const inGame = !!game?.players.some((p) => p.id === me);
   useEffect(() => {
     if (!game || !me || inGame || joining.current || refused || leaving || game.status === "FINISHED") return;
+    if (game.roster) return;
     joining.current = true;
     playService
       .join(code, me)
@@ -98,6 +103,29 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
     );
   }
 
+  if (game && game.roster && game.status !== "FINISHED" && !leaving && (!inGame || (renaming && game.status === "LOBBY"))) {
+    return (
+      <PlayFrame>
+        <header className="jqzz-play-bar compact">
+          <BackButton title="step out: pick your name when you come back" />
+          <span className="jqzz-play-title">{game.quizName}</span>
+        </header>
+        <main className="jqzz-phone">
+          <WhoAreYou
+            game={game}
+            me={me}
+            onJoined={(state) => {
+              setRenaming(false);
+              act(async () => state);
+            }}
+            onRefused={setRefused}
+            onCancel={inGame ? () => setRenaming(false) : undefined}
+          />
+        </main>
+      </PlayFrame>
+    );
+  }
+
   if (!game) {
     return (
       <PlayFrame>
@@ -127,8 +155,7 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
     });
     return ok ? id : null;
   };
-  const vote = (v: { choice?: string; match?: number; guesses?: Record<string, string> }) =>
-    act(() => playService.vote(code, me, v));
+  const vote = (v: Vote) => act(() => playService.vote(code, me, v));
 
   // done with this step: nothing left to answer or vote on
   const running = game.status === "PLAYING" || game.status === "PAUSED";
@@ -168,9 +195,20 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
               <>
                 <PlayerFace player={player} viewerId={me} className="jqzz-play-face huge" />
                 <p className="jqzz-play-prompt">you're in, {player.name}</p>
-                <button className="jqzz-play-btn ghost" onClick={() => setIdentityOpen(true)}>
-                  change name or picture
-                </button>
+                {game.roster ? (
+                  <div className="jqzz-play-row">
+                    <button className="jqzz-play-btn ghost" onClick={() => setRenaming(true)}>
+                      not {player.name}? change it
+                    </button>
+                    <button className="jqzz-play-btn ghost" onClick={() => setIdentityOpen(true)}>
+                      change picture
+                    </button>
+                  </div>
+                ) : (
+                  <button className="jqzz-play-btn ghost" onClick={() => setIdentityOpen(true)}>
+                    change name or picture
+                  </button>
+                )}
                 <p className="jqzz-play-note">waiting for the host to start · {game.players.length} here</p>
                 <div className="jqzz-progress-faces">
                   {game.players.map((p) => (
@@ -228,7 +266,8 @@ export const PlayScreen: React.FC<{ code: string }> = ({ code }) => {
           current={user}
           onSave={() => {
             setIdentityOpen(false);
-            // joining again refreshes your name and picture in the game
+            // joining again refreshes your name and picture in the game (with a
+            // roster, only the picture: the server keeps the name you picked)
             act(() => playService.join(code, me));
           }}
           onClose={() => setIdentityOpen(false)}
@@ -244,7 +283,7 @@ const PhoneStep: React.FC<{
   mine: MyAnswer;
   serverNow: () => number;
   submit: (a: Submission) => Promise<boolean>;
-  vote: (v: { choice?: string; match?: number; guesses?: Record<string, string> }) => Promise<boolean>;
+  vote: (v: Vote) => Promise<boolean>;
   draw: (picture: Blob) => Promise<string | null>;
   remember: (patch: MyAnswer) => void;
   /** sent, so the clock is all that's left to watch: it gets big */
@@ -310,7 +349,7 @@ const PhoneStep: React.FC<{
           <Judging {...answers} />
         ) : (
           <>
-            {ask !== "chain" && <Outcome game={game} mine={mine} gain={gain} />}
+            {ask !== "chain" && <Outcome game={game} me={me} mine={mine} gain={gain} />}
             <p className="jqzz-play-prompt small">{q.text}</p>
             <Reveal game={game} mine={mine} me={me} serverNow={serverNow} controls />
           </>
@@ -323,7 +362,7 @@ const PhoneStep: React.FC<{
     return (
       <>
         {top}
-        <Outcome game={game} mine={mine} gain={gain} />
+        <Outcome game={game} me={me} mine={mine} gain={gain} />
         <div className="jqzz-stage-elab">
           {q.elaborationText ? <p>{q.elaborationText}</p> : <p className="jqzz-play-note">no explanation for this one.</p>}
           <QuestionImage src={q.elaborationImageUrl} ownerId={game.authorId} viewerId={me} />
@@ -336,7 +375,9 @@ const PhoneStep: React.FC<{
   return (
     <>
       {top}
-      {(ask === "rank" || ask === "draw") && game.reveal && <Reveal game={game} mine={mine} me={me} serverNow={serverNow} />}
+      {(ask === "rank" || ask === "draw" || ask === "person" || (ask === "pick" && !!game.reveal?.entries)) && game.reveal && (
+        <Reveal game={game} mine={mine} me={me} serverNow={serverNow} />
+      )}
       {player && (
         <div className="jqzz-phone-rank">
           <span className="jqzz-play-qnum OEF jqzz-chroma">#{player.rank}</span>
@@ -350,21 +391,32 @@ const PhoneStep: React.FC<{
   );
 };
 
-/** How your answer did, in one line. */
-const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }> = ({ game, mine, gain }) => {
+/** How your answer did, in one line; and points paid now for an answer earlier. */
+const Outcome: React.FC<{ game: GameState; me: string; mine: MyAnswer; gain: number | null }> = ({ game, me, mine, gain }) => {
   const info = describeQuestion(game.question);
   const { ask, score } = info.mode;
+  const r = game.reveal;
   const sent =
     mine.picks?.length ||
     mine.text ||
     mine.drawing ||
     (mine.tiers && Object.keys(mine.tiers).length) ||
-    (mine.pairs && Object.keys(mine.pairs).length);
+    (mine.pairs && Object.keys(mine.pairs).length) ||
+    mine.choices?.length ||
+    mine.person ||
+    mine.votes?.length ||
+    mine.vote;
   // scored straight from the answers: right or not is known as soon as it's revealed
   const known = score === "right" || (score === "crowd" && ask !== "rank");
+  const later = r?.released?.[me] ?? 0;
+  const laterLine = later > 0 && <div className="jqzz-later-points">+{later} for your answer earlier</div>;
+  // the one whose answer it was had nothing to guess: what they're owed is the line that matters
+  if (ask === "person" && r?.settled && r.author === me) return laterLine || null;
   let text: string;
   let tone = "neutral";
-  if (gain && gain > 0) {
+  if (r?.held) {
+    text = "points come later";
+  } else if (gain && gain > 0) {
     text = `+${gain}`;
     tone = "good";
   } else if (!sent) {
@@ -377,7 +429,12 @@ const Outcome: React.FC<{ game: GameState; mine: MyAnswer; gain: number | null }
   } else {
     text = "no points this time";
   }
-  return <div className={`jqzz-outcome ${tone}`}>{text}</div>;
+  return (
+    <>
+      <div className={`jqzz-outcome ${tone}`}>{text}</div>
+      {laterLine}
+    </>
+  );
 };
 
 /** Leaving for good takes your score with it, so it asks once. */

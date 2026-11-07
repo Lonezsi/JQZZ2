@@ -4,11 +4,13 @@ import { useGame } from "../../hooks/useGame";
 import { go, joinUrl } from "../../hooks/useHashRoute";
 import { useEscape } from "../../hooks/useEscape";
 import { playService } from "../../services/playService";
-import type { GameState } from "../../types/play";
+import type { GamePlayer, GameState } from "../../types/play";
 import { ConfirmButton, Countdown, Leaderboard, PlayerFace, PlayFrame, Podium, QuestionHead, QuestionImage, AnswerPicture } from "./PlayCommon";
 import { Doodle } from "./Doodle";
 import { nameOf, tileColour, tileLetter } from "../../utils/play";
 import { Reveal } from "./Reveal";
+import { EntryFace, Subject } from "./Drawn";
+import { nameKey } from "../../utils/roster";
 import { modeOf } from "../../utils/questionTypes";
 import { SaveFromGame } from "../Stash/SaveFromGame";
 import { BackButton } from "../common/BackButton";
@@ -171,33 +173,90 @@ const HostLobby: React.FC<{
       </button>
       <InvitePeople game={game} me={me} />
 
-      <div className="jqzz-lobby-people">
-        {game.players.length === 0 && <p className="jqzz-play-note">waiting for people to join...</p>}
-        {game.players.map((p, i) => (
-          <button
-            key={p.id}
-            className={`jqzz-lobby-player${p.online ? "" : " away"}`}
-            style={{ "--i": i } as React.CSSProperties}
-            title="remove from the game"
-            onClick={() =>
-              confirm(`remove ${p.name} from the game?`) &&
-              act(() => playService.kick(game.code, me, p.id))
-            }
-          >
-            <PlayerFace player={p} viewerId={me} />
-            <span>{p.name}</span>
-          </button>
-        ))}
-      </div>
+      {game.roster ? (
+        <Expected game={game} me={me} act={act} />
+      ) : (
+        <div className="jqzz-lobby-people">
+          {game.players.length === 0 && <p className="jqzz-play-note">waiting for people to join...</p>}
+          {game.players.map((p, i) => (
+            <LobbyPlayer key={p.id} game={game} me={me} p={p} i={i} act={act} />
+          ))}
+        </div>
+      )}
 
       <button
         className="jqzz-play-btn primary big"
         disabled={game.players.length === 0}
         onClick={() => run(playService.start)}
       >
-        start · {game.players.length} {game.players.length === 1 ? "player" : "players"}
+        {game.roster
+          ? `start · ${game.players.length} of ${game.roster.names.length} here`
+          : `start · ${game.players.length} ${game.players.length === 1 ? "player" : "players"}`}
       </button>
     </div>
+  );
+};
+
+/** someone in the lobby; clicking takes them out, after asking */
+const LobbyPlayer: React.FC<{
+  game: GameState;
+  me: string;
+  p: GamePlayer;
+  i: number;
+  act: (fn: () => Promise<GameState>) => Promise<boolean>;
+  /** a roster game: taking them out frees their name */
+  listed?: boolean;
+}> = ({ game, me, p, i, act, listed }) => (
+  <button
+    className={`jqzz-lobby-player${p.online ? "" : " away"}`}
+    style={{ "--i": i } as React.CSSProperties}
+    title="remove from the game"
+    onClick={() =>
+      confirm(listed ? `remove ${p.name} from the game? ${p.name} goes back on the list.` : `remove ${p.name} from the game?`) &&
+      act(() => playService.kick(game.code, me, p.id))
+    }
+  >
+    <PlayerFace player={p} viewerId={me} />
+    <span>{p.name}</span>
+  </button>
+);
+
+/** a roster game's lobby: every name on the list, with whoever picked it, or waiting for them */
+const Expected: React.FC<{
+  game: GameState;
+  me: string;
+  act: (fn: () => Promise<GameState>) => Promise<boolean>;
+}> = ({ game, me, act }) => {
+  const roster = game.roster!;
+  const holders = (name: string) => game.players.filter((p) => nameKey(p.name) === nameKey(name));
+  const here = roster.names.filter((n) => holders(n.name).length > 0).length;
+  const listed = new Set(roster.names.map((n) => nameKey(n.name)));
+  // anyone whose name isn't on the list still shows, so the host can see them
+  const strays = game.players.filter((p) => !listed.has(nameKey(p.name)));
+  const chips: { key: string; p: GamePlayer | null; name: string }[] = [
+    ...roster.names.flatMap((n): { key: string; p: GamePlayer | null; name: string }[] => {
+      const who = holders(n.name);
+      return who.length ? who.map((p) => ({ key: p.id, p, name: n.name })) : [{ key: `name:${n.name}`, p: null, name: n.name }];
+    }),
+    ...strays.map((p) => ({ key: p.id, p, name: p.name })),
+  ];
+  return (
+    <>
+      <span className="jqzz-annot jqzz-expected">
+        expected · {here} of {roster.names.length} here
+      </span>
+      <div className="jqzz-lobby-people">
+        {chips.map((c, i) =>
+          c.p ? (
+            <LobbyPlayer key={c.key} game={game} me={me} p={c.p} i={i} act={act} listed={listed.has(nameKey(c.p.name))} />
+          ) : (
+            <span key={c.key} className="jqzz-guest" title="not here yet" style={{ "--i": i } as React.CSSProperties}>
+              {c.name}
+            </span>
+          ),
+        )}
+      </div>
+    </>
   );
 };
 
@@ -205,6 +264,14 @@ const HostLobby: React.FC<{
 function onTheirPhones(game: GameState): string {
   const q = game.question!;
   const { ask, score } = modeOf(q);
+  // earlier answers: voted on, or dealt out one each
+  if (ask === "pick" && game.board) {
+    if (game.board.mode === "ballots") return "everyone's choosing from their own set";
+    return (q.picks ?? 1) > 1 ? `pick up to ${q.picks} on your phone. you can't pick your own.` : "vote on your phone. you can't pick your own.";
+  }
+  if (ask === "person") return "everyone's picking someone on their phone";
+  if (q.dealt && ask === "draw") return "everyone got someone else's answer to draw";
+  if (q.dealt && ask === "write") return "everyone got someone else's answer to write about";
   if (score === "secret") {
     return ask === "draw"
       ? "everyone's drawing a secret word. no letters allowed."
@@ -265,7 +332,9 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
   if (phase === "RESULT") {
     // choices were already shown in their own reveal; tier lists and written answers
     // are worth seeing again next to the scores (a tier list round may have no reveal)
-    const worthShowing = q && modeOf(q).ask !== "pick" && modeOf(q).ask !== "pick-many";
+    // and so are a vote on earlier answers, and who got picked
+    const ask = q && modeOf(q).ask;
+    const worthShowing = q && ((ask !== "pick" && ask !== "pick-many") || (ask === "pick" && !!game.reveal?.entries));
     return (
       <div className="jqzz-stage-result">
         <div className="jqzz-stage-top">
@@ -283,6 +352,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
   const answered = game.answered ?? [];
   const acted = game.acted ?? [];
   const bracket = game.reveal?.bracket;
+  const board = mode.ask === "pick" ? game.board : undefined;
 
   return (
     <div className={`jqzz-stage-q phase-${phase}`}>
@@ -295,7 +365,9 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
       {phase === "QUESTION" && (
         <>
           <QuestionImage src={q.imageUrl} ownerId={game.authorId} viewerId={me} className="jqzz-stage-img" />
-          {(mode.ask === "pick" || mode.ask === "pick-many") && (
+          {board && <HostBoard game={game} serverNow={serverNow} />}
+          {mode.ask === "person" && q.entry?.image && <EntryFace game={game} e={{ key: "entry", image: q.entry.image }} className="champion" />}
+          {!board && (mode.ask === "pick" || mode.ask === "pick-many") && (
             <div className="jqzz-tiles">
               {q.answers.map((a, i) => (
                 <div key={a.id} className="jqzz-tile" style={{ "--tile": tileColour(i) } as React.CSSProperties}>
@@ -352,7 +424,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
             </div>
           )}
           <Progress
-            label={game.telephone ? "passed on" : "answered"}
+            label={game.telephone ? "passed on" : board ? "voted" : "answered"}
             done={answered}
             game={game}
             total={game.telephone ? game.telephone.players.length : everyone}
@@ -375,7 +447,7 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
               />
             </div>
           )}
-          <Reveal game={game} me={me} serverNow={serverNow} />
+          <Reveal game={game} me={me} serverNow={serverNow} room />
           {game.interaction && (
             <Progress
               label={game.interaction === "guess" ? "guessing" : "voted"}
@@ -395,6 +467,62 @@ const HostStep: React.FC<{ game: GameState; me: string; serverNow: () => number 
         </div>
       )}
     </div>
+  );
+};
+
+/**
+ * A vote on earlier answers, on the big screen: the answers themselves when
+ * everyone sees all but their own, or only how they were split up when each
+ * phone has its own set (the sets are nobody else's business).
+ */
+const HostBoard: React.FC<{ game: GameState; serverNow: () => number }> = ({ game, serverNow }) => {
+  const board = game.board!;
+  if (board.mode === "shared") {
+    const entries = board.entries ?? [];
+    if (entries.some((e) => e.image)) {
+      return (
+        <div className="jqzz-gallery">
+          {entries.map((e, i) => (
+            <figure key={e.key} className="jqzz-frame" style={{ "--i": i } as React.CSSProperties}>
+              <EntryFace game={game} e={e} />
+              {e.about && (
+                <figcaption>
+                  <Subject about={e.about} />
+                </figcaption>
+              )}
+            </figure>
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="jqzz-entry-grid wall">
+        {entries.map((e, i) => (
+          <div key={e.key} className="jqzz-entry static" style={{ "--i": i } as React.CSSProperties}>
+            <span className="jqzz-entry-text">{e.text}</span>
+            <Subject about={e.about} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  const rounds = board.rounds ?? 1;
+  return (
+    <>
+      <span className="jqzz-annot">
+        {board.count} answers · up to {board.cap} on each phone · nobody gets their own
+      </span>
+      {rounds > 1 && (
+        <div className="jqzz-stage-round">
+          <span className="jqzz-annot">
+            round {board.round} of {rounds}
+          </span>
+          {board.roundEndsAt && (
+            <Countdown game={game} serverNow={serverNow} size={44} endsAt={board.roundEndsAt} seconds={board.roundSeconds} />
+          )}
+        </div>
+      )}
+    </>
   );
 };
 

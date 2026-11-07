@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import type { GameEntry, GameState } from "../../types/play";
 import { TIERS } from "../../types/play";
-import type { Submission } from "../../services/playService";
+import { artUrl, type Submission, type Vote } from "../../services/playService";
 import { AnswerPicture, QuestionImage } from "./PlayCommon";
-import { nameOf, tileColour, tileLetter } from "../../utils/play";
+import { nameOf, pickCount, tileColour, tileLetter } from "../../utils/play";
 import { modeOf } from "../../utils/questionTypes";
 import { Estimate, Order, Pairs, Typed } from "./Recall";
 import { DrawAnswer, EntryFace, GuessWords, SecretWord, TelephoneTurn } from "./Drawn";
+import { useTask } from "./useTask";
+import { Ballot } from "./Ballot";
+import { PersonPick } from "./PersonPick";
 
 /** What this player sent for a question, remembered on their own device. */
 export interface MyAnswer {
@@ -17,8 +20,15 @@ export interface MyAnswer {
   /** the art id of what you drew */
   drawing?: string;
   vote?: string;
+  /** voting for up to picks during the reveal */
+  votes?: string[];
   guesses?: Record<string, string>;
   battles?: Record<number, string>;
+  /** a pick on earlier answers: what you chose, and in which round of ballots */
+  choices?: string[];
+  ballotRound?: number;
+  /** a person question: who you named */
+  person?: string;
 }
 
 interface Props {
@@ -27,7 +37,7 @@ interface Props {
   mine: MyAnswer;
   /** send an answer; resolves true when the server took it */
   submit: (answer: Submission) => Promise<boolean>;
-  vote: (v: { choice?: string; match?: number; guesses?: Record<string, string> }) => Promise<boolean>;
+  vote: (v: Vote) => Promise<boolean>;
   /** send a drawing; resolves to its art id, or null when it wasn't taken */
   draw: (picture: Blob) => Promise<string | null>;
   remember: (patch: MyAnswer) => void;
@@ -38,10 +48,14 @@ interface Props {
 export const Answering: React.FC<Props> = (props) => {
   const { game } = props;
   const q = game.question;
+  // dealt someone's answer: the prompt this phone shows is its own
+  const task = useTask(game, props.me, !!q?.dealt);
   if (!q) return null;
   const { ask, score } = modeOf(q);
   let body: React.ReactNode;
-  if (ask === "pick" || ask === "pick-many") body = <Choice {...props} />;
+  if (game.board) body = <Ballot {...props} />;
+  else if (ask === "person") body = <PersonPick {...props} />;
+  else if (ask === "pick" || ask === "pick-many") body = <Choice {...props} />;
   else if (ask === "rank") body = <Tiers {...props} />;
   else if (ask === "type-in") body = <Typed {...props} />;
   else if (ask === "order") body = <Order {...props} />;
@@ -54,7 +68,8 @@ export const Answering: React.FC<Props> = (props) => {
   const drawing = ask === "draw" || ask === "chain";
   return (
     <div className={`jqzz-answering${drawing ? " drawing" : ""}`}>
-      <p className={`jqzz-play-prompt jqzz-holo sheen${drawing ? " small" : ""}`}>{q.text}</p>
+      <p className={`jqzz-play-prompt jqzz-holo sheen${drawing ? " small" : ""}`}>{(q.dealt && task?.prompt) || q.text}</p>
+      {q.dealt && task?.about && task.prompt === q.text && <Dealt game={game} about={task.about} />}
       {score === "crowd" && <p className="jqzz-play-note">{ask === "number" ? "points for being closest to the room's average" : "points if you side with the most"}</p>}
       {score === "none" && (ask === "pick" || ask === "pick-many" || ask === "rank") && <p className="jqzz-play-note">no points on this one</p>}
       <QuestionImage src={q.imageUrl} ownerId={game.authorId} viewerId={props.me} />
@@ -62,6 +77,18 @@ export const Answering: React.FC<Props> = (props) => {
     </div>
   );
 };
+
+/** the answer you were dealt, when the prompt doesn't already say it */
+const Dealt: React.FC<{ game: GameState; about: NonNullable<GameEntry["about"]> }> = ({ game, about }) => (
+  <div className="jqzz-dealt" role="note">
+    <span className="jqzz-annot">only you see this</span>
+    {about.image ? (
+      <img className="jqzz-art handed" src={artUrl(game.code, about.image)} alt="the drawing you got" />
+    ) : (
+      <p className="jqzz-handed-text">{about.name ? `${about.name}: “${about.text ?? ""}”` : `“${about.text ?? ""}”`}</p>
+    )}
+  </div>
+);
 
 const Choice: React.FC<Props> = ({ game, mine, submit, remember }) => {
   const q = game.question!;
@@ -206,6 +233,10 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
   const { ask, score } = modeOf(game.question);
   const drawn = ask === "draw";
 
+  if (game.interaction === "vote" && (game.question?.picks ?? 1) > 1) {
+    return <VoteMany game={game} entries={entries.filter((e) => !isMine(e))} mine={mine} vote={vote} remember={remember} />;
+  }
+
   if (game.interaction === "vote") {
     const others = entries.filter((e) => !isMine(e));
     return (
@@ -273,6 +304,50 @@ export const Judging: React.FC<Props> = ({ game, me, mine, vote, remember }) => 
     );
   }
   return null;
+};
+
+/** voting for up to picks during the reveal: each tap goes straight in */
+const VoteMany: React.FC<{
+  game: GameState;
+  entries: GameEntry[];
+  mine: MyAnswer;
+  vote: Props["vote"];
+  remember: Props["remember"];
+}> = ({ game, entries, mine, vote, remember }) => {
+  const most = game.question?.picks ?? 1;
+  const [picked, setPicked] = useState<string[]>(mine.votes ?? (mine.vote ? [mine.vote] : []));
+  const drawn = entries.some((e) => e.image);
+  const tap = async (key: string) => {
+    const before = picked;
+    const next = picked.includes(key) ? picked.filter((k) => k !== key) : [...picked, key];
+    // over the limit, or taking back the last one: the server keeps a vote until it's replaced
+    if (next.length > most || next.length === 0) return;
+    setPicked(next);
+    if (await vote({ choices: next })) remember({ votes: next });
+    else setPicked(before);
+  };
+  return (
+    <div className="jqzz-judging">
+      <p className="jqzz-play-prompt small">vote for up to {most}</p>
+      <div className={drawn ? "jqzz-gallery pick" : "jqzz-entry-grid"}>
+        {entries.map((e) => (
+          <button
+            key={e.key}
+            className={`${drawn ? "jqzz-frame" : "jqzz-entry"}${picked.includes(e.key) ? " picked" : ""}`}
+            onClick={() => tap(e.key)}
+            aria-pressed={picked.includes(e.key)}
+          >
+            <EntryFace game={game} e={e} />
+          </button>
+        ))}
+      </div>
+      {entries.length === 0 ? (
+        <p className="jqzz-play-note">nothing to vote on but your own.</p>
+      ) : (
+        <p className="jqzz-play-note jqzz-pick-count">{pickCount(picked.length, Math.min(most, entries.length))}</p>
+      )}
+    </div>
+  );
 };
 
 const Guessing: React.FC<{
