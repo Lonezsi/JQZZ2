@@ -11,6 +11,7 @@ import { StarFlare } from "./StarFlare";
 interface WelcomeProps {
   onCreate?: () => void;
   onImport?: () => void;
+  onMakeWithAI?: () => void;
 }
 
 const FEATURES: { tag: string; title: string; body: string }[] = [
@@ -64,7 +65,7 @@ function useLiveGames() {
  * where the lines cross). Everything in the margins is real: your quizzes,
  * who's online, what's being played. Game modes and the notes come after it.
  */
-export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
+export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport, onMakeWithAI }) => {
   const { quizzes } = useQuiz();
   const { user } = useAuth();
   const { connected } = useWebSocket();
@@ -163,6 +164,11 @@ export const Welcome: React.FC<WelcomeProps> = ({ onCreate, onImport }) => {
           {onImport && (
             <button className="jqzz-toolbar-btn" onClick={onImport}>
               Import .txt
+            </button>
+          )}
+          {onMakeWithAI && (
+            <button className="jqzz-toolbar-btn" onClick={onMakeWithAI}>
+              Make one with AI
             </button>
           )}
           <a className="jqzz-toolbar-btn" href="#/join">

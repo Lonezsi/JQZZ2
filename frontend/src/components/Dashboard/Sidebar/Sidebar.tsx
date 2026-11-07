@@ -26,6 +26,8 @@ interface SidebarProps {
   onSelectQuiz: (id: number) => void;
   onNewQuiz: () => void;
   onImport: () => void;
+  /** opens the dialog for making a quiz with a chat AI */
+  onMakeWithAI: () => void;
   onHomeClick: () => void;
   /** phone only: put the drawer away */
   onClose?: () => void;
@@ -40,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectQuiz,
   onNewQuiz,
   onImport,
+  onMakeWithAI,
   onHomeClick,
   onClose,
 }) => {
@@ -140,6 +143,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
           Import .txt
           <Keys combo={keyOf("Import a .txt")} />
+        </button>
+        <button
+          className="jqzz-sid-action"
+          onClick={onMakeWithAI}
+          aria-keyshortcuts={ariaShortcut(keyOf("Make a quiz with AI"))}
+        >
+          <span className="jqzz-sid-action-icon" aria-hidden="true">
+            ✦
+          </span>
+          Make one with AI
+          <Keys combo={keyOf("Make a quiz with AI")} />
         </button>
         <a className="jqzz-sid-action" href="#/join" aria-keyshortcuts={ariaShortcut(keyOf("Join a game"))}>
           <span className="jqzz-sid-action-icon" aria-hidden="true">

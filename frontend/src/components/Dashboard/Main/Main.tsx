@@ -22,6 +22,8 @@ interface MainProps {
   onMenu: () => void;
   onNewQuiz: () => void;
   onImport: () => void;
+  /** opens the dialog for making a quiz with a chat AI (the front page has a button for it) */
+  onMakeWithAI: () => void;
   selectedActionIds: Set<number>;
   toggleSelectAction: (id: number, ctrlKey?: boolean, shiftKey?: boolean) => void;
   dragActionId: number | null;
@@ -53,6 +55,7 @@ export const Main: React.FC<MainProps> = ({
   onMenu,
   onNewQuiz,
   onImport,
+  onMakeWithAI,
   selectedActionIds,
   toggleSelectAction,
   dragActionId,
@@ -197,6 +200,7 @@ export const Main: React.FC<MainProps> = ({
               onDropZoneDrop={onDropZoneDrop}
               onNewQuiz={onNewQuiz}
               onImport={onImport}
+              onMakeWithAI={onMakeWithAI}
             />
           ) : (
             <TextMode

@@ -6,6 +6,9 @@ import { errorMessage } from "../services/api";
 import { snippetActions } from "../utils/snippetActions";
 import { DEFAULTS, formatSettings, settingsAt } from "../utils/settings";
 import type { QuizSettings } from "../utils/settings";
+import { freshRefs } from "../utils/scriptRefs";
+import { rosterAction } from "../utils/roster";
+import type { Roster } from "../utils/roster";
 
 const same = (a: QuizSettings, b: QuizSettings) =>
   (Object.keys(DEFAULTS) as (keyof QuizSettings)[]).every((k) => a[k] === b[k]);
@@ -165,11 +168,24 @@ export const useQuizMutations = (
         prev.map((quiz) => {
           if (quiz.id !== activeQuizId) return quiz;
           const i = at == null ? quiz.actions.length : Math.max(0, Math.min(at, quiz.actions.length));
-          return { ...quiz, actions: [...quiz.actions.slice(0, i), ...selfContained(added, quiz.actions, i), ...quiz.actions.slice(i)] };
+          // a dropped-in block links to itself, never to a look-alike label already in the quiz
+          const fresh = freshRefs(added, quiz.actions);
+          return { ...quiz, actions: [...quiz.actions.slice(0, i), ...selfContained(fresh, quiz.actions, i), ...quiz.actions.slice(i)] };
         }),
       );
     },
     [activeQuizId, setQuizzes],
+  );
+
+  /** who's coming: the quiz's one ROSTER step, kept first; null takes it out */
+  const setRoster = useCallback(
+    (r: Roster | null) => {
+      updateQuiz((quiz) => {
+        const rest = quiz.actions.filter((a) => a.phase !== "ROSTER");
+        return { ...quiz, actions: r ? [rosterAction(r), ...rest] : rest };
+      });
+    },
+    [updateQuiz],
   );
 
   const handleParsed = useCallback(
@@ -200,6 +216,7 @@ export const useQuizMutations = (
     deleteActions,
     newQuiz,
     dropSnippet,
+    setRoster,
     handleParsed,
   };
 };

@@ -39,6 +39,7 @@ interface VisualModeProps {
   onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
   onNewQuiz: () => void;
   onImport: () => void;
+  onMakeWithAI?: () => void;
 }
 
 export const VisualMode: React.FC<VisualModeProps> = ({
@@ -60,6 +61,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onDropZoneDrop,
   onNewQuiz,
   onImport,
+  onMakeWithAI,
 }) => {
   const { dropSnippet, setMode, reorderActions, moveActions, deleteActions } = useQuiz();
 
@@ -149,7 +151,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   };
 
   if (!quiz) {
-    return <Welcome onCreate={onNewQuiz} onImport={onImport} />;
+    return <Welcome onCreate={onNewQuiz} onImport={onImport} onMakeWithAI={onMakeWithAI} />;
   }
 
   if (renderItems.length === 0) {
