@@ -7,7 +7,8 @@ import { describe, parseSettings } from "../../../../utils/settings";
 import { formatTimecode } from "../../../../utils/timecode";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeIcon, typeLabel } from "../../../../utils/questionInfo";
-import { modeOf, optionNumber, parseOptions } from "../../../../utils/questionTypes";
+import { borrows, modeOf, optionNumber, parseOptions } from "../../../../utils/questionTypes";
+import { questionNumbers, showRefs, sourceOf } from "../../../../utils/scriptRefs";
 import { DRAG_IMAGE_KEY, dragging } from "../../../../utils/dragKeys";
 import { imageSlots, placeImage } from "../../../../utils/imageSlots";
 import type { ImageSlot } from "../../../../utils/imageSlots";
@@ -111,6 +112,7 @@ const PHONE = "(max-width: 760px)";
 
 /** What players see during this phase, as a one-line preview. */
 function PhasePreview({ action }: { action: Action }) {
+  const { quiz } = useQuiz();
   const q = action.question;
   switch (action.phase) {
     case "WAITING": {
@@ -132,7 +134,13 @@ function PhasePreview({ action }: { action: Action }) {
       const opts = parseOptions(q?.options);
       const { ask, score } = modeOf(q);
       const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+      // the earlier question this one uses, as the script numbers it
+      const source = quiz && q ? sourceOf(quiz.actions, q) : null;
+      const sourceName = source && quiz ? `Q${questionNumbers(quiz.actions).get(source.id)}` : "an earlier question";
       const onScreen = (() => {
+        if (ask === "person") return "players pick someone in the game";
+        if (borrows({ ask, score }, opts)) return `players vote on ${sourceName}'s answers`;
+        if ((ask === "write" || ask === "draw") && opts.from) return `each player gets someone's answer to ${sourceName}`;
         if (score === "secret") {
           return `players ${ask === "draw" ? "draw" : "describe"} one of ${plural(options, "secret word", "secret words")}`;
         }
@@ -238,7 +246,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     return () => cancelAnimationFrame(raf);
   }, [isSelected]);
 
-  const { updateQuestion } = useQuiz();
+  const { quiz, updateQuestion } = useQuiz();
   const [imageOver, setImageOver] = useState(false);
   const slots = imageSlots(action);
   // however the drag ends, the slots fold away
@@ -457,6 +465,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   const pct = maxTime > 0 ? Math.max(4, Math.round(((action.time || 0) / maxTime) * 100)) : 0;
   const q = action.question;
+  // a stored {@q2.winner} reads as the script writes it, {Q2.winner}
+  const prompt = q?.text ? showRefs(q.text, quiz?.actions ?? [], q) : "";
 
   return (
     <div className={rowClass} data-flip={flip} ref={rowRef}>
@@ -471,7 +481,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       <div
         className={`jqzz-card phase-${action.phase}${isSelected ? " selected" : ""}${action.phase === "QUESTION" ? " tall" : ""}${imageOver ? " image-over" : ""}`}
         style={{ ...phaseColor, "--dur": `${pct}%` } as React.CSSProperties}
-        aria-label={`${action.phase.toLowerCase()}, ${action.time} seconds, starts at ${formatTimecode(start)}${q?.text ? `: ${q.text}` : ""}`}
+        aria-label={`${action.phase.toLowerCase()}, ${action.time} seconds, starts at ${formatTimecode(start)}${q?.text ? `: ${prompt}` : ""}`}
         {...cardProps}
       >
         {action.phase === "QUESTION" && <Backdrop src={q?.imageUrl} />}
@@ -482,7 +492,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         <span className="jqzz-card-main">
           <span className="jqzz-card-phase">{action.phase.toLowerCase()}</span>
           {action.phase === "QUESTION" && (
-            <span className="jqzz-card-prompt">{q?.text || "no prompt yet"}</span>
+            <span className="jqzz-card-prompt">{prompt || "no prompt yet"}</span>
           )}
           <PhasePreview action={action} />
         </span>

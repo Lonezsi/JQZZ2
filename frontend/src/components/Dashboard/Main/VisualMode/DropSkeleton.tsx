@@ -4,6 +4,7 @@ import { buildRenderItems } from "../../../../utils/buildRenderItems";
 import { describe, parseSettings } from "../../../../utils/settings";
 import { typeIcon, typeLabel } from "../../../../utils/questionInfo";
 import { Glyph } from "../../../common/Glyph";
+import { plainRefs } from "../../../../utils/scriptRefs";
 
 /**
  * What a dragged snippet will become, drawn where it would land: the same
@@ -53,7 +54,7 @@ export const DropSkeleton: React.FC<{ actions: Action[]; name?: string }> = ({ a
                 {typeLabel(q)}
               </span>
             </div>
-            <span className="jqzz-skel-text">{q.text?.trim() || "new question"}</span>
+            <span className="jqzz-skel-text">{plainRefs(q.text ?? "").trim() || "new question"}</span>
             <span className="jqzz-skel-strip">
               {item.actions.map((a) => (
                 <span key={a.id} style={{ flexGrow: Math.max(a.time, 1), background: `var(--phase-${a.phase})` }} />
