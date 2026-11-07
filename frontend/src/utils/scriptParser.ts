@@ -10,6 +10,7 @@ import {
   askInfo,
   formatOptions,
   modeKey,
+  modeOf,
   presetFromScript,
   scoreFromScript,
   typeIdOf,
@@ -24,7 +25,45 @@ import type { Ask, QuestionField, QuestionOptions, Score } from "./questionTypes
 export interface ParseResult {
   questions: Question[];
   actions: Action[];
+  /** what keeps the script from applying, "Line 7: ..." */
   errors: string[];
+  /** lines it read as meant though they weren't written the usual way, "Line 12: read as ShowQuestion(Q1, time: 30)"; never block */
+  fixed: string[];
+  /** things nobody can score on, or a question that's never shown; they don't block the editor, the AI kit lists them */
+  warnings: string[];
+}
+
+/**
+ * A step line, `ShowQuestion(Q1, time: 30)`: its function, the question it
+ * shows and its time. null when the line isn't a step at all; `error` when it
+ * is one that can't be read. `askOf` tells a question's ask, for the time a
+ * step gets when it doesn't say one (`defaulted`). `canonical`: written just
+ * as the writer writes it. The editor's hints read steps through this too, so
+ * they can't disagree with the parser.
+ */
+export function readShowLine(
+  line: string,
+  askOf?: (ref: string) => Ask | undefined,
+): { fn: string; ref: string; time: number; defaulted: boolean; canonical: boolean } | { error: string } | null {
+  const m = line.trim().match(/^(Show\w+)\(\s*(Q\d+)\s*,\s*time:\s*(\d+)\s*\)$/);
+  if (!m) return null;
+  const [, fn, ref, t] = m;
+  if (!FN_PHASE_MAP[fn]) return { error: `unknown function ${fn}` };
+  // every step read today says its time; askOf is for the ones that don't
+  void askOf;
+  return { fn, ref, time: Number(t), defaulted: false, canonical: line.trim() === `${fn}(${ref}, time: ${t})` };
+}
+
+/**
+ * A question's header, `NewQuestion Q1 (`: its name, whether its block opens
+ * on this line (`opens`), and what follows the "(" there (`rest`, the first
+ * line of its body). null when the line isn't a header; `error` when it is
+ * one that can't be read. `canonical`: written just as the writer writes it.
+ */
+export function readHeader(line: string): { ref: string; opens: boolean; rest: string; canonical: boolean } | { error: string } | null {
+  const m = line.trim().match(/^NewQuestion\s+(Q\d+)\s*\($/);
+  if (!m) return null;
+  return { ref: m[1], opens: true, rest: "", canonical: line.trim() === `NewQuestion ${m[1]} (` };
 }
 
 /** fields a question block can have besides its extras (questionTypes: QuestionField) */
@@ -167,6 +206,8 @@ export function parseScript(text: string, prevQuestions: Question[]): ParseResul
   const questions: Question[] = [];
   const actions: Action[] = [];
   const errors: string[] = [];
+  const fixed: string[] = [];
+  const warnings: string[] = [];
   const qRefMap = new Map<string, Question>();
   // open `settings {` groups: what each one changed, so `}` can put it back
   const groups: Partial<QuizSettings>[] = [];
@@ -207,9 +248,10 @@ export function parseScript(text: string, prevQuestions: Question[]): ParseResul
       continue;
     }
 
-    const newQMatch = line.match(/^NewQuestion\s+(Q\d+)\s*\($/);
-    if (newQMatch) {
-      const qRef = newQMatch[1];
+    const header = readHeader(line);
+    if (header && "error" in header) errors.push(`Line ${lineNo}: ${header.error}`);
+    else if (header) {
+      const qRef = header.ref;
       if (qRefMap.has(qRef)) errors.push(`Line ${lineNo}: ${qRef} is defined twice`);
       const prev = prevQuestions[parseInt(qRef.slice(1), 10) - 1];
 
@@ -318,29 +360,30 @@ export function parseScript(text: string, prevQuestions: Question[]): ParseResul
       continue;
     }
 
-    const showMatch = line.match(/^(Show\w+)\(\s*(Q\d+)\s*,\s*time:\s*(\d+)\s*\)$/);
-    if (showMatch) {
-      const [, fn, qRef, t] = showMatch;
-      const phase = FN_PHASE_MAP[fn];
+    const show = readShowLine(line, (ref) => {
+      const q = qRefMap.get(ref);
+      return q ? modeOf(q).ask : undefined;
+    });
+    if (show && "error" in show) errors.push(`Line ${lineNo}: ${show.error}`);
+    else if (show) {
+      const { fn, ref: qRef, time } = show;
       const q = qRefMap.get(qRef);
-      if (phase && q) {
+      if (q) {
         actions.push({
           id: generateId(),
-          phase,
-          time: Number(t),
+          phase: FN_PHASE_MAP[fn],
+          time,
           question: q,
           preview: `${fn.replace("Show", "")}: "${q.text.slice(0, 30)}"`,
         });
         continue;
       }
-      errors.push(
-        phase ? `Line ${lineNo}: ${qRef} is used before it is defined` : `Line ${lineNo}: unknown function ${fn}`,
-      );
+      errors.push(`Line ${lineNo}: ${qRef} is used before it is defined`);
     }
 
     actions.push({ id: generateId(), phase: "TEXT", time: 0, question: null, preview: line });
   }
 
   // a group still open at the end simply lasts to the end
-  return { questions, actions, errors };
+  return { questions, actions, errors, fixed, warnings };
 }

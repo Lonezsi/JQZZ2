@@ -22,6 +22,8 @@ export function maxPoints(q: Question | null | undefined): number | null {
   const best = Math.max(0, ...values);
   const sum = values.filter((v) => v > 0).reduce((s, v) => s + v, 0);
   if (score === "right") {
+    // naming whoever made the winner of an earlier question; it has no answers of its own
+    if (ask === "person") return 100;
     if (!values.length) return null;
     return ask === "pick-many" || ask === "order" || ask === "match" ? sum : best;
   }

@@ -7,7 +7,9 @@ export type Phase =
   | "TEXT"
   | "DIVIDER"
   /** switches quiz settings for what follows; preview holds "shuffle=on, points=2" */
-  | "SETTING";
+  | "SETTING"
+  /** who's coming: preview holds {"names": [...], "unique": true}; never played */
+  | "ROSTER";
 
 export type ImageVisibility = "PUBLIC" | "PRIVATE" | "SEMI_PRIVATE";
 

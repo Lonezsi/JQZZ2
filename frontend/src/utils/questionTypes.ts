@@ -8,7 +8,7 @@
  */
 
 /** what players do */
-export type Ask = "pick" | "pick-many" | "type-in" | "order" | "number" | "match" | "rank" | "write" | "draw" | "chain";
+export type Ask = "pick" | "pick-many" | "type-in" | "order" | "number" | "match" | "rank" | "write" | "draw" | "chain" | "person";
 /** how it scores */
 export type Score = "right" | "crowd" | "votes" | "authors" | "secret" | "knockout" | "none";
 
@@ -19,6 +19,10 @@ export interface Mode {
 
 /** Extra fields a question can carry, besides prompt and answers. */
 export type QuestionField = "unit" | "min" | "max" | "rounds";
+/** fields that link questions or shape a vote; the editor draws these itself */
+export type LinkField = "from" | "picks" | "overflow" | "ref";
+/** every key a question's extras can have */
+export type OptionKey = QuestionField | LinkField;
 
 /** what a question's answers are, for the editor's columns; null: it has none */
 export type AnswerShape = null | {
@@ -54,7 +58,7 @@ export interface ScoreInfo {
 }
 
 export const ASKS: AskInfo[] = [
-  { id: "pick", label: "pick one", icon: "PREWRITTEN_SINGLE", blurb: "pick one of the options", fields: [], scores: ["right", "crowd", "none"] },
+  { id: "pick", label: "pick one", icon: "PREWRITTEN_SINGLE", blurb: "pick one of the options", fields: [], scores: ["right", "crowd", "none", "votes"] },
   { id: "pick-many", label: "pick any", icon: "PREWRITTEN_MULTIPLE", blurb: "pick any number of the options", fields: [], scores: ["right", "none"] },
   { id: "type-in", label: "type it", icon: "TYPED", blurb: "type the answer: spelling is forgiven a little", fields: [], scores: ["right"] },
   { id: "order", label: "put in order", icon: "ORDER", blurb: "put the items in the right order", fields: [], scores: ["right"] },
@@ -64,6 +68,7 @@ export const ASKS: AskInfo[] = [
   { id: "write", label: "write", icon: "USER_GENERATED", blurb: "everyone writes something", fields: [], scores: ["votes", "authors", "secret", "knockout", "none"] },
   { id: "draw", label: "draw", icon: "DRAW", blurb: "everyone draws something", fields: [], scores: ["votes", "authors", "secret", "knockout", "none"] },
   { id: "chain", label: "telephone chain", icon: "TELEPHONE", blurb: "write, draw what you're handed, describe that, and on", fields: ["rounds"], scores: ["none"] },
+  { id: "person", label: "pick a person", icon: "FRIENDS", blurb: "pick someone in the game", fields: [], scores: ["right", "none"] },
 ];
 
 export const SCORES: ScoreInfo[] = [
@@ -116,6 +121,9 @@ export const PRESETS: Preset[] = [
   { script: "draw-guess", aliases: ["pictionary"], type: "DRAW_GUESS", mode: m("draw", "secret"), label: "draw + guess", icon: "DRAW_GUESS", blurb: "everyone draws a secret word, then guesses the others'" },
   { script: "draw-knockout", aliases: ["draw-battle"], type: "DRAW_BATTLE", mode: m("draw", "knockout"), label: "draw knockout", icon: "DRAW_BATTLE", blurb: "draw, then the drawings battle it out" },
   { script: "telephone", aliases: ["gartic"], type: "TELEPHONE", mode: m("chain", "none"), label: "telephone", icon: "TELEPHONE", blurb: "write, then draw what you're handed, then describe the drawing, and on" },
+  // the two that use an earlier question (from: "Q1"); no stored type, the server plays them by their mode
+  { script: "vote", aliases: ["vote-on", "funniest"], mode: m("pick", "votes"), label: "vote on answers", icon: "USER_GENERATED_VOTE", blurb: "vote for the best of an earlier question's answers" },
+  { script: "who-was-it", aliases: ["guess-who"], mode: m("person", "right"), label: "who was it", icon: "USER_GENERATED_IDENTIFY", blurb: "guess who made an earlier question's winner" },
 ];
 
 /**
@@ -197,6 +205,8 @@ export function answerShape(mode: Mode): AnswerShape {
   switch (ask) {
     case "pick":
     case "pick-many":
+      // a pick scored by votes has no options of its own: they're an earlier question's answers
+      if (ask === "pick" && score === "votes") return null;
       return {
         text: "option",
         value: score === "none" ? null : score === "crowd" ? "points if most picked" : "points",
@@ -215,6 +225,9 @@ export function answerShape(mode: Mode): AnswerShape {
     case "write":
     case "draw":
       return score === "secret" ? { text: "secret word", value: "points per right guess", starts: 100 } : null;
+    case "person":
+      // the options are the players
+      return null;
     default:
       return null;
   }
@@ -254,7 +267,8 @@ export function describe(mode: Mode): Described {
     blurb: preset?.blurb ?? `${ask.blurb}; ${score.blurb}`,
     answers: answerShape(mode),
     fields: ask.fields,
-    judged: score.judged,
+    // a pick on earlier answers is voted on while it's asked, so its reveal settles at once
+    judged: score.judged && mode.ask !== "pick",
     speed: score.id === "right" && SPEEDY.includes(ask.id),
   };
 }
@@ -270,10 +284,54 @@ for (const p of PRESETS) {
   for (const n of [p.script, ...p.aliases, ...(p.type ? [p.type.toLowerCase().replace(/_/g, "-")] : [])]) BY_PRESET_NAME.set(n, p);
 }
 
+/** names other apps and AIs give an ask, read as it (the parser notes the fix) */
+const ASK_ALIASES: Record<string, Ask> = {
+  "multiple-choice": "pick",
+  mcq: "pick",
+  choice: "pick",
+  single: "pick",
+  "true-false": "pick",
+  "free-text": "write",
+  text: "write",
+  open: "write",
+  essay: "write",
+  drawing: "draw",
+  sketch: "draw",
+  player: "person",
+  people: "person",
+  who: "person",
+  "pick-person": "person",
+  "pick-player": "person",
+  dropdown: "person",
+};
+
+/** the same for a score */
+const SCORE_ALIASES: Record<string, Score> = {
+  correct: "right",
+  points: "right",
+  poll: "crowd",
+  majority: "crowd",
+  vote: "votes",
+  voting: "votes",
+  "who-wrote": "authors",
+  "guess-author": "authors",
+  "no-points": "none",
+  unscored: "none",
+  off: "none",
+};
+
 /** a `type:` shorthand, by its name or an older one */
 export const presetFromScript = (name: string): Preset | undefined => BY_PRESET_NAME.get(norm(name));
-export const askFromScript = (name: string): Ask | undefined => (ASK.has(norm(name) as Ask) ? (norm(name) as Ask) : undefined);
-export const scoreFromScript = (name: string): Score | undefined => (SCORE.has(norm(name) as Score) ? (norm(name) as Score) : undefined);
+/** an ask by its name, or by a name it's often given instead */
+export const askFromScript = (name: string): Ask | undefined => {
+  const n = norm(name);
+  return ASK.has(n as Ask) ? (n as Ask) : ASK_ALIASES[n];
+};
+/** a score the same way */
+export const scoreFromScript = (name: string): Score | undefined => {
+  const n = norm(name);
+  return SCORE.has(n as Score) ? (n as Score) : SCORE_ALIASES[n];
+};
 
 // ─── new questions ────────────────────────────────────────────────────
 
@@ -297,7 +355,11 @@ export function starterShape(p: Preset) {
     ...(d.answers?.match ? { match: "" } : {}),
   }));
   let steps: Step[];
-  if (ask === "chain") {
+  if (ask === "pick" && score === "votes") {
+    steps = [step("QUESTION", 40, "Everyone votes"), step("ANSWER", 15, "The winner")];
+  } else if (ask === "person") {
+    steps = [step("QUESTION", 20, "Pick a person"), step("ANSWER", 10, "Who it was")];
+  } else if (ask === "chain") {
     steps = [step("QUESTION", 300, "Write, draw, describe, pass it on"), step("ANSWER", 120, "The chains")];
   } else if (ask === "write" || ask === "draw") {
     const making = ask === "draw" ? step("QUESTION", 90, "Everyone draws") : step("QUESTION", 45, "Players write");
@@ -316,16 +378,22 @@ export function starterShape(p: Preset) {
 
 // ─── a question's extra fields, stored as "unit=m, min=0, max=100" ─────
 
-export type QuestionOptions = Partial<Record<QuestionField, string>>;
+export type QuestionOptions = Partial<Record<OptionKey, string>>;
 
-const FIELDS: QuestionField[] = ["unit", "min", "max", "rounds"];
+/** the order they're stored in: "from=q1, overflow=6, ref=q2" */
+const FIELDS: OptionKey[] = ["unit", "min", "max", "rounds", "from", "picks", "overflow", "ref"];
+
+/** "overflow: on": the most options one player sees */
+export const OVERFLOW_DEFAULT = 6;
+/** the most different ones one player can vote for on one question */
+export const PICKS_MOST = 10;
 
 export function parseOptions(text: string | null | undefined): QuestionOptions {
   const out: QuestionOptions = {};
   for (const part of (text ?? "").split(",")) {
     const i = part.indexOf("=");
     if (i < 0) continue;
-    const key = part.slice(0, i).trim().toLowerCase() as QuestionField;
+    const key = part.slice(0, i).trim().toLowerCase() as OptionKey;
     if (!FIELDS.includes(key)) continue;
     out[key] = decodeURIComponent(part.slice(i + 1).trim());
   }
@@ -339,7 +407,26 @@ export function formatOptions(o: QuestionOptions): string {
 }
 
 /** A number field, or the fallback when it's missing or isn't a number. */
-export function optionNumber(o: QuestionOptions, key: QuestionField, fallback: number): number {
+export function optionNumber(o: QuestionOptions, key: OptionKey, fallback: number): number {
   const n = Number(o[key]);
   return o[key] !== undefined && o[key] !== "" && Number.isFinite(n) ? n : fallback;
+}
+
+/** how many different ones each player may vote for: 1 to 10, 1 when unset */
+export function picksOf(o: QuestionOptions): number {
+  return Math.max(1, Math.min(PICKS_MOST, Math.round(optionNumber(o, "picks", 1))));
+}
+
+/** the most options one player sees: 0 when off, "on" is 6, else 2 to 20 */
+export function overflowOf(o: QuestionOptions): number {
+  const v = o.overflow?.trim().toLowerCase();
+  if (!v) return 0;
+  if (v === "on" || v === "yes" || v === "true") return OVERFLOW_DEFAULT;
+  const n = Number(v);
+  return !Number.isFinite(n) || n < 2 ? 0 : Math.min(20, Math.round(n));
+}
+
+/** a pick whose options are an earlier question's answers */
+export function borrows(mode: Mode, o: QuestionOptions): boolean {
+  return mode.ask === "pick" && (mode.score === "votes" || !!o.from);
 }
