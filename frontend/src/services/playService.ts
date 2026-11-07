@@ -9,6 +9,16 @@ export interface Submission {
   text?: string;
   tiers?: Record<number, string>;
   pairs?: Record<number, string>;
+  /** a pick on earlier answers: the entry keys; a person question: [their id] */
+  choices?: string[];
+}
+
+/** a vote during the reveal: one entry, or up to picks of them; a battle; guesses */
+export interface Vote {
+  choice?: string;
+  choices?: string[];
+  match?: number;
+  guesses?: Record<string, string>;
 }
 
 /** a drawing from a game in progress, or one kept with a game's history */
@@ -29,7 +39,9 @@ export const playService = {
   state: (code: string) => api.get<GameState>(`/play/${code}`).then((r) => r.data),
   /** games you host or play that haven't finished */
   mine: (userId: string) => api.get<MyGame[]>("/play/mine", { params: { userId } }).then((r) => r.data),
-  join: (code: string, userId: string) => post(`/play/${code}/join`, { userId }),
+  /** name: who you are, in a game whose quiz has a roster; left out, you keep the name you have */
+  join: (code: string, userId: string, name?: string) =>
+    post(`/play/${code}/join`, name === undefined ? { userId } : { userId, name }),
   leave: (code: string, userId: string) => post(`/play/${code}/leave`, { userId }),
 
   start: (code: string, userId: string) => post(`/play/${code}/start`, { userId }),
@@ -58,9 +70,5 @@ export const playService = {
   /** what only you see right now: your secret word, what you're handed */
   task: (code: string, userId: string) =>
     api.get<GameTask>(`/play/${code}/task`, { headers: { "X-User-Id": userId } }).then((r) => r.data),
-  vote: (
-    code: string,
-    userId: string,
-    vote: { choice?: string; match?: number; guesses?: Record<string, string> },
-  ) => post(`/play/${code}/vote`, { userId, ...vote }),
+  vote: (code: string, userId: string, vote: Vote) => post(`/play/${code}/vote`, { userId, ...vote }),
 };

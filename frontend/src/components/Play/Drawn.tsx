@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { GameChain, GameEntry, GameSide, GameState, GameTask } from "../../types/play";
-import { artUrl, playService, type Submission } from "../../services/playService";
+import type { GameAbout, GameChain, GameEntry, GameSide, GameState } from "../../types/play";
+import { artUrl, type Submission } from "../../services/playService";
+import { useTask } from "./useTask";
 import { DrawingFrame } from "../../draw/DrawingFrame";
 import type { MyAnswer } from "./Answering";
 import { Countdown } from "./PlayCommon";
-import { nameOf } from "../../utils/play";
+import { boardOutcome, nameOf, subjectOf } from "../../utils/play";
 import { modeOf } from "../../utils/questionTypes";
 
 /*
@@ -21,29 +22,11 @@ export const EntryFace: React.FC<{ game: GameState; e: GameSide | GameEntry; cla
     <span className={`jqzz-entry-text${className ? ` ${className}` : ""}`}>{e.text}</span>
   );
 
-/** what only this player sees: fetched again whenever the question or the round changes */
-function useTask(game: GameState, me: string, wanted: boolean) {
-  const [task, setTask] = useState<GameTask | null>(null);
-  const q = game.question?.id;
-  const round = game.telephone?.round ?? 0;
-  useEffect(() => {
-    if (!wanted || !me) return;
-    let gone = false;
-    playService
-      .task(game.code, me)
-      .then((t) => !gone && setTask(t))
-      .catch(() => !gone && setTask({}));
-    return () => {
-      gone = true;
-    };
-  }, [game.code, me, q, round, wanted]);
-  // a task from another question or turn is no task at all (an empty one is just nothing to do)
-  const stale =
-    !!task &&
-    task.question !== undefined &&
-    (task.question !== q || (!!game.telephone && task.round !== undefined && task.round !== round));
-  return stale ? null : task;
-}
+/** the caption under an entry made about an earlier one */
+export const Subject: React.FC<{ about?: GameAbout }> = ({ about }) => {
+  const line = subjectOf(about);
+  return line ? <span className="jqzz-subject">{line}</span> : null;
+};
 
 // ─── drawing an answer ──────────────────────────────────────────────
 
@@ -289,47 +272,59 @@ export const GuessWords: React.FC<{
 
 // ─── showing them ───────────────────────────────────────────────────
 
-/** every drawing on the wall; once the voting or guessing is over, who drew what and how it went */
-export const DrawnReveal: React.FC<{ game: GameState; me?: string }> = ({ game, me }) => {
+/** under a board that was voted on: a tie that a coin settled, and points that wait for later */
+export const BoardNotes: React.FC<{ game: GameState; room?: boolean }> = ({ game, room }) => {
   const r = game.reveal!;
-  const entries = r.entries ?? [];
-  if (!entries.length) return <p className="jqzz-play-note">nobody drew anything.</p>;
-  const { score } = modeOf(game.question);
-  const scored = r.settled && score !== "none";
-  const top = Math.max(0, ...entries.map((e) => e.votes ?? 0));
-  const sorted = scored ? [...entries].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0)) : entries;
   return (
-    <div className="jqzz-gallery">
-      {sorted.map((e, i) => (
-        <figure
-          key={e.key}
-          className={`jqzz-frame${scored && top > 0 && e.votes === top ? " winner" : ""}${e.authorId === me ? " mine" : ""}`}
-          style={{ "--i": i } as React.CSSProperties}
-        >
-          <EntryFace game={game} e={e} />
-          {(e.authorId || scored) && (
-            <figcaption>
-              {e.word && <strong className="jqzz-frame-word">{e.word}</strong>}
-              {e.authorId && <span>{nameOf(game, e.authorId)}</span>}
-              {scored && (
-                <span className="jqzz-annot">
-                  {score === "secret" ? `${e.votes ?? 0} got it` : score === "authors" ? `${e.votes ?? 0} saw through it` : `${e.votes ?? 0} votes`}
-                </span>
-              )}
-              {e.guesses && e.guesses.length > 0 && (
-                <span className="jqzz-frame-guesses">
-                  {e.guesses.map((g) => (
-                    <span key={g.userId} className={g.right ? "right" : undefined} title={nameOf(game, g.userId)}>
-                      {g.text}
-                    </span>
-                  ))}
-                </span>
-              )}
-            </figcaption>
-          )}
-        </figure>
-      ))}
-    </div>
+    <>
+      {r.settled && (r.tied?.length ?? 0) > 1 && <p className="jqzz-play-note jqzz-coinflip">a tie, settled with a coin flip</p>}
+      {r.held && (
+        <p className="jqzz-play-note jqzz-held">
+          {room ? "who wrote what stays secret for now" : "who wrote what stays secret for now. the points come later."}
+        </p>
+      )}
+    </>
+  );
+};
+
+/** every drawing on the wall; once the voting or guessing is over, who drew what and how it went */
+export const DrawnReveal: React.FC<{ game: GameState; me?: string; room?: boolean }> = ({ game, me, room }) => {
+  const { entries, sorted, scored, isWinner, count } = boardOutcome(game);
+  if (!entries.length) {
+    return <p className="jqzz-play-note">{modeOf(game.question).ask === "pick" ? "nothing came in to vote on." : "nobody drew anything."}</p>;
+  }
+  return (
+    <>
+      <div className="jqzz-gallery">
+        {sorted.map((e, i) => (
+          <figure
+            key={e.key}
+            className={`jqzz-frame${isWinner(e) ? " winner" : ""}${e.authorId && e.authorId === me ? " mine" : ""}`}
+            style={{ "--i": i } as React.CSSProperties}
+          >
+            <EntryFace game={game} e={e} />
+            {(e.authorId || scored || e.about) && (
+              <figcaption>
+                {e.word && <strong className="jqzz-frame-word">{e.word}</strong>}
+                <Subject about={e.about} />
+                {e.authorId && <span>{nameOf(game, e.authorId)}</span>}
+                {scored && <span className="jqzz-annot">{count(e)}</span>}
+                {e.guesses && e.guesses.length > 0 && (
+                  <span className="jqzz-frame-guesses">
+                    {e.guesses.map((g) => (
+                      <span key={g.userId} className={g.right ? "right" : undefined} title={nameOf(game, g.userId)}>
+                        {g.text}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
+      <BoardNotes game={game} room={room} />
+    </>
   );
 };
 

@@ -47,6 +47,46 @@ export interface GameQuestion {
   max?: number;
   /** MATCH: the other halves, shuffled, under keys that don't give the pairs away */
   halves?: { key: string; text: string }[];
+  /** voted on: how many different ones each player may pick, when more than 1 */
+  picks?: number;
+  /** write or draw with from: each phone gets its own prompt (the task's); this text has ___ */
+  dealt?: boolean;
+  /** person: everyone in the list, sorted; each phone leaves itself out */
+  people?: { id: string; name: string }[];
+  /** person + right, once its source is settled: the winning answer, never who made it */
+  entry?: { text?: string; image?: string };
+}
+
+/** what an entry was made about (write or draw with from); name is left out while it's a secret */
+export interface GameAbout {
+  name?: string;
+  text?: string;
+  image?: string;
+}
+
+/** a pick on an earlier question's answers, while it's asked */
+export interface GameBoard {
+  /** shared: everyone sees all but their own, listed here; ballots: each phone has its own set */
+  mode: "shared" | "ballots";
+  /** answers on the board */
+  count: number;
+  /** shared only, in board order, never who made them */
+  entries?: GameEntry[];
+  /** ballots only: the most on one phone, and the rounds the time is split into */
+  cap?: number;
+  round?: number;
+  rounds?: number;
+  /** ballots only: when this round ends (the step's end in the last round); null while paused */
+  roundEndsAt?: number | null;
+  roundSeconds?: number;
+}
+
+/** who the quiz expects: players join as one of these */
+export interface GameRoster {
+  /** taken: a player here has it */
+  names: { name: string; taken: boolean }[];
+  /** two players can't have the same name */
+  unique: boolean;
 }
 
 /** something a player made: written (text) or drawn (image, an art id); anonymous until the voting on it is over */
@@ -59,6 +99,10 @@ export interface GameEntry {
   /** DRAW_GUESS, once settled: the secret word, and what everyone guessed */
   word?: string | null;
   guesses?: { userId: string; text: string; right: boolean }[];
+  /** made about an earlier answer: that answer */
+  about?: GameAbout;
+  /** ballots: how many times it was on the ballot of someone who voted */
+  shown?: number;
 }
 
 export interface GameSide {
@@ -120,6 +164,18 @@ export interface GameReveal {
   /** TELEPHONE */
   prompt?: string;
   chains?: GameChain[];
+  /** anything voted on, or a knockout, once settled: the top entry (a tie broken once, at random) */
+  winner?: string | null;
+  /** the entries that tied for the top before the coin flip */
+  tied?: string[];
+  /** its points wait for a later person question, so gains are left out */
+  held?: boolean;
+  /** person: points paid with it from what it kept secret */
+  released?: Record<string, number>;
+  /** person: how many named each player */
+  named?: Record<string, number>;
+  /** person + right, settled: whoever made the winner (null: nobody's answer won) */
+  author?: string | null;
 }
 
 /** a telephone question while it's handed round */
@@ -133,16 +189,26 @@ export interface GameTelephone {
   players: string[];
 }
 
-/** what only you see now: your secret word, what you're handed */
+/** what only you see now: your secret word, what you're handed, your own set to vote on */
 export interface GameTask {
   question?: number;
-  kind?: "draw" | "write" | "describe" | "watch";
+  kind?: "draw" | "write" | "describe" | "watch" | "ballot" | "person";
   word?: string | null;
   drawing?: string | null;
   round?: number;
   rounds?: number;
   handed?: { text?: string; image?: string };
   mine?: { text?: string; image?: string };
+  /** ballot: what you can vote for (never your own) and how many */
+  ballot?: GameEntry[];
+  picks?: number;
+  /** what you chose so far: entry keys on a ballot, one player's id on a person question */
+  chosen?: string[] | string | null;
+  /** write or draw with from: your own prompt, filled in, and the answer you were dealt */
+  prompt?: string;
+  about?: GameAbout;
+  /** person: you made the answer it's about */
+  yours?: boolean;
 }
 
 export interface GameState {
@@ -179,6 +245,10 @@ export interface GameState {
   hurry?: string[];
   /** a telephone question being handed round */
   telephone?: GameTelephone;
+  /** who's coming, when the quiz has a Roster line */
+  roster?: GameRoster;
+  /** a pick on an earlier question's answers, during its QUESTION step */
+  board?: GameBoard;
 }
 
 /** a game you're in that hasn't finished, as /play/mine lists it */

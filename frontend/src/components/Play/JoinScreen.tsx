@@ -20,7 +20,9 @@ export const JoinScreen: React.FC<{ code?: string }> = ({ code: fromLink }) => {
     setBusy(true);
     setError(null);
     try {
-      await playService.join(c, user.id);
+      // a game that says who's coming lets you pick your name on its own screen first
+      const game = await playService.state(c);
+      if (!game.roster || game.players.some((p) => p.id === user.id)) await playService.join(c, user.id);
       go(`/play/${c}`);
     } catch (err) {
       setError(errorMessage(err));
