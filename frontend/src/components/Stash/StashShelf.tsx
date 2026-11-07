@@ -11,6 +11,7 @@ import type { ImageVisibility } from "../../types";
 import type { LibraryImage, StashItem, StashKind, StashList } from "../../types/stash";
 import { typeLabel } from "../../utils/questionInfo";
 import { contentToActions, readContent, readType } from "../../utils/stashContent";
+import { plainRefs } from "../../utils/scriptRefs";
 import type { TypeShape } from "../../types/stash";
 import type { Phase } from "../../types";
 import { FilterChips } from "./FilterChips";
@@ -46,7 +47,7 @@ const KINDS: Record<string, StashKind> = {
 /** what a saved item can be found by: its names and the questions in it */
 function itemText(item: StashItem) {
   const content = readContent(item);
-  return [item.title, item.handle, item.reference, ...content.questions.map((q) => q.text)];
+  return [item.title, item.handle, item.reference, ...content.questions.map((q) => plainRefs(q.text))];
 }
 
 /**
@@ -333,7 +334,7 @@ const FromEveryone: React.FC<{ query: string; kinds: StashKind[]; me: string; on
                 <img className="jqzz-shelf-thumb" src={imageUrl(item.imageId, me)} alt="" loading="lazy" />
               )}
               <div className="jqzz-shelf-body">
-                <span className="jqzz-shelf-title">{item.title || item.handle}</span>
+                <span className="jqzz-shelf-title">{plainRefs(item.title || "") || item.handle}</span>
                 <span className="jqzz-annot">
                   {item.kind === "QUIZ"
                     ? `quiz · ${plural(content.questions.length, "question")}`
@@ -511,7 +512,7 @@ const StashRow: React.FC<{
         <QuestionImage src={first.imageUrl} viewerId={me} className="jqzz-shelf-thumb" />
       )}
       <div className="jqzz-shelf-body">
-        <span className="jqzz-shelf-title">{item.title || item.handle}</span>
+        <span className="jqzz-shelf-title">{plainRefs(item.title || "") || item.handle}</span>
         <span className="jqzz-annot">
           {item.kind === "QUIZ"
             ? plural(content.questions.length, "question")
@@ -754,7 +755,7 @@ const DrawingCard: React.FC<{
           <img src={`${imageUrl(item.imageId, me)}${imageUrl(item.imageId, me).includes("?") ? "&" : "?"}v=${saves}`} alt="" loading="lazy" />
         </button>
       )}
-      <span className="jqzz-shelf-title">{item.title || item.handle}</span>
+      <span className="jqzz-shelf-title">{plainRefs(item.title || "") || item.handle}</span>
       {picture && <RefChip reference={picture} me={me} label="picture" />}
       <button type="button" className="jqzz-play-btn small" onClick={onDraw}>
         <Glyph name="DRAW" size={13} /> draw on it

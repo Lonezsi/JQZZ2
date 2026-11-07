@@ -46,6 +46,15 @@ const idOf = (t: TypeShape) => `type:${JSON.stringify(t)}`;
 const modeOfShape = (t: TypeShape) => modeOf({ type: t.questionType, mode: t.mode });
 const seconds = (t: TypeShape) => t.steps.reduce((sum, step) => sum + step.time, 0);
 
+/**
+ * Which family a kind sits in, in the tray. "who was it" scores right, which
+ * would put it with the quiz questions, but it guesses who wrote an earlier
+ * answer: it belongs with "who wrote it", right after it.
+ */
+const WHO_WAS_IT = "person/right";
+const WHO_WROTE = "write/authors";
+const trayFamily = (mode: Mode): FamilyId => (modeKey(mode) === WHO_WAS_IT ? "write" : familyOf(mode));
+
 /** your saved shapes and the built-in kinds, one row per kind, sorted into families */
 function kindsByFamily(yours: TypeShape[]): Map<FamilyId, Kind[]> {
   const kinds = new Map<string, Kind>();
@@ -63,8 +72,13 @@ function kindsByFamily(yours: TypeShape[]): Map<FamilyId, Kind[]> {
     kinds.delete(key);
   }
   ordered.push(...kinds.values()); // your own pairs no preset names
+  const who = ordered.findIndex((k) => modeKey(k.mode) === WHO_WAS_IT);
+  if (who >= 0) {
+    const [kind] = ordered.splice(who, 1);
+    ordered.splice(ordered.findIndex((k) => modeKey(k.mode) === WHO_WROTE) + 1, 0, kind);
+  }
   const out = new Map<FamilyId, Kind[]>(FAMILIES.map((f) => [f.id, []]));
-  ordered.forEach((k) => out.get(familyOf(k.mode))!.push(k));
+  ordered.forEach((k) => out.get(trayFamily(k.mode))!.push(k));
   return out;
 }
 

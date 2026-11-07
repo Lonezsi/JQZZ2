@@ -3,6 +3,7 @@ import { errorMessage } from "../../services/api";
 import { historyService, stashService } from "../../services/stashService";
 import type { HistoryRecord } from "../../types/stash";
 import { typeLabel } from "../../utils/questionInfo";
+import { plainRefs } from "../../utils/scriptRefs";
 
 /**
  * After a game: keep the whole quiz, or just the questions you liked. Reads the
@@ -86,7 +87,7 @@ export const SaveFromGame: React.FC<{
               <li key={q.key} className="jqzz-keep-row">
                 <span className="jqzz-board-rank">{i + 1}</span>
                 <span className="jqzz-keep-text">
-                  {q.text || "untitled question"}
+                  {plainRefs(q.text) || "untitled question"}
                   <span className="jqzz-annot">{typeLabel(q.type)}</span>
                 </span>
                 <button
@@ -106,7 +107,7 @@ export const SaveFromGame: React.FC<{
                     setBusy(k);
                     setError(null);
                     stashService
-                      .asType(me, { recordId, questionKey: q.key }, `${typeLabel(q.type)}: ${q.text || "question"}`.slice(0, 60))
+                      .asType(me, { recordId, questionKey: q.key }, `${typeLabel(q.type)}: ${plainRefs(q.text) || "question"}`.slice(0, 60))
                       .then(() => setSaved((s) => new Set(s).add(k)))
                       .catch((err) => setError(errorMessage(err)))
                       .finally(() => setBusy(null));

@@ -308,7 +308,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
   // --- Selection logic ---
   const getActionIdsInOrder = useCallback((): number[] => {
     if (!quiz) return [];
-    return quiz.actions.map((a) => a.id);
+    // the roster isn't a step on the timeline, so it's never selected (or deleted with a selection)
+    return quiz.actions.filter((a) => a.phase !== "ROSTER").map((a) => a.id);
   }, [quiz]);
 
   const toggleSelectAction = useCallback(

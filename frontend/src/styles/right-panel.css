@@ -314,3 +314,25 @@
 .jqzz-online-dot.off {
   border: 1px solid var(--text-3);
 }
+
+/* using an earlier question: the source, votes each, their own set */
+.jqzz-link-field {
+  margin-bottom: 16px;
+}
+.jqzz-link-warn {
+  color: var(--warm);
+}
+.jqzz-link-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+/* what a prompt can fill in, under it */
+.jqzz-fillins {
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}

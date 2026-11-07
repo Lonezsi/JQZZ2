@@ -4,6 +4,9 @@ import type { Quiz, Question, Action } from "../../../../types";
 import { quizToScript } from "../../../../utils/scriptSerializer";
 import { parseScript } from "../../../../utils/scriptParser";
 import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
+import { aiReference, errorsForAI, extractScript } from "../../../../utils/aiReference";
+import { copyText } from "../../../Modals/copyText";
+import { RosterCard } from "../RosterCard";
 
 interface ScriptEditorProps {
   quiz: Quiz | undefined;
@@ -49,6 +52,18 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
 }) => {
   const [text, setText] = useState<string>(() => quizToScript(quiz));
   const [errors, setErrors] = useState<string[]>([]);
+  // lines the reader tidied, and what it read but can't score: neither stops the script applying
+  const [fixed, setFixed] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  // which copy button just copied, for a moment
+  const [copied, setCopied] = useState<"ai" | "errors" | null>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const t = window.setTimeout(() => setCopied(null), 1400);
+    return () => window.clearTimeout(t);
+  }, [copied]);
+  const copy = (what: "ai" | "errors", content: string) =>
+    copyText(content).then((ok) => ok && setCopied(what));
   const [summary, setSummary] = useState({ questions: 0, actions: 0 });
   // where the caret is, so the bracket next to it and its partner light up
   const [caret, setCaret] = useState<number | null>(null);
@@ -102,11 +117,13 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   useEffect(() => {
     const t = setTimeout(() => {
       const current = quizRef.current;
-      const { questions, actions, errors } = parseScript(
+      const { questions, actions, errors, fixed, warnings } = parseScript(
         text,
         extractQuestionsFromActions(current),
       );
       setErrors(errors);
+      setFixed(fixed);
+      setWarnings(warnings);
       setSummary({ questions: questions.length, actions: actions.length });
       if (!current || !hasUserEdits.current || errors.length > 0) return;
       hasUserEdits.current = false;
@@ -128,7 +145,40 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     });
   };
 
+  /** a script pasted from an AI comes in a code fence, with words around it: only the script goes in */
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasted = e.clipboardData.getData("text/plain");
+    if (!pasted.includes("```")) return;
+    e.preventDefault();
+    const ta = e.currentTarget;
+    const script = extractScript(pasted);
+    const { selectionStart: s, selectionEnd: end } = ta;
+    edit(text.slice(0, s) + script + text.slice(end));
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = s + script.length;
+    });
+  };
+
+  /** the roster tip's "add names": a Roster line under the title, its first name picked to type over */
+  const addRosterLine = () => {
+    const nl = text.indexOf("\n");
+    const first = nl < 0 ? text : text.slice(0, nl);
+    const rest = nl < 0 ? "" : text.slice(nl + 1);
+    const line = 'Roster("Name 1", "Name 2")';
+    edit(`${first}\n\n${line}\n${rest}`);
+    const at = first.length + 2 + 'Roster("'.length;
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(at, at + "Name 1".length);
+      trackCaret();
+    });
+  };
+
   const parseOk = errors.length === 0;
+  const problems = [...errors, ...warnings];
+  const badgeTitle = parseOk ? [...fixed, ...warnings].join("\n") : errors.join("\n");
 
   return (
     <div className="jqzz-text-editor jqzz-view-in">
@@ -144,9 +194,13 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
         <span
           className={`jqzz-parse-badge${parseOk ? " ok" : " err"}`}
           role="status"
-          title={errors.join("\n")}
+          title={badgeTitle}
         >
-          {parseOk ? "valid" : `${errors.length} error${errors.length > 1 ? "s" : ""}`}
+          {!parseOk
+            ? `${errors.length} error${errors.length > 1 ? "s" : ""}`
+            : fixed.length > 0
+              ? `valid · tidied ${fixed.length}`
+              : "valid"}
         </span>
         <button
           className="jqzz-ai-btn"
@@ -186,12 +240,31 @@ ShowResult(${q}, time: 10)
         >
           Add
         </button>
+        <button
+          className="jqzz-ai-btn"
+          title="copies a guide for ChatGPT with this quiz in it, so it can change it"
+          onClick={() => copy("ai", aiReference("", text))}
+        >
+          {copied === "ai" ? "copied" : "copy for AI"}
+        </button>
       </div>
-      {!parseOk && (
-        <div className="jqzz-parse-errors" role="alert">
-          {errors[0]}
-          {errors.length > 1 && ` (+${errors.length - 1} more)`}. nothing gets
-          applied until this is fixed.
+      {quiz && <RosterCard quiz={quiz} onAddLine={addRosterLine} />}
+      {problems.length > 0 && (
+        <div className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`} role={parseOk ? "status" : "alert"}>
+          {parseOk ? (
+            <>
+              heads up: {warnings[0]}
+              {warnings.length > 1 && ` (+${warnings.length - 1} more)`}
+            </>
+          ) : (
+            <>
+              {errors[0]}
+              {errors.length > 1 && ` (+${errors.length - 1} more)`}. nothing gets applied until this is fixed.
+            </>
+          )}{" "}
+          <button className="jqzz-parse-copy" onClick={() => copy("errors", errorsForAI(problems))}>
+            {copied === "errors" ? "copied" : "copy errors for the AI"}
+          </button>
         </div>
       )}
       <div className="jqzz-editor-wrap">
@@ -205,6 +278,7 @@ ShowResult(${q}, time: 10)
           onChange={(e) => edit(e.target.value)}
           onScroll={syncScroll}
           onKeyDown={handleTab}
+          onPaste={handlePaste}
           onSelect={trackCaret}
           onKeyUp={trackCaret}
           onClick={trackCaret}
