@@ -370,6 +370,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.jqzz-roster-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+}
+.jqzz-roster-trash:hover {
+  color: var(--danger);
+}
 .jqzz-roster-key {
   display: inline-flex;
   opacity: 0.7;
@@ -474,7 +483,30 @@
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 12px;
+}
+/* the line between script and reference: a wide grip, a thin rule */
+.jqzz-text-resize {
+  position: relative;
+  flex: none;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.jqzz-text-resize::after {
+  content: "";
+  position: absolute;
+  inset: 8px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition: background var(--dur-1) var(--ease);
+}
+.jqzz-text-resize:hover::after,
+.jqzz-text-resize:focus-visible::after,
+.jqzz-text-resize.dragging::after {
+  background: var(--line-strong);
+}
+.jqzz-text-resize:focus-visible {
+  outline: none;
 }
 .jqzz-text-main {
   flex: 1;
@@ -487,7 +519,7 @@
 /* the language reference: prose in the app's type, code in the script's,
    numbered sections, tables ruled like a spec */
 .jqzz-docs {
-  width: min(480px, 42%);
+  width: var(--docs-w, min(480px, 42%));
   flex: none;
   display: flex;
   flex-direction: column;
@@ -642,6 +674,10 @@
 @media (max-width: 1099px) {
   .jqzz-text-split {
     flex-direction: column;
+    gap: 12px;
+  }
+  .jqzz-text-resize {
+    display: none;
   }
   .jqzz-docs {
     width: 100%;

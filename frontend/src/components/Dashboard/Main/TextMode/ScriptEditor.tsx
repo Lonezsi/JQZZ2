@@ -10,7 +10,9 @@ import {
   extractScript,
 } from "../../../../utils/aiReference";
 import { copyText } from "../../../Modals/copyText";
-import { RosterCard, ROSTER_EVENT } from "../RosterCard";
+import { ROSTER_EVENT } from "../RosterCard";
+import { SplitHandle } from "./SplitHandle";
+import { useDocsWidth } from "../../../../hooks/useDocsWidth";
 import { ScriptDocs } from "./ScriptDocs";
 
 interface ScriptEditorProps {
@@ -66,6 +68,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   // which copy button just copied, for a moment
   const [copied, setCopied] = useState<"ai" | "errors" | null>(null);
   // the manual sits beside the editor on a wide screen, and under it on a narrow one
+  const [docsWidth, setDocsWidth] = useDocsWidth();
   const [docsOpen, setDocsOpen] = useState(
     () => typeof window === "undefined" || window.innerWidth >= 1100,
   );
@@ -173,7 +176,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     });
   };
 
-  /** the roster tip's "add names": a Roster line under the title, its first name picked to type over */
+  /** R with no Roster line yet: one under the title, its first name picked to type over */
   const addRosterLine = () => {
     const nl = text.indexOf("\n");
     const first = nl < 0 ? text : text.slice(0, nl);
@@ -283,10 +286,10 @@ ShowResult(${q}, time: 10)
         </button>
         <button
           className="jqzz-ai-btn"
-          title="copies a guide for ChatGPT with this quiz in it, so it can change it"
+          title="copies the whole tutorial as plain text, with this quiz in it, to paste into any AI"
           onClick={() => copy("ai", aiReference("", text))}
         >
-          {copied === "ai" ? "copied" : "copy for AI"}
+          {copied === "ai" ? "copied" : "copy tutorial as text"}
         </button>
         <button
           className="jqzz-ai-btn"
@@ -299,7 +302,6 @@ ShowResult(${q}, time: 10)
       </div>
       <div className="jqzz-text-split">
         <div className="jqzz-text-main">
-          {quiz && <RosterCard quiz={quiz} onAddLine={addRosterLine} />}
           {problems.length > 0 && (
             <div
               className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`}
@@ -348,13 +350,18 @@ ShowResult(${q}, time: 10)
               aria-label="Quiz script"
             />
           </div>
-          <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
-            jqzz script v3 · {plural(text.split("\n").length, "line")} ·{" "}
-            {plural(summary.questions, "question")} ·{" "}
-            {plural(summary.actions, "phase")}
-          </div>
         </div>
-        {docsOpen && <ScriptDocs onClose={() => setDocsOpen(false)} />}
+        {docsOpen && (
+          <>
+            <SplitHandle width={docsWidth} onWidth={setDocsWidth} />
+            <ScriptDocs width={docsWidth} onClose={() => setDocsOpen(false)} />
+          </>
+        )}
+      </div>
+      <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
+        jqzz script v3 · {plural(text.split("\n").length, "line")} ·{" "}
+        {plural(summary.questions, "question")} ·{" "}
+        {plural(summary.actions, "phase")}
       </div>
     </div>
   );

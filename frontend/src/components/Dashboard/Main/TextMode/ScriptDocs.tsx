@@ -39,7 +39,8 @@ const Block: React.FC<{ b: DocBlock }> = ({ b }) => {
         <HighlightedScript text={b.code} hints={false} />
       </pre>
     );
-  if ("grammar" in b) return <pre className="jqzz-docs-grammar">{b.grammar}</pre>;
+  if ("grammar" in b)
+    return <pre className="jqzz-docs-grammar">{b.grammar}</pre>;
   if ("list" in b)
     return (
       <ul className="jqzz-docs-list">
@@ -64,7 +65,13 @@ const Block: React.FC<{ b: DocBlock }> = ({ b }) => {
           {b.table.rows.map((row, r) => (
             <tr key={r}>
               {row.map((cell, c) => (
-                <td key={c}>{c === 0 ? <code className="jqzz-docs-inline">{cell}</code> : <Prose text={cell} />}</td>
+                <td key={c}>
+                  {c === 0 ? (
+                    <code className="jqzz-docs-inline">{cell}</code>
+                  ) : (
+                    <Prose text={cell} />
+                  )}
+                </td>
               ))}
             </tr>
           ))}
@@ -80,21 +87,38 @@ const Block: React.FC<{ b: DocBlock }> = ({ b }) => {
  * the way the editor colours them. The body scrolls by itself, so the editor
  * never moves.
  */
-export const ScriptDocs: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+export const ScriptDocs: React.FC<{
+  width: number | null;
+  onClose: () => void;
+}> = ({ width, onClose }) => {
   const body = useRef<HTMLDivElement>(null);
   const jump = (id: string) => {
     const scroller = body.current;
     const at = scroller?.querySelector<HTMLElement>(`#jqzz-docs-${id}`);
-    if (scroller && at) scroller.scrollTo({ top: at.offsetTop - 8, behavior: "smooth" });
+    if (scroller && at)
+      scroller.scrollTo({ top: at.offsetTop - 8, behavior: "smooth" });
   };
   return (
-    <aside className="jqzz-docs" aria-label="language reference">
+    <aside
+      className="jqzz-docs"
+      aria-label="language reference"
+      style={
+        width
+          ? ({ "--docs-w": `${width}px` } as React.CSSProperties)
+          : undefined
+      }
+    >
       <div className="jqzz-docs-head">
         <div>
           <div className="jqzz-docs-title">JQzz Script</div>
           <span className="jqzz-annot">language reference · version 3</span>
         </div>
-        <button type="button" className="jqzz-docs-hide" onClick={onClose} title="hide the reference">
+        <button
+          type="button"
+          className="jqzz-docs-hide"
+          onClick={onClose}
+          title="hide the reference"
+        >
           hide
         </button>
       </div>
@@ -107,7 +131,11 @@ export const ScriptDocs: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </nav>
       <div className="jqzz-docs-body" ref={body}>
         {SCRIPT_DOCS.map((s, i) => (
-          <section key={s.id} id={`jqzz-docs-${s.id}`} className="jqzz-docs-sec">
+          <section
+            key={s.id}
+            id={`jqzz-docs-${s.id}`}
+            className="jqzz-docs-sec"
+          >
             <h3 className="jqzz-docs-name">
               <span className="jqzz-docs-num">{i + 1}</span> {s.title}
             </h3>

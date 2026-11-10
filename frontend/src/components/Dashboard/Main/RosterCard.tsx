@@ -4,6 +4,7 @@ import type { Quiz } from "../../../types";
 import { useQuiz } from "../../../contexts/QuizContext";
 import { rosterOf, rosterProblem } from "../../../utils/roster";
 import { Keys } from "../../common/Keys";
+import { Glyph } from "../../common/Glyph";
 
 /*
  * Who's coming (utils/scriptDocs.ts, WHO'S COMING): a card above the quiz that
@@ -36,20 +37,15 @@ const pieces = (s: string) =>
     .map((p) => p.trim().replace(/\s+/g, " "))
     .filter(Boolean);
 
+/** visual mode only: in text mode the Roster line is the list, and R goes to it (ScriptEditor) */
 interface RosterCardProps {
   quiz: Quiz;
-  /**
-   * Text mode: the card only shows the list (the Roster line is where it's
-   * edited), and the tip's "add names" calls this to write that line.
-   */
-  onAddLine?: () => void;
 }
 
 type Draft = { names: string[]; unique: boolean };
 
-export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
+export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
   const { setRoster } = useQuiz();
-  const text = !!onAddLine;
   const found = rosterOf(quiz);
   const roster = found?.roster ?? null;
   const [hidden, setHidden] = useState(tipHidden);
@@ -79,7 +75,6 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
 
   // R and the settings tray: open it, caret in the last name (or a first, empty one)
   useEffect(() => {
-    if (text) return;
     const open = () => {
       const d = draft ?? {
         names: roster?.names.length ? [...roster.names] : [""],
@@ -90,7 +85,7 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
     };
     window.addEventListener(ROSTER_EVENT, open);
     return () => window.removeEventListener(ROSTER_EVENT, open);
-  }, [text, roster, draft]);
+  }, [roster, draft]);
 
   const hideTip = () => {
     setHidden(true);
@@ -214,7 +209,7 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
   };
 
   // the editor (visual mode, with a list or while making one)
-  if (!text && editing) {
+  if (editing) {
     const count = editing.names.filter((n) => n.trim()).length;
     return (
       <div
@@ -239,27 +234,30 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
               {folded ? "▸" : "▾"}
             </span>
             <span className="jqzz-annot">who's coming · {count}</span>
+            {!draft && (
+              <span
+                className="jqzz-roster-key"
+                title="R opens the list from anywhere"
+              >
+                <Keys combo="R" />
+              </span>
+            )}
             {folded && (
               <span className="jqzz-roster-summary">
                 {editing.names.filter((n) => n.trim()).join(", ")}
               </span>
             )}
           </button>
-          {!draft && roster && (
-            <span className="jqzz-roster-actions">
-              <span
-                className="jqzz-roster-key"
-                title="press R to edit the list"
-              >
-                <Keys combo="R" />
-              </span>
-              <button
-                className="jqzz-roster-link"
-                onClick={() => setRoster(null)}
-              >
-                remove the list
-              </button>
-            </span>
+          {roster && (
+            <button
+              type="button"
+              className="jqzz-roster-link jqzz-roster-trash"
+              aria-label="remove the list"
+              title="remove the list"
+              onClick={() => setRoster(null)}
+            >
+              <Glyph name="TRASH" size={14} />
+            </button>
           )}
         </div>
         {!folded && (
@@ -349,12 +347,7 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
         </span>
         <button
           className="jqzz-roster-link"
-          onClick={() => {
-            if (onAddLine) onAddLine();
-            else {
-              commit({ names: [""], unique: true }, 0);
-            }
-          }}
+          onClick={() => commit({ names: [""], unique: true }, 0)}
         >
           add names <Keys combo="R" />
         </button>
@@ -370,31 +363,5 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz, onAddLine }) => {
     );
   }
 
-  // text mode: the list as it stands, edited in the Roster line
-  return (
-    <div className="jqzz-roster-card">
-      <div className="jqzz-roster-head">
-        <span className="jqzz-annot">who's coming · {roster.names.length}</span>
-        <span
-          className="jqzz-roster-key"
-          title="press R to go to the Roster line"
-        >
-          <Keys combo="R" />
-        </span>
-      </div>
-      <div className="jqzz-roster-names">
-        {roster.names.map((n) => (
-          <span key={n} className="jqzz-roster-chip">
-            {n}
-          </span>
-        ))}
-      </div>
-      <p className="jqzz-annot">
-        people who join pick their name from this list. it's only used in this
-        game, it doesn't change anyone's account.
-        {!roster.unique && " two people can pick the same name."} edit it in the
-        Roster line.
-      </p>
-    </div>
-  );
+  return null;
 };
