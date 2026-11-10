@@ -9,6 +9,8 @@ import { readContent } from "../../../../utils/stashContent";
 import { typeLabel } from "../../../../utils/questionInfo";
 import { plural } from "../../../../utils/format";
 import { Glide } from "../../../common/Glide";
+import { Keys } from "../../../common/Keys";
+import { ROSTER_EVENT } from "../RosterCard";
 
 const DRAG_SNIPPET_KEY = "jqzz-snippet";
 
@@ -64,7 +66,15 @@ export const AddButton: React.FC<AddButtonProps> = ({
             onPick={(k) => setTab(k as Tab)}
           />
           {tab === "types" && <SnippetTray onPick={onPick} />}
-          {tab === "settings" && <SettingsTray onPick={onPick} />}
+          {tab === "settings" && (
+            <SettingsTray
+              onPick={onPick}
+              onRoster={() => {
+                setOpen(false);
+                window.dispatchEvent(new Event(ROSTER_EVENT));
+              }}
+            />
+          )}
           {tab === "stash" && open && <StashTray onPick={onPick} />}
         </div>
       </div>
@@ -73,13 +83,20 @@ export const AddButton: React.FC<AddButtonProps> = ({
 };
 
 /** Settings blocks: they hold for everything after them. */
-const SettingsTray: React.FC<{ onPick: (id: string) => void }> = ({ onPick }) => (
+const SettingsTray: React.FC<{ onPick: (id: string) => void; onRoster: () => void }> = ({ onPick, onRoster }) => (
   <div className="jqzz-tray-grid">
+    {/* not a block in the timeline: the list at the top, so it opens there */}
+    <button className="jqzz-snippet setting" style={{ "--i": 0 } as React.CSSProperties} onClick={onRoster}>
+      <span className="jqzz-snippet-name">
+        who's coming <Keys combo="R" />
+      </span>
+      <span className="jqzz-annot">the names people pick from when they join</span>
+    </button>
     {SETTING_PRESETS.map((p, i) => (
       <button
         key={p.text}
         className="jqzz-snippet setting"
-        style={{ "--i": i } as React.CSSProperties}
+        style={{ "--i": i + 1 } as React.CSSProperties}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData(DRAG_SNIPPET_KEY, `set:${p.text}`);

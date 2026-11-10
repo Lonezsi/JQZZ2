@@ -11,7 +11,12 @@ const pieceClass = (p: Piece) =>
  * character here sits exactly where it sits in the textarea; the hints only
  * ever come after the end of a line, so they never push anything along.
  */
-export const HighlightedScript: React.FC<{ text: string; caret?: number | null }> = ({ text, caret = null }) => {
+/** hints: the notes at the end of a line (what a step does, what's wrong); the manual's examples leave them out */
+export const HighlightedScript: React.FC<{ text: string; caret?: number | null; hints?: boolean }> = ({
+  text,
+  caret = null,
+  hints = true,
+}) => {
   const lines = useMemo(() => analyze(text, caret), [text, caret]);
   return (
     <>
@@ -27,7 +32,7 @@ export const HighlightedScript: React.FC<{ text: string; caret?: number | null }
             </span>
           ))}
           {line.pieces.length === 0 && " "}
-          {line.hint && (
+          {hints && line.hint && (
             <span className={`jqzz-hint ${line.hint.tone}`} aria-hidden="true">
               {line.hint.text}
             </span>

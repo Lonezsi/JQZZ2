@@ -23,6 +23,8 @@ export const useKeyboardShortcuts = ({
   });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // a field that handled the key itself (the roster's Ctrl Enter saves) keeps it
+      if (e.defaultPrevented) return;
       const { onPalette, onSelectAll, onCommand } = latest.current;
       const t = e.target as HTMLElement | null;
       const typing = t?.tagName === "INPUT" || t?.tagName === "TEXTAREA" || !!t?.isContentEditable;

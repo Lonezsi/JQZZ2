@@ -4,9 +4,13 @@ import type { Quiz, Question, Action } from "../../../../types";
 import { quizToScript } from "../../../../utils/scriptSerializer";
 import { parseScript } from "../../../../utils/scriptParser";
 import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
-import { aiReference, errorsForAI, extractScript } from "../../../../utils/aiReference";
+import {
+  aiReference,
+  errorsForAI,
+  extractScript,
+} from "../../../../utils/aiReference";
 import { copyText } from "../../../Modals/copyText";
-import { RosterCard } from "../RosterCard";
+import { RosterCard, ROSTER_EVENT } from "../RosterCard";
 import { ScriptDocs } from "./ScriptDocs";
 
 interface ScriptEditorProps {
@@ -37,7 +41,10 @@ const extractQuestionsFromActions = (quiz: Quiz | undefined): Question[] => {
  * left out): otherwise the textarea can scroll further than it can, and at
  * the bottom or the right edge the colours slide off the words.
  */
-function alignUnder(ta: HTMLTextAreaElement | null, pre: HTMLPreElement | null) {
+function alignUnder(
+  ta: HTMLTextAreaElement | null,
+  pre: HTMLPreElement | null,
+) {
   if (!ta || !pre) return;
   pre.style.right = `${ta.offsetWidth - ta.clientWidth}px`;
   pre.style.bottom = `${ta.offsetHeight - ta.clientHeight}px`;
@@ -59,7 +66,9 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   // which copy button just copied, for a moment
   const [copied, setCopied] = useState<"ai" | "errors" | null>(null);
   // the manual sits beside the editor on a wide screen, and under it on a narrow one
-  const [docsOpen, setDocsOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 1100);
+  const [docsOpen, setDocsOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= 1100,
+  );
   useEffect(() => {
     if (!copied) return;
     const t = window.setTimeout(() => setCopied(null), 1400);
@@ -110,7 +119,9 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   useEffect(() => {
     const ta = taRef.current;
     if (!ta || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => alignUnder(taRef.current, preRef.current));
+    const ro = new ResizeObserver(() =>
+      alignUnder(taRef.current, preRef.current),
+    );
     ro.observe(ta);
     return () => ro.disconnect();
   }, []);
@@ -179,9 +190,34 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     });
   };
 
+  // R: to the Roster line, its first name picked; with no line yet, one is written
+  const toRoster = useRef<() => void>(() => {});
+  useEffect(() => {
+    toRoster.current = () => {
+      const m = /^\s*Roster\(\s*"([^"]*)"/m.exec(text);
+      if (!m) {
+        addRosterLine();
+        return;
+      }
+      const at = m.index + m[0].length - 1 - m[1].length;
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(at, at + m[1].length);
+      trackCaret();
+    };
+  });
+  useEffect(() => {
+    const go = () => toRoster.current();
+    window.addEventListener(ROSTER_EVENT, go);
+    return () => window.removeEventListener(ROSTER_EVENT, go);
+  }, []);
+
   const parseOk = errors.length === 0;
   const problems = [...errors, ...warnings];
-  const badgeTitle = parseOk ? [...fixed, ...warnings].join("\n") : errors.join("\n");
+  const badgeTitle = parseOk
+    ? [...fixed, ...warnings].join("\n")
+    : errors.join("\n");
 
   return (
     <div className="jqzz-text-editor jqzz-view-in">
@@ -214,7 +250,9 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
               aiRef.current?.focus();
               return;
             }
-            const used = [...text.matchAll(/NewQuestion\s+Q(\d+)/g)].map((m) => Number(m[1]));
+            const used = [...text.matchAll(/NewQuestion\s+Q(\d+)/g)].map((m) =>
+              Number(m[1]),
+            );
             const q = `Q${used.length > 0 ? Math.max(...used) + 1 : 1}`;
             const block = `NewQuestion ${q} (
   ask: "pick", score: "right",
@@ -260,55 +298,63 @@ ShowResult(${q}, time: 10)
         </button>
       </div>
       <div className="jqzz-text-split">
-      <div className="jqzz-text-main">
-      {quiz && <RosterCard quiz={quiz} onAddLine={addRosterLine} />}
-      {problems.length > 0 && (
-        <div className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`} role={parseOk ? "status" : "alert"}>
-          {parseOk ? (
-            <>
-              heads up: {warnings[0]}
-              {warnings.length > 1 && ` (+${warnings.length - 1} more)`}
-            </>
-          ) : (
-            <>
-              {errors[0]}
-              {errors.length > 1 && ` (+${errors.length - 1} more)`}. nothing gets applied until this is fixed.
-            </>
-          )}{" "}
-          <button className="jqzz-parse-copy" onClick={() => copy("errors", errorsForAI(problems))}>
-            {copied === "errors" ? "copied" : "copy errors for the AI"}
-          </button>
+        <div className="jqzz-text-main">
+          {quiz && <RosterCard quiz={quiz} onAddLine={addRosterLine} />}
+          {problems.length > 0 && (
+            <div
+              className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`}
+              role={parseOk ? "status" : "alert"}
+            >
+              {parseOk ? (
+                <>
+                  heads up: {warnings[0]}
+                  {warnings.length > 1 && ` (+${warnings.length - 1} more)`}
+                </>
+              ) : (
+                <>
+                  {errors[0]}
+                  {errors.length > 1 && ` (+${errors.length - 1} more)`}.
+                  nothing gets applied until this is fixed.
+                </>
+              )}{" "}
+              <button
+                className="jqzz-parse-copy"
+                onClick={() => copy("errors", errorsForAI(problems))}
+              >
+                {copied === "errors" ? "copied" : "copy errors for the AI"}
+              </button>
+            </div>
+          )}
+          <div className="jqzz-editor-wrap">
+            <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
+              <HighlightedScript text={text} caret={caret} />
+            </pre>
+            <textarea
+              ref={taRef}
+              className="jqzz-script-ta"
+              value={text}
+              onChange={(e) => edit(e.target.value)}
+              onScroll={syncScroll}
+              onKeyDown={handleTab}
+              onPaste={handlePaste}
+              onSelect={trackCaret}
+              onKeyUp={trackCaret}
+              onClick={trackCaret}
+              onBlur={() => setCaret(null)}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              aria-label="Quiz script"
+            />
+          </div>
+          <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
+            jqzz script v3 · {plural(text.split("\n").length, "line")} ·{" "}
+            {plural(summary.questions, "question")} ·{" "}
+            {plural(summary.actions, "phase")}
+          </div>
         </div>
-      )}
-      <div className="jqzz-editor-wrap">
-        <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
-          <HighlightedScript text={text} caret={caret} />
-        </pre>
-        <textarea
-          ref={taRef}
-          className="jqzz-script-ta"
-          value={text}
-          onChange={(e) => edit(e.target.value)}
-          onScroll={syncScroll}
-          onKeyDown={handleTab}
-          onPaste={handlePaste}
-          onSelect={trackCaret}
-          onKeyUp={trackCaret}
-          onClick={trackCaret}
-          onBlur={() => setCaret(null)}
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          aria-label="Quiz script"
-        />
-      </div>
-      <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
-        jqzz script v3 · {plural(text.split("\n").length, "line")} · {plural(summary.questions, "question")} ·{" "}
-        {plural(summary.actions, "phase")}
-      </div>
-      </div>
-      {docsOpen && <ScriptDocs onClose={() => setDocsOpen(false)} />}
+        {docsOpen && <ScriptDocs onClose={() => setDocsOpen(false)} />}
       </div>
     </div>
   );

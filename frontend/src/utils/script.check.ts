@@ -736,10 +736,18 @@ ShowAnswers(Q3, time: 15)`;
   // the manual: the placeholder of an empty quiz is the whole of it, as comments, and it reads clean
   const empty = parseScript(EMPTY_SCRIPT, []);
   check("manual: the empty script reads with no errors, fixes or warnings", empty.errors.length === 0 && empty.fixed.length === 0 && empty.warnings.length === 0 && empty.questions.length === 0, [empty.errors, empty.fixed, empty.warnings]);
-  check("manual: the empty script's comments hold the whole manual", SCRIPT_DOCS.every((sec) => EMPTY_SCRIPT.includes(`# ${sec.name}`)), SCRIPT_DOCS.map((sec) => sec.name));
+  check("manual: the empty script's comments hold every section", SCRIPT_DOCS.every((sec, i) => EMPTY_SCRIPT.includes(`# ${i + 1}. ${sec.title.toUpperCase()}`)), SCRIPT_DOCS.map((sec) => sec.title));
   const manual = docsAsText();
-  for (const a of ASKS) check(`manual: ask "${a.id}" is described`, manual.includes(`${a.id.padEnd(10)} ${a.blurb}`), a.id);
-  for (const sc of SCORES) check(`manual: score "${sc.id}" is described`, manual.includes(`${sc.id.padEnd(10)} ${sc.blurb}`), sc.id);
+  for (const a of ASKS) check(`manual: ask "${a.id}" is described`, manual.includes(a.id) && manual.includes(a.blurb), a.id);
+  for (const sc of SCORES) check(`manual: score "${sc.id}" is described`, manual.includes(sc.id) && manual.includes(sc.blurb), sc.id);
+  // every example in the manual is a script that reads clean
+  for (const sec of SCRIPT_DOCS) {
+    for (const b of sec.blocks) {
+      if (!("code" in b) || !b.code.startsWith("#")) continue;
+      const read = parseScript(b.code, []);
+      check(`manual: the example in "${sec.title}" reads clean`, read.errors.length === 0 && read.warnings.length === 0, [read.errors, read.warnings]);
+    }
+  }
   check("roster: a quiz with only a roster writes the empty script and the line", only === [EMPTY_SCRIPT.split("\n")[0], "", 'Roster("Anna")', "", ...EMPTY_SCRIPT.split("\n").slice(1)].join("\n"), only);
   const onlyBack = parseScript(only, []);
   check("roster: which reads back as just the roster", !onlyBack.errors.length && onlyBack.actions.length === 1 && onlyBack.actions[0].phase === "ROSTER", onlyBack);

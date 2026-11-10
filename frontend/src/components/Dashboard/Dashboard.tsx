@@ -21,6 +21,7 @@ import { errorMessage } from "../../services/api";
 import { go } from "../../hooks/useHashRoute";
 import { useEscape } from "../../hooks/useEscape";
 import { COMMANDS } from "../../constants/commands";
+import { ROSTER_EVENT } from "./Main/RosterCard";
 import "../../index.css";
 
 export const Dashboard: React.FC = () => {
@@ -179,6 +180,9 @@ export const Dashboard: React.FC = () => {
         break;
       case "Start":
         handleStart();
+        break;
+      case "Who's coming":
+        if (quiz) window.dispatchEvent(new Event(ROSTER_EVENT));
         break;
       case "Stash this quiz":
         handleStash();
