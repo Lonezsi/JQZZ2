@@ -166,6 +166,8 @@ const PATHS: Record<string, React.ReactNode> = {
       <circle cx="8" cy="8" r=".6" fill="currentColor" />
     </>
   ),
+  // ✦, drawn: a font puts the character off its centre
+  SPARK: <path d="M8 2.5C8.4 6 10 7.6 13.5 8 10 8.4 8.4 10 8 13.5 7.6 10 6 8.4 2.5 8 6 7.6 7.6 6 8 2.5z" />,
   STAR: (
     <>
       <path d="m8 2 1.8 3.7 4 .6-2.9 2.8.7 4L8 11.2 4.4 13.1l.7-4L2.2 6.3l4-.6z" />

@@ -9,6 +9,7 @@ import { SIDEBAR_MAX, SIDEBAR_MIN, useSidebarLayout } from "../../../hooks/useSi
 import { usePeople } from "../../../hooks/usePeople";
 import { useFriends } from "../../../hooks/useFriends";
 import { useWebSocket } from "../../../contexts/WebSocketContext";
+import { Glyph } from "../../common/Glyph";
 import { Keys } from "../../common/Keys";
 import { keyOf } from "../../../constants/commands";
 import { ariaShortcut } from "../../../utils/shortcuts";
@@ -150,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           aria-keyshortcuts={ariaShortcut(keyOf("Make a quiz with AI"))}
         >
           <span className="jqzz-sid-action-icon" aria-hidden="true">
-            ✦
+            <Glyph name="SPARK" size={13} />
           </span>
           Make one with AI
           <Keys combo={keyOf("Make a quiz with AI")} />
