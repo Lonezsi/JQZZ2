@@ -431,6 +431,83 @@
   color: var(--text-3);
   background: var(--raised-hover);
 }
+
+/* on a question card: what it takes from an earlier question, votes each and
+   own sets (LinkStrip). Real controls, so they sit apart from the read-only chips. */
+.jqzz-link-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  cursor: default;
+}
+.jqzz-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--raised);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.jqzz-link-chip.empty {
+  border-style: dashed;
+  background: none;
+}
+.jqzz-link-chip.warn {
+  border-color: var(--danger);
+}
+.jqzz-link-chip:has(input[type="checkbox"]) {
+  padding-right: 10px;
+  cursor: pointer;
+}
+.jqzz-link-chip input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--warm);
+}
+.jqzz-link-chip select {
+  max-width: 220px;
+  height: 20px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.jqzz-link-chip select:focus-visible,
+.jqzz-link-step:focus-visible {
+  outline: 1px solid var(--line-strong);
+}
+.jqzz-link-step {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--sunken);
+  color: var(--text);
+  line-height: 1;
+}
+.jqzz-link-step:hover:not(:disabled) {
+  background: var(--raised-hover);
+}
+.jqzz-link-step:disabled {
+  opacity: 0.35;
+}
+.jqzz-link-num {
+  min-width: 14px;
+  color: var(--text);
+  font-family: var(--font-data);
+  text-align: center;
+}
 .jqzz-ans-chip.scores {
   color: var(--text);
   border-color: color-mix(in srgb, var(--node) 55%, transparent);

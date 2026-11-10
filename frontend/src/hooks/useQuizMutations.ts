@@ -6,7 +6,7 @@ import { errorMessage } from "../services/api";
 import { snippetActions } from "../utils/snippetActions";
 import { DEFAULTS, formatSettings, settingsAt } from "../utils/settings";
 import type { QuizSettings } from "../utils/settings";
-import { freshRefs } from "../utils/scriptRefs";
+import { freshRefs, linkNew } from "../utils/scriptRefs";
 import { rosterAction } from "../utils/roster";
 import type { Roster } from "../utils/roster";
 
@@ -170,7 +170,11 @@ export const useQuizMutations = (
           const i = at == null ? quiz.actions.length : Math.max(0, Math.min(at, quiz.actions.length));
           // a dropped-in block links to itself, never to a look-alike label already in the quiz
           const fresh = freshRefs(added, quiz.actions);
-          return { ...quiz, actions: [...quiz.actions.slice(0, i), ...selfContained(fresh, quiz.actions, i), ...quiz.actions.slice(i)] };
+          const placed = selfContained(fresh, quiz.actions, i);
+          const actions = [...quiz.actions.slice(0, i), ...placed, ...quiz.actions.slice(i)];
+          // a vote on answers or a who-was-it takes from the nearest question it can
+          const ids = new Set(placed.flatMap((a) => (a.question ? [a.question.id] : [])));
+          return { ...quiz, actions: linkNew(actions, ids) };
         }),
       );
     },

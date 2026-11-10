@@ -7,12 +7,22 @@ import { describe, parseSettings } from "../../../../utils/settings";
 import { formatTimecode } from "../../../../utils/timecode";
 import { Glyph } from "../../../common/Glyph";
 import { maxPoints, typeIcon, typeLabel } from "../../../../utils/questionInfo";
-import { borrows, modeOf, optionNumber, parseOptions } from "../../../../utils/questionTypes";
-import { questionNumbers, showRefs, sourceOf } from "../../../../utils/scriptRefs";
+import {
+  borrows,
+  modeOf,
+  optionNumber,
+  parseOptions,
+} from "../../../../utils/questionTypes";
+import {
+  questionNumbers,
+  showRefs,
+  sourceOf,
+} from "../../../../utils/scriptRefs";
 import { DRAG_IMAGE_KEY, dragging } from "../../../../utils/dragKeys";
 import { imageSlots, placeImage } from "../../../../utils/imageSlots";
 import type { ImageSlot } from "../../../../utils/imageSlots";
 import { QuestionImage } from "../../../Play/PlayCommon";
+import { LinkStrip } from "./LinkStrip";
 
 interface ActionCardProps {
   action: Action;
@@ -56,20 +66,31 @@ function Backdrop({ src }: { src?: string }) {
     };
   }, [src, owner, viewer]);
   if (!url) return null;
-  return <img className="jqzz-card-backdrop" src={url} alt="" aria-hidden="true" />;
+  return (
+    <img className="jqzz-card-backdrop" src={url} alt="" aria-hidden="true" />
+  );
 }
 
 /**
  * While a picture is dragged over a step: its slots, each named, showing the
  * picture already in it. Dropped on a slot, the picture goes there.
  */
-function ImageSlots({ slots, onPlace }: { slots: ImageSlot[]; onPlace: (slot: string, ref: string) => void }) {
+function ImageSlots({
+  slots,
+  onPlace,
+}: {
+  slots: ImageSlot[];
+  onPlace: (slot: string, ref: string) => void;
+}) {
   const { user } = useAuth();
   const { quiz } = useQuiz();
   const [over, setOver] = useState<string | null>(null);
   const viewer = user?.id ?? "";
   return (
-    <div className="jqzz-img-slots" style={{ "--n": Math.min(slots.length, 5) } as React.CSSProperties}>
+    <div
+      className="jqzz-img-slots"
+      style={{ "--n": Math.min(slots.length, 5) } as React.CSSProperties}
+    >
       {slots.map((slot, i) => (
         <div
           key={slot.key}
@@ -90,7 +111,12 @@ function ImageSlots({ slots, onPlace }: { slots: ImageSlot[]; onPlace: (slot: st
           }}
         >
           {slot.src && (
-            <QuestionImage src={slot.src} ownerId={quiz?.authorId ?? viewer} viewerId={viewer} className="jqzz-img-slot-pic" />
+            <QuestionImage
+              src={slot.src}
+              ownerId={quiz?.authorId ?? viewer}
+              viewerId={viewer}
+              className="jqzz-img-slot-pic"
+            />
           )}
           <span className="jqzz-img-slot-name">{slot.label}</span>
         </div>
@@ -104,7 +130,14 @@ function ChipPicture({ src }: { src: string }) {
   const { user } = useAuth();
   const { quiz } = useQuiz();
   const viewer = user?.id ?? "";
-  return <QuestionImage src={src} ownerId={quiz?.authorId ?? viewer} viewerId={viewer} className="jqzz-ans-chip-img" />;
+  return (
+    <QuestionImage
+      src={src}
+      ownerId={quiz?.authorId ?? viewer}
+      viewerId={viewer}
+      className="jqzz-ans-chip-img"
+    />
+  );
 }
 
 /** a phone, where the inspector is a sheet over the bottom of the screen */
@@ -124,7 +157,9 @@ function PhasePreview({ action }: { action: Action }) {
               <span key={i} />
             ))}
           </span>
-          <span className="jqzz-prev-note">countdown, nothing on screen yet</span>
+          <span className="jqzz-prev-note">
+            countdown, nothing on screen yet
+          </span>
         </span>
       );
     }
@@ -133,14 +168,20 @@ function PhasePreview({ action }: { action: Action }) {
       const options = q?.answers?.length ?? 0;
       const opts = parseOptions(q?.options);
       const { ask, score } = modeOf(q);
-      const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+      const plural = (n: number, one: string, many: string) =>
+        `${n} ${n === 1 ? one : many}`;
       // the earlier question this one uses, as the script numbers it
       const source = quiz && q ? sourceOf(quiz.actions, q) : null;
-      const sourceName = source && quiz ? `Q${questionNumbers(quiz.actions).get(source.id)}` : "an earlier question";
+      const sourceName =
+        source && quiz
+          ? `Q${questionNumbers(quiz.actions).get(source.id)}`
+          : "an earlier question";
       const onScreen = (() => {
         if (ask === "person") return "players pick someone in the game";
-        if (borrows({ ask, score }, opts)) return `players vote on ${sourceName}'s answers`;
-        if ((ask === "write" || ask === "draw") && opts.from) return `each player gets someone's answer to ${sourceName}`;
+        if (borrows({ ask, score }, opts))
+          return `players vote on ${sourceName}'s answers`;
+        if ((ask === "write" || ask === "draw") && opts.from)
+          return `each player gets someone's answer to ${sourceName}`;
         if (score === "secret") {
           return `players ${ask === "draw" ? "draw" : "describe"} one of ${plural(options, "secret word", "secret words")}`;
         }
@@ -150,7 +191,9 @@ function PhasePreview({ action }: { action: Action }) {
           case "order":
             return `${plural(options, "item", "items")} to put in order`;
           case "number":
-            return opts.unit ? `players guess a number, in ${opts.unit}` : "players guess a number";
+            return opts.unit
+              ? `players guess a number, in ${opts.unit}`
+              : "players guess a number";
           case "match":
             return `${plural(options, "pair", "pairs")} to match`;
           case "rank":
@@ -180,20 +223,71 @@ function PhasePreview({ action }: { action: Action }) {
     }
     case "ANSWER": {
       const answers = q?.answers ?? [];
+      const { ask, score } = modeOf(q);
+      // a vote on an earlier question's answers has none of its own: the winner is shown
+      if (q && borrows({ ask, score }, parseOptions(q.options))) {
+        const source = quiz ? sourceOf(quiz.actions, q) : null;
+        const name =
+          source && quiz
+            ? `Q${questionNumbers(quiz.actions).get(source.id)}`
+            : "the earlier question";
+        return (
+          <span className="jqzz-prev">
+            <span className="jqzz-prev-note">
+              the most voted of {name}'s answers wins
+            </span>
+          </span>
+        );
+      }
+      if (ask === "person") {
+        return (
+          <span className="jqzz-prev">
+            <span className="jqzz-prev-note">
+              shows who it was, and who guessed right
+            </span>
+          </span>
+        );
+      }
+      // players make the answers here, so none are written in advance (a secret word list aside)
+      if (
+        (ask === "write" || ask === "draw" || ask === "chain") &&
+        score !== "secret"
+      ) {
+        const made =
+          ask === "draw" ? "drawings" : ask === "chain" ? "chains" : "answers";
+        const reveal =
+          score === "votes"
+            ? `everyone votes on the ${made}`
+            : score === "knockout"
+              ? `the ${made} battle it out`
+              : score === "authors"
+                ? `everyone guesses who made which`
+                : `the ${made} go up on the big screen`;
+        return (
+          <span className="jqzz-prev">
+            <span className="jqzz-prev-note">{reveal}</span>
+          </span>
+        );
+      }
       if (answers.length === 0) {
         return <span className="jqzz-prev jqzz-prev-warn">no answers yet</span>;
       }
       return (
         <span className="jqzz-prev">
           {answers.slice(0, 4).map((a) => (
-            <span key={a.id} className={`jqzz-ans-chip${(a.value || 0) > 0 ? " scores" : ""}`}>
+            <span
+              key={a.id}
+              className={`jqzz-ans-chip${(a.value || 0) > 0 ? " scores" : ""}`}
+            >
               {a.imageUrl && <ChipPicture src={a.imageUrl} />}
               {a.text || "..."}
               {a.match != null && <> → {a.match || "..."}</>}
               <b>{a.value}</b>
             </span>
           ))}
-          {answers.length > 4 && <span className="jqzz-prev-note">+{answers.length - 4} more</span>}
+          {answers.length > 4 && (
+            <span className="jqzz-prev-note">+{answers.length - 4} more</span>
+          )}
         </span>
       );
     }
@@ -201,7 +295,9 @@ function PhasePreview({ action }: { action: Action }) {
       return q?.elaborationText ? (
         <span className="jqzz-prev jqzz-prev-quote">“{q.elaborationText}”</span>
       ) : (
-        <span className="jqzz-prev jqzz-prev-warn">nothing written to explain it yet</span>
+        <span className="jqzz-prev jqzz-prev-warn">
+          nothing written to explain it yet
+        </span>
       );
     case "RESULT": {
       const max = maxPoints(q);
@@ -300,7 +396,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       onActionDragOver(e, action.id);
     },
     onDragLeave: (e: React.DragEvent<HTMLDivElement>) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setImageOver(false);
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+        setImageOver(false);
     },
     onDrop: (e: React.DragEvent<HTMLDivElement>) => {
       if (dragging(e, DRAG_IMAGE_KEY)) {
@@ -318,7 +415,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   function place(slot: string, ref: string) {
     setImageOver(false);
-    if (action.question) updateQuestion(action.question.id, placeImage(action.question, slot, ref));
+    if (action.question)
+      updateQuestion(
+        action.question.id,
+        placeImage(action.question, slot, ref),
+      );
   }
 
   const handle = (
@@ -382,7 +483,9 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   const rowClass = `jqzz-row kind-${kind}${isOver ? " drag-over" : ""}${isDragging ? " dragging-self" : ""}${isSelected ? " is-selected" : ""}`;
   const flip = `a-${action.id}`;
-  const phaseColor = { "--node": `var(--phase-${action.phase})` } as React.CSSProperties;
+  const phaseColor = {
+    "--node": `var(--phase-${action.phase})`,
+  } as React.CSSProperties;
 
   if (kind === "divider") {
     return (
@@ -427,7 +530,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           </span>
           <span className="jqzz-annot">from here</span>
           <span className="jqzz-setting-chips">
-            {chips.length ? chips.map((c) => <span key={c}>{c}</span>) : <span>nothing set</span>}
+            {chips.length ? (
+              chips.map((c) => <span key={c}>{c}</span>)
+            ) : (
+              <span>nothing set</span>
+            )}
           </span>
           <span className="jqzz-card-actions">
             {moveBtns}
@@ -452,7 +559,9 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           <span className="jqzz-note-glyph" aria-hidden="true">
             <Glyph name="TEXT" size={14} />
           </span>
-          <span className="jqzz-text-block-content">{action.preview || "empty note"}</span>
+          <span className="jqzz-text-block-content">
+            {action.preview || "empty note"}
+          </span>
           <span className="jqzz-annot jqzz-note-tag">for you only</span>
           <span className="jqzz-card-actions">
             {moveBtns}
@@ -463,7 +572,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     );
   }
 
-  const pct = maxTime > 0 ? Math.max(4, Math.round(((action.time || 0) / maxTime) * 100)) : 0;
+  const pct =
+    maxTime > 0
+      ? Math.max(4, Math.round(((action.time || 0) / maxTime) * 100))
+      : 0;
   const q = action.question;
   // a stored {@q2.winner} reads as the script writes it, {Q2.winner}
   const prompt = q?.text ? showRefs(q.text, quiz?.actions ?? [], q) : "";
@@ -492,9 +604,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         <span className="jqzz-card-main">
           <span className="jqzz-card-phase">{action.phase.toLowerCase()}</span>
           {action.phase === "QUESTION" && (
-            <span className="jqzz-card-prompt">{prompt || "no prompt yet"}</span>
+            <span className="jqzz-card-prompt">
+              {prompt || "no prompt yet"}
+            </span>
           )}
           <PhasePreview action={action} />
+          {action.phase === "QUESTION" && q && quiz && (
+            <LinkStrip question={q} actions={quiz.actions} />
+          )}
         </span>
         <span className="jqzz-card-time">{action.time}s</span>
         <span className="jqzz-card-actions">

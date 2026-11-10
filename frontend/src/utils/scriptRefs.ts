@@ -235,3 +235,28 @@ export function freshRefs(added: Action[], existing: Action[]): Action[] {
   }
   return added.map((a) => (a.question && renamed.has(a.question.id) ? { ...a, question: renamed.get(a.question.id)! } : a));
 }
+
+/**
+ * Questions just added that can't play without an earlier one (a vote on
+ * answers, a who-was-it) link to the nearest earlier question that fits,
+ * the way the inspector's picker would. Ones with a link already, or with
+ * nothing earlier to take from, are left alone.
+ */
+export function linkNew(actions: Action[], ids: Iterable<number>): Action[] {
+  let out = actions;
+  for (const id of ids) {
+    const q = out.find((a) => a.question?.id === id)?.question;
+    if (!q || parseOptions(q.options).from) continue;
+    const m = modeOf(q);
+    const needs = (m.ask === "pick" && m.score === "votes") || (m.ask === "person" && m.score === "right");
+    if (!needs) continue;
+    const nearest = sourcesFor(out, q).at(-1);
+    if (!nearest) continue;
+    const patches = linkTo(out, q, nearest.question);
+    out = out.map((a) => {
+      const p = a.question && patches.find((x) => x.id === a.question!.id);
+      return p ? { ...a, question: { ...a.question!, ...p.patch } } : a;
+    });
+  }
+  return out;
+}
