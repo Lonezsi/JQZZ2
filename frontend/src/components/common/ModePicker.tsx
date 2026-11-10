@@ -3,7 +3,7 @@ import { Select } from "./Select";
 import { ASKS, askInfo, describe, fixMode, scoreInfo, type Mode } from "../../utils/questionTypes";
 
 /**
- * What a question is, as its two choices (docs/script.md): what players do,
+ * What a question is, as its two choices (utils/scriptDocs.ts): what players do,
  * and how that scores. The score list only offers what the chosen ask takes.
  */
 export const ModePicker: React.FC<{ mode: Mode; onChange: (mode: Mode) => void; id: string; hint?: boolean }> = ({

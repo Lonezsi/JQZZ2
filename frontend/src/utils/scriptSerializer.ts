@@ -6,65 +6,23 @@ import { modeOf, parseOptions } from "./questionTypes";
 import type { OptionKey } from "./questionTypes";
 import { readRoster, rosterLine } from "./roster";
 import { showRefs, sourceOf } from "./scriptRefs";
+import { docsAsText } from "./scriptDocs";
 
-export const EMPTY_SCRIPT = `# New Quiz · JQzz Script v3
-# Author: you
-#
-# ─── How to write a quiz (all of it: docs/script.md) ──
-#
-# NewQuestion Q1 (
-#   ask: "pick", score: "right",
-#   prompt: "Your question here?",
-#   elaboration: "Fun fact about the answer",
-#   answers: [
-#     { text: "Option A", value: 0   },
-#     { text: "Option B", value: 100 },
-#   ],
-# )
-#
-# ShowWaiting(Q1, time: 10)
-# ShowQuestion(Q1, time: 30)
-# ShowAnswers(Q1, time: 15)
-# ShowElaboration(Q1, time: 20)
-# ShowResult(Q1, time: 10)
-#
-# A question is what players do (ask) and how it scores (score):
-#   ask: pick, pick-many, type-in, order, number, match, rank,
-#        write, draw, chain, person
-#   score: right       whoever gets it right
-#          crowd       whoever sides with the most
-#          votes       everyone votes for the best one
-#          authors     everyone guesses who made what
-#          secret      answers are secret words; the others guess them
-#          knockout    battles until one is left
-#          none        nobody scores
-#   number takes unit, min, max; chain takes rounds; match answers take
-#   { text: "Gold", match: "Au", value: 100 }
-#   type: "poll" and the other old names still read (docs/script.md)
-#
-# Using an earlier question (docs/script.md):
-#   from: "Q1"     pick + votes: vote on Q1's answers
-#                  write, draw: everyone gets someone else's Q1 answer
-#                  person + right: guess who made Q1's winner
-#   picks: 2       vote for up to 2
-#   overflow: 6    nobody sees more than 6 answers
-#   in a prompt: {Q2.winner}; with from: {author} and {answer}
-#
-# Roster("Anna", "Bence")   who's coming: they pick their name when they join
-#
-# Use --- to insert a visual divider.
-# Settings group what's inside them, until the closing brace:
-#
-# shuffle {            questions inside swap places
-# mix {                answers come in a random order
-# grade=off {          played, but nobody scores
-# latejoin=off {       nobody new can join from here
-# points=2 {           double points
-# speed {              faster answers score more
-# }                    back to how it was before the group
-#
-# Any other line becomes a text note block.
-# ─────────────────────────────────────────────────────`;
+/*
+ * The empty quiz's text: the whole manual as comments (scriptDocs.ts), so the
+ * explanation is right there in the script, and comments are dropped when the
+ * quiz is saved. Its first line and last rule are what the writer and the
+ * roster line rely on.
+ */
+export const EMPTY_SCRIPT = [
+  "# New Quiz · JQzz Script v3",
+  "# Author: you",
+  "#",
+  ...docsAsText().split("\n").map((line) => (line ? `# ${line}` : "#")),
+  "#",
+  "# Delete these comments whenever you like: they're left out when the quiz is saved.",
+  "# ─────────────────────────────────────────────────────",
+].join("\n");
 
 // JSON string syntax, which the parser reads back (quotes and newlines survive)
 const str = (s: string | undefined) => JSON.stringify(s ?? "");

@@ -21,11 +21,11 @@ import type { Ask, Mode, QuestionField, QuestionOptions, Score } from "./questio
 import { rosterAction, rosterProblem } from "./roster";
 
 /*
- * Reads a JQzz script (docs/script.md) into questions and timeline steps.
+ * Reads a JQzz script (utils/scriptDocs.ts) into questions and timeline steps.
  * The script is the source of truth: whatever it can say, the quiz can be.
  *
  * Scripts often come from a chat AI, so the reader forgives the usual slips
- * (docs/script.md, "What the reader forgives") and says which lines it tidied
+ * (utils/scriptDocs.ts, WHAT THE READER FORGIVES) and says which lines it tidied
  * in `fixed`. A repair only ever changes how a line that was an error or a
  * note reads: a script that was valid reads exactly as it did.
  */

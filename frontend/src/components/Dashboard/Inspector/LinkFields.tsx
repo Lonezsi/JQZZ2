@@ -13,7 +13,7 @@ import type { LinkField, Mode, QuestionOptions } from "../../../utils/questionTy
 import { linkTo, plainRefs, showRefs, sourceOf, sourcesFor } from "../../../utils/scriptRefs";
 
 /*
- * Using an earlier question (docs/script.md): which one a question takes its
+ * Using an earlier question (utils/scriptDocs.ts): which one a question takes its
  * answers from, how many each player votes for, and whether each gets their
  * own set. The script says from: "Q1"; the quiz keeps a hidden label, so
  * these fields go through scriptRefs and never write a label by hand.

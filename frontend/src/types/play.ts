@@ -36,7 +36,7 @@ export interface GameQuestion {
   answers: GameAnswer[];
   elaborationText?: string | null;
   elaborationImageUrl?: string | null;
-  /** what players do and how it scores (docs/script.md); older servers only send type */
+  /** what players do and how it scores (utils/scriptDocs.ts); older servers only send type */
   ask?: string;
   score?: string;
   /** answering sooner scores more */

@@ -4,7 +4,7 @@ import { useQuiz } from "../../../contexts/QuizContext";
 import { rosterOf, rosterProblem, splitNames } from "../../../utils/roster";
 
 /*
- * Who's coming (docs/script.md, "Who's coming"): a card above the quiz that
+ * Who's coming (utils/scriptDocs.ts, WHO'S COMING): a card above the quiz that
  * lists the names people pick from when they join, or, while a quiz has
  * questions and no list, a tip that says it can have one. Dismissing the
  * tip hides it on every quiz: once you know rosters exist, it's said.

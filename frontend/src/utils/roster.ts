@@ -2,7 +2,7 @@ import type { Action, Quiz } from "../types";
 import { generateId } from "./idGenerator";
 
 /*
- * Who's coming: the names a quiz expects (docs/script.md, "Who's coming").
+ * Who's coming: the names a quiz expects (utils/scriptDocs.ts, WHO'S COMING).
  * The script says it in one line, Roster("Anna", "Bence"); the quiz keeps it
  * as a ROSTER step that never plays, its preview {"names":[...],"unique":true}.
  * Everyone who joins the game picks their name from it.

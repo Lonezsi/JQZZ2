@@ -4,7 +4,7 @@ import type { Mode } from "./questionTypes";
 import { settingsAt } from "./settings";
 
 /*
- * Links between questions (docs/script.md, "Using an earlier question"). The
+ * Links between questions (utils/scriptDocs.ts, EARLIER QUESTIONS). The
  * script calls questions Q1, Q2 by where they stand, but a quiz keeps hidden
  * labels instead: the question something uses has `ref=q1` in its extras, the
  * one using it `from=q1`, and a prompt says {@q1.winner}. Labels stay put when

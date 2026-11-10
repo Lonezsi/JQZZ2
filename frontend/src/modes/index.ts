@@ -1,6 +1,6 @@
 /*
  * Game modes: ready-made quizzes that show off a way of playing. Each is a
- * plain script (docs/script.md), the same as one written in the editor, so
+ * plain script (utils/scriptDocs.ts), the same as one written in the editor, so
  * everything about it comes from the script: its name from the first line,
  * what it's about and who it's for from its comments, the rest from parsing it.
  */

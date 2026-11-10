@@ -5,7 +5,7 @@ import type { Ask, Score } from "./questionTypes";
  * Making a quiz with a chat AI: a guide to copy into it, and what to do with
  * its answer. The guide is plain ASCII and says one way to write each thing,
  * so even a weak AI writes a script the reader takes; the reader forgives the
- * rest (docs/script.md, "What the reader forgives"). Its lists of asks and
+ * rest (utils/scriptDocs.ts, WHAT THE READER FORGIVES). Its lists of asks and
  * scores come from the registry, so a new one can't be left out of it.
  */
 

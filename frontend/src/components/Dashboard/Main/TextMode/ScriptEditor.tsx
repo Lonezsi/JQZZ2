@@ -7,6 +7,7 @@ import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
 import { aiReference, errorsForAI, extractScript } from "../../../../utils/aiReference";
 import { copyText } from "../../../Modals/copyText";
 import { RosterCard } from "../RosterCard";
+import { ScriptDocs } from "./ScriptDocs";
 
 interface ScriptEditorProps {
   quiz: Quiz | undefined;
@@ -57,6 +58,8 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   const [warnings, setWarnings] = useState<string[]>([]);
   // which copy button just copied, for a moment
   const [copied, setCopied] = useState<"ai" | "errors" | null>(null);
+  // the manual sits beside the editor on a wide screen, and under it on a narrow one
+  const [docsOpen, setDocsOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 1100);
   useEffect(() => {
     if (!copied) return;
     const t = window.setTimeout(() => setCopied(null), 1400);
@@ -247,7 +250,17 @@ ShowResult(${q}, time: 10)
         >
           {copied === "ai" ? "copied" : "copy for AI"}
         </button>
+        <button
+          className="jqzz-ai-btn"
+          aria-pressed={docsOpen}
+          title="the script's manual: every question, step and setting"
+          onClick={() => setDocsOpen((open) => !open)}
+        >
+          docs
+        </button>
       </div>
+      <div className="jqzz-text-split">
+      <div className="jqzz-text-main">
       {quiz && <RosterCard quiz={quiz} onAddLine={addRosterLine} />}
       {problems.length > 0 && (
         <div className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`} role={parseOk ? "status" : "alert"}>
@@ -293,6 +306,9 @@ ShowResult(${q}, time: 10)
       <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
         jqzz script v3 · {plural(text.split("\n").length, "line")} · {plural(summary.questions, "question")} ·{" "}
         {plural(summary.actions, "phase")}
+      </div>
+      </div>
+      {docsOpen && <ScriptDocs onClose={() => setDocsOpen(false)} />}
       </div>
     </div>
   );

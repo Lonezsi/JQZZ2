@@ -1,6 +1,6 @@
 /*
  * What a question can be, in one place. A question is two choices (Script
- * v3, docs/script.md): what players do, its `ask`, and how that scores, its
+ * v3, utils/scriptDocs.ts): what players do, its `ask`, and how that scores, its
  * `score`. Any pair an ask allows works. The handful of pairs people reach
  * for most have names, the presets; they're what older scripts and the
  * server's stored `type` call them. The parser, the writer, the editor and
