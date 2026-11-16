@@ -7,6 +7,7 @@ import type { Command } from "../types";
  *   V view: visual or text · P practice · R who's coming (the roster)
  *   J join · S stash · Shift S stash this quiz · H history · B the bell
  *   Y you (your profile) · , settings (as in most apps) · F the front page
+ *   D the script's docs (text mode) · Z undo the last delete (Delete or Backspace deletes the picked steps)
  * The ones that matter more keep the Ctrl (⌘ on a Mac): Ctrl K for these
  * commands and Ctrl Enter to start a game. Esc closes, then goes back.
  *
@@ -22,6 +23,8 @@ export const COMMANDS: (Command & { to?: string })[] = [
   { icon: "▷", label: "Start", sub: "Mod ↵" },
   { icon: "▷", label: "Practice this quiz", sub: "P" },
   { icon: "☰", label: "Who's coming", sub: "R" },
+  { icon: "↶", label: "Undo", sub: "Z" },
+  { icon: "§", label: "Script docs", sub: "D" },
   { icon: "◇", label: "Stash this quiz", sub: "Shift S" },
   { icon: "⌁", label: "Join a game", sub: "J", to: "/join" },
   { icon: "▤", label: "Open stash", sub: "S", to: "/me/stash" },

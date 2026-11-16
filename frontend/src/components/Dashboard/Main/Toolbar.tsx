@@ -72,10 +72,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <div className="jqzz-seg" role="group" aria-label="Editor mode" data-mode={mode}>
           <span className="jqzz-seg-thumb" aria-hidden="true" />
           <button aria-pressed={mode === "visual"} onClick={() => setMode("visual")} data-keys={keyOf("Switch visual / text")}>
-            Visual
+            visual
           </button>
           <button aria-pressed={mode === "text"} onClick={() => setMode("text")} data-keys={keyOf("Switch visual / text")}>
-            Text
+            text
           </button>
         </div>
       )}
@@ -137,7 +137,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           title="start a game"
           data-keys="Mod ↵"
         >
-          <span aria-hidden="true">▶</span> Start
+          <span aria-hidden="true">▶</span> start
         </button>
       )}
     </div>

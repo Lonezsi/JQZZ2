@@ -10,6 +10,7 @@ import { typeLabel } from "../../../../utils/questionInfo";
 import { plural } from "../../../../utils/format";
 import { Glide } from "../../../common/Glide";
 import { Keys } from "../../../common/Keys";
+import { useEscape } from "../../../../hooks/useEscape";
 import { ROSTER_EVENT } from "../RosterCard";
 
 const DRAG_SNIPPET_KEY = "jqzz-snippet";
@@ -25,7 +26,7 @@ interface AddButtonProps {
 type Tab = "types" | "settings" | "stash";
 const TABS = [
   { key: "types", label: "types", icon: "TYPE", title: "a new question of a type" },
-  { key: "settings", label: "settings", icon: "SETTING", title: "settings for what follows" },
+  { key: "settings", label: "more", icon: "SETTING", title: "settings, notes, section lines, who's coming" },
   { key: "stash", label: "stash", icon: "STASH", title: "questions you saved" },
 ];
 
@@ -39,6 +40,8 @@ export const AddButton: React.FC<AddButtonProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("types");
+  // Esc closes the tray first, before it can close the quiz
+  useEscape(open, () => setOpen(false));
 
   return (
     <div
@@ -82,7 +85,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   );
 };
 
-/** Settings blocks: they hold for everything after them. */
+/** Everything that isn't a question: who's coming, a note, a section line, and the settings blocks that hold for everything after them. */
 const SettingsTray: React.FC<{ onPick: (id: string) => void; onRoster: () => void }> = ({ onPick, onRoster }) => (
   <div className="jqzz-tray-grid">
     {/* not a block in the timeline: the list at the top, so it opens there */}
@@ -92,11 +95,30 @@ const SettingsTray: React.FC<{ onPick: (id: string) => void; onRoster: () => voi
       </span>
       <span className="jqzz-annot">the names people pick from when they join</span>
     </button>
+    {[
+      { id: "note", name: "note", note: "for you only, never shown in a game" },
+      { id: "divider", name: "section line", note: "splits the quiz into parts, skipped when it runs" },
+    ].map((x, i) => (
+      <button
+        key={x.id}
+        className="jqzz-snippet setting"
+        style={{ "--i": i + 1 } as React.CSSProperties}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData(DRAG_SNIPPET_KEY, x.id);
+          e.dataTransfer.effectAllowed = "copy";
+        }}
+        onClick={() => onPick(x.id)}
+      >
+        <span className="jqzz-snippet-name">{x.name}</span>
+        <span className="jqzz-annot">{x.note}</span>
+      </button>
+    ))}
     {SETTING_PRESETS.map((p, i) => (
       <button
         key={p.text}
         className="jqzz-snippet setting"
-        style={{ "--i": i + 1 } as React.CSSProperties}
+        style={{ "--i": i + 3 } as React.CSSProperties}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData(DRAG_SNIPPET_KEY, `set:${p.text}`);

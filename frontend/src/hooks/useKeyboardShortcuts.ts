@@ -4,7 +4,8 @@ import { lettersBusy, pressed } from "../utils/shortcuts";
 
 /**
  * The editor's keys: Ctrl K opens the commands, Ctrl A selects every step,
- * and each command acting on the open quiz runs on its key from
+ * Delete or Backspace removes the picked steps (when not typing), and each
+ * command acting on the open quiz runs on its key from
  * constants/commands.ts (by label, through onCommand). Ctrl keys work while
  * typing too; plain letters only when you aren't (utils/shortcuts.ts).
  */
@@ -12,20 +13,23 @@ export const useKeyboardShortcuts = ({
   onPalette,
   onSelectAll,
   onCommand,
+  onDelete,
 }: {
   onPalette: () => void;
   onSelectAll: () => void;
   onCommand: (label: string) => void;
+  /** true when it took something out */
+  onDelete?: () => boolean;
 }) => {
-  const latest = useRef({ onPalette, onSelectAll, onCommand });
+  const latest = useRef({ onPalette, onSelectAll, onCommand, onDelete });
   useEffect(() => {
-    latest.current = { onPalette, onSelectAll, onCommand };
+    latest.current = { onPalette, onSelectAll, onCommand, onDelete };
   });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // a field that handled the key itself (the roster's Ctrl Enter saves) keeps it
       if (e.defaultPrevented) return;
-      const { onPalette, onSelectAll, onCommand } = latest.current;
+      const { onPalette, onSelectAll, onCommand, onDelete } = latest.current;
       const t = e.target as HTMLElement | null;
       const typing = t?.tagName === "INPUT" || t?.tagName === "TEXTAREA" || !!t?.isContentEditable;
       if (pressed(e, "Mod K")) {
@@ -36,6 +40,10 @@ export const useKeyboardShortcuts = ({
       if (pressed(e, "Mod A") && !typing) {
         e.preventDefault();
         onSelectAll();
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && !e.ctrlKey && !e.metaKey && !lettersBusy(e)) {
+        if (onDelete?.()) e.preventDefault();
         return;
       }
       const hit = COMMANDS.find(

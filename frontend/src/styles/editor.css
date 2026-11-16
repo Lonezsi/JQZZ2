@@ -73,11 +73,21 @@
   color: var(--danger);
   border-color: var(--danger);
 }
+/* the parse message, in the status row under the script: the full list is in its title */
 .jqzz-parse-errors {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-family: var(--font-data);
   font-size: var(--fs-small);
   color: var(--danger);
-  padding: 0 16px;
+}
+.jqzz-parse-msg {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* highlighted <pre> under a transparent <textarea> */
@@ -218,9 +228,19 @@
   opacity: 1;
 }
 
+/* one line, always there, so nothing above it moves: counts left, the parse message right */
 .jqzz-script-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 24px;
   padding: 0 4px;
+}
+.jqzz-script-count {
+  flex: none;
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 /* the parse strip's button, and its quieter look when it's only a heads up */
@@ -282,8 +302,7 @@
 }
 .jqzz-roster-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -348,10 +367,10 @@
 /* the head folds the list away: then it reads as one line of names */
 .jqzz-roster-fold {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: 1;
+  flex: 0 1 auto;
   padding: 2px 0;
   border: none;
   background: none;
@@ -359,9 +378,20 @@
   text-align: left;
 }
 .jqzz-roster-fold-mark {
-  width: 10px;
+  display: grid;
+  place-items: center;
   color: var(--text-3);
-  font-size: var(--fs-small);
+  transition: rotate var(--dur-2) var(--ease);
+}
+.jqzz-roster-fold-mark.open {
+  rotate: 90deg;
+}
+.jqzz-roster-over {
+  color: var(--danger);
+}
+/* the trash keeps to the far end, so nothing beside it reads as its key */
+.jqzz-roster-trash {
+  margin-left: auto;
 }
 .jqzz-roster-summary {
   overflow: hidden;
@@ -519,7 +549,8 @@
 /* the language reference: prose in the app's type, code in the script's,
    numbered sections, tables ruled like a spec */
 .jqzz-docs {
-  width: var(--docs-w, min(480px, 42%));
+  /* a remembered width can't squeeze the script under its 360px once the window is narrower */
+  width: clamp(280px, var(--docs-w, min(480px, 42%)), calc(100% - 372px));
   flex: none;
   display: flex;
   flex-direction: column;
@@ -542,16 +573,22 @@
   font-weight: 700;
   color: var(--text);
 }
-.jqzz-docs-hide {
-  border: none;
+/* only on a narrow screen, where the contents fold away under it */
+.jqzz-docs-contents {
+  display: none;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
   background: none;
-  color: var(--text-3);
+  color: var(--text-2);
   font: inherit;
   font-size: var(--fs-small);
-  cursor: pointer;
 }
-.jqzz-docs-hide:hover {
+.jqzz-docs-contents:hover,
+.jqzz-docs-contents[aria-expanded="true"] {
   color: var(--text);
+  background: var(--sunken);
 }
 .jqzz-docs-toc {
   display: grid;
@@ -682,5 +719,48 @@
   .jqzz-docs {
     width: 100%;
     max-height: 56vh;
+  }
+  /* the contents fold into one button, so the reference itself gets the height */
+  .jqzz-docs-contents {
+    display: inline-flex;
+    align-items: center;
+  }
+  .jqzz-docs-toc:not(.open) {
+    display: none;
+  }
+}
+
+/* points beyond the three buttons (Inspector/ContextEditor.tsx): any amount from 0 to 10 */
+.jqzz-points-other {
+  width: 96px;
+  margin-top: 8px;
+}
+
+/* a phone has room for one of the two: the problem wins */
+@media (max-width: 760px) {
+  .jqzz-script-status:has(.jqzz-parse-errors) .jqzz-script-count {
+    display: none;
+  }
+}
+
+/* a name that breaks a rule shows it as you type; the reason is in its title */
+.jqzz-roster-field.bad {
+  border-bottom-color: var(--danger);
+}
+.jqzz-roster-drop {
+  color: var(--text-2);
+}
+/* a phone gets one plain line instead of the keys */
+.jqzz-roster-touch {
+  display: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+}
+@media (hover: none) {
+  .jqzz-roster-keys {
+    display: none;
+  }
+  .jqzz-roster-touch {
+    display: block;
   }
 }

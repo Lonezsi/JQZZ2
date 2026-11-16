@@ -711,8 +711,8 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
       const question: Question = {
         id: prev?.id ?? generateId(),
         text: "",
-        imageUrl: prev?.imageUrl ?? "",
-        elaborationImageUrl: prev?.elaborationImageUrl,
+        // pictures are written in the script (image:, elaborationImage:); no line means none
+        imageUrl: "",
         userId: prev?.userId,
         type: "PREWRITTEN_SINGLE",
         elaborationText: "",
@@ -744,6 +744,18 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
           case "elaboration":
             question.elaborationText = asText ?? "";
             elaborationLine = f.line;
+            break;
+          case "image":
+          case "picture":
+            if (f.key !== "image") fix(f.line, `read ${f.key} as image`);
+            question.imageUrl = asText ?? "";
+            break;
+          case "elaborationImage":
+          case "elaboration-image":
+          case "elaboration_image":
+          case "elaborationimage":
+            if (f.key !== "elaborationImage") fix(f.line, `read ${f.key} as elaborationImage`);
+            question.elaborationImageUrl = asText || undefined;
             break;
           case "type": {
             preset = asText ? presetFromScript(asText) : undefined;
@@ -803,11 +815,11 @@ export function readScript(text: string, prevQuestions: Question[]): ParseResult
                 id: prevAnswer?.id ?? generateId(),
                 text: o.text === undefined ? "" : String(o.text),
                 value: typeof o.value === "number" ? Math.round(o.value) : Number(o.value) || 0,
-                imageUrl: prevAnswer?.imageUrl,
+                imageUrl: o.image === undefined ? undefined : String(o.image) || undefined,
                 userId: prevAnswer?.userId,
               };
               if (o.match !== undefined) answer.match = String(o.match);
-              const unknown = Object.keys(o).filter((k) => !["text", "value", "match"].includes(k));
+              const unknown = Object.keys(o).filter((k) => !["text", "value", "match", "image"].includes(k));
               if (unknown.length) err(f.line, `answers don't have ${unknown.map((k) => `"${k}"`).join(", ")}`);
               return answer;
             });

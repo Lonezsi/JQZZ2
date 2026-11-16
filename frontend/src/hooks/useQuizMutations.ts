@@ -9,6 +9,7 @@ import type { QuizSettings } from "../utils/settings";
 import { freshRefs, linkNew } from "../utils/scriptRefs";
 import { rosterAction } from "../utils/roster";
 import type { Roster } from "../utils/roster";
+import { notifyError, offerUndo, putBack } from "../utils/notice";
 
 const same = (a: QuizSettings, b: QuizSettings) =>
   (Object.keys(DEFAULTS) as (keyof QuizSettings)[]).every((k) => a[k] === b[k]);
@@ -76,23 +77,39 @@ export const useQuizMutations = (
     [updateQuiz],
   );
 
-  const deleteAction = useCallback(
-    (id: number) => {
-      updateQuiz((quiz) => ({
-        ...quiz,
-        actions: quiz.actions.filter((a) => a.id !== id),
-      }));
+  /**
+   * Steps out of the open quiz, with an undo that puts them back where they
+   * were. The offer is made inside the update, where the quiz as it was is in
+   * hand (React may run it twice in development: the second offer is the same).
+   */
+  const removeSteps = useCallback(
+    (goes: (a: Action) => boolean, label: (n: number) => string) => {
+      const quizId = activeQuizId;
+      updateQuiz((quiz) => {
+        const before = quiz.actions;
+        const gone = new Set(before.filter(goes).map((a) => a.id));
+        const n = gone.size;
+        if (n === 0) return quiz;
+        offerUndo(label(n), () =>
+          setQuizzes((prev) =>
+            prev.map((q) => (q.id === quizId ? { ...q, actions: putBack(q.actions, before, gone) } : q)),
+          ),
+        );
+        return { ...quiz, actions: before.filter((a) => !gone.has(a.id)) };
+      });
     },
-    [updateQuiz],
+    [activeQuizId, updateQuiz, setQuizzes],
   );
 
-  /** several steps at once: a whole question */
+  const deleteAction = useCallback(
+    (id: number) => removeSteps((a) => a.id === id, () => "deleted a step"),
+    [removeSteps],
+  );
+
+  /** several steps at once: a whole question, or a selection */
   const deleteActions = useCallback(
-    (ids: number[]) => {
-      const gone = new Set(ids);
-      updateQuiz((quiz) => ({ ...quiz, actions: quiz.actions.filter((a) => !gone.has(a.id)) }));
-    },
-    [updateQuiz],
+    (ids: number[]) => removeSteps((a) => ids.includes(a.id), (n) => (n === 1 ? "deleted a step" : `deleted ${n} steps`)),
+    [removeSteps],
   );
 
   const duplicateAction = useCallback(
@@ -154,7 +171,7 @@ export const useQuizMutations = (
       return response.data.id;
     } catch (error) {
       console.error("Failed to create quiz", error);
-      alert(`couldn't make a new quiz: ${errorMessage(error)}`);
+      notifyError(`couldn't make a new quiz: ${errorMessage(error)}`);
     }
   }, [setQuizzes, authorId]);
 
@@ -184,12 +201,17 @@ export const useQuizMutations = (
   /** who's coming: the quiz's one ROSTER step, kept first; null takes it out */
   const setRoster = useCallback(
     (r: Roster | null) => {
+      if (!r) {
+        // taking the list away can be undone like any delete
+        removeSteps((a) => a.phase === "ROSTER", () => "removed who's coming");
+        return;
+      }
       updateQuiz((quiz) => {
         const rest = quiz.actions.filter((a) => a.phase !== "ROSTER");
-        return { ...quiz, actions: r ? [rosterAction(r), ...rest] : rest };
+        return { ...quiz, actions: [rosterAction(r), ...rest] };
       });
     },
-    [updateQuiz],
+    [removeSteps, updateQuiz],
   );
 
   const handleParsed = useCallback(

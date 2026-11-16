@@ -33,8 +33,8 @@ function sourceLabel(m: Mode): string | null {
 
 /**
  * A number typed in a field that stores something else when it's out of
- * range (nothing at all, for the default). What's typed stays on screen, so
- * "1" on the way to "10" doesn't vanish under the cursor.
+ * range (nothing at all, for the default). What's typed stays on screen while
+ * you're in the field, so "1" on the way to "10" doesn't vanish under the cursor.
  */
 const NumberField: React.FC<{
   id: string;
@@ -45,7 +45,9 @@ const NumberField: React.FC<{
   placeholder?: string;
   onCommit: (raw: string) => void;
 }> = ({ id, label, value, min, max, placeholder, onCommit }) => {
-  const [draft, setDraft] = useState(value);
+  // what's typed shows only while you're in the field; otherwise the stored value,
+  // so a change made on the card shows here at once
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <div className="jqzz-field-group">
       <label className="jqzz-field-label" htmlFor={id}>
@@ -58,7 +60,9 @@ const NumberField: React.FC<{
         min={min}
         max={max}
         placeholder={placeholder}
-        value={draft}
+        value={draft ?? value}
+        onFocus={() => setDraft(value)}
+        onBlur={() => setDraft(null)}
         onChange={(e) => {
           setDraft(e.target.value);
           onCommit(e.target.value);

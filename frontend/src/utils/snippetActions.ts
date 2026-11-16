@@ -7,12 +7,15 @@ import { contentToActions, readContent, readType, typeToActions } from "./stashC
  * What a dragged or picked snippet becomes: fresh steps, ready to go into a
  * quiz. "set:..." is a settings block, "type:{json}" a new question of a
  * stashed type, "stash:{json}" a stashed question or whole quiz with its
- * settings, anything else a built-in shape.
+ * settings, "note" a note for you, "divider" a section line, anything else
+ * a built-in shape.
  */
 export function snippetActions(snippetId: string): Action[] {
   if (snippetId.startsWith("set:")) {
     return [{ id: generateId(), phase: "SETTING", time: 0, question: null, preview: snippetId.slice(4) }];
   }
+  if (snippetId === "note") return [{ id: generateId(), phase: "TEXT", time: 0, question: null, preview: "" }];
+  if (snippetId === "divider") return [{ id: generateId(), phase: "DIVIDER", time: 0, question: null, preview: "" }];
   try {
     if (snippetId.startsWith("type:")) return typeToActions(readType({ payload: snippetId.slice(5), title: null }));
     if (snippetId.startsWith("stash:")) return contentToActions(readContent({ payload: snippetId.slice(6) }));

@@ -18,6 +18,7 @@ import { convertToBackendQuiz } from "../utils/quizConverter";
 import { parseScript } from "../utils/scriptParser";
 import { freshRefs } from "../utils/scriptRefs";
 import type { Roster } from "../utils/roster";
+import { notifyError } from "../utils/notice";
 
 export type SaveState = "saved" | "saving" | "error";
 
@@ -141,7 +142,9 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
     async (name: string, script: string) => {
       const { actions, errors } = parseScript(script, []);
       if (errors.length > 0) {
-        alert(`couldn't import ${name}:\n\n${errors.slice(0, 10).join("\n")}`);
+        notifyError(
+          `couldn't import ${name}: ${errors[0]}${errors.length > 1 ? ` (+${errors.length - 1} more)` : ""}`,
+        );
         return null;
       }
       try {
@@ -152,7 +155,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
         setActiveQuizId(res.data.id);
         return res.data;
       } catch (err) {
-        alert(`import failed: ${errorMessage(err)}`);
+        notifyError(`import failed: ${errorMessage(err)}`);
         return null;
       }
     },
@@ -175,7 +178,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         await quizService.delete(id, authorId);
       } catch (err) {
-        alert(`couldn't delete it: ${errorMessage(err)}`);
+        notifyError(`couldn't delete it: ${errorMessage(err)}`);
         return;
       }
       setQuizzes((prev) => prev.filter((q) => q.id !== id));

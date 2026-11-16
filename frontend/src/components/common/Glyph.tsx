@@ -147,6 +147,21 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="m4 4 8 8M12 4l-8 8" />
     </>
   ),
+  // moving, copying and folding: drawn so they sit centred, where ↑ ↓ ⧉ ⠿ ▸ characters didn't
+  UP: <path d="M8 13V3.5M4 7.5l4-4 4 4" />,
+  DOWN: <path d="M8 3v9.5M4 8.5l4 4 4-4" />,
+  COPY: (
+    <>
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+      <path d="M10.5 3.5v-.5A1 1 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6a1 1 0 0 0 1 1h.5" />
+    </>
+  ),
+  GRIP: (
+    <>
+      <path d="M6 4h.01M10 4h.01M6 8h.01M10 8h.01M6 12h.01M10 12h.01" strokeWidth={2.2} />
+    </>
+  ),
+  CHEVRON: <path d="m6 3.5 4.5 4.5L6 12.5" />,
   BELL: (
     <>
       <path d="M4 11V7.2a4 4 0 0 1 8 0V11l1.2 1.3H2.8z" />

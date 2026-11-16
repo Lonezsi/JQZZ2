@@ -11,8 +11,9 @@ import {
 } from "../../../../utils/aiReference";
 import { copyText } from "../../../Modals/copyText";
 import { ROSTER_EVENT } from "../RosterCard";
+import { Keys } from "../../../common/Keys";
 import { SplitHandle } from "./SplitHandle";
-import { useDocsWidth } from "../../../../hooks/useDocsWidth";
+import { DOCS_EVENT, useDocsOpen, useDocsWidth } from "../../../../hooks/useDocsWidth";
 import { ScriptDocs } from "./ScriptDocs";
 
 interface ScriptEditorProps {
@@ -69,9 +70,14 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
   const [copied, setCopied] = useState<"ai" | "errors" | null>(null);
   // the manual sits beside the editor on a wide screen, and under it on a narrow one
   const [docsWidth, setDocsWidth] = useDocsWidth();
-  const [docsOpen, setDocsOpen] = useState(
-    () => typeof window === "undefined" || window.innerWidth >= 1100,
-  );
+  // open or closed as you left it (D toggles it, from anywhere in the editor)
+  const [docsOpen, setDocsOpen] = useDocsOpen();
+  useEffect(() => {
+    const toggle = () => setDocsOpen((o) => !o);
+    window.addEventListener(DOCS_EVENT, toggle);
+    return () => window.removeEventListener(DOCS_EVENT, toggle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setDocsOpen only writes state and storage
+  }, []);
   useEffect(() => {
     if (!copied) return;
     const t = window.setTimeout(() => setCopied(null), 1400);
@@ -257,13 +263,15 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
               Number(m[1]),
             );
             const q = `Q${used.length > 0 ? Math.max(...used) + 1 : 1}`;
+            // a question mark only when it has no ending of its own; the answers are left
+            // empty to fill in, never placeholder words that would play as they are
+            const asked = /[?!.:…]$/.test(prompt) ? prompt : `${prompt}?`;
             const block = `NewQuestion ${q} (
   ask: "pick", score: "right",
-  prompt: ${JSON.stringify(`${prompt}?`)},
-  elaboration: "Add your explanation here",
+  prompt: ${JSON.stringify(asked)},
   answers: [
-    { text: "Answer A", value: 100 },
-    { text: "Answer B", value: 0 },
+    { text: "", value: 100 },
+    { text: "", value: 0 },
   ],
 )
 
@@ -278,11 +286,11 @@ ShowResult(${q}, time: 10)
             edit(
               hasContent
                 ? `${text.trimEnd()}\n\n${block}`
-                : `# ${prompt} · JQzz Script v3\n# Author: generated\n\n${block}`,
+                : `# ${prompt} · JQzz Script v3\n\n${block}`,
             );
           }}
         >
-          Add
+          add
         </button>
         <button
           className="jqzz-ai-btn"
@@ -297,36 +305,11 @@ ShowResult(${q}, time: 10)
           title="the script's manual: every question, step and setting"
           onClick={() => setDocsOpen((open) => !open)}
         >
-          docs
+          docs <Keys combo="D" />
         </button>
       </div>
       <div className="jqzz-text-split">
         <div className="jqzz-text-main">
-          {problems.length > 0 && (
-            <div
-              className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`}
-              role={parseOk ? "status" : "alert"}
-            >
-              {parseOk ? (
-                <>
-                  heads up: {warnings[0]}
-                  {warnings.length > 1 && ` (+${warnings.length - 1} more)`}
-                </>
-              ) : (
-                <>
-                  {errors[0]}
-                  {errors.length > 1 && ` (+${errors.length - 1} more)`}.
-                  nothing gets applied until this is fixed.
-                </>
-              )}{" "}
-              <button
-                className="jqzz-parse-copy"
-                onClick={() => copy("errors", errorsForAI(problems))}
-              >
-                {copied === "errors" ? "copied" : "copy errors for the AI"}
-              </button>
-            </div>
-          )}
           <div className="jqzz-editor-wrap">
             <pre ref={preRef} className="jqzz-highlight-pre" aria-hidden>
               <HighlightedScript text={text} caret={caret} />
@@ -354,14 +337,32 @@ ShowResult(${q}, time: 10)
         {docsOpen && (
           <>
             <SplitHandle width={docsWidth} onWidth={setDocsWidth} />
-            <ScriptDocs width={docsWidth} onClose={() => setDocsOpen(false)} />
+            <ScriptDocs width={docsWidth} />
           </>
         )}
       </div>
-      <div className="jqzz-annot jqzz-script-status" aria-hidden="true">
-        jqzz script v3 · {plural(text.split("\n").length, "line")} ·{" "}
-        {plural(summary.questions, "question")} ·{" "}
-        {plural(summary.actions, "phase")}
+      <div className="jqzz-script-status">
+        <span className="jqzz-annot jqzz-script-count" aria-hidden="true">
+          jqzz script v3 · {plural(text.split(/\n/).length, "line")} · {plural(summary.questions, "question")} ·{" "}
+          {plural(summary.actions, "phase")}
+        </span>
+        {/* in this row and not above the script, so a half-typed line never moves the script */}
+        {problems.length > 0 && (
+          <span
+            className={`jqzz-parse-errors${parseOk ? " heads-up" : ""}`}
+            role={parseOk ? "status" : "alert"}
+            title={problems.join(String.fromCharCode(10))}
+          >
+            <span className="jqzz-parse-msg">
+              {parseOk
+                ? `heads up: ${warnings[0]}${warnings.length > 1 ? ` (+${warnings.length - 1} more)` : ""}`
+                : `${errors[0]}${errors.length > 1 ? ` (+${errors.length - 1} more)` : ""}. nothing gets applied until this is fixed.`}
+            </span>
+            <button className="jqzz-parse-copy" onClick={() => copy("errors", errorsForAI(problems))}>
+              {copied === "errors" ? "copied" : "copy errors as text"}
+            </button>
+          </span>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Glyph } from "../../common/Glyph";
 import type { Action, Question } from "../../../types";
 import { ContextEditor } from "./ContextEditor";
 import { useQuiz } from "../../../contexts/QuizContext";
@@ -122,7 +123,7 @@ export const Inspector: React.FC<InspectorProps> = ({
           )}
         </div>
         <button className="jqzz-icon-btn" onClick={onClose} aria-label="Close" title="close · esc">
-          ✕
+          <Glyph name="CLOSE" size={13} />
         </button>
       </header>
       {/* keyed, so moving to another card crossfades the fields */}

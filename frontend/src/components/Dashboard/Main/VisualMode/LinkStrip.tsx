@@ -1,6 +1,7 @@
 import React from "react";
 import type { Action, Question } from "../../../../types";
 import { useQuiz } from "../../../../contexts/QuizContext";
+import { Select } from "../../../common/Select";
 import {
   OVERFLOW_DEFAULT,
   PICKS_MOST,
@@ -41,7 +42,11 @@ function linkWord(m: Mode): string | null {
   return null;
 }
 
-/** keeps a press inside the strip from selecting the card under it */
+/**
+ * keeps a click inside the strip from selecting the card under it. Keys are
+ * left alone: the card already ignores keys from its children, and stopping
+ * them would cut off Esc, Ctrl K and the letter keys (they listen on window).
+ */
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 const Stepper: React.FC<{
@@ -114,41 +119,33 @@ export const LinkStrip: React.FC<{ question: Question; actions: Action[] }> = ({
       className="jqzz-link-strip"
       onClick={stop}
       onMouseDown={stop}
-      onKeyDown={stop}
       onDoubleClick={stop}
     >
       {word && (
-        <label
+        <span
           className={`jqzz-link-chip${options.from && !source ? " warn" : !options.from ? " empty" : ""}`}
         >
           <span>{word}</span>
-          <select
+          {/* the app's own dropdown, the one the inspector uses: its panel opens over the card */}
+          <Select
+            className="jqzz-link-select"
+            aria-label={word}
+            placeholder={candidates.length ? "pick one" : "nothing earlier yet"}
             value={source ? String(source.id) : options.from ? "gone" : ""}
-            onChange={(e) => {
-              const picked =
-                candidates.find((c) => String(c.question.id) === e.target.value)
-                  ?.question ?? null;
-              linkTo(actions, question, picked).forEach(({ id, patch }) =>
-                updateQuestion(id, patch),
-              );
+            onChange={(v) => {
+              const picked = candidates.find((c) => String(c.question.id) === v)?.question ?? null;
+              linkTo(actions, question, picked).forEach(({ id, patch }) => updateQuestion(id, patch));
             }}
-          >
-            {options.from && !source && (
-              <option value="gone">a question that's gone</option>
-            )}
-            <option value="">
-              {candidates.length ? "pick one" : "nothing earlier yet"}
-            </option>
-            {candidates.map((c) => (
-              <option key={c.question.id} value={String(c.question.id)}>
-                Q{c.n} ·{" "}
-                {plainRefs(
-                  showRefs(c.question.text, actions, c.question),
-                ).slice(0, 32) || "untitled"}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={[
+              ...(options.from && !source ? [{ value: "gone", label: "a question that's gone", disabled: true }] : []),
+              { value: "", label: "nothing" },
+              ...candidates.map((c) => ({
+                value: String(c.question.id),
+                label: `Q${c.n} · ${plainRefs(showRefs(c.question.text, actions, c.question)).slice(0, 32) || "untitled"}`,
+              })),
+            ]}
+          />
+        </span>
       )}
       {voting && (
         <Stepper

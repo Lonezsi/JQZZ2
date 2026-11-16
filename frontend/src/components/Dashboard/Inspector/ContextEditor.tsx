@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import type { Action, Question, Answer, Phase } from "../../../types";
 import { generateId } from "../../../utils/idGenerator";
 import { ImagePicker } from "../../Modals/ImagePicker";
@@ -16,6 +17,8 @@ import { Glyph } from "../../common/Glyph";
 import { Glide } from "../../common/Glide";
 import { showRefs, storeRefs } from "../../../utils/scriptRefs";
 import { FillInHelp, LinkFields } from "./LinkFields";
+import { Keys } from "../../common/Keys";
+import { pastedLines, useListFocus } from "../../../hooks/useListFocus";
 
 interface ContextEditorProps {
   action: Action | null;
@@ -82,6 +85,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
   onQuestionUpdate,
 }) => {
   const [answers, setAnswers] = useState<Answer[]>(question?.answers ?? []);
+  const answerList = useListFocus();
   const { quiz } = useQuiz();
   const actions = quiz?.actions ?? [];
 
@@ -144,13 +148,33 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
             kind="radio"
             className="jqzz-glide-fill jqzz-glide-points"
             label={SETTING_LABEL.points}
-            value={s.points === undefined ? "keep" : String(s.points)}
-            onPick={(v) => set({ points: v === "keep" ? undefined : Number(v) })}
+            value={s.points === undefined ? "keep" : [1, 2, 3].includes(s.points) ? String(s.points) : "other"}
+            onPick={(v) =>
+              set({ points: v === "keep" ? undefined : v === "other" ? 5 : Number(v) })
+            }
             options={[
               { key: "keep", label: "keep", icon: "RESET", title: "keep as it was" },
-              ...[0.5, 1, 2, 3].map((n) => ({ key: String(n), label: `×${n}`, icon: "STAR", title: `points ×${n}` })),
+              ...[1, 2, 3].map((n) => ({ key: String(n), label: `×${n}`, icon: "STAR", title: `points ×${n}` })),
+              { key: "other", label: "other", icon: "SETTING", title: "any amount from 0 to 10" },
             ]}
           />
+          {/* the script takes 0 to 10 in halves: anything the three buttons don't cover goes here */}
+          {s.points !== undefined && ![1, 2, 3].includes(s.points) && (
+            <input
+              className="jqzz-field-input jqzz-points-other"
+              type="number"
+              min={0}
+              max={10}
+              step={0.5}
+              aria-label="points multiplier, 0 to 10"
+              defaultValue={s.points}
+              key={action.id}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (e.target.value.trim() && Number.isFinite(n)) set({ points: Math.max(0, Math.min(10, n)) });
+              }}
+            />
+          )}
         </div>
         <p className="jqzz-panel-hint">
           these hold for every question after this block, until another block changes them. in text
@@ -200,12 +224,6 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
     onQuestionUpdate(question.id, { mode: modeKey(next), type: typeIdOf(next), ...(fixed !== answers ? { answers: fixed } : {}) });
   };
 
-  const addAnswer = () => {
-    const next: Answer[] = [...answers, { id: generateId(), text: "", value: shape?.starts ?? 0, ...(shape?.match ? { match: "" } : {}) }];
-    setAnswers(next);
-    if (question) onQuestionUpdate(question.id, { answers: next });
-  };
-
   const options = parseOptions(question?.options);
   const setOption = (key: QuestionField, value: string) => {
     if (!question) return;
@@ -240,6 +258,66 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
     const next = answers.filter((_, i) => i !== idx);
     setAnswers(next);
     if (question) onQuestionUpdate(question.id, { answers: next });
+  };
+
+  // the answers edit like the roster (hooks/useListFocus.ts): Enter adds the next,
+  // Backspace in an empty one takes it out, a pasted list fills a row a line, and
+  // Alt ↑ ↓ moves one. No comma split here: answers can hold commas.
+  const canAddAnswer = !!shape && !noAnswers && !(mode.ask === "number" && answers.length >= 1);
+  const blankAnswer = (text = ""): Answer => ({
+    id: generateId(),
+    text,
+    value: shape?.starts ?? 0,
+    ...(shape?.match ? { match: "" } : {}),
+  });
+  const commitAnswers = (next: Answer[], focus?: number) => {
+    flushSync(() => setAnswers(next));
+    if (question) onQuestionUpdate(question.id, { answers: next });
+    if (focus !== undefined) answerList.focusAt(focus);
+  };
+  const moveAnswer = (i: number, by: -1 | 1) => {
+    const to = i + by;
+    if (to < 0 || to >= answers.length) return;
+    const next = [...answers];
+    [next[i], next[to]] = [next[to], next[i]];
+    commitAnswers(next, to);
+  };
+  const onAnswerKey = (e: React.KeyboardEvent<HTMLInputElement>, i: number) => {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+      if (!canAddAnswer) return;
+      e.preventDefault();
+      commitAnswers([...answers.slice(0, i + 1), blankAnswer(), ...answers.slice(i + 1)], i + 1);
+    } else if (e.key === "Backspace" && !answers[i].text && !answers[i].match && answers.length > 1) {
+      e.preventDefault();
+      commitAnswers(
+        answers.filter((_, j) => j !== i),
+        Math.max(0, i - 1),
+      );
+    } else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && e.altKey) {
+      e.preventDefault();
+      moveAnswer(i, e.key === "ArrowUp" ? -1 : 1);
+    } else if (e.key === "ArrowUp" && i > 0) {
+      e.preventDefault();
+      answerList.focusAt(i - 1);
+    } else if (e.key === "ArrowDown" && i < answers.length - 1) {
+      e.preventDefault();
+      answerList.focusAt(i + 1);
+    }
+  };
+  const onAnswerPaste = (e: React.ClipboardEvent<HTMLInputElement>, i: number) => {
+    const lines = pastedLines(e);
+    if (!lines || !canAddAnswer || mode.ask === "number") return;
+    e.preventDefault();
+    // into this row if it's empty, the rest after it
+    const here = answers[i].text.trim() ? [] : [lines.shift()!];
+    const rows = [
+      ...answers.slice(0, i),
+      here.length ? { ...answers[i], text: here[0] } : answers[i],
+      ...lines.map((l) => blankAnswer(l)),
+      ...answers.slice(i + 1),
+    ];
+    commitAnswers(rows, i + lines.length);
   };
 
   return (
@@ -349,7 +427,7 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
               ) : (
                 !shape && <p className="jqzz-panel-hint">no answers here: players make them.</p>
               )}
-              {mode.ask === "order" && <p className="jqzz-panel-hint">put them in the right order here. players see them shuffled.</p>}
+              {mode.ask === "order" && <p className="jqzz-panel-hint">put them in the right order here, players see them shuffled. alt ↑ ↓ moves one.</p>}
               {mode.ask === "number" && <p className="jqzz-panel-hint">one answer: the right number, and the points for getting it spot on.</p>}
               {mode.score === "secret" && <p className="jqzz-panel-hint">everyone gets one of these to {mode.ask === "draw" ? "draw" : "describe without saying it"}.</p>}
               {answers.length > 0 && (
@@ -364,12 +442,15 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
                 <div key={a.id} className={`jqzz-answer-row${shape?.match ? " pairs" : ""}${shape && !shape.value ? " plain" : ""}`}>
                   <AnswerPictureSlot src={a.imageUrl} index={i} onChange={(ref) => updateAnswer(i, "imageUrl", ref)} />
                   <input
+                    ref={answerList.ref(i)}
                     className="jqzz-answer-text"
                     value={a.text}
                     placeholder={shape?.text ?? "answer"}
                     inputMode={mode.ask === "number" ? "decimal" : undefined}
-                    aria-label={`${shape?.text ?? "Answer"} ${i + 1}`}
+                    aria-label={`${shape?.text ?? "answer"} ${i + 1}`}
                     onChange={(e) => updateAnswer(i, "text", e.target.value)}
+                    onKeyDown={(e) => onAnswerKey(e, i)}
+                    onPaste={(e) => onAnswerPaste(e, i)}
                   />
                   {shape?.match && (
                     <input
@@ -389,20 +470,53 @@ export const ContextEditor: React.FC<ContextEditorProps> = ({
                       onChange={(e) => updateAnswer(i, "value", e.target.value)}
                     />
                   )}
-                  <button
-                    className="jqzz-answer-del"
-                    onClick={() => removeAnswer(i)}
-                    aria-label={`Remove answer ${i + 1}`}
-                    title="Remove"
-                  >
-                    ✕
-                  </button>
+                  <span className="jqzz-answer-tools">
+                    {/* on touch there are no Alt arrows: these move it */}
+                    <button
+                      className="jqzz-answer-move"
+                      onClick={() => moveAnswer(i, -1)}
+                      disabled={i === 0}
+                      aria-label={`move ${shape?.text ?? "answer"} ${i + 1} up`}
+                    >
+                      <Glyph name="UP" size={12} />
+                    </button>
+                    <button
+                      className="jqzz-answer-move"
+                      onClick={() => moveAnswer(i, 1)}
+                      disabled={i === answers.length - 1}
+                      aria-label={`move ${shape?.text ?? "answer"} ${i + 1} down`}
+                    >
+                      <Glyph name="DOWN" size={12} />
+                    </button>
+                    <button
+                      className="jqzz-answer-del"
+                      onClick={() => removeAnswer(i)}
+                      aria-label={`remove ${shape?.text ?? "answer"} ${i + 1}`}
+                      title="remove"
+                    >
+                      <Glyph name="TRASH" size={13} />
+                    </button>
+                  </span>
                 </div>
               ))}
-              {shape && !noAnswers && !(mode.ask === "number" && answers.length >= 1) && (
-                <button className="jqzz-add-answer" onClick={addAnswer}>
-                  + Add {shape.text}
+              {canAddAnswer && (
+                <button
+                  className="jqzz-add-answer"
+                  onClick={() => commitAnswers([...answers, blankAnswer()], answers.length)}
+                >
+                  + add {shape!.text}
                 </button>
+              )}
+              {canAddAnswer && answers.length > 0 && (
+                <p className="jqzz-answer-keys">
+                  <span>
+                    <Keys combo="↵" /> next {shape!.text}
+                  </span>
+                  <span>
+                    <Keys combo="Alt ↑" /> <Keys combo="Alt ↓" /> move it
+                  </span>
+                  <span>a pasted list fills a row a line</span>
+                </p>
               )}
             </>
           )}

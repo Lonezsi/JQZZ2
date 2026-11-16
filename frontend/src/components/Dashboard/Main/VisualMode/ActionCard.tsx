@@ -6,7 +6,7 @@ import { useQuiz } from "../../../../contexts/QuizContext";
 import { describe, parseSettings } from "../../../../utils/settings";
 import { formatTimecode } from "../../../../utils/timecode";
 import { Glyph } from "../../../common/Glyph";
-import { maxPoints, typeIcon, typeLabel } from "../../../../utils/questionInfo";
+import { maxPoints } from "../../../../utils/questionInfo";
 import {
   borrows,
   modeOf,
@@ -23,6 +23,7 @@ import { imageSlots, placeImage } from "../../../../utils/imageSlots";
 import type { ImageSlot } from "../../../../utils/imageSlots";
 import { QuestionImage } from "../../../Play/PlayCommon";
 import { LinkStrip } from "./LinkStrip";
+import { InlineEdit } from "../../../common/InlineEdit";
 
 interface ActionCardProps {
   action: Action;
@@ -209,15 +210,9 @@ function PhasePreview({ action }: { action: Action }) {
         }
       })();
       return (
+        // the type, the prompt and the picture are on the plate above: this says what's on screen
         <span className="jqzz-prev">
-          <span className="jqzz-type-pill">
-            <Glyph name={typeIcon(q ?? undefined)} size={12} />
-            {typeLabel(q ?? undefined)}
-          </span>
-          <span className="jqzz-prev-note">
-            {!q?.text ? "no prompt yet" : onScreen}
-          </span>
-          {q?.imageUrl && <span className="jqzz-prev-note">· with image</span>}
+          <span className="jqzz-prev-note">{!q?.text ? "no prompt yet" : onScreen}</span>
         </span>
       );
     }
@@ -342,7 +337,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     return () => cancelAnimationFrame(raf);
   }, [isSelected]);
 
-  const { quiz, updateQuestion } = useQuiz();
+  const { quiz, updateQuestion, updateAction } = useQuiz();
   const [imageOver, setImageOver] = useState(false);
   const slots = imageSlots(action);
   // however the drag ends, the slots fold away
@@ -434,7 +429,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       title="drag to move"
       aria-hidden="true"
     >
-      ⠿
+      <Glyph name="GRIP" size={14} />
     </div>
   );
 
@@ -447,10 +442,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           e.stopPropagation();
           onMove(action.id, -1);
         }}
-        title="Move up"
+        title="move up"
         aria-label="Move up"
       >
-        ↑
+        <Glyph name="UP" size={13} />
       </button>
       <button
         className="jqzz-card-action-btn jqzz-touch-only"
@@ -459,10 +454,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           e.stopPropagation();
           onMove(action.id, 1);
         }}
-        title="Move down"
+        title="move down"
         aria-label="Move down"
       >
-        ↓
+        <Glyph name="DOWN" size={13} />
       </button>
     </>
   );
@@ -474,10 +469,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         e.stopPropagation();
         deleteAction(action.id);
       }}
-      title="Delete"
+      title="delete (z undoes it)"
       aria-label={`Delete ${kind === "phase" ? action.phase.toLowerCase() : kind}`}
     >
-      ✕
+      <Glyph name="TRASH" size={13} />
     </button>
   );
 
@@ -603,17 +598,26 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         </span>
         <span className="jqzz-card-main">
           <span className="jqzz-card-phase">{action.phase.toLowerCase()}</span>
-          {action.phase === "QUESTION" && (
-            <span className="jqzz-card-prompt">
-              {prompt || "no prompt yet"}
-            </span>
-          )}
           <PhasePreview action={action} />
           {action.phase === "QUESTION" && q && quiz && (
             <LinkStrip question={q} actions={quiz.actions} />
           )}
         </span>
-        <span className="jqzz-card-time">{action.time}s</span>
+        {/* seconds, changed right here: the inspector keeps the full version */}
+        <InlineEdit
+          className="jqzz-card-time"
+          type="number"
+          min={0}
+          max={600}
+          value={String(action.time)}
+          aria-label={`seconds for this ${action.phase.toLowerCase()} step`}
+          onCommit={(v) => {
+            const n = Math.round(Number(v));
+            if (v.trim() && Number.isFinite(n)) updateAction(action.id, { time: Math.max(0, Math.min(600, n)) });
+          }}
+        >
+          {action.time}s
+        </InlineEdit>
         <span className="jqzz-card-actions">
           {moveBtns}
           <button
@@ -622,10 +626,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               e.stopPropagation();
               duplicateAction(action.id);
             }}
-            title="Duplicate"
+            title="duplicate"
             aria-label={`Duplicate ${action.phase.toLowerCase()}`}
           >
-            ⧉
+            <Glyph name="COPY" size={13} />
           </button>
           {deleteBtn}
         </span>

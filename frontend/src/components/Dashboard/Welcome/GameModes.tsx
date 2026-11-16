@@ -7,6 +7,7 @@ import { playService } from "../../../services/playService";
 import { errorMessage } from "../../../services/api";
 import { go } from "../../../hooks/useHashRoute";
 import { Glyph } from "../../common/Glyph";
+import { notifyError } from "../../../utils/notice";
 
 /**
  * Ready-made quizzes, one per way of playing. Host one as it is, or open it
@@ -46,7 +47,7 @@ export const GameModes: React.FC = () => {
       const game = await playService.host(quiz.id, user.id);
       go(`/host/${game.code}`);
     } catch (err) {
-      alert(`couldn't start it: ${errorMessage(err)}`);
+      notifyError(`couldn't start it: ${errorMessage(err)}`);
     } finally {
       setBusy(null);
     }

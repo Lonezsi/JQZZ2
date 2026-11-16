@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { SCRIPT_DOCS, type DocBlock } from "../../../../utils/scriptDocs";
 import { HighlightedScript } from "../../../../utils/syntaxHighlighterScript";
 
@@ -87,26 +87,21 @@ const Block: React.FC<{ b: DocBlock }> = ({ b }) => {
  * the way the editor colours them. The body scrolls by itself, so the editor
  * never moves.
  */
-export const ScriptDocs: React.FC<{
-  width: number | null;
-  onClose: () => void;
-}> = ({ width, onClose }) => {
+export const ScriptDocs: React.FC<{ width: number | null }> = ({ width }) => {
   const body = useRef<HTMLDivElement>(null);
+  // on a narrow screen the contents fold into one row, so the reference has room to be read
+  const [tocOpen, setTocOpen] = useState(false);
   const jump = (id: string) => {
     const scroller = body.current;
     const at = scroller?.querySelector<HTMLElement>(`#jqzz-docs-${id}`);
-    if (scroller && at)
-      scroller.scrollTo({ top: at.offsetTop - 8, behavior: "smooth" });
+    if (scroller && at) scroller.scrollTo({ top: at.offsetTop - 8, behavior: "smooth" });
+    setTocOpen(false);
   };
   return (
     <aside
       className="jqzz-docs"
       aria-label="language reference"
-      style={
-        width
-          ? ({ "--docs-w": `${width}px` } as React.CSSProperties)
-          : undefined
-      }
+      style={width ? ({ "--docs-w": `${width}px` } as React.CSSProperties) : undefined}
     >
       <div className="jqzz-docs-head">
         <div>
@@ -115,14 +110,15 @@ export const ScriptDocs: React.FC<{
         </div>
         <button
           type="button"
-          className="jqzz-docs-hide"
-          onClick={onClose}
-          title="hide the reference"
+          className="jqzz-docs-contents"
+          aria-expanded={tocOpen}
+          aria-controls="jqzz-docs-toc"
+          onClick={() => setTocOpen((o) => !o)}
         >
-          hide
+          contents
         </button>
       </div>
-      <nav className="jqzz-docs-toc" aria-label="contents">
+      <nav id="jqzz-docs-toc" className={`jqzz-docs-toc${tocOpen ? " open" : ""}`} aria-label="contents">
         {SCRIPT_DOCS.map((s, i) => (
           <button key={s.id} type="button" onClick={() => jump(s.id)}>
             <span className="jqzz-docs-num">{i + 1}</span> {s.title}

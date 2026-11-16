@@ -15,7 +15,8 @@ import { DropSkeleton } from "./DropSkeleton";
 import { DRAG_GROUP_KEY, DRAG_SNIPPET_KEY, dragging } from "../../../../utils/dragKeys";
 import { snippetActions } from "../../../../utils/snippetActions";
 import { readContent } from "../../../../utils/stashContent";
-import { showRefs } from "../../../../utils/scriptRefs";
+import { showRefs, storeRefs } from "../../../../utils/scriptRefs";
+import { InlineEdit } from "../../../common/InlineEdit";
 import { RosterCard } from "../RosterCard";
 
 interface VisualModeProps {
@@ -65,7 +66,9 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   onImport,
   onMakeWithAI,
 }) => {
-  const { dropSnippet, setMode, reorderActions, moveActions, deleteActions } = useQuiz();
+  const { dropSnippet, setMode, reorderActions, moveActions, deleteActions, updateQuestion } = useQuiz();
+  // the plate whose prompt is being typed in: it stops being draggable meanwhile
+  const [editingPlate, setEditingPlate] = useState<number | null>(null);
 
   // A quiz opens in two steps: the first few items straight away, then all the
   // rest at once when the browser has a moment. Drawing every card of a long
@@ -311,7 +314,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
             <div
               className="jqzz-group-head"
               data-flip={`g-${q.id}-${item.actions[0]?.id}`}
-              draggable
+              draggable={editingPlate !== q.id}
               title="drag to move the whole question"
               onDragStart={(e) => {
                 e.dataTransfer.setData(DRAG_GROUP_KEY, JSON.stringify(item.actions.map((a) => a.id)));
@@ -342,7 +345,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                   <AddTypeButton question={q} actions={item.actions} />
                   <span className="jqzz-group-move">
                     <span className="jqzz-group-grip" aria-hidden="true">
-                      ⠿
+                      <Glyph name="GRIP" size={14} />
                     </span>
                     <button
                       className="jqzz-card-action-btn jqzz-touch-only"
@@ -351,7 +354,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                       aria-label={`Move question ${n} up`}
                       title="move the question up"
                     >
-                      ↑
+                      <Glyph name="UP" size={13} />
                     </button>
                     <button
                       className="jqzz-card-action-btn jqzz-touch-only"
@@ -360,7 +363,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                       aria-label={`Move question ${n} down`}
                       title="move the question down"
                     >
-                      ↓
+                      <Glyph name="DOWN" size={13} />
                     </button>
                     <DeleteQuestionButton
                       n={n ?? 0}
@@ -368,7 +371,20 @@ export const VisualMode: React.FC<VisualModeProps> = ({
                     />
                   </span>
                 </div>
-                <span className="jqzz-group-text">{showRefs(q.text, quiz.actions, q) || "untitled question"}</span>
+                {/* the prompt, typed in right here; {Q2.winner} reads and is stored as the inspector does it */}
+                <InlineEdit
+                  className="jqzz-group-text"
+                  value={showRefs(q.text, quiz.actions, q)}
+                  aria-label={`question ${n}'s prompt`}
+                  onEditing={(on) => setEditingPlate(on ? q.id : null)}
+                  onCommit={(typed) => {
+                    const stored = storeRefs(typed, quiz.actions, q);
+                    stored.patches.forEach(({ id, patch }) => updateQuestion(id, patch));
+                    updateQuestion(q.id, { text: stored.text });
+                  }}
+                >
+                  {showRefs(q.text, quiz.actions, q) || "untitled question"}
+                </InlineEdit>
                 {/* the question's rhythm: its phases, widths by time */}
                 <span className="jqzz-phase-strip" aria-hidden="true">
                   {item.actions.map((a) => (
@@ -468,7 +484,7 @@ const DeleteQuestionButton: React.FC<{ n: number; onDelete: () => void }> = ({ n
       aria-label={armed ? `Confirm: delete question ${n}` : `Delete question ${n}`}
       title={armed ? "click again to delete the whole question" : "delete this question"}
     >
-      <span aria-hidden="true">✕</span>
+      <Glyph name="TRASH" size={13} />
       <span className="jqzz-group-del-text">delete?</span>
     </button>
   );

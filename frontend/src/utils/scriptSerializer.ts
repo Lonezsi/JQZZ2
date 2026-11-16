@@ -82,7 +82,9 @@ export function quizToScript(quiz: Quiz | undefined): string {
     if (sourceNo) lines.push(`  from: "Q${sourceNo}",`);
     // {@q2.winner} is kept by label; the script says {Q2.winner}
     lines.push(`  prompt: ${str(showRefs(q.text, quiz.actions, q))},`);
+    if (q.imageUrl) lines.push(`  image: ${str(q.imageUrl)},`);
     if (q.elaborationText) lines.push(`  elaboration: ${str(showRefs(q.elaborationText, quiz.actions, q))},`);
+    if (q.elaborationImageUrl) lines.push(`  elaborationImage: ${str(q.elaborationImageUrl)},`);
     // a type's extras, numbers bare and words quoted
     const extras = parseOptions(q.options);
     WRITTEN.filter((k) => extras[k] !== undefined && extras[k] !== "").forEach((k) => {
@@ -93,7 +95,7 @@ export function quizToScript(quiz: Quiz | undefined): string {
       lines.push(`  answers: [`);
       answers.forEach((a) =>
         lines.push(
-          `    { text: ${str(a.text)}${a.match !== undefined && a.match !== null ? `, match: ${str(a.match)}` : ""}, value: ${a.value} },`,
+          `    { text: ${str(a.text)}${a.match !== undefined && a.match !== null ? `, match: ${str(a.match)}` : ""}${a.imageUrl ? `, image: ${str(a.imageUrl)}` : ""}, value: ${a.value} },`,
         ),
       );
       lines.push(`  ],`);

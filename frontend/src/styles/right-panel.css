@@ -181,7 +181,7 @@
 /* Answers */
 .jqzz-answer-head {
   display: grid;
-  grid-template-columns: 30px 1fr 58px 26px;
+  grid-template-columns: 30px 1fr 58px auto;
   gap: 6px;
   margin-bottom: 4px;
   font-size: var(--fs-small);
@@ -190,7 +190,7 @@
 /* no points column: ranked items, a show of hands */
 .jqzz-answer-head.plain,
 .jqzz-answer-row.plain {
-  grid-template-columns: 30px 1fr 26px;
+  grid-template-columns: 30px 1fr auto;
 }
 .jqzz-mode-picker {
   display: grid;
@@ -204,7 +204,7 @@
 /* pairs: both halves side by side */
 .jqzz-answer-head.pairs,
 .jqzz-answer-row.pairs {
-  grid-template-columns: 30px 1fr 1fr 58px 26px;
+  grid-template-columns: 30px 1fr 1fr 58px auto;
 }
 .jqzz-answer-row {
   display: grid;
@@ -219,9 +219,19 @@
   font-family: var(--font-data);
   color: var(--warm);
 }
-.jqzz-answer-del {
+/* the row's own buttons: move (touch only) and remove */
+.jqzz-answer-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.jqzz-answer-del,
+.jqzz-answer-move {
   width: 26px;
   height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: none;
   border-radius: var(--radius-sm);
   background: none;
@@ -230,6 +240,45 @@
 .jqzz-answer-del:hover {
   color: var(--danger);
   background: var(--sunken);
+}
+.jqzz-answer-move {
+  display: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+}
+.jqzz-answer-move:disabled {
+  opacity: 0.3;
+}
+/* the keys for the list, under it; a phone has the move buttons instead */
+.jqzz-answer-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 8px;
+  color: var(--text-3);
+  font-size: var(--fs-annot);
+}
+.jqzz-answer-keys > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+@media (hover: none) {
+  .jqzz-answer-move {
+    display: grid;
+    width: 32px;
+    height: 32px;
+  }
+  .jqzz-answer-del {
+    width: 32px;
+    height: 32px;
+  }
+  .jqzz-answer-keys {
+    display: none;
+  }
 }
 .jqzz-add-answer {
   width: 100%;

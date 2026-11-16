@@ -759,6 +759,34 @@ ShowAnswers(Q3, time: 15)`;
   check("roster: coloured as a keyword and strings", hint.pieces[0]?.kind === "kw" && hint.pieces.some((p) => p.kind === "str"), hint.pieces);
 }
 
+// pictures are written in the script now, so an export or an AI round trip keeps them
+{
+  const pics = parseScript(
+    [
+      "NewQuestion Q1 (",
+      '  ask: "pick", score: "right",',
+      '  prompt: "Which one?",',
+      '  image: ":cat",',
+      '  elaboration: "That one.",',
+      '  elaborationImage: "https://example.com/a.png",',
+      "  answers: [",
+      '    { text: "A", image: "anna:dog", value: 100 },',
+      '    { text: "B", value: 0 },',
+      "  ],",
+      ")",
+      "ShowQuestion(Q1, time: 10)",
+    ].join(String.fromCharCode(10)),
+    [],
+  );
+  const pq = pics.actions[0]?.question;
+  check("pictures: read with no errors", pics.errors.length === 0 && pics.warnings.length === 0, [pics.errors, pics.warnings]);
+  check("pictures: the question, its elaboration and an answer have theirs", pq?.imageUrl === ":cat" && pq?.elaborationImageUrl === "https://example.com/a.png" && pq?.answers?.[0]?.imageUrl === "anna:dog" && !pq?.answers?.[1]?.imageUrl, pq);
+  const back = parseScript(quizToScript(quizOf(pics.actions)), []).actions[0]?.question;
+  check("pictures: and written out and read back, they're still there", back?.imageUrl === ":cat" && back?.elaborationImageUrl === "https://example.com/a.png" && back?.answers?.[0]?.imageUrl === "anna:dog", back);
+  const picture = parseScript(['NewQuestion Q1 (', '  prompt: "x",', '  picture: ":cat",', '  answers: [ { text: "a", value: 100 } ],', ")", "ShowQuestion(Q1, time: 5)"].join(String.fromCharCode(10)), []);
+  check("pictures: picture: is read as image:", picture.errors.length === 0 && picture.fixed.length > 0 && picture.actions[0]?.question?.imageUrl === ":cat", picture);
+}
+
 console.log(`${passed} passed, ${failed} failed`);
 // a failure fails the run (scripts/check-script.mjs runs this under Node)
 if (failed) throw new Error(`${failed} script check${failed > 1 ? "s" : ""} failed`);

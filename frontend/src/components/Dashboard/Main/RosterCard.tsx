@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { Quiz } from "../../../types";
 import { useQuiz } from "../../../contexts/QuizContext";
-import { rosterOf, rosterProblem } from "../../../utils/roster";
+import { ROSTER_MOST, ROSTER_NAME_MOST, nameKey, rosterOf, rosterProblem } from "../../../utils/roster";
 import { Keys } from "../../common/Keys";
 import { Glyph } from "../../common/Glyph";
+import { useListFocus } from "../../../hooks/useListFocus";
 
 /*
  * Who's coming (utils/scriptDocs.ts, WHO'S COMING): a card above the quiz that
@@ -37,6 +38,20 @@ const pieces = (s: string) =>
     .map((p) => p.trim().replace(/\s+/g, " "))
     .filter(Boolean);
 
+/** the fields that break a rule, as you type: too long, or a name that's already above */
+function badFields(names: string[]): Set<number> {
+  const bad = new Set<number>();
+  const seen = new Set<string>();
+  names.forEach((n, i) => {
+    const name = n.trim().replace(/\s+/g, " ");
+    if (!name) return;
+    if (name.length > ROSTER_NAME_MOST) bad.add(i);
+    if (seen.has(nameKey(name))) bad.add(i);
+    seen.add(nameKey(name));
+  });
+  return bad;
+}
+
 /** visual mode only: in text mode the Roster line is the list, and R goes to it (ScriptEditor) */
 interface RosterCardProps {
   quiz: Quiz;
@@ -53,24 +68,14 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
   // while you're in it: the fields as typed, and whether two can share a name
   const [draft, setDraft] = useState<Draft | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const fields = useRef<(HTMLInputElement | null)[]>([]);
-  // the caret goes into field i at its end, once the render that makes it is done
-  const pending = useRef<number | null>(null);
+  const list = useListFocus();
   const justSaved = useRef(false);
-  const applyFocus = () => {
-    const i = pending.current;
-    const f = i === null ? null : fields.current[i];
-    if (!f) return;
-    pending.current = null;
-    f.focus();
-    f.setSelectionRange(f.value.length, f.value.length);
-  };
-  useEffect(applyFocus);
+  // a save that failed on Esc: a second Esc drops the changes instead
+  const [dropArmed, setDropArmed] = useState(false);
   /** the new fields drawn now, and the caret in one, before the next key can land elsewhere */
   const commit = (d: Draft, focus: number) => {
     flushSync(() => setDraft(d));
-    pending.current = focus;
-    applyFocus();
+    list.focusAt(focus);
   };
 
   // R and the settings tray: open it, caret in the last name (or a first, empty one)
@@ -108,8 +113,13 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
     }
     const why = rosterProblem(names);
     if (why) {
-      setDraft({ ...d, names });
-      setProblem(why);
+      // the caret goes to the first name that's wrong, if one is
+      const first = [...badFields(names)][0];
+      flushSync(() => {
+        setDraft({ ...d, names });
+        setProblem(why);
+      });
+      if (first !== undefined) list.focusAt(first);
       return false;
     }
     const same =
@@ -135,6 +145,7 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
     names[i] = value;
     setDraft({ ...d, names });
     setProblem(null);
+    setDropArmed(false);
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>, i: number) => {
@@ -142,7 +153,18 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
     if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
       // ours, not the page's: Esc mustn't also go back, Ctrl Enter mustn't start the game
       e.preventDefault();
-      if (save(d)) {
+      if (e.key === "Escape" && dropArmed) {
+        // the second Esc after a save that couldn't happen: back to the list as it was
+        setDropArmed(false);
+        justSaved.current = true;
+        setDraft(null);
+        setProblem(null);
+        e.currentTarget.blur();
+        return;
+      }
+      const saved = save(d);
+      setDropArmed(!saved && e.key === "Escape");
+      if (saved) {
         // saved: the blur that follows mustn't save the old draft a second time
         justSaved.current = true;
         e.currentTarget.blur();
@@ -172,12 +194,10 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
     }
     if (e.key === "ArrowUp" && i > 0) {
       e.preventDefault();
-      pending.current = i - 1;
-      applyFocus();
+      list.focusAt(i - 1);
     } else if (e.key === "ArrowDown" && i < d.names.length - 1) {
       e.preventDefault();
-      pending.current = i + 1;
-      applyFocus();
+      list.focusAt(i + 1);
     }
   };
 
@@ -210,17 +230,15 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
 
   // the editor (visual mode, with a list or while making one)
   if (editing) {
-    const count = editing.names.filter((n) => n.trim()).length;
+    const filled = editing.names.filter((n) => n.trim()).length;
+    const over = filled > ROSTER_MOST;
+    const bad = draft ? badFields(draft.names) : new Set<number>();
     return (
       <div
         className={`jqzz-roster-card${draft ? " editing" : ""}`}
         onBlur={(e) => {
           if (justSaved.current) justSaved.current = false;
-          else if (
-            draft &&
-            !e.currentTarget.contains(e.relatedTarget as Node | null)
-          )
-            save();
+          else if (draft && !e.currentTarget.contains(e.relatedTarget as Node | null)) save();
         }}
       >
         <div className="jqzz-roster-head">
@@ -230,31 +248,38 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
             aria-expanded={!folded}
             onClick={() => setFolded((f) => !f)}
           >
-            <span className="jqzz-roster-fold-mark" aria-hidden="true">
-              {folded ? "▸" : "▾"}
+            <span className={`jqzz-roster-fold-mark${folded ? "" : " open"}`} aria-hidden="true">
+              <Glyph name="CHEVRON" size={12} />
             </span>
-            <span className="jqzz-annot">who's coming · {count}</span>
-            {!draft && (
-              <span
-                className="jqzz-roster-key"
-                title="R opens the list from anywhere"
-              >
-                <Keys combo="R" />
+            <span className="jqzz-annot">
+              who's coming ·{" "}
+              {/* over the limit, it says by how much as you type */}
+              <span className={over ? "jqzz-roster-over" : undefined}>
+                {over ? `${filled} / ${ROSTER_MOST}` : filled}
               </span>
-            )}
+            </span>
             {folded && (
-              <span className="jqzz-roster-summary">
-                {editing.names.filter((n) => n.trim()).join(", ")}
-              </span>
+              <span className="jqzz-roster-summary">{editing.names.filter((n) => n.trim()).join(", ")}</span>
             )}
           </button>
+          {/* R opens this list from anywhere: next to its name, away from the trash */}
+          {!draft && (
+            <span className="jqzz-roster-key" title="R opens the list from anywhere">
+              <Keys combo="R" />
+            </span>
+          )}
           {roster && (
             <button
               type="button"
               className="jqzz-roster-link jqzz-roster-trash"
               aria-label="remove the list"
               title="remove the list"
-              onClick={() => setRoster(null)}
+              onClick={() => {
+                // the draft goes too, or the next click away would save it back (Z undoes this)
+                setDraft(null);
+                setProblem(null);
+                setRoster(null);
+              }}
             >
               <Glyph name="TRASH" size={14} />
             </button>
@@ -269,14 +294,20 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <input
-                    ref={(el) => {
-                      fields.current[i] = el;
-                    }}
-                    className="jqzz-roster-field"
+                    ref={list.ref(i)}
+                    className={`jqzz-roster-field${bad.has(i) ? " bad" : ""}`}
                     value={n}
                     placeholder="a name"
                     aria-label={`name ${i + 1}`}
-                    maxLength={200}
+                    aria-invalid={bad.has(i) || undefined}
+                    title={
+                      bad.has(i)
+                        ? n.trim().length > ROSTER_NAME_MOST
+                          ? `up to ${ROSTER_NAME_MOST} letters`
+                          : "this name is on the list already"
+                        : undefined
+                    }
+                    maxLength={80}
                     onChange={(e) => change(i, e.target.value)}
                     onKeyDown={(e) => onKey(e, i)}
                     onBlur={() => onFieldBlur(i)}
@@ -298,6 +329,7 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
             {problem && (
               <p className="jqzz-roster-problem" role="alert">
                 {problem}
+                {dropArmed && <span className="jqzz-roster-drop"> · esc again drops your changes</span>}
               </p>
             )}
             <label className="jqzz-roster-shared">
@@ -313,22 +345,23 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
               two people can pick the same name
             </label>
             {draft ? (
-              <p className="jqzz-roster-keys">
-                <span>
-                  <Keys combo="↵" /> new name
-                </span>
-                <span>
-                  <Keys combo="Mod ↵" /> save
-                </span>
-                <span>
-                  <Keys combo="Esc" /> save and leave
-                </span>
-                <span>commas split a name in two, empty ones go</span>
-              </p>
+              <>
+                {/* keys on a keyboard; a phone gets one plain line instead */}
+                <p className="jqzz-roster-keys">
+                  <span>
+                    <Keys combo="↵" /> new name
+                  </span>
+                  <span>
+                    <Keys combo="Mod ↵" /> or <Keys combo="Esc" /> save
+                  </span>
+                  <span>commas split a name in two, empty ones go</span>
+                </p>
+                <p className="jqzz-roster-touch">return adds a name. tap away to save.</p>
+              </>
             ) : (
               <p className="jqzz-annot">
-                people who join pick their name from this list. it's only used
-                in this game, it doesn't change anyone's account.
+                people who join pick their name from this list. it's only used in this game, it doesn't change
+                anyone's account.
               </p>
             )}
           </>
@@ -357,7 +390,7 @@ export const RosterCard: React.FC<RosterCardProps> = ({ quiz }) => {
           title="hide this tip"
           onClick={hideTip}
         >
-          ✕
+          <Glyph name="CLOSE" size={12} />
         </button>
       </div>
     );

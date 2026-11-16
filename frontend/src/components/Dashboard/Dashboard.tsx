@@ -22,6 +22,9 @@ import { go } from "../../hooks/useHashRoute";
 import { useEscape } from "../../hooks/useEscape";
 import { COMMANDS } from "../../constants/commands";
 import { ROSTER_EVENT } from "./Main/RosterCard";
+import { NoticeBar } from "../common/NoticeBar";
+import { DOCS_EVENT, rememberDocsOpen } from "../../hooks/useDocsWidth";
+import { notify, notifyError, undoNow } from "../../utils/notice";
 import "../../index.css";
 
 export const Dashboard: React.FC = () => {
@@ -41,6 +44,7 @@ export const Dashboard: React.FC = () => {
     updateAction,
     updateQuestion,
     deleteAction,
+    deleteActions,
     duplicateAction,
     reorderActions,
     newQuiz,
@@ -118,9 +122,9 @@ export const Dashboard: React.FC = () => {
       .update(quiz.id, convertToBackendQuiz(quiz))
       .then(() => stashService.fromQuiz(user.id, quiz.id))
       .then(([item]) => {
-        if (window.confirm(`saved to your stash as ${item.handle}. open the stash?`)) go("/me/stash");
+        notify(`saved to your stash as ${item.handle}`, { label: "open the stash", run: () => go("/me/stash") });
       })
-      .catch((err) => alert(`couldn't stash it: ${errorMessage(err)}`));
+      .catch((err) => notifyError(`couldn't stash it: ${errorMessage(err)}`));
   }, [quiz, user]);
 
   // Determine which action to edit in the right panel
@@ -139,7 +143,7 @@ export const Dashboard: React.FC = () => {
       return;
     }
     if (!quiz.actions.some((a) => a.question)) {
-      alert("this quiz has no questions yet. add one first.");
+      notifyError("this quiz has no questions yet. add one first.");
       return;
     }
     if (!user) return;
@@ -147,7 +151,7 @@ export const Dashboard: React.FC = () => {
     playService
       .host(quiz.id, user.id)
       .then((game) => go(`/host/${game.code}`))
-      .catch((err) => alert(`couldn't start it: ${errorMessage(err)}`));
+      .catch((err) => notifyError(`couldn't start it: ${errorMessage(err)}`));
   }, [quiz, newQuiz, user]);
 
   // Esc, one thing at a time (hooks/useEscape.ts): what was opened last goes
@@ -181,6 +185,16 @@ export const Dashboard: React.FC = () => {
       case "Start":
         handleStart();
         break;
+      case "Script docs":
+        // the docs live beside the script: from visual mode, go there with them open
+        if (mode === "visual") {
+          rememberDocsOpen(true);
+          setMode("text");
+        } else window.dispatchEvent(new Event(DOCS_EVENT));
+        break;
+      case "Undo":
+        undoNow();
+        break;
       case "Who's coming":
         if (quiz) window.dispatchEvent(new Event(ROSTER_EVENT));
         break;
@@ -192,7 +206,7 @@ export const Dashboard: React.FC = () => {
           playService
             .practice(user.id, { quizId: quiz.id })
             .then((game) => go(`/play/${game.code}`))
-            .catch((err) => alert(`couldn't start it: ${errorMessage(err)}`));
+            .catch((err) => notifyError(`couldn't start it: ${errorMessage(err)}`));
         }
         break;
     }
@@ -202,11 +216,19 @@ export const Dashboard: React.FC = () => {
     onPalette: () => setPaletteOpen(true),
     onSelectAll: selectAllActions,
     onCommand: handleCommand,
+    // Delete or Backspace takes the picked steps out (Z puts them back)
+    onDelete: () => {
+      if (selectedActionIds.size === 0) return false;
+      deleteActions(Array.from(selectedActionIds));
+      clearSelectedActions();
+      return true;
+    },
   });
 
   return (
     <div className="jqzz-app" data-phase={selectedAction?.phase ?? "IDLE"}>
       <div className="jqzz-dash">
+        <NoticeBar />
         <CommandPalette
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}

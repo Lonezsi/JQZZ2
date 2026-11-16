@@ -113,8 +113,35 @@ JQZZ/
 
 ## Keyboard Shortcuts
 
-| Shortcut       | Action               |
-|----------------|----------------------|
+One table drives the palette, the sidebar keycaps and the handlers:
+`frontend/src/constants/commands.ts`. Plain letters work while you're not
+typing, not in a dialog, not over a drawing and not in a game.
+
+| Key            | Does                                          |
+|----------------|-----------------------------------------------|
+| `Ctrl/⌘ K`     | command palette                               |
+| `Ctrl/⌘ ↵`     | start a game (in a field that saves, it saves)|
+| `N`            | new quiz                                      |
+| `I`            | import a .txt                                 |
+| `A`            | make a quiz with AI                           |
+| `E`            | export this quiz                              |
+| `V`            | switch visual / text                          |
+| `P`            | practice this quiz                            |
+| `R`            | who's coming (the roster)                     |
+| `D`            | the script's docs                             |
+| `Z`            | undo the last delete                          |
+| `Delete`       | delete the picked steps                       |
+| `Shift S`      | stash this quiz                               |
+| `J` `S` `H` `B` `Y` `,` `F` | join, stash, history, notifications, you, settings, front page |
+| `Ctrl/⌘ A`     | pick every step                               |
+| `Esc`          | close what's on top, then go up a level       |
+| `Ctrl/Shift + click` | pick several steps                      |
+
+In a list (the roster, a question's answers): `↵` adds the next one,
+`Backspace` in an empty one removes it, `Alt ↑ ↓` moves an answer, and the
+roster saves on `Ctrl/⌘ ↵`, `Esc` or clicking away.
+
+----------------|----------------------|
 | `Ctrl/⌘ + K`  | Command Palette      |
 | `Ctrl/⌘ + N`  | New Quiz             |
 | `Ctrl/⌘ + E`  | Export Quiz (.txt)   |
