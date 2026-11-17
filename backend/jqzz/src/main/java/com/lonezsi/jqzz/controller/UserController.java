@@ -250,6 +250,7 @@ public class UserController {
         m.put("profilePictureUrl", u.getProfilePictureUrl());
         m.put("online", u.isOnline());
         m.put("googleLinked", u.isGoogleLinked());
+        m.put("foyerLinked", u.isFoyerLinked());
         if (key != null) m.put("loginKey", key);
         if (u.isAdmin()) m.put("admin", true);
         return m;

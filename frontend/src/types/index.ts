@@ -70,6 +70,8 @@ export interface User {
   online: boolean;
   /** tied to a Google account: it can be signed into anywhere, not just this browser */
   googleLinked?: boolean;
+  /** tied to a Foyer account: opening JQZZ signed in on Foyer opens this one */
+  foyerLinked?: boolean;
   /** only ever sent to the account itself: what logs it in */
   loginKey?: string;
   /** the admin account, which can open #/admin */

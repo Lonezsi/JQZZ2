@@ -26,4 +26,9 @@ export const userService = {
   /** tie this account to the Google account that just signed in */
   googleLink: (id: string, credential: string) => api.post<User>(`/users/${id}/google`, { credential }),
   googleUnlink: (id: string) => api.delete<User>(`/users/${id}/google`),
+  /** the account tied to whoever is signed in on Foyer, or a new one made from it (401: nobody) */
+  foyerLogin: () => api.post<User>("/users/foyer/login"),
+  /** tie this account to whoever is signed in on Foyer */
+  foyerLink: (id: string) => api.post<User>(`/users/${id}/foyer`),
+  foyerUnlink: (id: string) => api.delete<User>(`/users/${id}/foyer`),
 };

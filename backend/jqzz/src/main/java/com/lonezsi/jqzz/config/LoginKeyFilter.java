@@ -50,7 +50,7 @@ public class LoginKeyFilter extends OncePerRequestFilter {
     private static final Set<String> PARAMS = Set.of("userId", "ownerId", "adminId");
     private static final Set<String> BODY_FIELDS = Set.of("userId", "adminId", "authorId", "hostId", "ownerId");
     /** /users/{x} that aren't an account */
-    private static final Set<String> USER_ROUTES = Set.of("register", "login", "logout", "google");
+    private static final Set<String> USER_ROUTES = Set.of("register", "login", "logout", "google", "foyer");
 
     private final LoginKeys keys;
     private final boolean enforced;
@@ -68,7 +68,9 @@ public class LoginKeyFilter extends OncePerRequestFilter {
                 || path.startsWith("/ws")
                 || path.equals("/users/register")
                 || path.equals("/users/login")
-                || path.startsWith("/users/google/");
+                || path.startsWith("/users/google/")
+                // Foyer vouches for who this is (FoyerAuth); there is no key yet to show
+                || path.equals("/users/foyer") || path.startsWith("/users/foyer/");
     }
 
     @Override

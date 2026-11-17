@@ -87,6 +87,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (initializing.current) return;
     initializing.current = true;
 
+    // Signed in on Foyer (the home server's one sign-in, its cookie arrives with every
+    // request): the account tied to it, or a new one made from it. False when nobody is
+    // signed in there, or Foyer can't be asked.
+    const foyerLogin = async (): Promise<boolean> => {
+      try {
+        signedIn((await userService.foyerLogin()).data);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    // An account this browser already had gets tied to the Foyer account, so other devices
+    // signed in on Foyer open it too. If that Foyer account already has its own account
+    // here and this one is only a guest, the Foyer one wins: a guest is nobody yet.
+    const foyerTie = async (u: User) => {
+      if (u.foyerLinked) return;
+      try {
+        signedIn((await userService.foyerLink(u.id)).data);
+      } catch (err) {
+        const taken = axios.isAxiosError(err) && err.response?.status === 409;
+        if (taken && !u.googleLinked && (u.name ?? "").endsWith("(guest)")) await foyerLogin();
+      }
+    };
+
     // Keep the stored identity unless the server says it no longer exists:
     // a backend that is down or restarting must not cost the user their account.
     const restore = async (attempt: number) => {
@@ -97,16 +121,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         if (key || legacyId) {
           try {
-            if (key) await login(key);
-            else signedIn((await userService.login({ id: legacyId! })).data);
+            const u = key ? await login(key) : signedIn((await userService.login({ id: legacyId! })).data);
+            await foyerTie(u);
           } catch (err) {
             const gone = axios.isAxiosError(err) && (err.response?.status === 404 || err.response?.status === 401);
             if (!gone) throw err;
             localStorage.removeItem(KEY_STORE);
             localStorage.removeItem("userId");
-            await register(guestName());
+            if (!(await foyerLogin())) await register(guestName());
           }
-        } else {
+        } else if (!(await foyerLogin())) {
           await register(guestName());
         }
         setUnreachable(false);

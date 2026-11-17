@@ -33,9 +33,19 @@ public class User {
     @Column(unique = true)
     private String googleSub;
 
+    /** the Foyer account this one is tied to (the home server's one sign-in); null if none */
+    @JsonIgnore
+    @Column(unique = true)
+    private String foyerId;
+
     /** has been told, once, that a guest account lives in one browser */
     @JsonIgnore
     private Boolean guestNoticed;
+
+    public String getFoyerId(){return foyerId;}
+    public void setFoyerId(String foyerId){this.foyerId=foyerId;}
+    /** tied to Foyer: opening JQZZ signed in on Foyer opens this account, on any device */
+    public boolean isFoyerLinked(){return foyerId != null;}
 
     public String getGoogleSub(){return googleSub;}
     public void setGoogleSub(String googleSub){this.googleSub=googleSub;}

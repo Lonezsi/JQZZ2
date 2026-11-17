@@ -10,6 +10,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByHandle(String handle);
 
     java.util.Optional<User> findByGoogleSub(String googleSub);
+    java.util.Optional<User> findByFoyerId(String foyerId);
     User findByHandle(String handle);
     java.util.Optional<User> findFirstByAdminTrue();
 }
