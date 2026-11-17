@@ -11,6 +11,7 @@ import type { PresenceState } from "../../hooks/usePresence";
 import { SettingsPanel } from "../Stash/SettingsPanel";
 import { GoogleButton, useGoogleEnabled } from "../common/GoogleButton";
 import { GoogleAccount } from "../common/GoogleAccount";
+import { FoyerAccount } from "../common/FoyerAccount";
 import { SecretId } from "../common/SecretId";
 import { Glyph } from "../common/Glyph";
 import { useEscape } from "../../hooks/useEscape";
@@ -382,6 +383,8 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                         <Glyph name="SETTINGS" size={13} /> admin panel
                       </a>
                     )}
+                    <div className="jqzz-field-label">foyer</div>
+                    <FoyerAccount />
                     {googleOn && (
                       <>
                         <div className="jqzz-field-label">google</div>

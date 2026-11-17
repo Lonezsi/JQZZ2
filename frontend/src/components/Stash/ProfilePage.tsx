@@ -19,6 +19,7 @@ import { StashShelf } from "./StashShelf";
 import { NotificationList } from "./NotificationList";
 import { SettingsPanel } from "./SettingsPanel";
 import { GoogleAccount } from "../common/GoogleAccount";
+import { FoyerAccount } from "../common/FoyerAccount";
 import { SecretId } from "../common/SecretId";
 import { useGoogleEnabled } from "../common/GoogleButton";
 import { hits } from "../../utils/search";
@@ -416,6 +417,15 @@ const AboutYou: React.FC<{ profile: Profile; me: string; friends: Friends; query
             <dd>
               <SecretId id={user?.loginKey ?? ""} />
               <span className="jqzz-annot">type it on another device to be you there</span>
+            </dd>
+          </div>
+          <div>
+            <dt>
+              <Glyph name="PUBLIC" size={14} />
+              foyer
+            </dt>
+            <dd>
+              <FoyerAccount />
             </dd>
           </div>
           {googleOn && (
