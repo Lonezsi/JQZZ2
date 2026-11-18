@@ -16,11 +16,14 @@ import { ROSTER_EVENT } from "../RosterCard";
 const DRAG_SNIPPET_KEY = "jqzz-snippet";
 
 interface AddButtonProps {
-  dropOver: boolean;
-  onDropZoneDragOver: (e: React.DragEvent<HTMLElement>) => void;
-  onDropZoneDragLeave: () => void;
-  onDropZoneDrop: (e: React.DragEvent<HTMLElement>) => void;
+  dropOver?: boolean;
+  onDropZoneDragOver?: (e: React.DragEvent<HTMLElement>) => void;
+  onDropZoneDragLeave?: () => void;
+  onDropZoneDrop?: (e: React.DragEvent<HTMLElement>) => void;
   onPick: (snippetId: string) => void;
+  /** opened in a gap between two questions: starts open, says so, and closing it lets the gap go */
+  here?: boolean;
+  onClose?: () => void;
 }
 
 type Tab = "types" | "settings" | "stash";
@@ -30,15 +33,28 @@ const TABS = [
   { key: "stash", label: "stash", icon: "STASH", title: "questions you saved" },
 ];
 
-/** End of the timeline: opens the add tray in place, or takes a drop. */
+/**
+ * End of the timeline: opens the add tray in place, or takes a drop. The same tray opens
+ * in a gap between two questions (`here`), which is how a phone, with no dragging, adds
+ * one in the middle of a quiz.
+ */
 export const AddButton: React.FC<AddButtonProps> = ({
-  dropOver,
+  dropOver = false,
   onDropZoneDragOver,
   onDropZoneDragLeave,
   onDropZoneDrop,
   onPick,
+  here = false,
+  onClose,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(here);
+  const setOpen = (next: boolean | ((o: boolean) => boolean)) => {
+    setOpenState((o) => {
+      const v = typeof next === "function" ? next(o) : next;
+      if (!v && here) onClose?.();
+      return v;
+    });
+  };
   const [tab, setTab] = useState<Tab>("types");
   // Esc closes the tray first, before it can close the quiz
   useEscape(open, () => setOpen(false));
@@ -57,7 +73,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       >
         {/* drawn with two bars so it turns into an x around its true centre */}
         <span className="jqzz-add-plus jqzz-plus" aria-hidden="true" />
-        {dropOver ? "let go to add it" : open ? "pick one, it goes at the end" : "add"}
+        {dropOver ? "let go to add it" : open ? (here ? "pick one, it goes here" : "pick one, it goes at the end") : "add"}
       </button>
       <div className="jqzz-add-tray" inert={!open}>
         <div className="jqzz-add-tray-inner">

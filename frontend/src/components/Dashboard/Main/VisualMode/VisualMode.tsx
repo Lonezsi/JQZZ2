@@ -105,6 +105,8 @@ export const VisualMode: React.FC<VisualModeProps> = ({
   // A whole question being moved works the same way, carrying its step ids.
   const [incoming, setIncoming] = useState<{ actions: Action[]; name?: string; moving?: Set<number> } | null>(null);
   const [slot, setSlot] = useState<number | null>(null);
+  // the gap between two items whose + is open (see insertPoint)
+  const [insertAt, setInsertAt] = useState<number | null>(null);
   const slotRef = useRef<number | null>(null);
   const quizRef = useRef(quiz);
   useEffect(() => {
@@ -220,6 +222,43 @@ export const VisualMode: React.FC<VisualModeProps> = ({
     }
   };
 
+  // A + in every gap between two items opens the add tray right there: what's picked goes
+  // in front of the item after the gap. On a phone it's always shown, with a mouse it shows
+  // when the gap is pointed at; dragging a snippet into the gap does the same.
+  const insertPoint = (gap: number) => {
+    if (gap <= 0 || gap >= renderItems.length || incoming) return null;
+    if (insertAt === gap) {
+      return (
+        <div key={`insert-${gap}`} className="jqzz-row kind-add jqzz-insert-open">
+          <span className="jqzz-tc" />
+          <span className="jqzz-node end" aria-hidden="true" />
+          <AddButton
+            here
+            onClose={() => setInsertAt(null)}
+            onPick={(id) => {
+              const first = firstAction(renderItems[gap]);
+              const index = first ? quiz.actions.findIndex((a) => a.id === first.id) : -1;
+              dropSnippet(id, index < 0 ? undefined : index);
+              setInsertAt(null);
+            }}
+          />
+        </div>
+      );
+    }
+    return (
+      <div key={`insert-${gap}`} className="jqzz-insert">
+        <button
+          className="jqzz-insert-btn"
+          onClick={() => setInsertAt(gap)}
+          aria-label="Add something here, between these two"
+          title="add something here"
+        >
+          <span className="jqzz-insert-plus jqzz-plus" aria-hidden="true" />
+        </button>
+      </div>
+    );
+  };
+
   const card = (a: Action) => (
     <ActionCard
       key={a.id}
@@ -291,8 +330,9 @@ export const VisualMode: React.FC<VisualModeProps> = ({
           incoming && slot === idx && !besideItself(idx) ? (
             <DropSkeleton key="incoming" actions={incoming.actions} name={incoming.name} />
           ) : null;
+        const gapPlus = insertPoint(idx);
         if (item.kind !== "group") {
-          return skeleton ? [skeleton, card(item.action)] : card(item.action);
+          return [gapPlus, skeleton, card(item.action)];
         }
 
         const q = item.question;
@@ -304,6 +344,7 @@ export const VisualMode: React.FC<VisualModeProps> = ({
         const chips = inForce ? describe(changed(inForce)) : [];
         const weight = inForce ? (inForce.grade ? inForce.points : 0) : 1;
         return [
+          gapPlus,
           skeleton,
           <div
             key={`${q.id}-${idx}`}

@@ -29,6 +29,11 @@
   .jqzz-touch-only {
     display: grid;
   }
+  /* no hovering on a phone: the + between two items is always there */
+  .jqzz-insert-btn {
+    opacity: 1;
+    transform: scale(1);
+  }
   .jqzz-card-action-btn:disabled {
     opacity: 0.3;
   }
