@@ -41,7 +41,7 @@ class ImageServiceTest {
     void setUp() throws IOException {
         mockFile = mock(MultipartFile.class);
         // Use lenient stubs that won't cause failures if not used
-        lenient().when(mockFile.getBytes()).thenReturn("fake image data".getBytes());
+        lenient().when(mockFile.getBytes()).thenReturn(com.lonezsi.jqzz.Pic.png(1, 2, 3));
         lenient().when(mockFile.getContentType()).thenReturn("image/png");
     }
 
@@ -210,11 +210,12 @@ void uploadImage_invalidMimeType_throwsException() throws IOException {
     String ownerId = null;
     ImageVisibility visibility = ImageVisibility.PUBLIC;
     
-    when(mockFile.getContentType()).thenReturn("application/pdf");
+    // what decides is the file's bytes, not the type it was sent with
+    when(mockFile.getBytes()).thenReturn("%PDF-1.7 not a picture".getBytes());
 
     assertThatThrownBy(() -> imageService.uploadImage(handle, ownerId, visibility, mockFile))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("File must be an image");
+            .hasMessageContaining("PNG, JPEG, WebP or GIF");
 }
 
 @Test
@@ -278,4 +279,21 @@ void listAccessibleImages_returnsUserAndPublicImages() {
     assertThat(result).hasSize(2);
     assertThat(result).containsExactlyElementsOf(expectedImages);
 }
+
+    /** Condom finding 1: the type is read from the bytes. An SVG that says it's a PNG is refused,
+     *  and a real picture is kept as what it is, whatever the browser said. */
+    @Test
+    void uploadImage_anSvgIsRefusedWhateverItClaims() throws Exception {
+        org.springframework.mock.web.MockMultipartFile svg = new org.springframework.mock.web.MockMultipartFile(
+                "file", "cat.png", "image/png", "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>".getBytes());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> imageService.uploadImage("cat", null, ImageVisibility.PUBLIC, svg))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("PNG, JPEG, WebP or GIF");
+    }
+
+    @Test
+    void pictureType_readsTheBytes() {
+        org.assertj.core.api.Assertions.assertThat(com.lonezsi.jqzz.service.PictureType.of(com.lonezsi.jqzz.Pic.png(1))).isEqualTo("image/png");
+        org.assertj.core.api.Assertions.assertThat(com.lonezsi.jqzz.service.PictureType.of("<svg></svg> padding....".getBytes())).isNull();
+        org.assertj.core.api.Assertions.assertThat(com.lonezsi.jqzz.service.PictureType.of(new byte[] { 'G', 'I', 'F', '8', '9', 'a', 0, 0, 0, 0, 0, 0 })).isEqualTo("image/gif");
+    }
 }

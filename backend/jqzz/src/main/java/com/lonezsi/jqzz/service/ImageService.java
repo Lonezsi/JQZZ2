@@ -50,10 +50,8 @@ public class ImageService {
         }
 
         byte[] data = file.getBytes();
-        String mimeType = file.getContentType();
-        if (mimeType == null || !mimeType.startsWith("image/")) {
-            throw new IllegalArgumentException("File must be an image");
-        }
+        // what it is, from its bytes: the type the browser sent is the sender's word (PictureType)
+        String mimeType = PictureType.require(data);
 
         Image image = new Image(handle, ownerId, visibility, data, mimeType);
         image.setUploadedBy(uploader);
@@ -67,7 +65,7 @@ public class ImageService {
      */
     public Image keep(String ownerId, String base, byte[] data, String mimeType) {
         if (ownerId == null || ownerId.isBlank()) throw new IllegalArgumentException("Sign in first");
-        if (mimeType == null || !mimeType.startsWith("image/")) throw new IllegalArgumentException("That isn't a picture");
+        mimeType = PictureType.require(data);
         String stem = base == null ? "" : base.toLowerCase().replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
         if (stem.isEmpty()) stem = "picture";
         if (stem.length() > 40) stem = stem.substring(0, 40).replaceAll("_+$", "");
@@ -80,7 +78,7 @@ public class ImageService {
 
     /** A new picture for one of your own, keeping its handle and whoever can see it: a drawing saved again. */
     public Image replace(Long id, String userId, byte[] data, String mimeType) {
-        if (mimeType == null || !mimeType.startsWith("image/")) throw new IllegalArgumentException("That isn't a picture");
+        mimeType = PictureType.require(data);
         Image img = imageRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Image not found"));
         if (userId == null || !isUploadedBy(id, userId)) throw new SecurityException("You can only change your own images");
         img.setData(data);

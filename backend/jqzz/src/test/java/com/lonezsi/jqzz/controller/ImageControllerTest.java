@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -95,14 +96,29 @@ class ImageControllerTest {
 
     @Test
     void getImage_success() throws Exception {
-        when(imageService.getImageData(1L, "user123")).thenReturn(Optional.of("image data".getBytes()));
-        when(imageService.getMimeType(1L)).thenReturn("image/png");
+        byte[] png = com.lonezsi.jqzz.Pic.png(1, 2, 3);
+        when(imageService.getImageData(1L, "user123")).thenReturn(Optional.of(png));
 
         mockMvc.perform(get("/images/1")
                         .header("X-User-Id", "user123"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("image/png"))
-                .andExpect(content().bytes("image data".getBytes()));
+                .andExpect(content().bytes(png))
+                // nothing served from here may run: not even a picture (Condom finding 1)
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Content-Security-Policy", "default-src 'none'; sandbox"));
+    }
+
+    /** Condom finding 1: an SVG with a script, kept before uploads were checked, is not served,
+     *  whatever type was stored with it. */
+    @Test
+    void getImage_anSvgIsNeverServed() throws Exception {
+        byte[] svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>".getBytes();
+        when(imageService.getImageData(1L, "user123")).thenReturn(Optional.of(svg));
+
+        mockMvc.perform(get("/images/1")
+                        .header("X-User-Id", "user123"))
+                .andExpect(status().isUnsupportedMediaType());
     }
 
     @Test

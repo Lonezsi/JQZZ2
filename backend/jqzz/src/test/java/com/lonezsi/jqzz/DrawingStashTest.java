@@ -29,40 +29,40 @@ class DrawingStashTest {
     @Test
     void aDrawingKeepsItsLayersAndPicture() {
         String me = "drawer-" + System.nanoTime();
-        StashItem drawn = stash.saveDrawing(me, null, "My cat", LAYERS, new byte[] { 1, 2, 3 }, "image/webp");
+        StashItem drawn = stash.saveDrawing(me, null, "My cat", LAYERS, Pic.png(1, 2, 3), "image/webp");
         assertThat(drawn.getKind()).isEqualTo(StashKind.DRAWING);
         assertThat(drawn.getPayload()).isEqualTo(LAYERS);
         assertThat(drawn.getHandle()).isEqualTo("my_cat");
-        assertThat(images.getImageData(drawn.getImageId(), me)).hasValue(new byte[] { 1, 2, 3 });
+        assertThat(images.getImageData(drawn.getImageId(), me)).hasValue(Pic.png(1, 2, 3));
 
         String more = LAYERS.replace("sky", "sea");
-        StashItem again = stash.saveDrawing(me, drawn.getId(), null, more, new byte[] { 4, 5 }, "image/webp");
+        StashItem again = stash.saveDrawing(me, drawn.getId(), null, more, Pic.png(4, 5), "image/webp");
         assertThat(again.getId()).isEqualTo(drawn.getId());
         assertThat(again.getImageId()).isEqualTo(drawn.getImageId());
         assertThat(again.getPayload()).contains("sea");
         assertThat(again.getTitle()).isEqualTo("My cat");
-        assertThat(images.getImageData(drawn.getImageId(), me)).hasValue(new byte[] { 4, 5 });
+        assertThat(images.getImageData(drawn.getImageId(), me)).hasValue(Pic.png(4, 5));
     }
 
     @Test
     void someoneElsesDrawingIsntYoursToSave() {
         String me = "drawer-" + System.nanoTime();
-        StashItem drawn = stash.saveDrawing(me, null, null, LAYERS, new byte[] { 1 }, "image/png");
-        assertThatThrownBy(() -> stash.saveDrawing("someone-else", drawn.getId(), null, LAYERS, new byte[] { 2 }, "image/png"))
+        StashItem drawn = stash.saveDrawing(me, null, null, LAYERS, Pic.png(1), "image/png");
+        assertThatThrownBy(() -> stash.saveDrawing("someone-else", drawn.getId(), null, LAYERS, Pic.png(2), "image/png"))
                 .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void aDrawingMakesItsPicturePublicWithIt() {
         String me = "drawer-" + System.nanoTime();
-        StashItem drawn = stash.saveDrawing(me, null, "public sketch " + System.nanoTime(), LAYERS, new byte[] { 1 }, "image/png");
+        StashItem drawn = stash.saveDrawing(me, null, "public sketch " + System.nanoTime(), LAYERS, Pic.png(1), "image/png");
         stash.update(drawn.getId(), me, null, ImageVisibility.PUBLIC, null);
         assertThat(images.getImageData(drawn.getImageId(), "anyone")).isPresent();
     }
 
     @Test
     void layersThatArentLayersAreRefused() {
-        assertThatThrownBy(() -> stash.saveDrawing("x", null, null, "not json", new byte[] { 1 }, "image/png"))
+        assertThatThrownBy(() -> stash.saveDrawing("x", null, null, "not json", Pic.png(1), "image/png"))
                 .isInstanceOf(ResponseStatusException.class);
     }
 }

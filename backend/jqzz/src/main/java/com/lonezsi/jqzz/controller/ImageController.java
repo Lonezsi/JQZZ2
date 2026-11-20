@@ -24,6 +24,7 @@ import com.lonezsi.jqzz.config.LoginKeyFilter;
 import com.lonezsi.jqzz.model.Image;
 import com.lonezsi.jqzz.model.ImageVisibility;
 import com.lonezsi.jqzz.service.ImageService;
+import com.lonezsi.jqzz.service.PictureType;
 
 @RestController
 @RequestMapping("/images")
@@ -94,10 +95,19 @@ public class ImageController {
         if (data.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        String mimeType = imageService.getMimeType(id);
-        if (mimeType == null) mimeType = "image/jpeg";
+        // Served as what its bytes are, never as what was stored: a picture kept before the
+        // uploads were checked could be an SVG with a script in it. Anything that isn't one of
+        // the four picture types isn't served at all, and the headers keep even a picture
+        // from running anything (Condom report, finding 1).
+        String mimeType = PictureType.of(data.get());
+        if (mimeType == null) {
+            return ResponseEntity.status(415).build();
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(mimeType))
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "default-src 'none'; sandbox")
+                .header("Content-Disposition", "inline")
                 .body(data.get());
     }
 

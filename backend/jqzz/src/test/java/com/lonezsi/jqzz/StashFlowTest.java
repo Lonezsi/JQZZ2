@@ -46,7 +46,7 @@ class StashFlowTest {
         String bobAt = handleOf(bob);
         String carolAt = handleOf(carol);
         images.uploadImage("river", alice, ImageVisibility.SEMI_PRIVATE,
-                new MockMultipartFile("file", "river.png", "image/png", new byte[] {1, 2, 3}));
+                new MockMultipartFile("file", "river.png", "image/png", Pic.png(1, 2, 3)));
 
         String q1 = """
             {"id": 1, "text": "Longest river?", "imageUrl": ":river", "type": "PREWRITTEN_SINGLE",
