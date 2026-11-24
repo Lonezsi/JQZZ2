@@ -81,10 +81,9 @@ public class UserController {
     }
 
     /**
-     * Logging in takes the login key. Accounts made before there were keys
-     * have none yet: the first login by their id gets one made, and from then
-     * on only the key works. (The browser that made the account still holds
-     * its id, so that's who gets there first.)
+     * Logging in takes the login key, and only that: an id is public, so it
+     * never gets anyone a key. An account from before keys existed gets its
+     * key from the admin panel (POST /admin/users/{id}/key).
      */
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request, HttpServletResponse response) {
@@ -94,11 +93,8 @@ public class UserController {
             key = request.getKey().trim();
             user = keys.owner(key).flatMap(userRepository::findById).orElse(null);
         } else if (request.getId() != null) {
-            user = userRepository.findById(request.getId()).orElse(null);
-            if (user != null && keys.has(user.getId())) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "log in with your login key");
-            }
-            if (user != null) key = keys.issue(user.getId());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "log in with your login key; an account from before keys gets one from the admin");
         } else {
             user = null;
         }
