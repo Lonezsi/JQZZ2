@@ -4,7 +4,12 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
+import java.time.LocalDateTime;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.lonezsi.jqzz.model.Image;
@@ -19,6 +24,35 @@ public class ImageService {
     public ImageService(ImageRepository imageRepository) {
         this.imageRepository = imageRepository;
     }
+
+    @Value("${jqzz.pictures.per-hour:30}") int perHour = 30;
+    @Value("${jqzz.pictures.per-account-mb:200}") long perAccountMb = 200;
+    @Value("${jqzz.pictures.total-mb:5120}") long totalMb = 5120;
+
+    /**
+     * Whether a picture of {@code adding} bytes may be kept (Condom report, finding 2): an
+     * uploader is needed, an account may add only so many new pictures an hour and keep only so
+     * many MB, and the whole store has a ceiling so nobody can fill the disk. {@code freeing} is
+     * what a replaced picture gives back.
+     */
+    private void roomFor(String uploader, long adding, long freeing, boolean isNew) {
+        if (uploader == null || uploader.isBlank()) throw new IllegalArgumentException("Sign in first");
+        if (isNew && imageRepository.countByUploadedByAndCreatedAtAfter(uploader, LocalDateTime.now().minusHours(1)) >= perHour) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "That's a lot of pictures in an hour: try again in a while");
+        }
+        long mine = bytes(imageRepository.bytesOf(uploader));
+        if (mine - freeing + adding > perAccountMb * 1024 * 1024) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
+                    "Your pictures are over " + perAccountMb + " MB together: delete some first");
+        }
+        long all = bytes(imageRepository.bytesStored());
+        if (all - freeing + adding > totalMb * 1024 * 1024) {
+            throw new ResponseStatusException(HttpStatus.INSUFFICIENT_STORAGE, "The picture store is full for now");
+        }
+    }
+
+    private static long bytes(Number n) { return n == null ? 0 : n.longValue(); }
 
     /**
      * Upload an image. Validates uniqueness of handle based on visibility.
@@ -52,6 +86,7 @@ public class ImageService {
         byte[] data = file.getBytes();
         // what it is, from its bytes: the type the browser sent is the sender's word (PictureType)
         String mimeType = PictureType.require(data);
+        roomFor(uploader, data.length, 0, true);
 
         Image image = new Image(handle, ownerId, visibility, data, mimeType);
         image.setUploadedBy(uploader);
@@ -66,6 +101,7 @@ public class ImageService {
     public Image keep(String ownerId, String base, byte[] data, String mimeType) {
         if (ownerId == null || ownerId.isBlank()) throw new IllegalArgumentException("Sign in first");
         mimeType = PictureType.require(data);
+        roomFor(ownerId, data.length, 0, true);
         String stem = base == null ? "" : base.toLowerCase().replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
         if (stem.isEmpty()) stem = "picture";
         if (stem.length() > 40) stem = stem.substring(0, 40).replaceAll("_+$", "");
@@ -81,6 +117,7 @@ public class ImageService {
         mimeType = PictureType.require(data);
         Image img = imageRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Image not found"));
         if (userId == null || !isUploadedBy(id, userId)) throw new SecurityException("You can only change your own images");
+        roomFor(userId, data.length, img.getData() == null ? 0 : img.getData().length, false);
         img.setData(data);
         img.setMimeType(mimeType);
         return imageRepository.save(img);

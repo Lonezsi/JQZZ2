@@ -48,6 +48,11 @@ public class ImageController {
             @RequestParam("file") MultipartFile file,
             @RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) throws IOException {
 
+        // an upload is someone's: a guest account counts, nobody doesn't (Condom report, finding 2)
+        if (enforced && me == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sign in first: a guest account is enough");
+        }
+        if (ownerId == null || ownerId.isBlank()) ownerId = me;
         // a multipart form's fields are past the login key filter: check the owner here
         if (enforced && ownerId != null && !ownerId.equals(me)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("that isn't your account");
