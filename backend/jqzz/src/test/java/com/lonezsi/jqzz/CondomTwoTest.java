@@ -30,7 +30,7 @@ import com.lonezsi.jqzz.service.PresenceTracker;
 
 /** The Condom pass: headers, who the socket is, quizzes with no author, the people list, the cookie. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = { "jqzz.auth.enforce-login-key=true", "jqzz.cookie.secure=true" })
+@TestPropertySource(properties = { "jqzz.auth.enforce-login-key=true", "jqzz.cookie.secure=true", "jqzz.cookie.path=/jqzz/" })
 class CondomTwoTest {
 
     @Value("${local.server.port}")
@@ -48,7 +48,8 @@ class CondomTwoTest {
         assertThat(r.headers().firstValue("X-Frame-Options")).hasValue("DENY");
         assertThat(r.headers().firstValue("Referrer-Policy")).hasValue("same-origin");
         assertThat(r.headers().firstValue("Content-Security-Policy").orElse(""))
-                .contains("frame-ancestors 'none'").contains("script-src 'self'").doesNotContain("accounts.google.com");
+                .contains("frame-ancestors 'none'").contains("script-src 'self'").doesNotContain("accounts.google.com")
+                .doesNotContain("unsafe-eval").doesNotContain("script-src 'self' 'unsafe-inline'");
     }
 
     @Test
@@ -83,7 +84,10 @@ class CondomTwoTest {
     void theKeyCookieIsSecureAndHttpOnly() throws Exception {
         HttpResponse<String> r = send("POST", "/users/register", null, "{\"name\": \"Alice\"}");
         String cookie = r.headers().firstValue("Set-Cookie").orElse("");
-        assertThat(cookie).startsWith("jqzz_key=").contains("Secure").contains("HttpOnly");
+        assertThat(cookie).startsWith("jqzz_key=").contains("Secure").contains("HttpOnly")
+                .contains("SameSite=Lax").contains("Path=/jqzz/");
+        // the old cookie at / is expired, so the browser stops sending it to JR!TER and Foyer
+        assertThat(r.headers().allValues("Set-Cookie")).anyMatch(c -> c.startsWith("jqzz_key=;") && c.contains("Path=/;") && c.contains("Max-Age=0"));
     }
 
     @Test
