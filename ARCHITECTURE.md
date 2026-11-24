@@ -36,7 +36,7 @@ Technical deep-dive into the JQZZ system.
 │  ┌──────────────┐  ┌───────────────┐  ┌───────────────┐  │
 │  │ REST Controllers│  │ WS Handler   │  │ Image Service │  │
 │  │ Quiz, User,   │  │ (STOMP       │  │ (upload,      │  │
-│  │ Lobby, Image  │  │  messages)   │  │  resolve)     │  │
+│  │ Image         │  │  messages)   │  │  resolve)     │  │
 │  └──────┬───────┘  └───────┬───────┘  └───────┬───────┘  │
 │         │                  │                   │          │
 │  ┌──────┴──────────────────┴───────────────────┴───────┐  │
@@ -65,8 +65,6 @@ Quiz (1) ──── (*) Action
                 └── Phase enum: WAITING | QUESTION | ANSWER | ELABORATION | RESULT
 
 User (1) ──── (*) Quiz        (via authorId string)
-Lobby (*) ── (1) Quiz         (via quiz_id FK)
-Lobby (1) ── (*) Player       (Embeddable record)
 Image        (standalone)     (public/private/semi-private)
 ```
 
@@ -86,13 +84,6 @@ Image        (standalone)     (public/private/semi-private)
 | GET    | `/users/{id}`          | Get user by ID           |
 | PATCH  | `/users/{id}`          | Update user profile      |
 | DELETE | `/users/{id}`          | Delete user              |
-| GET    | `/lobbies`             | List all lobbies         |
-| POST   | `/lobbies`             | Create lobby             |
-| POST   | `/lobbies/{id}/join`   | Join lobby               |
-| POST   | `/lobbies/{id}/leave`  | Leave lobby              |
-| DELETE | `/lobbies/{id}`        | Delete lobby             |
-| POST   | `/game/{id}/start`     | Start game               |
-| POST   | `/game/{id}/next`      | Next action              |
 | POST   | `/images/upload`       | Upload image             |
 | GET    | `/images/resolve`      | Resolve image reference  |
 | GET    | `/images/{id}`         | Get image data           |
@@ -104,14 +95,11 @@ Image        (standalone)     (public/private/semi-private)
 | Topic                  | Events                          |
 |------------------------|---------------------------------|
 | `/topic/users`         | `user_registered`, `user_logged_in`, `user_logged_out`, `user_updated` |
-| `/topic/lobbies`       | `lobby_created`, `lobby_deleted` |
-| `/topic/lobby/{id}`    | `players_update`, `quiz_started`, `action`, `timer_update` |
 
 ### Message Mapping
 
 | Destination              | Handler                  |
 |--------------------------|--------------------------|
-| `/app/lobby/{id}/timer`  | `GameController.timerUpdate` |
 
 ---
 
@@ -188,7 +176,6 @@ Any line becomes a text note block
 
 - **Stateless REST** — Every request is independent
 - **WebSocket presence** — `User.online` flag persisted to DB on login/logout
-- **Lobby state** — `Lobby.currentActionIndex`, `Lobby.time`, `Lobby.players` persisted to DB
 
 ---
 
@@ -232,8 +219,6 @@ Answer      (id: Long PK, question_id: FK, text, answer_value: Int, image_url, u
 app_user    (id: String PK, handle: Unique, name, password, email, profile_picture_url, online: Boolean)
 
 -- Multiplayer
-Lobby       (id: Long PK, name, admin_id: Long, quiz_id: FK, current_action_index: Int, time: Int)
-Player      (Embeddable: user_id, score) → lobby_players
 
 -- Images
 app_image   (id: Long PK, handle, owner_id: String, visibility: Enum, data: BLOB, mime_type, created_at)

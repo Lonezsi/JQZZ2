@@ -119,36 +119,6 @@ class QuizPersistenceTest {
             .isEqualTo(404);
     }
 
-    @Test
-    void gameStepsOverEditorOnlyBlocks() throws Exception {
-        long quizId = createQuiz();
-        send("PUT", "/quizzes/" + quizId, """
-            {"name": "Q", "actions": [
-               {"phase": "TEXT", "time": 0, "preview": "intro"},
-               {"phase": "QUESTION", "time": 30, "question": %s},
-               {"phase": "DIVIDER", "time": 0}
-            ]}
-            """.formatted(QUESTION));
-
-        HttpResponse<String> lobby = send("POST", "/lobbies",
-            "{\"name\": \"Room\", \"adminId\": \"abc123\", \"quizId\": " + quizId + "}");
-        assertThat(lobby.statusCode()).isEqualTo(200);
-        long lobbyId = ((Number) JsonPath.read(lobby.body(), "$.id")).longValue();
-
-        assertThat(send("POST", "/game/" + lobbyId + "/start", null).statusCode()).isEqualTo(200);
-        assertThat(send("POST", "/game/" + lobbyId + "/next", null).statusCode()).isEqualTo(200);
-        String afterFirst = send("GET", "/lobbies/" + lobbyId, null).body();
-        assertThat(JsonPath.<String>read(afterFirst, "$.currentAction.phase")).isEqualTo("QUESTION");
-
-        // past the end: reports the quiz as finished instead of failing
-        assertThat(send("POST", "/game/" + lobbyId + "/next", null).statusCode()).isEqualTo(200);
-        assertThat(JsonPath.<Boolean>read(send("GET", "/lobbies/" + lobbyId, null).body(), "$.quizOver")).isTrue();
-
-        HttpResponse<String> missing = send("POST", "/game/987654/next", null);
-        assertThat(missing.statusCode()).isEqualTo(404);
-        assertThat(missing.body()).contains("Lobby not found");
-    }
-
     private long createQuiz() throws Exception {
         HttpResponse<String> created = send("POST", "/quizzes", "{\"name\": \"New\", \"authorId\": \"abc123\", \"actions\": []}");
         assertThat(created.statusCode()).isEqualTo(200);

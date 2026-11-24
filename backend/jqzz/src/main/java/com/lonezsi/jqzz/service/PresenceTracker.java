@@ -22,8 +22,8 @@ import com.lonezsi.jqzz.model.User;
 import com.lonezsi.jqzz.repository.UserRepository;
 
 /**
- * Derives the online flag from open WebSocket sessions. Clients send their user
- * id as a "userId" STOMP CONNECT header; a user stays online while at least one
+ * Derives the online flag from open WebSocket sessions. Clients send their login
+ * key as a "loginKey" STOMP CONNECT header, which says who they are; a user stays online while at least one
  * of their sessions (tabs) is connected. This also covers crashed browsers and
  * closed laptops, where no logout request would ever arrive.
  *
@@ -43,9 +43,15 @@ public class PresenceTracker {
     private final Map<String, Map<String, String>> watchesBySession = new HashMap<>();
     private final List<BiConsumer<String, String>> watchListeners = new CopyOnWriteArrayList<>();
 
-    public PresenceTracker(UserRepository userRepository, SimpMessagingTemplate messaging) {
+    private final LoginKeys keys;
+    private final boolean enforced;
+
+    public PresenceTracker(UserRepository userRepository, SimpMessagingTemplate messaging, LoginKeys keys,
+            @org.springframework.beans.factory.annotation.Value("${jqzz.auth.enforce-login-key:true}") boolean enforced) {
         this.userRepository = userRepository;
         this.messaging = messaging;
+        this.keys = keys;
+        this.enforced = enforced;
     }
 
     /** Nobody is connected right after startup, whatever the database says. */
@@ -59,7 +65,11 @@ public class PresenceTracker {
     @EventListener
     public synchronized void onConnect(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        String userId = accessor.getFirstNativeHeader("userId");
+        // who this is comes from the login key sent with CONNECT; a bare userId is only believed
+        // when keys aren't enforced (the tests)
+        String key = accessor.getFirstNativeHeader("loginKey");
+        String userId = key == null || key.isBlank() ? null : keys.owner(key).orElse(null);
+        if (userId == null && !enforced) userId = accessor.getFirstNativeHeader("userId");
         String sessionId = accessor.getSessionId();
         if (userId == null || userId.isBlank() || sessionId == null) return;
 

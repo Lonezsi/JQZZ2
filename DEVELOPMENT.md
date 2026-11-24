@@ -38,7 +38,7 @@ java -jar target/jqzz-0.0.1-SNAPSHOT.jar
 ```
 
 The backend starts on **http://localhost:8080** with:
-- REST API at `/quizzes`, `/users`, `/lobbies`, `/images`
+- REST API at `/quizzes`, `/users`, `/images`
 - WebSocket at `/ws` (STOMP)
 - Swagger UI at `/swagger-ui.html`
 
@@ -61,7 +61,7 @@ npm run dev
 
 The dev server starts on **http://localhost:5173** with hot reload.
 
-**API Proxy**: The frontend calls the API with relative paths and the Vite dev server proxies `/quizzes`, `/users`, `/lobbies`, `/game`, `/images` and `/ws` to `http://127.0.0.1:8080`. To proxy to another backend:
+**API Proxy**: The frontend calls the API with relative paths and the Vite dev server proxies `/quizzes`, `/users`, `/images` and `/ws` to `http://127.0.0.1:8080`. To proxy to another backend:
 ```bash
 JQZZ_BACKEND_URL=http://localhost:9090 npm run dev
 ```
@@ -127,7 +127,7 @@ docker-compose build frontend
 - **Functional components only** — No class components
 - **Contexts for global state** — `AuthContext`, `QuizContext`, `WebSocketContext`
 - **Hooks for reusable logic** — `useQuizzes`, `useQuizMutations`, `useDragAndDrop`, `useKeyboardShortcuts`
-- **Services for API calls** — `quizService`, `userService`, `lobbyService`
+- **Services for API calls** — `quizService`, `userService`
 - **CSS class naming** — Prefixed with `jqzz-` (e.g., `jqzz-dash`, `jqzz-sidebar`, `jqzz-main`)
 - **TypeScript strict** — Use explicit types, avoid `any`
 - **File naming** — PascalCase for components (`Dashboard.tsx`), camelCase for hooks/utils (`useQuizzes.ts`)
@@ -137,7 +137,7 @@ docker-compose build frontend
 - **Lombok for boilerplate** — `@Entity` with manual getters/setters (Lombok available but not used everywhere)
 - **Constructor injection** — No `@Autowired` on fields
 - **Repository pattern** — Spring Data JPA repositories
-- **Controller per resource** — `QuizController`, `UserController`, `LobbyController`, `GameController`, `ImageController`
+- **Controller per resource** — `QuizController`, `UserController`, `ImageController`
 - **Cascading** — `Quiz → Action → Question → Answer` with `CascadeType.ALL`
 
 ---
