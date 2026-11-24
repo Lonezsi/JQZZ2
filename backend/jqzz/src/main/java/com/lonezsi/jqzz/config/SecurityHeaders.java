@@ -18,8 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * sniffed into another type, and the page may only run its own scripts (so an
  * injected one, here or on JR!TER / Foyer next door, has nothing to run).
  *
- * Google Fonts hosts stay allowed until the fonts are served from here; https:
- * images stay until pictures from outside addresses are decided (Condom 6).
+ * Fonts are served from here. https: images stay until pictures from outside addresses are decided (Condom 6).
  * Routes that set their own stricter CSP (pictures) get both; the browser
  * applies both, so the stricter one wins.
  */
@@ -32,8 +31,8 @@ public class SecurityHeaders extends OncePerRequestFilter {
     public SecurityHeaders(@Value("${jqzz.google.client-id:}") String google) {
         String g = google == null || google.isBlank() ? "" : " https://accounts.google.com";
         this.csp = "default-src 'self'; script-src 'self'" + g
-                + "; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" + g
-                + "; font-src 'self' data: https://fonts.gstatic.com"
+                + "; style-src 'self' 'unsafe-inline'" + g
+                + "; font-src 'self' data:"
                 + "; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:"
                 + "; connect-src 'self' data: blob:; worker-src 'self' blob:; frame-src 'self'" + g
                 + "; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";

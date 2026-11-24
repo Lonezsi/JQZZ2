@@ -3,6 +3,7 @@ import { Client } from "@stomp/stompjs";
 import type { IMessage, StompSubscription } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { API_BASE_URL, KEY_STORE } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 function storedKey(): string {
   try {
@@ -11,7 +12,6 @@ function storedKey(): string {
     return "";
   }
 }
-import { useAuth } from "./AuthContext";
 
 interface WebSocketContextType {
   client: Client | null;
