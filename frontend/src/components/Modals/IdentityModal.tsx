@@ -376,7 +376,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
                     </div>
                     <SecretId id={current.loginKey ?? ""} />
                     <a className="jqzz-optional jqzz-privacy-link" href="/foyer/privacy" target="_blank" rel="noopener">
-                      what's kept about you, and how to get it deleted
+                      what's kept about you, and how to get it deleted. for people 16 and over
                     </a>
                     {current.admin && (
                       <a className="jqzz-modal-btn ghost jqzz-admin-link" href="#/admin" onClick={onClose}>
