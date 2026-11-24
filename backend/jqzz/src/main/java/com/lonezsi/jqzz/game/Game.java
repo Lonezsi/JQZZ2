@@ -132,7 +132,7 @@ public class Game {
     }
 
     /** a drawing, kept while the game lasts and served by its id */
-    public record Art(byte[] bytes, String contentType) {}
+    public record Art(byte[] bytes, String contentType, String by) {}
 
     /** open: someone new can still join while this step plays (the "latejoin" setting) */
     public record Step(Phase phase, int seconds, QuestionSnap question, boolean open) {
@@ -819,12 +819,12 @@ public class Game {
             Telephone t = playing(st, userId);
             if (t.kind() != Telephone.Kind.DRAW) throw new IllegalArgumentException("This round is for writing");
             Telephone.Link before = t.mine(userId);
-            id = keepArt(bytes, contentType, before == null ? null : before.image());
+            id = keepArt(bytes, contentType, before == null ? null : before.image(), userId);
             t.put(userId, new Telephone.Link(userId, null, id));
             telephoneDone(t, now, online);
         } else {
             if (dealsPairs(q)) dealTo(q, st, userId);
-            id = keepArt(bytes, contentType, st.drawings.get(userId));
+            id = keepArt(bytes, contentType, st.drawings.get(userId), userId);
             st.drawings.put(userId, id);
             if (everyoneDid(st.drawings.keySet(), online)) endsAt = Math.min(endsAt, now + EVERYONE_DONE_MS);
         }
@@ -837,7 +837,7 @@ public class Game {
         return id == null ? null : art.get(id);
     }
 
-    private String keepArt(byte[] bytes, String contentType, String replaces) {
+    private String keepArt(byte[] bytes, String contentType, String replaces, String by) {
         Art old = replaces == null ? null : art.get(replaces);
         long after = artBytes + bytes.length - (old == null ? 0 : old.bytes().length);
         if (after > MAX_GAME_ART_BYTES) throw new IllegalStateException("This game has no room left for drawings");
@@ -846,7 +846,7 @@ public class Game {
         do {
             id = randomKey(12);
         } while (art.containsKey(id));
-        art.put(id, new Art(bytes, contentType));
+        art.put(id, new Art(bytes, contentType, by));
         artBytes = after;
         return id;
     }

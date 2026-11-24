@@ -82,10 +82,13 @@ public class AdminController {
     private final Map<String, Long> tokens = new ConcurrentHashMap<>();
     private int failures;
     private long lockedUntil;
+    private final com.lonezsi.jqzz.service.AccountEraser eraser;
 
     public AdminController(UserRepository users, QuizService quizzes, QuizRepository quizRepo, GameRecordRepository records,
             DrawingRepository drawings, ImageRepository images, StashItemRepository stash,
-            NotificationService notifications, GameEngine engine, SimpMessagingTemplate messaging, LoginKeys keys) {
+            NotificationService notifications, GameEngine engine, SimpMessagingTemplate messaging, LoginKeys keys,
+            com.lonezsi.jqzz.service.AccountEraser eraser) {
+        this.eraser = eraser;
         this.users = users;
         this.quizzes = quizzes;
         this.quizRepo = quizRepo;
@@ -255,8 +258,7 @@ public class AdminController {
             @RequestHeader(value = TOKEN, required = false) String token, @PathVariable String id) {
         unlocked(me, token);
         person(id);
-        users.deleteById(id);
-        keys.forget(id);
+        eraser.erase(id);
         messaging.convertAndSend("/topic/users", (Object) Map.of("event", "user_deleted", "user", Map.of("id", id)));
         return ResponseEntity.noContent().build();
     }

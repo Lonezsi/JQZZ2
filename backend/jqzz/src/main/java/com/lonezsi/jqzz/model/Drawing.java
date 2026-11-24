@@ -35,9 +35,18 @@ public class Drawing {
     @Column(length = 4 * 1024 * 1024)
     private byte[] data;
 
+    /** who drew it, so it goes with their account; null on drawings kept before this was recorded */
+    @Column(name = "drawn_by")
+    private String drawnBy;
+
     public Drawing() {}
 
     public Drawing(Long recordId, String artKey, String contentType, byte[] data) {
+        this(recordId, artKey, contentType, data, null);
+    }
+
+    public Drawing(Long recordId, String artKey, String contentType, byte[] data, String drawnBy) {
+        this.drawnBy = drawnBy;
         this.recordId = recordId;
         this.artKey = artKey;
         this.contentType = contentType;
@@ -47,6 +56,7 @@ public class Drawing {
     public Long getId() { return id; }
     public Long getRecordId() { return recordId; }
     public String getArtKey() { return artKey; }
+    public String getDrawnBy() { return drawnBy; }
     public String getContentType() { return contentType; }
     public byte[] getData() { return data; }
 }

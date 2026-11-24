@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.lonezsi.jqzz.model.Notification;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+    @org.springframework.data.jpa.repository.Query("SELECT n FROM Notification n WHERE n.userId = :id OR n.fromId = :id")
+    List<Notification> involving(@org.springframework.data.repository.query.Param("id") String id);
 
     /** your latest, newest first */
     List<Notification> findTop100ByUserIdOrderByCreatedAtDescIdDesc(String userId);

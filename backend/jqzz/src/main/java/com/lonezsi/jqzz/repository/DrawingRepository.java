@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.lonezsi.jqzz.model.Drawing;
 
 public interface DrawingRepository extends JpaRepository<Drawing, Long> {
+    java.util.List<Drawing> findByDrawnBy(String drawnBy);
 
     Optional<Drawing> findFirstByRecordIdAndArtKey(Long recordId, String artKey);
 

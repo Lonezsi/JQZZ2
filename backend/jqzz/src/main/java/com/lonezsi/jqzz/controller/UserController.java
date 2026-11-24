@@ -33,8 +33,11 @@ public class UserController {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messaging;
     private final LoginKeys keys;
+    private final com.lonezsi.jqzz.service.AccountEraser eraser;
 
-    public UserController(UserRepository userRepository, SimpMessagingTemplate messaging, LoginKeys keys) {
+    public UserController(UserRepository userRepository, SimpMessagingTemplate messaging, LoginKeys keys,
+            com.lonezsi.jqzz.service.AccountEraser eraser) {
+        this.eraser = eraser;
         this.userRepository = userRepository;
         this.messaging = messaging;
         this.keys = keys;
@@ -208,8 +211,7 @@ public class UserController {
         if (!userRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        userRepository.deleteById(id);
-        keys.forget(id);
+        eraser.erase(id);
         messaging.convertAndSend(
             "/topic/users",
             (Object) Map.of("event", "user_deleted", "user", Map.of("id", id))

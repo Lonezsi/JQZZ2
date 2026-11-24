@@ -168,7 +168,7 @@ export const IdentityModal: React.FC<IdentityModalProps> = ({
 
   const handleDeleteAccount = async () => {
     if (!current) return;
-    if (!confirm("delete your account? this can't be undone.")) return;
+    if (!confirm("delete your account? your quizzes, pictures, stash, friends and drawings go with it, and it can't be undone. games you played stay in the other players' history.")) return;
     setLoading(true);
     setError(null);
     try {

@@ -677,7 +677,7 @@ public class GameEngine {
         if (drawings == null || recordId == null) return;
         for (Map.Entry<String, Game.Art> e : art.entrySet()) {
             try {
-                drawings.save(new Drawing(recordId, e.getKey(), e.getValue().contentType(), e.getValue().bytes()));
+                drawings.save(new Drawing(recordId, e.getKey(), e.getValue().contentType(), e.getValue().bytes(), e.getValue().by()));
             } catch (RuntimeException ex) {
                 System.err.println("game " + game.code() + ": could not keep a drawing: " + ex);
             }

@@ -9,6 +9,8 @@ import com.lonezsi.jqzz.model.StashItem;
 import com.lonezsi.jqzz.model.StashKind;
 
 public interface StashItemRepository extends JpaRepository<StashItem, Long> {
+    List<StashItem> findBySavedBy(String savedBy);
+    List<StashItem> findByImageIdIn(java.util.Collection<Long> ids);
 
     List<StashItem> findBySavedByOrderByCreatedAtDesc(String savedBy);
 

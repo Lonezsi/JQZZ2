@@ -38,6 +38,9 @@ class UserControllerTest {
     @Mock
     private LoginKeys keys;
 
+    @Mock
+    private com.lonezsi.jqzz.service.AccountEraser eraser;
+
     @InjectMocks
     private UserController userController;
 
@@ -199,6 +202,7 @@ class UserControllerTest {
         
         mockMvc.perform(delete("/users/test123").header("X-User-Id", "test123"))
                 .andExpect(status().isNoContent());  // Change from 200 to 204
+        org.mockito.Mockito.verify(eraser).erase("test123");
     }
 
     @Test
