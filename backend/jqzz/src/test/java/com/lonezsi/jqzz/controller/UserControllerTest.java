@@ -35,6 +35,9 @@ class UserControllerTest {
     private UserRepository userRepository;
 
     @Mock
+    private com.lonezsi.jqzz.config.KeyCookie keyCookie;
+
+    @Mock
     private SimpMessagingTemplate messaging;
 
     @Mock

@@ -30,3 +30,8 @@ Copy the jar to `C:\JQZZ\jqzz-new.jar` and run `Swap-Jqzz.ps1`; copy `<out>` ove
 (no restart needed for the frontend alone). `Restart-Jqzz.ps1` restarts without swapping.
 
 Build the frontend from PowerShell: Git Bash rewrites `/jqzz/` into a Windows path.
+
+## Cookie path
+
+The login cookie is `Secure` and set on `/jqzz/` (the path the browser sees), so JR!TER and Foyer never get it. `Start-Jqzz.ps1` passes `--jqzz.cookie.path=/jqzz/`; the copy in `C:\JQZZ` needs the same line the next time it is replaced. Locally over plain http, run with `--jqzz.cookie.secure=false`.
+

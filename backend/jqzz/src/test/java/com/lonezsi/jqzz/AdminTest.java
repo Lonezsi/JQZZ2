@@ -60,11 +60,11 @@ class AdminTest {
         String aliceKey = JsonPath.read(alice, "$.loginKey");
 
         // the admin is nobody's to see
-        assertThat(send("GET", "/users", null, null, null).body()).doesNotContain("Admin");
+        assertThat(send("GET", "/users", aliceKey, null, null).body()).doesNotContain("Admin");
         String me = send("POST", "/users/login", null, null, "{\"key\": \"%s\"}".formatted(key)).body();
         assertThat((Boolean) JsonPath.read(me, "$.admin")).isTrue();
         String adminId = JsonPath.read(me, "$.id");
-        assertThat(send("GET", "/users/" + adminId, null, null, null).statusCode()).isEqualTo(404);
+        assertThat(send("GET", "/users/" + adminId, aliceKey, null, null).statusCode()).isEqualTo(404);
 
         // anyone else finds nothing here, right answer or not
         assertThat(send("GET", "/admin/question", aliceKey, null, null).statusCode()).isEqualTo(404);

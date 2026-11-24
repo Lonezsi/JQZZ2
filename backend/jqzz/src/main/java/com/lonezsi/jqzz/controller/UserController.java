@@ -35,9 +35,15 @@ public class UserController {
     private final LoginKeys keys;
     private final com.lonezsi.jqzz.service.AccountEraser eraser;
 
+    private final com.lonezsi.jqzz.config.KeyCookie cookie;
+    /** field-injected (not in the constructor) so a plain unit test builds it with keys off */
+    @org.springframework.beans.factory.annotation.Value("${jqzz.auth.enforce-login-key:true}")
+    private boolean enforced;
+
     public UserController(UserRepository userRepository, SimpMessagingTemplate messaging, LoginKeys keys,
-            com.lonezsi.jqzz.service.AccountEraser eraser) {
+            com.lonezsi.jqzz.service.AccountEraser eraser, com.lonezsi.jqzz.config.KeyCookie cookie) {
         this.eraser = eraser;
+        this.cookie = cookie;
         this.userRepository = userRepository;
         this.messaging = messaging;
         this.keys = keys;
@@ -79,7 +85,7 @@ public class UserController {
             (Object) Map.of("event", "user_registered", "user", saved)
         );
 
-        keyCookie(response, key);
+        cookie.set(response, key);
         return self(saved, key);
     }
 
@@ -110,7 +116,7 @@ public class UserController {
                 (Object) Map.of("event", "user_logged_in", "user", saved)
             );
         }
-        keyCookie(response, key);
+        cookie.set(response, key);
         return ResponseEntity.ok(self(saved, key));
     }
 
@@ -216,17 +222,25 @@ public class UserController {
     }
 
     @GetMapping
-    public Iterable<User> getAll() {
+    public Iterable<User> getAll(@org.springframework.web.bind.annotation.RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
+        needKey(me);
         // the admin account isn't one of the people
         return userRepository.findAll().stream().filter(u -> !u.isAdmin()).toList();
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<User> getOne(@PathVariable String userId) {
+    public ResponseEntity<User> getOne(@PathVariable String userId,
+            @org.springframework.web.bind.annotation.RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
+        needKey(me);
         return userRepository.findById(userId)
                 .filter(u -> !u.isAdmin())
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** the people list is for people with a key (every visitor has a guest one), not for the whole internet */
+    private void needKey(String me) {
+        if (enforced && me == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "log in again: this needs your login key");
     }
 
     static Map<String, Object> self(User u) {
@@ -252,22 +266,6 @@ public class UserController {
         if (key != null) m.put("loginKey", key);
         if (u.isAdmin()) m.put("admin", true);
         return m;
-    }
-
-    /**
-     * The key as a cookie too, for the requests that can't carry a header:
-     * pictures in &lt;img&gt; tags. Script can't read it, and other sites can't
-     * make a browser send it with anything but a plain GET.
-     */
-    static void keyCookie(HttpServletResponse response, String key) {
-        if (key == null) return;
-        ResponseCookie cookie = ResponseCookie.from(LoginKeyFilter.COOKIE, key)
-                .httpOnly(true)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(java.time.Duration.ofDays(400))
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private static String sanitizeHandle(String raw) {

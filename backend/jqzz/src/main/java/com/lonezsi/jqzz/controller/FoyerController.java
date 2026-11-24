@@ -42,7 +42,11 @@ public class FoyerController {
     private final SimpMessagingTemplate messaging;
     private final LoginKeys keys;
 
-    public FoyerController(FoyerAuth foyer, UserRepository users, SimpMessagingTemplate messaging, LoginKeys keys) {
+    private final com.lonezsi.jqzz.config.KeyCookie cookie;
+
+    public FoyerController(FoyerAuth foyer, UserRepository users, SimpMessagingTemplate messaging, LoginKeys keys,
+            com.lonezsi.jqzz.config.KeyCookie cookie) {
+        this.cookie = cookie;
         this.foyer = foyer;
         this.users = users;
         this.messaging = messaging;
@@ -82,7 +86,7 @@ public class FoyerController {
         String key = keys.issue(saved.getId());
         messaging.convertAndSend("/topic/users",
                 (Object) Map.of("event", fresh ? "user_registered" : "user_logged_in", "user", saved));
-        UserController.keyCookie(response, key);
+        cookie.set(response, key);
         return UserController.self(saved, key);
     }
 

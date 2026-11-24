@@ -42,9 +42,11 @@ public class GoogleController {
     private final NotificationService notifications;
     private final SimpMessagingTemplate messaging;
     private final LoginKeys keys;
+    private final com.lonezsi.jqzz.config.KeyCookie cookie;
 
     public GoogleController(GoogleAuth google, UserRepository users, NotificationService notifications,
-            SimpMessagingTemplate messaging, LoginKeys keys) {
+            SimpMessagingTemplate messaging, LoginKeys keys, com.lonezsi.jqzz.config.KeyCookie cookie) {
+        this.cookie = cookie;
         this.google = google;
         this.users = users;
         this.notifications = notifications;
@@ -80,7 +82,7 @@ public class GoogleController {
         String key = keys.issue(saved.getId());
         messaging.convertAndSend("/topic/users",
                 (Object) Map.of("event", fresh ? "user_registered" : "user_logged_in", "user", saved));
-        UserController.keyCookie(response, key);
+        cookie.set(response, key);
         return UserController.self(saved, key);
     }
 

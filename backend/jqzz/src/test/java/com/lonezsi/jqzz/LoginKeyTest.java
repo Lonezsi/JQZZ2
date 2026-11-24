@@ -36,8 +36,8 @@ class LoginKeyTest {
         assertThat(aliceKey).hasSize(32).isNotEqualTo(aliceId);
 
         // nobody else is sent the key: not in the people list, not in their record
-        assertThat(send("GET", "/users", null, null).body()).doesNotContain(aliceKey);
-        assertThat(send("GET", "/users/" + aliceId, null, null).body()).doesNotContain(aliceKey);
+        assertThat(send("GET", "/users", bobKey, null).body()).doesNotContain(aliceKey);
+        assertThat(send("GET", "/users/" + aliceId, bobKey, null).body()).doesNotContain(aliceKey);
 
         // logging in takes the key; the id no longer does
         assertThat(send("POST", "/users/login", null, "{\"key\": \"%s\"}".formatted(aliceKey)).statusCode()).isEqualTo(200);

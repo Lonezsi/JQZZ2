@@ -79,6 +79,7 @@ $ErrorActionPreference = 'Continue'
 & $Java -Xmx384m -jar $Jar `
     "--server.port=$Port" `
     '--server.address=127.0.0.1' `
+    '--jqzz.cookie.path=/jqzz/' `
     '--server.forward-headers-strategy=native' `
     '--spring.web.resources.static-locations=file:C:/JQZZ/web/' `
     '--spring.web.resources.cache.cachecontrol.no-cache=true' *>> $out

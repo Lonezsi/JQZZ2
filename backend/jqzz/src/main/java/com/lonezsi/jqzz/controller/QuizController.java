@@ -65,8 +65,7 @@ public class QuizController {
         if (quiz == null) return ResponseEntity.notFound().build();
         JsonNode tree = json.valueToTree(quiz);
         String author = quiz.getAuthorId();
-        boolean theirs = author == null || author.isBlank() || author.equals(me)
-                || (me != null && users.findById(me).map(User::isAdmin).orElse(false));
+        boolean theirs = (author == null || author.isBlank() ? !enforced : author.equals(me)) || isAdmin(me);
         if (!theirs) withoutRoster(tree);
         return ResponseEntity.ok(tree);
     }
@@ -80,8 +79,25 @@ public class QuizController {
     }
 
     @PostMapping
-    public Quiz create(@RequestBody Quiz quiz) {
-        return quizService.create(quiz);
+    public ResponseEntity<Quiz> create(@RequestBody Quiz quiz,
+                                       @RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
+        // a quiz always has an author, and it is whoever the login key proves
+        if (enforced) {
+            if (me == null) return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+            quiz.setAuthorId(me);
+        }
+        return ResponseEntity.ok(quizService.create(quiz));
+    }
+
+    private boolean isAdmin(String id) {
+        return id != null && users.findById(id).map(User::isAdmin).orElse(false);
+    }
+
+    /** a quiz with no author is the admin's; with keys off, anyone's (the tests) */
+    private boolean mayChange(String author, String me) {
+        if (!enforced) return true;
+        if (author == null || author.isBlank()) return isAdmin(me);
+        return author.equals(me);
     }
 
     @PutMapping("/{id}")
@@ -89,7 +105,7 @@ public class QuizController {
                                        @RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
         // only whoever made it saves over it (its login key proved who that is)
         String author = quizService.findById(id).map(Quiz::getAuthorId).orElse(null);
-        if (enforced && author != null && !author.equals(me)) {
+        if (enforced && !mayChange(author, me)) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
         }
         return quizService.update(id, quiz)
@@ -100,11 +116,14 @@ public class QuizController {
     /** Only whoever made a quiz can delete it; quizzes from before authors were kept are anyone's. */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
+                                    @RequestHeader(value = "X-User-Id", required = false) String header,
+                                    @RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
         Quiz quiz = quizService.findById(id).orElse(null);
         if (quiz == null) return ResponseEntity.notFound().build();
         String author = quiz.getAuthorId();
-        if (author != null && !author.isBlank() && !author.equals(userId)) {
+        String userId = enforced ? me : header;
+        boolean authorless = author == null || author.isBlank();
+        if (enforced ? !mayChange(author, userId) : (!authorless && !author.equals(userId))) {
             return ResponseEntity.status(403).body("Only its author can delete this quiz");
         }
         return quizService.delete(id)

@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,9 +37,12 @@ public class ProfileController {
     private final StashService stash;
     private final FriendController friends;
     private final JsonMapper json;
+    private final boolean enforced;
 
     public ProfileController(UserRepository users, GameRecordRepository records, StashService stash,
-            FriendController friends, JsonMapper json) {
+            FriendController friends, JsonMapper json,
+            @org.springframework.beans.factory.annotation.Value("${jqzz.auth.enforce-login-key:true}") boolean enforced) {
+        this.enforced = enforced;
         this.users = users;
         this.records = records;
         this.stash = stash;
@@ -49,7 +53,13 @@ public class ProfileController {
     @GetMapping("/{userId}")
     @Transactional(readOnly = true)
     public Map<String, Object> profile(@PathVariable String userId,
-                                       @RequestHeader(value = "X-User-Id", required = false) String viewerId) {
+                                       @RequestHeader(value = "X-User-Id", required = false) String header,
+                                       @RequestAttribute(value = com.lonezsi.jqzz.config.LoginKeyFilter.USER, required = false) String me) {
+        // the proven viewer; the header only counts when keys aren't enforced (the tests)
+        String viewerId = enforced ? me : header;
+        if (enforced && me == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "log in again: this needs your login key");
+        }
         User user = users.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such person"));
         boolean self = userId.equals(viewerId);
