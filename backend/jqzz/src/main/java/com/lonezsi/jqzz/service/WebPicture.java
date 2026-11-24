@@ -8,10 +8,15 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.springframework.stereotype.Service;
 
@@ -22,8 +27,9 @@ import org.springframework.stereotype.Service;
  * tailnet, so an address has to be a public one: http or https, a host that
  * resolves only to public addresses (not this machine, the local network, the
  * tailnet's 100.64/10, link-local or the like), every redirect checked the
- * same way before it's followed, an image by its content type, and no more
- * than MAX_BYTES of it.
+ * same way before it's followed, the connection made to the very address that
+ * was checked (so a name can't answer differently the second time), an image
+ * by its content type, and no more than MAX_BYTES of it.
  */
 @Service
 public class WebPicture {
@@ -33,33 +39,24 @@ public class WebPicture {
 
     public record Fetched(byte[] data, String mimeType, String name) {}
 
-    private final HttpClient http = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(8))
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build();
+    /** one answer: status, lower-cased headers, and the body still to be read (close it) */
+    record Answer(int status, Map<String, String> headers, InputStream body, Socket socket) {}
 
     public Fetched fetch(String address) {
         URI uri = parse(address);
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
-            check(uri);
-            HttpResponse<InputStream> res;
+            InetAddress at = check(uri);
+            Answer res;
             try {
-                res = http.send(HttpRequest.newBuilder(uri)
-                        .timeout(Duration.ofSeconds(12))
-                        .header("User-Agent", "jqzz (a picture for someone's stash)")
-                        .header("Accept", "image/*")
-                        .GET().build(), HttpResponse.BodyHandlers.ofInputStream());
+                res = get(uri, at);
             } catch (IOException e) {
                 throw new IllegalArgumentException("Couldn't reach that address");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalArgumentException("Couldn't reach that address");
             }
-            int status = res.statusCode();
+            int status = res.status();
             if (status >= 300 && status < 400) {
                 close(res);
-                String to = res.headers().firstValue("Location")
-                        .orElseThrow(() -> new IllegalArgumentException("That address sent us nowhere"));
+                String to = res.headers().get("location");
+                if (to == null) throw new IllegalArgumentException("That address sent us nowhere");
                 uri = uri.resolve(to);
                 continue;
             }
@@ -67,19 +64,95 @@ public class WebPicture {
                 close(res);
                 throw new IllegalArgumentException("That address answered " + status);
             }
-            String type = res.headers().firstValue("Content-Type").orElse("").split(";")[0].trim().toLowerCase();
+            String encoding = res.headers().getOrDefault("transfer-encoding", "").trim();
+            if (!encoding.isEmpty() && !encoding.equalsIgnoreCase("identity")) {
+                close(res);
+                throw new IllegalArgumentException("Couldn't read the picture from there");
+            }
+            String type = res.headers().getOrDefault("content-type", "").split(";")[0].trim().toLowerCase();
             if (!type.startsWith("image/") || type.equals("image/svg+xml")) {
                 close(res);
                 throw new IllegalArgumentException("That address isn't a picture");
             }
-            long length = res.headers().firstValueAsLong("Content-Length").orElse(-1);
+            long length = -1;
+            try {
+                length = Long.parseLong(res.headers().getOrDefault("content-length", "-1").trim());
+            } catch (NumberFormatException ignored) {
+                // no usable length; the read below still caps it
+            }
             if (length > MAX_BYTES) {
                 close(res);
                 throw new IllegalArgumentException("That picture is over 10 MB");
             }
-            return new Fetched(read(res.body()), type, nameOf(uri));
+            try {
+                return new Fetched(read(res.body()), type, nameOf(uri));
+            } finally {
+                close(res);
+            }
         }
         throw new IllegalArgumentException("That address sent us round too many times");
+    }
+
+    /**
+     * GET over a socket opened to {@code at} itself, so the name is never looked up again.
+     * https still checks the certificate against the host name. HTTP/1.0 keeps the body plain
+     * (no chunking): it runs to the end of the stream.
+     */
+    static Answer get(URI uri, InetAddress at) throws IOException {
+        boolean https = "https".equalsIgnoreCase(uri.getScheme());
+        int port = uri.getPort() != -1 ? uri.getPort() : (https ? 443 : 80);
+        String host = uri.getHost();
+        Socket raw = new Socket();
+        try {
+            raw.connect(new InetSocketAddress(at, port), 8000);
+            raw.setSoTimeout(12000);
+            Socket s = raw;
+            if (https) {
+                SSLSocket ssl = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault()).createSocket(raw, host, port, true);
+                SSLParameters p = ssl.getSSLParameters();
+                p.setEndpointIdentificationAlgorithm("HTTPS");
+                ssl.setSSLParameters(p);
+                ssl.startHandshake();
+                s = ssl;
+            }
+            String path = uri.getRawPath() == null || uri.getRawPath().isEmpty() ? "/" : uri.getRawPath();
+            if (uri.getRawQuery() != null) path += "?" + uri.getRawQuery();
+            boolean usual = uri.getPort() == -1 || port == (https ? 443 : 80);
+            String request = "GET " + path + " HTTP/1.0\r\n"
+                    + "Host: " + host + (usual ? "" : ":" + port) + "\r\n"
+                    + "User-Agent: jqzz (a picture for someone's stash)\r\n"
+                    + "Accept: image/*\r\nConnection: close\r\n\r\n";
+            s.getOutputStream().write(request.getBytes(StandardCharsets.ISO_8859_1));
+            s.getOutputStream().flush();
+
+            InputStream in = new java.io.BufferedInputStream(s.getInputStream(), 8192);
+            ByteArrayOutputStream head = new ByteArrayOutputStream();
+            int last4 = 0, c;
+            while ((c = in.read()) != -1) {
+                head.write(c);
+                last4 = (last4 << 8) | c;
+                if (last4 == 0x0d0a0d0a) break;
+                if (head.size() > 64 * 1024) throw new IOException("head too long");
+            }
+            String[] lines = head.toString(StandardCharsets.ISO_8859_1).split("\r\n");
+            String[] first = lines[0].split(" ");
+            if (first.length < 2) throw new IOException("odd answer");
+            int status = Integer.parseInt(first[1].trim());
+            Map<String, String> headers = new HashMap<>();
+            for (int i = 1; i < lines.length; i++) {
+                int colon = lines[i].indexOf(':');
+                if (colon > 0) headers.put(lines[i].substring(0, colon).trim().toLowerCase(), lines[i].substring(colon + 1).trim());
+            }
+            return new Answer(status, headers, in, s);
+        } catch (IOException | RuntimeException e) {
+            try {
+                raw.close();
+            } catch (IOException ignored) {
+                // already failing
+            }
+            if (e instanceof IOException io) throw io;
+            throw new IOException("odd answer", e);
+        }
     }
 
     private static URI parse(String address) {
@@ -95,7 +168,7 @@ public class WebPicture {
     }
 
     /** Only somewhere on the open internet, by every address the name has. */
-    static void check(URI uri) {
+    static InetAddress check(URI uri) {
         String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
         if (!scheme.equals("http") && !scheme.equals("https")) throw new IllegalArgumentException("Only http and https addresses");
         int port = uri.getPort();
@@ -109,6 +182,7 @@ public class WebPicture {
         for (InetAddress a : all) {
             if (!isPublic(a)) throw new IllegalArgumentException("That address isn't on the open internet");
         }
+        return all[0];
     }
 
     static boolean isPublic(InetAddress a) {
@@ -158,9 +232,9 @@ public class WebPicture {
         }
     }
 
-    private static void close(HttpResponse<InputStream> res) {
+    private static void close(Answer res) {
         try {
-            res.body().close();
+            res.socket().close();
         } catch (IOException ignored) {
             // it's being let go anyway
         }
