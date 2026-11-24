@@ -48,7 +48,7 @@ class ImageServiceTest {
     @Test
     void uploadPublicImage_success() throws IOException {
         String handle = "logo";
-        String ownerId = null;
+        String ownerId = "someone";
         ImageVisibility visibility = ImageVisibility.PUBLIC;
 
         when(imageRepository.existsByHandleAndOwnerIdIsNull(handle)).thenReturn(false);

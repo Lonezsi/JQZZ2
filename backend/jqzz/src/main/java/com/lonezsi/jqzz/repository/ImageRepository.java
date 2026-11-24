@@ -31,6 +31,15 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     @Query("SELECT i FROM Image i WHERE i.uploadedBy = :userId OR i.ownerId = :userId ORDER BY i.createdAt DESC")
     List<Image> findMine(@Param("userId") String userId);
 
+    long countByUploadedByAndCreatedAtAfter(String uploadedBy, java.time.LocalDateTime after);
+
+    // bytes of pictures kept by one account / by everyone (ImageService.roomFor)
+    @Query(value = "SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM app_image WHERE uploaded_by = :u OR owner_id = :u", nativeQuery = true)
+    Number bytesOf(@Param("u") String userId);
+
+    @Query(value = "SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM app_image", nativeQuery = true)
+    Number bytesStored();
+
     boolean existsByIdAndUploadedBy(Long id, String uploadedBy);
 
     boolean existsByIdAndOwnerId(Long id, String ownerId);
