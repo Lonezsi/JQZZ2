@@ -239,7 +239,7 @@ public class GameEngine {
         // practice is alone: nobody to pick a name from the list for
         Game game = hostQuiz(quiz, userId, false);
         return change(game, g -> {
-            g.addPlayer(user.getId(), user.getName(), user.getProfilePictureUrl(), now());
+            g.addPlayer(user.getId(), user.getName(), kept(user.getProfilePictureUrl()), now());
             g.start(now());
         });
     }
@@ -258,7 +258,7 @@ public class GameEngine {
     public Map<String, Object> join(String code, String userId, String name) {
         Game game = find(code);
         User user = userRepository.findById(userId == null ? "" : userId).orElseThrow(() -> notFound("No such user"));
-        return change(game, g -> g.addPlayer(user.getId(), user.getName(), user.getProfilePictureUrl(), name, now()));
+        return change(game, g -> g.addPlayer(user.getId(), user.getName(), kept(user.getProfilePictureUrl()), name, now()));
     }
 
     public Map<String, Object> leave(String code, String userId) {
@@ -897,7 +897,7 @@ public class GameEngine {
                 parseOptions(q.getOptions()), settings.speed, Mode.parse(q.getMode(), q.getType()));
     }
 
-    /** A game never sends players to an outside address (Condom 6): only JQZZ's own pictures. */
+    /** A game never sends players to an outside address (Condom 6): only JQZZ's own pictures, for questions, answers and players' faces. */
     public static String kept(String ref) {
         return com.lonezsi.jqzz.service.QuizPictures.isOutside(ref) ? null : ref;
     }

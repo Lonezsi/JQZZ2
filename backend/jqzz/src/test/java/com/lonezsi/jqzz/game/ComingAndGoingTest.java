@@ -69,6 +69,8 @@ class ComingAndGoingTest {
             User u = new User();
             u.setId(inv.getArgument(0));
             u.setName(inv.getArgument(0));
+            if ("g1".equals(u.getId())) u.setProfilePictureUrl("https://lh3.googleusercontent.com/x");
+            if ("k1".equals(u.getId())) u.setProfilePictureUrl(":me");
             return Optional.of(u);
         });
         presence = mock(PresenceTracker.class);
@@ -118,6 +120,15 @@ class ComingAndGoingTest {
         engine.join(code, "p1");
         engine.start(code, "host");
         return code;
+    }
+
+    @Test
+    void aPlayersOutsidePictureNeverReachesTheGame() {
+        String code = (String) engine.host(7L, "host").get("code");
+        engine.join(code, "g1");
+        engine.join(code, "k1");
+        assertThat(engine.game(code).players.get("g1").picture).isNull();
+        assertThat(engine.game(code).players.get("k1").picture).isEqualTo(":me");
     }
 
     @Test
