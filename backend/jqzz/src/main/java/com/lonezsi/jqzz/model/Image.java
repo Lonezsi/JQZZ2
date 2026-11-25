@@ -53,6 +53,14 @@ public class Image {
     @Column(name = "uploaded_by")
     private String uploadedBy;
 
+    /** the web address a quiz picture was fetched from, so saving the same link again doesn't fetch it again */
+    @Column(name = "source_url", length = 2000)
+    @JsonIgnore
+    private String sourceUrl;
+
+    public String getSourceUrl() { return sourceUrl; }
+    public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
+
     // Constructors, getters, setters (unchanged)
     public Image() {}
 

@@ -888,13 +888,18 @@ public class GameEngine {
         List<Game.AnswerSnap> answers = new ArrayList<>();
         for (Answer ans : q.getAnswers()) {
             long id = ans.getId() != null ? ans.getId() : spare[0]--;
-            answers.add(new Game.AnswerSnap(id, ans.getText(), ans.getImageUrl(), ans.getValue(), ans.getMatch()));
+            answers.add(new Game.AnswerSnap(id, ans.getText(), kept(ans.getImageUrl()), ans.getValue(), ans.getMatch()));
         }
         // an order question's answers are the right order: the game shuffles what it shows instead
         if (settings.mix && Mode.parse(q.getMode(), q.getType()).ask() != Mode.Ask.ORDER) Collections.shuffle(answers, random);
-        return new Game.QuestionSnap(q.getId(), q.getText(), q.getImageUrl(), q.getType(),
-                q.getElaborationText(), q.getElaborationImageUrl(), answers, settings.weight(),
+        return new Game.QuestionSnap(q.getId(), q.getText(), kept(q.getImageUrl()), q.getType(),
+                q.getElaborationText(), kept(q.getElaborationImageUrl()), answers, settings.weight(),
                 parseOptions(q.getOptions()), settings.speed, Mode.parse(q.getMode(), q.getType()));
+    }
+
+    /** A game never sends players to an outside address (Condom 6): only JQZZ's own pictures. */
+    public static String kept(String ref) {
+        return com.lonezsi.jqzz.service.QuizPictures.isOutside(ref) ? null : ref;
     }
 
     /** "unit=m, min=0" (values URL-encoded, as the script writes them) -> {unit: m, min: 0} */

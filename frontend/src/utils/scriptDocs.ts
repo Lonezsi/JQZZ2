@@ -156,7 +156,7 @@ note        = (* any other line *) ;`,
         },
       },
       {
-        p: "A picture is written the way the editor stores it: a web link (`https://...`), one of the quiz author's pictures (`:name`), or a picture someone shared (`handle:name`). Leave the field out for no picture.",
+        p: "A picture is written the way the editor stores it: a web link (`https://...`, which JQZZ fetches once when the quiz is saved and keeps as one of your pictures, so games never load the outside address), one of the quiz author's pictures (`:name`), or a picture someone shared (`handle:name`). Leave the field out for no picture.",
       },
       {
         p: "An answer is `{ text: \"...\", value: 100 }`. `value` is the points it's worth; a match answer adds `match: \"...\"`, its other half, and any answer can add `image: \"...\"`, a picture on it. A right-answer question needs at least one answer worth 100.",

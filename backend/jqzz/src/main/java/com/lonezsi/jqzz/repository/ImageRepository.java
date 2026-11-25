@@ -40,6 +40,8 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     @Query(value = "SELECT COALESCE(SUM(OCTET_LENGTH(data)), 0) FROM app_image", nativeQuery = true)
     Number bytesStored();
 
+    Optional<Image> findFirstByUploadedByAndSourceUrl(String uploadedBy, String sourceUrl);
+
     boolean existsByIdAndUploadedBy(Long id, String uploadedBy);
 
     boolean existsByIdAndOwnerId(Long id, String ownerId);

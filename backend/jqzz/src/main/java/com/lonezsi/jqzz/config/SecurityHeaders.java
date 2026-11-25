@@ -18,7 +18,8 @@ import jakarta.servlet.http.HttpServletResponse;
  * sniffed into another type, and the page may only run its own scripts (so an
  * injected one, here or on JR!TER / Foyer next door, has nothing to run).
  *
- * Fonts are served from here. https: images stay until pictures from outside addresses are decided (Condom 6).
+ * Fonts are served from here. https: images stay for profile pictures and the editor's preview of a
+ * link before it's saved; games only get JQZZ's own pictures (QuizPictures, Condom 6).
  * Routes that set their own stricter CSP (pictures) get both; the browser
  * applies both, so the stricter one wins.
  */

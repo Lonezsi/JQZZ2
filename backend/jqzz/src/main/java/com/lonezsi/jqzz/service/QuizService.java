@@ -28,8 +28,11 @@ public class QuizService {
 
     private final QuizRepository quizRepository;
 
-    public QuizService(QuizRepository quizRepository) {
+    private final QuizPictures quizPictures;
+
+    public QuizService(QuizRepository quizRepository, QuizPictures quizPictures) {
         this.quizRepository = quizRepository;
+        this.quizPictures = quizPictures;
     }
 
     @Transactional(readOnly = true)
@@ -44,6 +47,7 @@ public class QuizService {
 
     @Transactional
     public Quiz create(Quiz incoming) {
+        quizPictures.localize(incoming, incoming.getAuthorId());
         Quiz quiz = new Quiz();
         quiz.setName(incoming.getName());
         quiz.setAuthorId(incoming.getAuthorId());
@@ -55,6 +59,8 @@ public class QuizService {
     @Transactional
     public Optional<Quiz> update(Long id, Quiz incoming) {
         return quizRepository.findById(id).map(quiz -> {
+            quizPictures.localize(incoming,
+                    incoming.getAuthorId() != null ? incoming.getAuthorId() : quiz.getAuthorId());
             if (incoming.getName() != null) quiz.setName(incoming.getName());
             if (incoming.getAuthorId() != null) quiz.setAuthorId(incoming.getAuthorId());
 

@@ -99,6 +99,11 @@ public class ImageService {
      * {@code base}: "drawing", then "drawing_2" and so on.
      */
     public Image keep(String ownerId, String base, byte[] data, String mimeType) {
+        return keep(ownerId, base, data, mimeType, ImageVisibility.PRIVATE, null);
+    }
+
+    /** As above, with who can see it and, for a picture fetched from the web, the address it came from. */
+    public Image keep(String ownerId, String base, byte[] data, String mimeType, ImageVisibility visibility, String sourceUrl) {
         if (ownerId == null || ownerId.isBlank()) throw new IllegalArgumentException("Sign in first");
         mimeType = PictureType.require(data);
         roomFor(ownerId, data.length, 0, true);
@@ -107,8 +112,9 @@ public class ImageService {
         if (stem.length() > 40) stem = stem.substring(0, 40).replaceAll("_+$", "");
         String handle = stem;
         for (int n = 2; imageRepository.existsByOwnerIdAndHandle(ownerId, handle); n++) handle = stem + "_" + n;
-        Image image = new Image(handle, ownerId, ImageVisibility.PRIVATE, data, mimeType);
+        Image image = new Image(handle, ownerId, visibility, data, mimeType);
         image.setUploadedBy(ownerId);
+        image.setSourceUrl(sourceUrl);
         return imageRepository.save(image);
     }
 
