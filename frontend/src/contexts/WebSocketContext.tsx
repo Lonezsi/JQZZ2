@@ -2,16 +2,8 @@ import React, { createContext, useCallback, useEffect, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import type { IMessage, StompSubscription } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { API_BASE_URL, KEY_STORE } from "../services/api";
+import { API_BASE_URL } from "../services/api";
 import { useAuth } from "./AuthContext";
-
-function storedKey(): string {
-  try {
-    return localStorage.getItem(KEY_STORE) ?? "";
-  } catch {
-    return "";
-  }
-}
 
 interface WebSocketContextType {
   client: Client | null;
@@ -40,8 +32,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const stompClient = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
-      // lets the backend track presence: online while any tab is connected
-      connectHeaders: userId ? { loginKey: storedKey() } : {},
+      // presence: the key cookie sent with the handshake says who this is
       reconnectDelay: 3000,
       onConnect: () => setConnected(true),
       onWebSocketClose: () => setConnected(false),

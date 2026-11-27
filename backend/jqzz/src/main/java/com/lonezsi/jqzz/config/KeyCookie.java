@@ -37,6 +37,14 @@ public class KeyCookie {
         }
     }
 
+    /** signing out: the cookie goes */
+    public void clear(HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE, build("", path, java.time.Duration.ZERO).toString());
+        if (!"/".equals(path)) {
+            response.addHeader(HttpHeaders.SET_COOKIE, build("", "/", java.time.Duration.ZERO).toString());
+        }
+    }
+
     private ResponseCookie build(String value, String where, java.time.Duration age) {
         return ResponseCookie.from(LoginKeyFilter.COOKIE, value)
                 .httpOnly(true)

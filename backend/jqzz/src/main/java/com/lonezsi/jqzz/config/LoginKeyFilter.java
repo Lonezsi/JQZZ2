@@ -34,8 +34,8 @@ import tools.jackson.databind.json.JsonMapper;
  * X-User-Id header, a userId parameter, a userId / adminId / authorId field in
  * the body, /users/{id}/...), and ids are public, so on their own they prove
  * nothing. Any request that names someone must carry that someone's login key:
- * in the X-Login-Key header, or for plain GETs (pictures in &lt;img&gt; tags) in
- * the jqzz_key cookie set at login. Requests that name nobody pass as before.
+ * in the X-Login-Key header, or in the HttpOnly jqzz_key cookie set at login
+ * (for writes only when the browser doesn't say the request is cross-site). Requests that name nobody pass as before.
  *
  * Controllers can read the proven id from the request attribute {@link #USER}.
  */
@@ -50,7 +50,7 @@ public class LoginKeyFilter extends OncePerRequestFilter {
     private static final Set<String> PARAMS = Set.of("userId", "ownerId", "adminId");
     private static final Set<String> BODY_FIELDS = Set.of("userId", "adminId", "authorId", "hostId", "ownerId");
     /** /users/{x} that aren't an account */
-    private static final Set<String> USER_ROUTES = Set.of("register", "login", "logout", "google", "foyer");
+    private static final Set<String> USER_ROUTES = Set.of("register", "login", "logout", "google", "foyer", "me");
 
     private final LoginKeys keys;
     private final boolean enforced;
@@ -78,8 +78,12 @@ public class LoginKeyFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         boolean reading = "GET".equals(request.getMethod()) || "HEAD".equals(request.getMethod());
         String key = request.getHeader(HEADER);
-        // the cookie only counts for reading: another site can make a browser send it on a POST
-        if ((key == null || key.isBlank()) && reading) key = cookie(request);
+        if (key == null || key.isBlank()) {
+            // the cookie is the browser's credential. For writes it must come from this site itself:
+            // a browser that says the request is cross-site (or same-site) doesn't get it counted
+            String site = request.getHeader("Sec-Fetch-Site");
+            if (reading || site == null || "same-origin".equals(site)) key = cookie(request);
+        }
         String me = keys.owner(key).orElse(null);
         if (me != null) request.setAttribute(USER, me);
         // the admin panel acts on other people's things by design; AdminController checks it's the admin
@@ -136,6 +140,12 @@ public class LoginKeyFilter extends OncePerRequestFilter {
             // not JSON after all: the controller will say so
         }
         return out;
+    }
+
+    /** the key a request shows: the header, else the cookie (the socket handshake uses this too) */
+    public static String keyOf(HttpServletRequest request) {
+        String key = request.getHeader(HEADER);
+        return key == null || key.isBlank() ? cookie(request) : key;
     }
 
     private static String cookie(HttpServletRequest request) {

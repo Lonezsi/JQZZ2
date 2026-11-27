@@ -10,6 +10,8 @@ import type {
 export const userService = {
   register: (data: RegisterRequest) => api.post<User>("/users/register", data),
   login: (data: LoginRequest) => api.post<User>("/users/login", data),
+  /** the account the key cookie belongs to, with its key (401: nobody) */
+  me: () => api.get<User>("/users/me"),
   logout: (id: string) => api.post("/users/logout", { id }),
   updateHandle: (id: string, data: UpdateHandleRequest) =>
     api.post<User>(`/users/${id}/handle`, data),

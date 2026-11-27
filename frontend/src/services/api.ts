@@ -8,23 +8,11 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-/** where this browser keeps its login key */
+/**
+ * Where older visits kept the login key. The key now lives only in an HttpOnly cookie, which
+ * the browser sends by itself; this is read once to move an old browser over, then removed.
+ */
 export const KEY_STORE = "jqzz-login-key";
-
-/** the key, as every request that acts as you has to show it */
-export function keyHeader(): Record<string, string> {
-  try {
-    const key = localStorage.getItem(KEY_STORE);
-    return key ? { "X-Login-Key": key } : {};
-  } catch {
-    return {};
-  }
-}
-
-api.interceptors.request.use((config) => {
-  Object.entries(keyHeader()).forEach(([k, v]) => config.headers.set(k, v));
-  return config;
-});
 
 /** Best human-readable message from an axios/network error. */
 export function errorMessage(err: unknown): string {

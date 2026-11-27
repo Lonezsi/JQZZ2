@@ -56,11 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // the account as the server sent it to its owner: its key goes in this browser only
   const signedIn = useCallback((u: User): User => {
-    // the old stored id goes only once a key has come to replace it
-    if (u.loginKey) {
-      localStorage.setItem(KEY_STORE, u.loginKey);
-      localStorage.removeItem("userId");
-    }
+    // the key lives in the HttpOnly cookie the server just set; nothing of it stays in the page's storage
+    localStorage.removeItem(KEY_STORE);
+    localStorage.removeItem("userId");
     setUser(u);
     return u;
   }, []);
@@ -79,7 +77,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (user) {
       await userService.logout(user.id);
       setUser(null);
-      localStorage.removeItem(KEY_STORE);
     }
   }, [user]);
 
@@ -114,24 +111,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Keep the stored identity unless the server says it no longer exists:
     // a backend that is down or restarting must not cost the user their account.
     const restore = async (attempt: number) => {
-      const key = localStorage.getItem(KEY_STORE);
-      // from before login keys: this browser only knows the account's id, and
-      // trades it for a key once
-      const legacyId = localStorage.getItem("userId");
+      // a browser from before the cookie-only key: trade the stored key for the cookie once
+      // (signedIn then wipes it from storage)
+      const oldKey = localStorage.getItem(KEY_STORE);
       try {
-        if (key || legacyId) {
-          try {
-            const u = key ? await login(key) : signedIn((await userService.login({ id: legacyId! })).data);
-            await foyerTie(u);
-          } catch (err) {
-            const gone = axios.isAxiosError(err) && (err.response?.status === 404 || err.response?.status === 401);
-            if (!gone) throw err;
-            localStorage.removeItem(KEY_STORE);
-            localStorage.removeItem("userId");
-            if (!(await foyerLogin())) await register(guestName());
-          }
-        } else if (!(await foyerLogin())) {
-          await register(guestName());
+        try {
+          const u = oldKey ? await login(oldKey) : signedIn((await userService.me()).data);
+          await foyerTie(u);
+        } catch (err) {
+          const gone = axios.isAxiosError(err) && (err.response?.status === 404 || err.response?.status === 401);
+          if (!gone) throw err;
+          localStorage.removeItem(KEY_STORE);
+          localStorage.removeItem("userId");
+          if (!(await foyerLogin())) await register(guestName());
         }
         setUnreachable(false);
         setLoading(false);

@@ -121,10 +121,11 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody LogoutRequest request) {
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest request, HttpServletResponse response) {
         if (request.getId() == null) {
             return ResponseEntity.badRequest().build();
         }
+        cookie.clear(response);
         return userRepository.findById(request.getId())
                 .map(user -> {
                     user.setOnline(false);
@@ -226,6 +227,17 @@ public class UserController {
         needKey(me);
         // the admin account isn't one of the people
         return userRepository.findAll().stream().filter(u -> !u.isAdmin()).toList();
+    }
+
+    /** who the login key in this request's cookie is, with the key: how a page load finds its account without keeping the key */
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> me(jakarta.servlet.http.HttpServletRequest request,
+            @org.springframework.web.bind.annotation.RequestAttribute(value = LoginKeyFilter.USER, required = false) String me) {
+        if (me == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "no login key");
+        return userRepository.findById(me).map(user -> {
+            user.setOnline(true);
+            return ResponseEntity.ok(self(userRepository.save(user), LoginKeyFilter.keyOf(request)));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{userId}")

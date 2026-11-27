@@ -13,7 +13,7 @@ import { useAuth } from "./AuthContext";
 import type { Quiz, Question, Action, EditorMode, RenderItem } from "../types";
 import { buildRenderItems } from "../utils/buildRenderItems";
 import { quizService } from "../services/quizService";
-import { API_BASE_URL, errorMessage, keyHeader } from "../services/api";
+import { API_BASE_URL, errorMessage } from "../services/api";
 import { convertToBackendQuiz } from "../utils/quizConverter";
 import { parseScript } from "../utils/scriptParser";
 import { freshRefs } from "../utils/scriptRefs";
@@ -295,7 +295,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!isDirty(persisted.current, q)) continue;
         fetch(`${API_BASE_URL}/quizzes/${q.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", ...keyHeader() },
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
           body: JSON.stringify(convertToBackendQuiz(q)),
           keepalive: true,
         }).catch(() => {});

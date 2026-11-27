@@ -68,6 +68,11 @@ public class PresenceTracker {
         // who this is comes from the login key sent with CONNECT; a bare userId is only believed
         // when keys aren't enforced (the tests)
         String key = accessor.getFirstNativeHeader("loginKey");
+        if (key == null || key.isBlank()) {
+            // the handshake saw the key cookie (WebSocketConfig.KeyHandshake)
+            Object fromCookie = accessor.getSessionAttributes() == null ? null : accessor.getSessionAttributes().get("loginKey");
+            key = fromCookie == null ? null : fromCookie.toString();
+        }
         String userId = key == null || key.isBlank() ? null : keys.owner(key).orElse(null);
         if (userId == null && !enforced) userId = accessor.getFirstNativeHeader("userId");
         String sessionId = accessor.getSessionId();

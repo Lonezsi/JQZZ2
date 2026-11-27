@@ -105,6 +105,58 @@ class CondomTwoTest {
         assertThat(presence.userOf("s3")).isEqualTo("anna");
     }
 
+    @Test
+    void theCookieAloneActsAsYouButNotWhenCrossSite() throws Exception {
+        HttpResponse<String> reg = send("POST", "/users/register", null, "{\"name\": \"Alice\"}");
+        String id = JsonPath.read(reg.body(), "$.id");
+        String key = JsonPath.read(reg.body(), "$.loginKey");
+        String jar = "jqzz_key=" + key;
+        String body = "{\"name\": \"Alice Two\"}";
+        assertThat(sendCookie("POST", "/users/" + id + "/name", jar, null, body).statusCode()).isEqualTo(200);
+        assertThat(sendCookie("POST", "/users/" + id + "/name", jar, "same-origin", body).statusCode()).isEqualTo(200);
+        assertThat(sendCookie("POST", "/users/" + id + "/name", jar, "cross-site", body).statusCode()).isEqualTo(401);
+        assertThat(sendCookie("POST", "/users/" + id + "/name", jar, "same-site", body).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void meIsWhoeverTheCookieSaysAndLogoutExpiresIt() throws Exception {
+        HttpResponse<String> reg = send("POST", "/users/register", null, "{\"name\": \"Alice\"}");
+        String id = JsonPath.read(reg.body(), "$.id");
+        String key = JsonPath.read(reg.body(), "$.loginKey");
+        HttpResponse<String> me = sendCookie("GET", "/users/me", "jqzz_key=" + key, null, null);
+        assertThat(me.statusCode()).isEqualTo(200);
+        assertThat(JsonPath.<String>read(me.body(), "$.id")).isEqualTo(id);
+        assertThat(JsonPath.<String>read(me.body(), "$.loginKey")).isEqualTo(key);
+        assertThat(sendCookie("GET", "/users/me", null, null, null).statusCode()).isEqualTo(401);
+
+        HttpResponse<String> out = sendCookie("POST", "/users/logout", "jqzz_key=" + key, null, "{\"id\": \"" + id + "\"}");
+        assertThat(out.headers().allValues("Set-Cookie")).anyMatch(c -> c.startsWith("jqzz_key=;") && c.contains("Max-Age=0") && c.contains("Path=/jqzz/"));
+    }
+
+    @Test
+    void theSocketKnowsTheKeyFromTheHandshakeCookie() {
+        LoginKeys keys = mock(LoginKeys.class);
+        when(keys.owner("good-key")).thenReturn(Optional.of("anna"));
+        PresenceTracker presence = new PresenceTracker(mock(UserRepository.class), mock(SimpMessagingTemplate.class), keys, true);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setSessionId("s9");
+        accessor.setSessionAttributes(new java.util.HashMap<>(java.util.Map.of("loginKey", "good-key")));
+        presence.onConnect(new SessionConnectEvent(presence,
+                MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders())));
+        assertThat(presence.userOf("s9")).isEqualTo("anna");
+    }
+
+    private HttpResponse<String> sendCookie(String method, String path, String cookie, String site, String json) throws Exception {
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                .header("Content-Type", "application/json")
+                .method(method, json == null
+                        ? HttpRequest.BodyPublishers.noBody()
+                        : HttpRequest.BodyPublishers.ofString(json));
+        if (cookie != null) request.header("Cookie", cookie);
+        if (site != null) request.header("Sec-Fetch-Site", site);
+        return http.send(request.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
     private static void connect(PresenceTracker presence, String session, String header, String value, String loginKey) {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
         accessor.setSessionId(session);
